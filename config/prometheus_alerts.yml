@@ -1,0 +1,380 @@
+# Prometheus Alerting Rules for RasoDataset-Agent
+# Deploy to Prometheus rules directory and reload
+
+groups:
+  # ============================================================================
+  # Provider Health Alerts
+  # ============================================================================
+  - name: provider_alerts
+    interval: 30s
+    rules:
+      # Provider circuit breaker opened
+      - alert: CircuitBreakerOpen
+        expr: circuit_breaker_state == 2  # OPEN = 2
+        for: 1m
+        labels:
+          severity: warning
+          category: resilience
+        annotations:
+          summary: "Circuit breaker OPEN for {{ $labels.provider }}"
+          description: "Provider {{ $labels.provider }} circuit breaker has been open for {{ $value | printf \"%.0f\" }} minutes. Requests are being rejected."
+          runbook_url: "https://docs.example.com/runbooks/circuit-breaker"
+
+      # Multiple provider failures
+      - alert: ProviderFailureRate
+        expr: rate(provider_errors_total[5m]) / rate(provider_requests_total[5m]) > 0.1
+        for: 2m
+        labels:
+          severity: warning
+          category: provider
+        annotations:
+          summary: "High provider error rate: {{ $labels.provider }}"
+          description: "Provider {{ $labels.provider }} error rate is {{ $value | printf \"%.1f\" }}% over the last 5 minutes."
+          runbook_url: "https://docs.example.com/runbooks/provider-outage"
+
+      # Provider latency spike
+      - alert: ProviderLatencyHigh
+        expr: histogram_quantile(0.95, provider_latency_seconds_bucket) > 5
+        for: 3m
+        labels:
+          severity: warning
+          category: performance
+        annotations:
+          summary: "High provider latency: {{ $labels.provider }}"
+          description: "Provider {{ $labels.provider }} P95 latency is {{ $value | printf \"%.1f\" }}s, exceeding 5s threshold."
+
+      # Provider completely down
+      - alert: ProviderDown
+        expr: up{job="ai-dataset-provider"} == 0
+        for: 30s
+        labels:
+          severity: critical
+          category: availability
+        annotations:
+          summary: "Provider unreachable: {{ $labels.instance }}"
+          description: "Provider health check failed for {{ $labels.instance }}. All requests to this provider are failing."
+          runbook_url: "https://docs.example.com/runbooks/provider-outage"
+
+  # ============================================================================
+  # Database & Cache Alerts
+  # ============================================================================
+  - name: database_alerts
+    interval: 30s
+    rules:
+      # Database connection pool exhausted
+      - alert: DatabaseConnectionPoolExhausted
+        expr: db_connection_pool_size / db_connection_pool_max > 0.9
+        for: 2m
+        labels:
+          severity: warning
+          category: database
+        annotations:
+          summary: "Database connection pool at {{ $value | printf \"%.0f\" }}%"
+          description: "Database connection pool utilization is {{ $value | printf \"%.1f\" }}%. New connections may be rejected soon."
+          runbook_url: "https://docs.example.com/runbooks/database-connection-pool"
+
+      # Database query latency
+      - alert: DatabaseQueryLatency
+        expr: histogram_quantile(0.95, db_query_duration_seconds_bucket) > 2
+        for: 5m
+        labels:
+          severity: warning
+          category: database
+        annotations:
+          summary: "High database query latency"
+          description: "P95 database query latency is {{ $value | printf \"%.1f\" }}s, exceeding 2s threshold."
+
+      # Redis cache miss rate
+      - alert: CacheMissRateHigh
+        expr: rate(cache_misses_total[5m]) / (rate(cache_hits_total[5m]) + rate(cache_misses_total[5m])) > 0.5
+        for: 10m
+        labels:
+          severity: info
+          category: cache
+        annotations:
+          summary: "High cache miss rate: {{ $value | printf \"%.1f\" }}%"
+          description: "Cache miss rate is above 50%. Consider warming cache or increasing cache size."
+
+      # Redis connection issues
+      - alert: RedisConnectionIssue
+        expr: redis_connection_errors_total > 0
+        for: 1m
+        labels:
+          severity: warning
+          category: cache
+        annotations:
+          summary: "Redis connection errors detected"
+          description: "{{ $value }} Redis connection errors in the last minute."
+          runbook_url: "https://docs.example.com/runbooks/redis-failure"
+
+  # ============================================================================
+  # API & Request Alerts
+  # ============================================================================
+  - name: api_alerts
+    interval: 30s
+    rules:
+      # High API error rate
+      - alert: HighAPIErrorRate
+        expr: rate(http_requests_total{status=~"5.."}[5m]) / rate(http_requests_total[5m]) > 0.05
+        for: 2m
+        labels:
+          severity: warning
+          category: api
+        annotations:
+          summary: "API error rate above 5%"
+          description: "API error rate is {{ $value | printf \"%.2f\" }}%. Check logs for details."
+
+      # API latency SLO breach
+      - alert: APILatencySLOBreach
+        expr: histogram_quantile(0.95, http_request_duration_seconds_bucket) > 1
+        for: 5m
+        labels:
+          severity: warning
+          category: performance
+        annotations:
+          summary: "API P95 latency above SLO (1s)"
+          description: "API P95 latency is {{ $value | printf \"%.2f\" }}s. This exceeds the 1s SLO target."
+
+      # API availability SLO breach
+      - alert: APIAvailabilitySLOBreach
+        expr: (1 - (rate(http_requests_total{status=~"5.."}[1h]) / rate(http_requests_total[1h]))) < 0.99
+        for: 5m
+        labels:
+          severity: critical
+          category: availability
+        annotations:
+          summary: "API availability below 99% SLO"
+          description: "API availability is {{ $value | printf \"%.3f\" }}% over the last hour. This breaches the 99% SLO."
+          runbook_url: "https://docs.example.com/runbooks/slo-breach"
+
+      # High request rate (potential DDoS)
+      - alert: HighRequestRate
+        expr: rate(http_requests_total[1m]) > 1000
+        for: 5m
+        labels:
+          severity: warning
+          category: security
+        annotations:
+          summary: "Unusually high request rate"
+          description: "Request rate is {{ $value | printf \"%.0f\" }} req/s, which is above normal thresholds."
+
+  # ============================================================================
+  # Orchestration & Job Alerts
+  # ============================================================================
+  - name: orchestration_alerts
+    interval: 30s
+    rules:
+      # Job failure rate
+      - alert: JobFailureRate
+        expr: rate(jobs_total{status="failed"}[5m]) / rate(jobs_total[5m]) > 0.1
+        for: 5m
+        labels:
+          severity: warning
+          category: orchestration
+        annotations:
+          summary: "High job failure rate"
+          description: "Job failure rate is {{ $value | printf \"%.1f\" }}%. Check orchestrator logs for details."
+
+      # Job stuck in running state
+      - alert: JobStuck
+        expr: jobs_in_progress > 0 and ON(job_id) rate(job_progress[10m]) == 0
+        for: 30m
+        labels:
+          severity: warning
+          category: orchestration
+        annotations:
+          summary: "Job stuck in running state"
+          description: "Job {{ $labels.job_id }} has been running for 30+ minutes without progress."
+          runbook_url: "https://docs.example.com/runbooks/orchestration-deadlock"
+
+      # Job queue depth increasing
+      - alert: JobQueueBacklog
+        expr: job_queue_depth > 100
+        for: 10m
+        labels:
+          severity: warning
+          category: orchestration
+        annotations:
+          summary: "Job queue backlog building"
+          description: "Job queue depth is {{ $value | printf \"%.0f\" }}, which exceeds the 100 threshold. Consider scaling workers."
+
+      # Bulkhead rejection rate
+      - alert: BulkheadRejectionRate
+        expr: rate(bulkhead_rejected_total[5m]) > 0
+        for: 2m
+        labels:
+          severity: warning
+          category: resilience
+        annotations:
+          summary: "Bulkhead rejecting requests"
+          description: "Bulkhead {{ $labels.name }} is rejecting {{ $value | printf \"%.0f\" }} requests/s due to capacity limits."
+          runbook_url: "https://docs.example.com/runbooks/bulkhead-isolation"
+
+  # ============================================================================
+  # Retry & Resilience Alerts
+  # ============================================================================
+  - name: retry_alerts
+    interval: 30s
+    rules:
+      # Retry storm
+      - alert: RetryStorm
+        expr: rate(retries_total[1m]) / rate(provider_requests_total[1m]) > 0.5
+        for: 2m
+        labels:
+          severity: warning
+          category: resilience
+        annotations:
+          summary: "Retry storm detected"
+          description: "Retry rate is {{ $value | printf \"%.1f\" }}% of requests. This indicates provider instability."
+          runbook_url: "https://docs.example.com/runbooks/retry-storm"
+
+      # Multiple circuit breakers open
+      - alert: MultipleCircuitBreakersOpen
+        expr: sum(circuit_breaker_state == 2) by (instance) > 2
+        for: 2m
+        labels:
+          severity: critical
+          category: resilience
+        annotations:
+          summary: "Multiple circuit breakers open"
+          description: "{{ $value }} circuit breakers are open on {{ $labels.instance }}. This indicates widespread provider issues."
+          runbook_url: "https://docs.example.com/runbooks/circuit-breaker"
+
+  # ============================================================================
+  # Resource Alerts
+  # ============================================================================
+  - name: resource_alerts
+    interval: 30s
+    rules:
+      # High memory usage
+      - alert: HighMemoryUsage
+        expr: process_resident_memory_bytes / on(instance) node_memory_MemTotal_bytes * 100 > 80
+        for: 5m
+        labels:
+          severity: warning
+          category: infrastructure
+        annotations:
+          summary: "Memory usage above 80%"
+          description: "Memory usage is {{ $value | printf \"%.1f\" }}% on {{ $labels.instance }}. Consider scaling or optimizing."
+
+      # Memory leak indicator
+      - alert: MemoryLeak
+        expr: (process_resident_memory_bytes - process_resident_memory_bytes offset 1h) / process_resident_memory_bytes offset 1h > 0.2
+        for: 10m
+        labels:
+          severity: warning
+          category: infrastructure
+        annotations:
+          summary: "Possible memory leak detected"
+          description: "Memory has grown by {{ $value | printf \"%.1f\" }}% in the last hour on {{ $labels.instance }}."
+          runbook_url: "https://docs.example.com/runbooks/memory-leak"
+
+      # High CPU usage
+      - alert: HighCPUUsage
+        expr: 100 - (avg by (instance) (rate(node_cpu_seconds_total{mode="idle"}[5m])) * 100) > 80
+        for: 10m
+        labels:
+          severity: warning
+          category: infrastructure
+        annotations:
+          summary: "High CPU usage"
+          description: "CPU usage is {{ $value | printf \"%.1f\" }}% on {{ $labels.instance }}."
+
+      # Disk space low
+      - alert: DiskSpaceLow
+        expr: (node_filesystem_avail_bytes{mountpoint="/"} / node_filesystem_size_bytes{mountpoint="/"}) * 100 < 10
+        for: 5m
+        labels:
+          severity: warning
+          category: infrastructure
+        annotations:
+          summary: "Disk space low"
+          description: "Disk space on {{ $labels.instance }} is {{ $value | printf \"%.1f\" }}% free. Consider cleanup or expansion."
+
+  # ============================================================================
+  # Security Alerts
+  # ============================================================================
+  - name: security_alerts
+    interval: 30s
+    rules:
+      # Authentication failures
+      - alert: AuthenticationFailureSpike
+        expr: rate(auth_failures_total[5m]) > 10
+        for: 2m
+        labels:
+          severity: warning
+          category: security
+        annotations:
+          summary: "Authentication failure spike"
+          description: "{{ $value | printf \"%.0f\" }} authentication failures in the last 5 minutes. This may indicate a brute force attack."
+          runbook_url: "https://docs.example.com/runbooks/security-incident"
+
+      # Invalid API key usage
+      - alert: InvalidAPIKeyUsage
+        expr: rate(invalid_api_key_total[5m]) > 0
+        for: 1m
+        labels:
+          severity: warning
+          category: security
+        annotations:
+          summary: "Invalid API key usage detected"
+          description: "{{ $value | printf \"%.0f\" }} requests with invalid API keys in the last 5 minutes."
+          runbook_url: "https://docs.example.com/runbooks/security-incident"
+
+      # Configuration changed
+      - alert: ConfigChanged
+        expr: rate(config_changes_total[5m]) > 0
+        for: 0s
+        labels:
+          severity: info
+          category: operations
+        annotations:
+          summary: "Configuration changed"
+          description: "Configuration change detected on {{ $labels.instance }}. Check audit logs for details."
+
+  # ============================================================================
+  # Streaming Alerts
+  # ============================================================================
+  - name: streaming_alerts
+    interval: 30s
+    rules:
+      # SSE connection drops
+      - alert: SSEConnectionDropRate
+        expr: rate(sse_disconnections_total[5m]) / rate(sse_connections_total[5m]) > 0.1
+        for: 5m
+        labels:
+          severity: warning
+          category: streaming
+        annotations:
+          summary: "High SSE connection drop rate"
+          description: "SSE connection drop rate is {{ $value | printf \"%.1f\" }}%. Check network stability and client reconnection logic."
+
+      # Streaming throughput degradation
+      - alert: StreamingThroughputLow
+        expr: rate(streaming_bytes_total[5m]) < 1000 and rate(streaming_requests_total[5m]) > 10
+        for: 10m
+        labels:
+          severity: warning
+          category: streaming
+        annotations:
+          summary: "Streaming throughput degradation"
+          description: "Streaming throughput has dropped below expected levels. Check for network or provider issues."
+
+
+# ============================================================================
+# Alert Routing (to be used with Alertmanager)
+# ============================================================================
+inhibit_rules:
+  # Inhibit resource alerts when system is under maintenance
+  - source_match:
+      severity: maintenance
+    target_match:
+      severity: warning
+    equal: [instance]
+
+  # Inhibit lower severity when critical alert fires
+  - source_match:
+      severity: critical
+    target_match:
+      severity: warning
+    equal: [service, instance]
