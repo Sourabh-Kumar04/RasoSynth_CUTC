@@ -343,7 +343,8 @@ export default function FineTunePage() {
   const fetchJobs = useCallback(async () => {
     try {
       const res = await api.listFineTuneJobs()
-      if (res?.jobs) setJobs(res.jobs)
+      const raw = res?.jobs || (Array.isArray(res) ? res : [])
+      if (Array.isArray(raw)) setJobs(raw)
     } catch {}
   }, [])
 
@@ -351,7 +352,8 @@ export default function FineTunePage() {
     ;(async () => {
       try {
         const m = await api.getSupportedModels()
-        if (m?.models) setModels(m.models)
+        const rawModels = m?.models || (Array.isArray(m) ? m : [])
+        if (Array.isArray(rawModels)) setModels(rawModels)
       } catch {}
       await fetchJobs()
       setLoading(false)

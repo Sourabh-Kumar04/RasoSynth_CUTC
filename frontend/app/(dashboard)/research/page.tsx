@@ -72,9 +72,10 @@ export default function ResearchPage() {
     }
   }
 
-  const cachedTechniques = status?.cached_techniques ?? []
-  const history = status?.research_history ?? []
-  const techEntries = Object.entries(techniques?.techniques ?? {})
+  const cachedTechniques = Array.isArray(status?.cached_techniques) ? status!.cached_techniques : []
+  const history = Array.isArray(status?.research_history) ? status!.research_history : []
+  const rawTech = techniques?.techniques
+  const techEntries = rawTech && typeof rawTech === 'object' && !Array.isArray(rawTech) ? Object.entries(rawTech) : []
 
   return (
     <div className="space-y-5 animate-fade-in">

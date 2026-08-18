@@ -99,15 +99,16 @@ export default function ProvidersPage() {
     return true
   })
 
-  const activeCount = providers.filter(p => p.status !== 'unhealthy' && p.status !== 'unknown').length
+  const safeProviders = Array.isArray(providers) ? providers : []
+  const activeCount = safeProviders.filter(p => p.status === 'available' || p.status === 'healthy').length
   const avgLatency = (() => {
-    const with_lat = providers.filter(p => p.latency_ms)
+    const with_lat = safeProviders.filter(p => p.latency_ms != null && p.latency_ms > 0)
     return with_lat.length ? Math.round(with_lat.reduce((s, p) => s + (p.latency_ms ?? 0), 0) / with_lat.length) : 0
   })()
-  const totalCost = providers.reduce((s, p) => s + (p.cost_today_usd ?? 0), 0)
+  const totalCost = safeProviders.reduce((s, p) => s + (p.cost_today_usd ?? 0), 0)
   const cbOpen = Object.values(circuitBreakers).filter(v => v === 'open').length
 
-  const latencyData = providers
+  const latencyData = safeProviders
     .filter(p => p.latency_ms)
     .map(p => ({ name: p.name.replace(/_/g, ' '), latency: p.latency_ms }))
 

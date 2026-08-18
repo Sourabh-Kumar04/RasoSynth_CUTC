@@ -181,7 +181,8 @@ export default function DatasetsPage() {
 
       // Fetch jobs
       const response = await api.getJobs({ limit: 50 })
-      const jobs = response.data || []
+      const rawJobs = response?.data || (Array.isArray(response) ? response : [])
+      const jobs = Array.isArray(rawJobs) ? rawJobs : []
 
       // Convert jobs to datasets for display
       const mappedDatasets = jobs.map(jobToDataset)

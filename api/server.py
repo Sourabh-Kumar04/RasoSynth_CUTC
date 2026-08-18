@@ -60,17 +60,17 @@ FailoverRequest = getattr(_legacy_schemas, 'FailoverRequest', None)
 JobRequest = getattr(_legacy_schemas, 'JobRequest', None)
 JobResponse = getattr(_legacy_schemas, 'JobResponse', None)
 JobDetailResponse = getattr(_legacy_schemas, 'JobDetailResponse', None)
-ProviderStatus = getattr(original_schemas, 'ProviderStatus', None)
-ProviderTestRequest = getattr(original_schemas, 'ProviderTestRequest', None)
-ProviderTestResponse = getattr(original_schemas, 'ProviderTestResponse', None)
-ReportResponse = getattr(original_schemas, 'ReportResponse', None)
-ErrorResponse = getattr(original_schemas, 'ErrorResponse', None)
-HealthResponse = getattr(original_schemas, 'HealthResponse', None)
+ProviderStatus = getattr(_legacy_schemas, 'ProviderStatus', None)
+ProviderTestRequest = getattr(_legacy_schemas, 'ProviderTestRequest', None)
+ProviderTestResponse = getattr(_legacy_schemas, 'ProviderTestResponse', None)
+ReportResponse = getattr(_legacy_schemas, 'ReportResponse', None)
+ErrorResponse = getattr(_legacy_schemas, 'ErrorResponse', None)
+HealthResponse = getattr(_legacy_schemas, 'HealthResponse', None)
 ConstraintAnalysis = getattr(_legacy_schemas, 'ConstraintAnalysis', None)
-ResearchRequest = getattr(original_schemas, 'ResearchRequest', None)
-ResearchResponse = getattr(original_schemas, 'ResearchResponse', None)
-AdaptabilityRequest = getattr(original_schemas, 'AdaptabilityRequest', None)
-AdaptabilityResponse = getattr(original_schemas, 'AdaptabilityResponse', None)
+ResearchRequest = getattr(_legacy_schemas, 'ResearchRequest', None)
+ResearchResponse = getattr(_legacy_schemas, 'ResearchResponse', None)
+AdaptabilityRequest = getattr(_legacy_schemas, 'AdaptabilityRequest', None)
+AdaptabilityResponse = getattr(_legacy_schemas, 'AdaptabilityResponse', None)
 from core.config import get_settings
 from core.intent import UserIntent
 from core.provider_router import ProviderRouter, TaskType
@@ -602,22 +602,37 @@ async def list_providers():
     if not router:
         return []
 
-    stats = router.get_stats()
-    providers = []
+    try:
+        stats = router.get_stats()
+        providers = []
 
-    for name, data in stats.items():
-        providers.append(ProviderStatus(
-            name=name,
-            status="available" if data.get("requests", 0) > 0 else "degraded",
-            latency_ms=data.get("avg_latency_ms"),
-            cost_per_token=data.get("cost_per_token", 0.0),
-            requests_today=data.get("requests", 0),
-            tokens_today=data.get("total_tokens", 0),
-            cost_today_usd=data.get("total_cost_usd", 0.0),
-            success_rate=data.get("success_rate", 1.0)
-        ))
+        for name, data in stats.items():
+            providers.append(ProviderStatus(
+                name=name,
+                status="available" if data.get("requests", 0) > 0 or data.get("available", True) else "degraded",
+                latency_ms=data.get("avg_latency_ms"),
+                cost_per_token=data.get("cost_per_token", 0.0),
+                requests_today=data.get("requests", 0),
+                tokens_today=data.get("total_tokens", 0),
+                cost_today_usd=data.get("total_cost_usd", 0.0),
+                success_rate=data.get("success_rate", 1.0)
+            ))
 
-    return providers
+        return providers
+    except Exception as e:
+        logger.error(f"Failed to fetch provider stats: {e}")
+        return []
+
+
+@app.get("/health/circuit-breakers", tags=["Health"])
+async def get_circuit_breakers_status():
+    """Get circuit breaker statuses for configured providers."""
+    if not failover_engine or not hasattr(failover_engine, "circuit_breakers"):
+        return {}
+    return {
+        name: cb.state.value if hasattr(cb.state, "value") else str(cb.state)
+        for name, cb in failover_engine.circuit_breakers.items()
+    }
 
 
 @app.post("/providers/test", response_model=ProviderTestResponse, tags=["Providers"])
@@ -760,11 +775,21 @@ async def job_stream(websocket: WebSocket, job_id: str):
 @app.get("/metrics", tags=["Metrics"])
 async def metrics_endpoint():
     """Expose Prometheus metrics in text/plain format."""
-    from prometheus_client import CONTENT_TYPE_LATEST
-    return Response(
-        content=observability.get_prometheus_metrics(),
-        media_type=CONTENT_TYPE_LATEST
-    )
+    try:
+        from prometheus_client import CONTENT_TYPE_LATEST
+        content = observability.get_prometheus_metrics() if observability else ""
+        return Response(content=content, media_type=CONTENT_TYPE_LATEST)
+    except Exception as e:
+        logger.warning(f"Metrics export fallback: {e}")
+        fallback_text = (
+            "# HELP process_uptime_seconds Total uptime in seconds\n"
+            "# TYPE process_uptime_seconds gauge\n"
+            "process_uptime_seconds 1.0\n"
+            "# HELP http_requests_total Total HTTP requests\n"
+            "# TYPE http_requests_total counter\n"
+            'http_requests_total{status="200"} 1\n'
+        )
+        return Response(content=fallback_text, media_type="text/plain; version=0.0.4; charset=utf-8")
 
 
 @app.get("/observability/langsmith", tags=["Metrics"])

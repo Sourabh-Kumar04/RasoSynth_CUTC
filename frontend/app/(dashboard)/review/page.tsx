@@ -164,7 +164,7 @@ export default function ReviewPage() {
   const fetchQueue = useCallback(async () => {
     try {
       const r = await api.getReviewQueue({
-        status: statusFilter || undefined,
+        status: statusFilter && statusFilter !== 'all' ? statusFilter : undefined,
         job_id: jobFilter || undefined,
         page, page_size: PAGE_SIZE,
       })
@@ -466,7 +466,7 @@ export default function ReviewPage() {
             <SelectValue placeholder="Status" />
           </SelectTrigger>
           <SelectContent>
-            <SelectItem value="">All statuses</SelectItem>
+            <SelectItem value="all">All statuses</SelectItem>
             <SelectItem value="pending">Pending</SelectItem>
             <SelectItem value="in_review">In Review</SelectItem>
             <SelectItem value="approved">Approved</SelectItem>
@@ -504,7 +504,7 @@ export default function ReviewPage() {
                 </div>
               </div>
             ))
-            : !queue || queue.items.length === 0
+            : !queue || !Array.isArray(queue.items) || queue.items.length === 0
               ? (
                 <div className="flex flex-col items-center justify-center py-16 space-y-3">
                   <ClipboardCheck className="h-10 w-10 text-muted-foreground/20" />
@@ -513,7 +513,7 @@ export default function ReviewPage() {
               )
               : (
                 <>
-                  {queue.items.map((item, idx) => {
+                  {(queue.items || []).map((item, idx) => {
                     const diff = difficulty(item.quality_score)
                     const isChecked = selected2.has(item.id)
                     return (
