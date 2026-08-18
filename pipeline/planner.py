@@ -136,25 +136,55 @@ class CoveragePlanner:
         self.config = config
 
     def generate_matrix(self, plan: DatasetPlan, target_size: int = 100) -> CoverageMatrix:
-        """Generate a coverage matrix by Cartesian combination of diversity attributes."""
+        """
+        Generate a coverage matrix of exactly `target_size` cells.
+
+        Fix #1: cells list is hard-capped at target_size — no overshoot.
+        Fix #3: when 'language' is a dimension with multiple values, cells are
+                distributed as evenly as possible across all language values so
+                each language gets exactly ceil(target_size / n_languages) slots
+                before cycling, guaranteeing balance.
+        """
         dims = plan.diversity_attributes
         if not dims:
             dims = {"category": ["general_instruction"]}
 
         import itertools
         import random
+
         keys = list(dims.keys())
         values = [dims[k] for k in keys]
-        
+
         combinations = list(itertools.product(*values))
-        
-        # Shuffle combinations to distribute slowest-varying attributes evenly
+
         rng = random.Random(42)
         rng.shuffle(combinations)
-        
+
+        # Fix #3: balanced language distribution
+        # If 'language' is one of the dimensions, interleave combinations so
+        # each language appears in a round-robin order rather than in blocks.
+        lang_idx = keys.index("language") if "language" in keys else None
+        if lang_idx is not None:
+            lang_values = dims["language"]
+            n_langs = len(lang_values)
+            # Bucket combinations by language
+            buckets: dict[str, list] = {lv: [] for lv in lang_values}
+            for combo in combinations:
+                lang = combo[lang_idx]
+                if lang in buckets:
+                    buckets[lang].append(combo)
+            # Interleave round-robin
+            interleaved: list = []
+            iters = [iter(buckets[lv]) for lv in lang_values]
+            while len(interleaved) < target_size * n_langs:  # overgenerate then slice
+                for it in iters:
+                    val = next(it, None)
+                    if val is not None:
+                        interleaved.append(val)
+            combinations = interleaved
+
+        # Fix #1: build exactly target_size cells — no more, no less
         cells = []
-        
-        # Build balanced cells to match the target size
         for i in range(target_size):
             combo = combinations[i % len(combinations)]
             cell = {keys[j]: combo[j] for j in range(len(keys))}

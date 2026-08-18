@@ -1119,15 +1119,18 @@ class DatasetOrchestrator:
             # 2. Setup Generator and Validator
             generator = SeedlessGenerator(self.router, config)
             validator = MultiStageValidator(self.router, config)
-            
+
             max_attempts = config.get("regeneration_attempts", 3)
             cells = coverage_dict.get("cells", [])
+
+            # Fix #5: reset dedup tracker at the start of each batch
+            generator.reset_seen_topics()
 
             # Generate samples using the coverage matrix cells
             for idx, cell in enumerate(cells):
                 if self._is_cancelled(job_id):
                     break
-                
+
                 # Update progress incrementally
                 if idx % max(1, len(cells) // 10) == 0:
                     prog = 0.7 + (idx / len(cells)) * 0.2
@@ -1135,7 +1138,12 @@ class DatasetOrchestrator:
 
                 valid_sample = None
                 for attempt in range(max_attempts):
-                    sample = await generator.generate_sample(plan_obj, cell)
+                    # Fix #2: pass cell_index so difficulty tier varies
+                    sample = await generator.generate_sample(
+                        plan_obj, cell,
+                        cell_index=idx,
+                        total_cells=len(cells),
+                    )
                     val_res = await validator.validate(sample)
                     if val_res.is_valid:
                         valid_sample = sample
