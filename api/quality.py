@@ -2,55 +2,75 @@
 Quality Dashboard API — endpoints for dataset quality metrics.
 """
 import logging
-from fastapi import APIRouter, Query
+from fastapi import APIRouter, Query, Request
 from datetime import datetime, timedelta
 from typing import Optional
-
-from core.review_service import ReviewService
 
 logger = logging.getLogger(__name__)
 
 router = APIRouter(prefix="/api/quality", tags=["quality"])
 
-# Database-driven quality metrics endpoints
+# In-memory ring buffers (populated by record_quality_snapshot)
+_quality_history: list[dict] = []
+_job_quality: dict[str, dict] = {}
+
+
+def _get_review_service(request: Request = None):
+    """Return the shared ReviewService from app state, or None if unavailable."""
+    try:
+        if request is not None:
+            svc = getattr(request.app.state, "review_service", None)
+            if svc is not None:
+                return svc
+        # Fallback: module-level singleton set by lifespan
+        import core as _core
+        return getattr(_core, "_review_service_instance", None)
+    except Exception:
+        return None
 
 
 @router.get("/overview")
-async def quality_overview():
+async def quality_overview(request: Request):
     """Get overall quality metrics overview from real dataset samples in DB."""
     import api.server as server
     db_mgr = getattr(server, "db", None)
-    
+
     avg_quality = 0.0
     total_jobs = 0
     total_samples = 0
-    
+
     if db_mgr and db_mgr.db:
         from core.db import Sample, Dataset
         from sqlalchemy import select, func
         try:
             async with db_mgr.db.session_maker() as session:
-                # Count total datasets/jobs
                 job_res = await session.execute(select(func.count(Dataset.id)))
                 total_jobs = job_res.scalar() or 0
-                
-                # Query avg quality score across samples
-                sample_res = await session.execute(select(func.count(Sample.id), func.avg(Sample.quality_score)))
+
+                sample_res = await session.execute(
+                    select(func.count(Sample.id), func.avg(Sample.quality_score))
+                )
                 row = sample_res.one_or_none()
                 if row:
                     total_samples = row[0] or 0
                     avg_quality = float(row[1] or 0.0)
         except Exception as e:
-            logger.error(f"Error querying quality overview from DB: {e}")
+            logger.error("Error querying quality overview from DB: %s", e)
 
-    svc = ReviewService()
-    review_stats = svc.get_stats() if hasattr(svc, "_items") else {}
+    # Use shared ReviewService from app state
+    svc = _get_review_service(request)
+    review_stats: dict = {}
+    if svc is not None:
+        try:
+            review_stats = await svc.get_stats()
+        except Exception:
+            pass
 
     return {
         "average_quality": round(avg_quality, 3),
         "total_jobs": total_jobs,
         "total_samples_reviewed": total_samples or review_stats.get("total", 0),
-        "approval_rate": review_stats.get("approval_rate", 1.0 if total_samples > 0 else 0.0),
+        "approval_rate": review_stats.get("approval_rate", 0.0),
         "rejection_rate": review_stats.get("rejection_rate", 0.0),
         "last_updated": datetime.utcnow().isoformat(),
     }

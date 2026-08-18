@@ -119,7 +119,7 @@ export default function SettingsPage() {
               )}
             </div>
           </div>
-          <a href="http://localhost:8000/docs" target="_blank" rel="noopener noreferrer">
+          <a href={`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000'}/docs`} target="_blank" rel="noopener noreferrer">
             <Button variant="ghost" size="sm" className="h-7 text-xs gap-1 text-muted-foreground">
               <ExternalLink className="h-3 w-3" />API Docs
             </Button>
