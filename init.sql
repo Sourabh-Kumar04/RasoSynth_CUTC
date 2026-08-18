@@ -139,3 +139,57 @@ CREATE TABLE IF NOT EXISTS failover_events (
 CREATE INDEX IF NOT EXISTS idx_failover_events_job_id ON failover_events(job_id);
 CREATE INDEX IF NOT EXISTS idx_failover_events_provider ON failover_events(provider);
 CREATE INDEX IF NOT EXISTS idx_failover_events_created_at ON failover_events(created_at DESC);
+-- Fine-tuning jobs (added for fine-tuning integration)
+CREATE TABLE IF NOT EXISTS finetune_jobs (
+    id VARCHAR PRIMARY KEY,
+    dataset_id VARCHAR REFERENCES datasets(id) ON DELETE SET NULL,
+    status VARCHAR NOT NULL DEFAULT 'pending',
+    base_model VARCHAR NOT NULL,
+    output_model_name VARCHAR,
+    config JSONB,
+    progress FLOAT DEFAULT 0.0,
+    current_epoch INTEGER DEFAULT 0,
+    total_epochs INTEGER DEFAULT 1,
+    train_loss FLOAT,
+    eval_loss FLOAT,
+    error TEXT,
+    output_path VARCHAR,
+    hf_repo_url VARCHAR,
+    created_at TIMESTAMP DEFAULT NOW(),
+    started_at TIMESTAMP,
+    completed_at TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT NOW()
+);
+
+CREATE INDEX IF NOT EXISTS ix_finetune_jobs_status ON finetune_jobs(status);
+CREATE INDEX IF NOT EXISTS ix_finetune_jobs_dataset_id ON finetune_jobs(dataset_id);
+CREATE INDEX IF NOT EXISTS ix_finetune_jobs_created_at ON finetune_jobs(created_at);
+
+-- Human review queue (added for HITL integration)
+CREATE TABLE IF NOT EXISTS review_queue (
+    id VARCHAR PRIMARY KEY,
+    job_id VARCHAR NOT NULL,
+    dataset_id VARCHAR DEFAULT '',
+    instruction TEXT NOT NULL,
+    response TEXT NOT NULL,
+    source_url VARCHAR DEFAULT '',
+    source_text TEXT DEFAULT '',
+    quality_score FLOAT DEFAULT 0.0,
+    hallucination_risk FLOAT DEFAULT 0.0,
+    duplicate_score FLOAT DEFAULT 0.0,
+    diversity_score FLOAT DEFAULT 0.0,
+    review_status VARCHAR DEFAULT 'pending',
+    review_decision VARCHAR,
+    review_notes TEXT DEFAULT '',
+    reviewed_by VARCHAR DEFAULT '',
+    review_timestamp TIMESTAMP,
+    edited_instruction TEXT,
+    edited_response TEXT,
+    review_version INTEGER DEFAULT 0,
+    created_at TIMESTAMP DEFAULT NOW(),
+    updated_at TIMESTAMP DEFAULT NOW()
+);
+
+CREATE INDEX IF NOT EXISTS ix_review_queue_job_id ON review_queue(job_id);
+CREATE INDEX IF NOT EXISTS ix_review_queue_status ON review_queue(review_status);
+CREATE INDEX IF NOT EXISTS ix_review_queue_created_at ON review_queue(created_at);

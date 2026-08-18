@@ -13,6 +13,8 @@ import {
   Workflow,
   Beaker,
   Settings as SettingsIcon,
+  Cpu,
+  ClipboardCheck,
 } from 'lucide-react'
 import { clsx } from 'clsx'
 import { Button } from '@/components/ui/button'
@@ -22,6 +24,8 @@ const navItems = [
   { href: '/datasets', label: 'Datasets', icon: Database },
   { href: '/studio', label: 'Studio', icon: FlaskConical },
   { href: '/orchestration', label: 'Orchestration', icon: Workflow },
+  { href: '/finetune', label: 'Fine-Tune', icon: Cpu },
+  { href: '/review', label: 'Review', icon: ClipboardCheck },
   { href: '/observability', label: 'Observability', icon: Activity },
   { href: '/providers', label: 'Providers', icon: Beaker },
   { href: '/research', label: 'Research', icon: Beaker },

@@ -107,6 +107,111 @@ class QualityScore(Base):
     sample = relationship("Sample", back_populates="quality_scores")
 
 
+class FineTuneJob(Base):
+    """Fine-tuning job model — tracks PEFT/LoRA training runs."""
+    __tablename__ = "finetune_jobs"
+
+    id = Column(PG_UUID(as_uuid=False), primary_key=True, default=lambda: str(uuid.uuid4()))
+    dataset_id = Column(PG_UUID(as_uuid=False), ForeignKey("datasets.id", ondelete="SET NULL"), nullable=True, index=True)
+    # job metadata
+    status = Column(String, nullable=False, default="pending", index=True)  # pending/running/completed/failed/cancelled
+    base_model = Column(String, nullable=False)          # e.g. "unsloth/llama-3-8b"
+    output_model_name = Column(String)                   # HF Hub repo or local path
+    # config payload – lora_r, lora_alpha, epochs, batch_size, lr, push_to_hub, etc.
+    config = Column(JSON, default=dict)
+    # results
+    progress = Column(Float, default=0.0)
+    current_epoch = Column(Integer, default=0)
+    total_epochs = Column(Integer, default=1)
+    train_loss = Column(Float)
+    eval_loss = Column(Float)
+    error = Column(Text)
+    output_path = Column(String)                         # local checkpoint dir
+    hf_repo_url = Column(String)                         # HF Hub URL if pushed
+    # timing
+    created_at = Column(DateTime, default=datetime.utcnow)
+    started_at = Column(DateTime)
+    completed_at = Column(DateTime)
+    updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+
+    def to_dict(self) -> dict:
+        return {
+            "id": self.id,
+            "dataset_id": self.dataset_id,
+            "status": self.status,
+            "base_model": self.base_model,
+            "output_model_name": self.output_model_name,
+            "config": self.config or {},
+            "progress": self.progress,
+            "current_epoch": self.current_epoch,
+            "total_epochs": self.total_epochs,
+            "train_loss": self.train_loss,
+            "eval_loss": self.eval_loss,
+            "error": self.error,
+            "output_path": self.output_path,
+            "hf_repo_url": self.hf_repo_url,
+            "created_at": self.created_at.isoformat() if self.created_at else None,
+            "started_at": self.started_at.isoformat() if self.started_at else None,
+            "completed_at": self.completed_at.isoformat() if self.completed_at else None,
+            "updated_at": self.updated_at.isoformat() if self.updated_at else None,
+        }
+
+
+class ReviewQueueItem(Base):
+    """Persistent human-review queue item."""
+    __tablename__ = "review_queue"
+
+    id = Column(PG_UUID(as_uuid=False), primary_key=True, default=lambda: str(uuid.uuid4()))
+    job_id = Column(String, nullable=False, index=True)
+    dataset_id = Column(String, default="")
+    instruction = Column(Text, nullable=False)
+    response = Column(Text, nullable=False)
+    source_url = Column(String, default="")
+    source_text = Column(Text, default="")
+    # quality signals
+    quality_score = Column(Float, default=0.0)
+    hallucination_risk = Column(Float, default=0.0)
+    duplicate_score = Column(Float, default=0.0)
+    diversity_score = Column(Float, default=0.0)
+    # review state
+    review_status = Column(String, default="pending", index=True)   # pending/in_review/approved/rejected/flagged
+    review_decision = Column(String)                                  # approve/reject/edit
+    review_notes = Column(Text, default="")
+    reviewed_by = Column(String, default="")
+    review_timestamp = Column(DateTime)
+    edited_instruction = Column(Text)
+    edited_response = Column(Text)
+    review_version = Column(Integer, default=0)
+    # timestamps
+    created_at = Column(DateTime, default=datetime.utcnow, index=True)
+    updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+
+    def to_dict(self) -> dict:
+        return {
+            "id": self.id,
+            "job_id": self.job_id,
+            "dataset_id": self.dataset_id,
+            "instruction": self.instruction,
+            "response": self.response,
+            "source_url": self.source_url,
+            "source_text": (self.source_text or "")[:200],
+            "quality_score": self.quality_score,
+            "hallucination_risk": self.hallucination_risk,
+            "duplicate_score": self.duplicate_score,
+            "diversity_score": self.diversity_score,
+            "review_status": self.review_status,
+            "review_decision": self.review_decision,
+            "review_notes": self.review_notes,
+            "reviewed_by": self.reviewed_by,
+            "review_timestamp": self.review_timestamp.isoformat() if self.review_timestamp else None,
+            "edited_instruction": self.edited_instruction,
+            "edited_response": self.edited_response,
+            "review_version": self.review_version,
+            "created_at": self.created_at.isoformat() if self.created_at else None,
+            "updated_at": self.updated_at.isoformat() if self.updated_at else None,
+        }
+
+
 class DatabaseManager:
     """Database manager for async SQLAlchemy operations."""
 
@@ -171,6 +276,11 @@ class DatabaseManager:
                 ("ix_datasets_job_id", "datasets", "job_id"),
                 ("ix_datasets_created_at", "datasets", "created_at"),
                 ("ix_samples_dataset_id", "samples", "dataset_id"),
+                ("ix_finetune_jobs_status", "finetune_jobs", "status"),
+                ("ix_finetune_jobs_dataset_id", "finetune_jobs", "dataset_id"),
+                ("ix_review_queue_job_id", "review_queue", "job_id"),
+                ("ix_review_queue_status", "review_queue", "review_status"),
+                ("ix_review_queue_created_at", "review_queue", "created_at"),
             ]
             for idx_name, table, column in indexes:
                 try:
@@ -340,6 +450,117 @@ class DatabaseManager:
             await self._commit_with_retry(session)
             _ = (source.id, source.url, source.source_type, source.title)
             return source
+
+    # ── Fine-tune job helpers ─────────────────────────────────────────────
+
+    async def create_finetune_job(self, data: dict) -> "FineTuneJob":
+        """Persist a new FineTuneJob row."""
+        from sqlalchemy import text as _text  # noqa – already imported above but safe
+        async with self.session_maker() as session:
+            fj = FineTuneJob(**data)
+            session.add(fj)
+            await self._commit_with_retry(session)
+            _ = fj.id
+            return fj
+
+    async def get_finetune_job(self, job_id: str) -> Optional["FineTuneJob"]:
+        async with self.session_maker() as session:
+            return await session.get(FineTuneJob, job_id)
+
+    async def update_finetune_job(self, job_id: str, **kwargs) -> None:
+        async with self.session_maker() as session:
+            fj = await session.get(FineTuneJob, job_id)
+            if fj:
+                for k, v in kwargs.items():
+                    if hasattr(fj, k):
+                        setattr(fj, k, v)
+                await self._commit_with_retry(session)
+
+    async def list_finetune_jobs(self, limit: int = 100) -> list["FineTuneJob"]:
+        from sqlalchemy import select
+        async with self.session_maker() as session:
+            result = await session.execute(
+                select(FineTuneJob).order_by(FineTuneJob.created_at.desc()).limit(limit)
+            )
+            jobs = list(result.scalars().all())
+            for j in jobs:
+                _ = j.id
+            return jobs
+
+    # ── Review queue helpers ──────────────────────────────────────────────
+
+    async def create_review_item(self, data: dict) -> "ReviewQueueItem":
+        async with self.session_maker() as session:
+            item = ReviewQueueItem(**data)
+            session.add(item)
+            await self._commit_with_retry(session)
+            _ = item.id
+            return item
+
+    async def get_review_item(self, item_id: str) -> Optional["ReviewQueueItem"]:
+        async with self.session_maker() as session:
+            return await session.get(ReviewQueueItem, item_id)
+
+    async def update_review_item(self, item_id: str, **kwargs) -> Optional["ReviewQueueItem"]:
+        async with self.session_maker() as session:
+            item = await session.get(ReviewQueueItem, item_id)
+            if item:
+                for k, v in kwargs.items():
+                    if hasattr(item, k):
+                        setattr(item, k, v)
+                await self._commit_with_retry(session)
+            return item
+
+    async def list_review_items(
+        self,
+        status: Optional[str] = None,
+        job_id: Optional[str] = None,
+        page: int = 1,
+        page_size: int = 50,
+    ) -> tuple[list["ReviewQueueItem"], int]:
+        """Return (items, total_count) with optional filters and pagination."""
+        from sqlalchemy import select, func
+        async with self.session_maker() as session:
+            base_q = select(ReviewQueueItem)
+            if status:
+                base_q = base_q.where(ReviewQueueItem.review_status == status)
+            if job_id:
+                base_q = base_q.where(ReviewQueueItem.job_id == job_id)
+
+            count_result = await session.execute(
+                select(func.count()).select_from(base_q.subquery())
+            )
+            total = count_result.scalar() or 0
+
+            offset = (page - 1) * page_size
+            data_result = await session.execute(
+                base_q.order_by(ReviewQueueItem.created_at.desc()).offset(offset).limit(page_size)
+            )
+            items = list(data_result.scalars().all())
+            for i in items:
+                _ = i.id
+            return items, total
+
+    async def review_stats(self) -> dict:
+        from sqlalchemy import select, func
+        async with self.session_maker() as session:
+            result = await session.execute(
+                select(ReviewQueueItem.review_status, func.count().label("cnt"))
+                .group_by(ReviewQueueItem.review_status)
+            )
+            rows = result.all()
+        counts: dict[str, int] = {r[0]: r[1] for r in rows}
+        total = sum(counts.values())
+        return {
+            "total": total,
+            "pending": counts.get("pending", 0),
+            "in_review": counts.get("in_review", 0),
+            "approved": counts.get("approved", 0),
+            "rejected": counts.get("rejected", 0),
+            "flagged": counts.get("flagged", 0),
+            "approval_rate": round(counts.get("approved", 0) / max(total, 1) * 100, 1),
+            "rejection_rate": round(counts.get("rejected", 0) / max(total, 1) * 100, 1),
+        }
 
     async def delete_job(self, job_id: str) -> bool:
         """Delete a job and all associated data."""

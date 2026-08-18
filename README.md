@@ -232,11 +232,79 @@ Access the frontend at http://localhost:3000
 | `/quality` | Dataset quality dashboard with dynamic **Strategic Segmentation** |
 | `/datasets` | Dataset explorer and validation |
 | `/providers` | Multi-provider management console |
+| `/finetune` | **Fine-Tune Studio** — PEFT/LoRA fine-tuning with live training logs |
+| `/review` | **Human Review Queue** — HITL sample review with keyboard shortcuts |
 | `/observability` | System metrics and tracing |
 | `/research` | Provider benchmarking |
 | `/settings` | Platform configuration |
 
 See [frontend/README.md](frontend/README.md) for details.
+
+## Fine-Tuning Integration
+
+After generating a dataset you can fine-tune an open-source model directly:
+
+```bash
+# Start a fine-tuning job (uses the JSONL output of a dataset job)
+curl -X POST http://localhost:8000/api/finetune/jobs \
+  -H "Content-Type: application/json" \
+  -d '{
+    "dataset_id": "<your-dataset-id>",
+    "base_model": "HuggingFaceTB/SmolLM2-1.7B-Instruct",
+    "num_train_epochs": 3,
+    "lora_r": 16,
+    "chat_template": "alpaca"
+  }'
+
+# Stream live training progress
+wscat -c ws://localhost:8000/api/finetune/jobs/<id>/stream
+
+# List supported base models
+curl http://localhost:8000/api/finetune/models
+```
+
+Supported base models: Llama-3 8B, Mistral 7B, Phi-3 Mini, Gemma-2 9B, Qwen-2.5 7B, SmolLM2 1.7B.
+
+Uses [Unsloth](https://github.com/unslothai/unsloth) for 2-4× GPU speedup when available; falls back to plain HuggingFace PEFT on CPU.
+
+Install fine-tuning dependencies:
+
+```bash
+pip install -e ".[finetuning]"
+# Optional GPU acceleration:
+pip install unsloth
+```
+
+## Human-in-the-Loop (HITL) Review
+
+Enable reviewer approval gates in the dataset generation pipeline:
+
+```bash
+# Start a job with blocking HITL (pipeline pauses after construction)
+curl -X POST http://localhost:8000/jobs \
+  -d '{"target_domain": "...", "human_review": true, "human_review_mode": "blocking"}'
+
+# Review samples at http://localhost:3000/review
+# Then resume the pipeline:
+curl -X POST http://localhost:8000/api/review/jobs/<job_id>/resume
+
+# Export approved samples as JSONL for fine-tuning:
+curl http://localhost:8000/api/review/queue/export?job_id=<job_id> -o approved.jsonl
+```
+
+`human_review_mode` options:
+- `blocking` — pipeline pauses and waits for reviewer to call `/resume`
+- `async` — samples submitted for review, pipeline continues immediately
+
+| Endpoint | Description |
+|----------|-------------|
+| `GET /api/review/queue` | List review queue with filters |
+| `POST /api/review/queue/{id}/approve` | Approve a sample |
+| `POST /api/review/queue/{id}/reject` | Reject a sample |
+| `POST /api/review/queue/{id}/edit` | Edit and approve |
+| `GET /api/review/queue/export` | Download approved as JSONL |
+| `GET /api/review/paused` | List jobs paused at HITL gate |
+| `POST /api/review/jobs/{id}/resume` | Resume a paused job |
 
 ## Monitoring
 

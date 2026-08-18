@@ -52,6 +52,10 @@ try:
 except ImportError:
     PAGINATION_AVAILABLE = False
 
+# Singleton set by api/server.py lifespan; read by orchestrator HITL node.
+# Stays None until the server has fully started.
+_review_service_instance = None
+
 __all__ = [
     # Config
     "Settings",

@@ -128,7 +128,13 @@ class AdmissionController:
         if self._semaphore.locked() is False and not self._queue:
             # Semaphore has no waiters and queue is empty — fast admit
             await self._semaphore.acquire()
-            self._admit_job(job_id)
+            try:
+                self._admit_job(job_id)
+            except Exception as exc:
+                # _admit_job raised (e.g. provider unavailable) — release slot and reject
+                self._semaphore.release()
+                logger.warning("admit_job failed for %s: %s", job_id, exc)
+                return False
             return True
 
         # Slow path: queue the job

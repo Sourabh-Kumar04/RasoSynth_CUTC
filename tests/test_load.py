@@ -164,7 +164,8 @@ class TestFailureInjection:
 
         stats = controller.get_stats()
         assert controller.get_active_count() == 0
-        assert stats["total_admitted"] + stats["total_completed"] == stats["total_admitted"]
+        # All admitted jobs were released — completed count should equal admitted count
+        assert stats["total_completed"] == stats["total_admitted"]
 
         await controller.stop()
 

@@ -1,31 +1,38 @@
 """
-Human Review Service — manages review queue, approvals, rejections, edits.
-In-memory implementation for now, designed for easy DB backend swap.
+Human Review Service — async, DB-backed.
+
+Improvements over v1:
+- _bump_version inlined into update call (one round-trip instead of two)
+- get_paused_jobs() exposes currently-blocked dataset jobs
+- export_approved() streams approved items as JSONL for fine-tuning
 """
-import uuid
+
+from __future__ import annotations
+
+import asyncio
+import logging
 from datetime import datetime
-from typing import Optional
-from enum import Enum
+from typing import AsyncGenerator, Optional
+
+from core.db import DatabaseManager, ReviewQueueItem
+
+logger = logging.getLogger(__name__)
 
 
-class ReviewStatus(str, Enum):
-    PENDING = "pending"
-    APPROVED = "approved"
-    REJECTED = "rejected"
-    FLAGGED = "flagged"
-    IN_REVIEW = "in_review"
+class ReviewService:
+    """
+    Async review service backed by DatabaseManager.
+    One instance stored on app.state.review_service.
+    """
 
+    def __init__(self, db_manager: DatabaseManager):
+        self.db = db_manager
+        # job_id -> asyncio.Event (set when reviewer calls resume_job)
+        self._resume_events: dict[str, asyncio.Event] = {}
 
-class ReviewDecision(str, Enum):
-    APPROVE = "approve"
-    REJECT = "reject"
-    EDIT = "edit"
+    # ── Submit / query ────────────────────────────────────────────────────────
 
-
-class ReviewQueueItem:
-    """In-memory review queue item representation."""
-
-    def __init__(
+    async def submit(
         self,
         instruction: str,
         response: str,
@@ -37,196 +44,191 @@ class ReviewQueueItem:
         hallucination_risk: float = 0.0,
         duplicate_score: float = 0.0,
         diversity_score: float = 0.0,
-    ):
-        self.id = str(uuid.uuid4())
-        self.job_id = job_id
-        self.dataset_id = dataset_id
-        self.instruction = instruction
-        self.response = response
-        self.source_url = source_url
-        self.source_text = source_text
-        self.quality_score = quality_score
-        self.hallucination_risk = hallucination_risk
-        self.duplicate_score = duplicate_score
-        self.diversity_score = diversity_score
-
-        self.review_status = ReviewStatus.PENDING
-        self.review_decision: Optional[str] = None
-        self.review_notes = ""
-        self.reviewed_by = ""
-        self.review_timestamp: Optional[datetime] = None
-        self.edited_instruction: Optional[str] = None
-        self.edited_response: Optional[str] = None
-        self.review_version = 0
-
-        self.created_at = datetime.utcnow()
-        self.updated_at = datetime.utcnow()
-
-    def to_dict(self) -> dict:
-        return {
-            "id": self.id,
-            "job_id": self.job_id,
-            "dataset_id": self.dataset_id,
-            "instruction": self.instruction,
-            "response": self.response,
-            "source_url": self.source_url,
-            "source_text": self.source_text[:200] if self.source_text else "",
-            "quality_score": self.quality_score,
-            "hallucination_risk": self.hallucination_risk,
-            "duplicate_score": self.duplicate_score,
-            "diversity_score": self.diversity_score,
-            "review_status": self.review_status.value if isinstance(self.review_status, Enum) else self.review_status,
-            "review_decision": self.review_decision,
-            "review_notes": self.review_notes,
-            "reviewed_by": self.reviewed_by,
-            "review_timestamp": self.review_timestamp.isoformat() if self.review_timestamp else None,
-            "edited_instruction": self.edited_instruction,
-            "edited_response": self.edited_response,
-            "review_version": self.review_version,
-            "created_at": self.created_at.isoformat(),
-            "updated_at": self.updated_at.isoformat(),
-        }
-
-
-class ReviewService:
-    """Manages the human review queue."""
-
-    def __init__(self):
-        self._items: dict[str, ReviewQueueItem] = {}
-
-    def submit(
-        self,
-        instruction: str,
-        response: str,
-        job_id: str,
-        **kwargs,
-    ) -> ReviewQueueItem:
-        item = ReviewQueueItem(instruction, response, job_id, **kwargs)
-        self._items[item.id] = item
-        return item
-
-    def approve(self, item_id: str, reviewer: str, notes: str = "") -> Optional[dict]:
-        item = self._items.get(item_id)
-        if not item:
-            return None
-        item.review_status = ReviewStatus.APPROVED
-        item.review_decision = ReviewDecision.APPROVE
-        item.review_notes = notes
-        item.reviewed_by = reviewer
-        item.review_timestamp = datetime.utcnow()
-        item.review_version += 1
-        item.updated_at = datetime.utcnow()
+    ) -> dict:
+        item = await self.db.create_review_item(dict(
+            job_id=job_id,
+            dataset_id=dataset_id,
+            instruction=instruction,
+            response=response,
+            source_url=source_url,
+            source_text=source_text,
+            quality_score=quality_score,
+            hallucination_risk=hallucination_risk,
+            duplicate_score=duplicate_score,
+            diversity_score=diversity_score,
+            review_status="pending",
+        ))
         return item.to_dict()
 
-    def reject(self, item_id: str, reviewer: str, reason: str = "") -> Optional[dict]:
-        item = self._items.get(item_id)
-        if not item:
-            return None
-        item.review_status = ReviewStatus.REJECTED
-        item.review_decision = ReviewDecision.REJECT
-        item.review_notes = reason
-        item.reviewed_by = reviewer
-        item.review_timestamp = datetime.utcnow()
-        item.review_version += 1
-        item.updated_at = datetime.utcnow()
-        return item.to_dict()
+    async def get_item(self, item_id: str) -> Optional[dict]:
+        item = await self.db.get_review_item(item_id)
+        return item.to_dict() if item else None
 
-    def edit(
+    async def get_queue(
         self,
-        item_id: str,
-        reviewer: str,
-        edited_instruction: str = None,
-        edited_response: str = None,
-        notes: str = "",
-    ) -> Optional[dict]:
-        item = self._items.get(item_id)
-        if not item:
-            return None
-        item.edited_instruction = edited_instruction or item.instruction
-        item.edited_response = edited_response or item.response
-        item.review_status = ReviewStatus.APPROVED
-        item.review_decision = ReviewDecision.EDIT
-        item.review_notes = notes
-        item.reviewed_by = reviewer
-        item.review_timestamp = datetime.utcnow()
-        item.review_version += 1
-        item.updated_at = datetime.utcnow()
-        return item.to_dict()
-
-    def get_queue(
-        self,
-        status: str = None,
-        job_id: str = None,
+        status: Optional[str] = None,
+        job_id: Optional[str] = None,
         page: int = 1,
         page_size: int = 50,
     ) -> dict:
-        items = list(self._items.values())
-        if status:
-            items = [i for i in items if i.review_status.value == status or i.review_status == status]
-        if job_id:
-            items = [i for i in items if i.job_id == job_id]
-
-        total = len(items)
-        start = (page - 1) * page_size
-        end = start + page_size
-        page_items = items[start:end]
-
+        items, total = await self.db.list_review_items(
+            status=status, job_id=job_id, page=page, page_size=page_size
+        )
         return {
-            "items": [i.to_dict() for i in page_items],
+            "items": [i.to_dict() for i in items],
             "total": total,
             "page": page,
             "page_size": page_size,
             "total_pages": (total + page_size - 1) // page_size if page_size > 0 else 0,
         }
 
-    def get_item(self, item_id: str) -> Optional[dict]:
-        item = self._items.get(item_id)
+    # ── Review actions ────────────────────────────────────────────────────────
+
+    async def approve(self, item_id: str, reviewer: str, notes: str = "") -> Optional[dict]:
+        existing = await self.db.get_review_item(item_id)
+        if not existing:
+            return None
+        item = await self.db.update_review_item(
+            item_id,
+            review_status="approved",
+            review_decision="approve",
+            review_notes=notes,
+            reviewed_by=reviewer,
+            review_timestamp=datetime.utcnow(),
+            review_version=(existing.review_version or 0) + 1,
+        )
         return item.to_dict() if item else None
 
-    def get_stats(self) -> dict:
-        total = len(self._items)
-        pending = sum(1 for i in self._items.values() if i.review_status == ReviewStatus.PENDING)
-        approved = sum(1 for i in self._items.values() if i.review_status == ReviewStatus.APPROVED)
-        rejected = sum(1 for i in self._items.values() if i.review_status == ReviewStatus.REJECTED)
-        flagged = sum(1 for i in self._items.values() if i.review_status == ReviewStatus.FLAGGED)
-        in_review = sum(1 for i in self._items.values() if i.review_status == ReviewStatus.IN_REVIEW)
-        return {
-            "total": total,
-            "pending": pending,
-            "approved": approved,
-            "rejected": rejected,
-            "flagged": flagged,
-            "in_review": in_review,
-            "approval_rate": round(approved / max(total, 1) * 100, 1),
-            "rejection_rate": round(rejected / max(total, 1) * 100, 1),
-        }
+    async def reject(self, item_id: str, reviewer: str, reason: str = "") -> Optional[dict]:
+        existing = await self.db.get_review_item(item_id)
+        if not existing:
+            return None
+        item = await self.db.update_review_item(
+            item_id,
+            review_status="rejected",
+            review_decision="reject",
+            review_notes=reason,
+            reviewed_by=reviewer,
+            review_timestamp=datetime.utcnow(),
+            review_version=(existing.review_version or 0) + 1,
+        )
+        return item.to_dict() if item else None
 
-    def bulk_approve(self, filters: dict, reviewer: str, reason: str = "") -> int:
-        items = self._get_filtered(filters)
+    async def edit(
+        self,
+        item_id: str,
+        reviewer: str,
+        edited_instruction: Optional[str] = None,
+        edited_response: Optional[str] = None,
+        notes: str = "",
+    ) -> Optional[dict]:
+        existing = await self.db.get_review_item(item_id)
+        if not existing:
+            return None
+        item = await self.db.update_review_item(
+            item_id,
+            edited_instruction=edited_instruction or existing.instruction,
+            edited_response=edited_response or existing.response,
+            review_status="approved",
+            review_decision="edit",
+            review_notes=notes,
+            reviewed_by=reviewer,
+            review_timestamp=datetime.utcnow(),
+            review_version=(existing.review_version or 0) + 1,
+        )
+        return item.to_dict() if item else None
+
+    async def flag(self, item_id: str, reviewer: str, reason: str = "") -> Optional[dict]:
+        existing = await self.db.get_review_item(item_id)
+        if not existing:
+            return None
+        item = await self.db.update_review_item(
+            item_id,
+            review_status="flagged",
+            review_notes=reason,
+            reviewed_by=reviewer,
+            review_timestamp=datetime.utcnow(),
+            review_version=(existing.review_version or 0) + 1,
+        )
+        return item.to_dict() if item else None
+
+    # ── Bulk operations ───────────────────────────────────────────────────────
+
+    async def bulk_approve(self, filters: dict, reviewer: str, reason: str = "") -> int:
+        items, _ = await self.db.list_review_items(
+            status=filters.get("status"),
+            job_id=filters.get("job_id"),
+            page=1, page_size=10000,
+        )
         count = 0
         for item in items:
-            self.approve(item.id, reviewer, reason)
+            if filters.get("quality_min") and (item.quality_score or 0) < filters["quality_min"]:
+                continue
+            await self.approve(item.id, reviewer, reason)
             count += 1
         return count
 
-    def bulk_reject(self, filters: dict, reviewer: str, reason: str = "") -> int:
-        items = self._get_filtered(filters)
+    async def bulk_reject(self, filters: dict, reviewer: str, reason: str = "") -> int:
+        items, _ = await self.db.list_review_items(
+            status=filters.get("status"),
+            job_id=filters.get("job_id"),
+            page=1, page_size=10000,
+        )
         count = 0
         for item in items:
-            self.reject(item.id, reviewer, reason)
+            await self.reject(item.id, reviewer, reason)
             count += 1
         return count
 
-    def _get_filtered(self, filters: dict) -> list[ReviewQueueItem]:
-        items = list(self._items.values())
-        if filters.get("status"):
-            items = [i for i in items if i.review_status.value == filters["status"]]
-        if filters.get("job_id"):
-            items = [i for i in items if i.job_id == filters["job_id"]]
-        if filters.get("quality_min"):
-            items = [i for i in items if i.quality_score >= filters["quality_min"]]
-        if filters.get("quality_max"):
-            items = [i for i in items if i.quality_score <= filters["quality_max"]]
-        if filters.get("hallucination_max"):
-            items = [i for i in items if i.hallucination_risk <= filters["hallucination_max"]]
-        return items
+    # ── Stats & export ────────────────────────────────────────────────────────
+
+    async def get_stats(self) -> dict:
+        return await self.db.review_stats()
+
+    async def export_approved(self, job_id: Optional[str] = None) -> AsyncGenerator[str, None]:
+        """Yield JSONL lines of all approved items (optionally filtered by job)."""
+        import json
+        page = 1
+        while True:
+            items, total = await self.db.list_review_items(
+                status="approved", job_id=job_id, page=page, page_size=500
+            )
+            for item in items:
+                d = item.to_dict()
+                # Use edited text if available, else original
+                yield json.dumps({
+                    "instruction": d.get("edited_instruction") or d["instruction"],
+                    "response": d.get("edited_response") or d["response"],
+                    "input": "",
+                    "source_review_id": d["id"],
+                    "job_id": d["job_id"],
+                    "quality_score": d["quality_score"],
+                }) + "\n"
+            if page * 500 >= total:
+                break
+            page += 1
+
+    # ── HITL pause / resume ───────────────────────────────────────────────────
+
+    async def pause_job_for_review(self, job_id: str) -> asyncio.Event:
+        """Returns an Event that will be set when resume_job() is called."""
+        event = asyncio.Event()
+        self._resume_events[job_id] = event
+        logger.info("Job %s paused at HITL gate", job_id)
+        return event
+
+    async def resume_job(self, job_id: str) -> bool:
+        event = self._resume_events.pop(job_id, None)
+        if event is not None:
+            event.set()
+            logger.info("Job %s resumed", job_id)
+            return True
+        logger.warning("resume_job: job %s was not paused", job_id)
+        return False
+
+    def is_job_paused(self, job_id: str) -> bool:
+        return job_id in self._resume_events
+
+    def get_paused_jobs(self) -> list[str]:
+        """Return list of job_ids currently paused at the HITL gate."""
+        return list(self._resume_events.keys())

@@ -67,6 +67,16 @@ dev = [
 ]
 flower = ["flower>=2.0.0"]
 ray = ["ray>=2.35.0"]
+# Fine-tuning dependencies — install with: pip install -e ".[finetuning]"
+# Unsloth is optional (NVIDIA GPU only). Install separately if needed.
+finetuning = [
+    "transformers>=4.44.0",
+    "peft>=0.12.0",
+    "trl>=0.9.0",
+    "accelerate>=0.33.0",
+    "bitsandbytes>=0.43.0",
+    "datasets>=3.0.0",
+]
 
 [project.scripts]
 dataset-engine = "main:main"

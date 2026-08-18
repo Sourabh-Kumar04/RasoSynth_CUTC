@@ -191,6 +191,11 @@ class TestQualityBenchmark:
 class TestQualityBenchmarkEdgeCases:
     """Edge case tests for QualityBenchmark."""
 
+    @pytest.fixture
+    def benchmark(self):
+        """Create a QualityBenchmark instance."""
+        return QualityBenchmark()
+
     @pytest.mark.asyncio
     async def test_benchmark_dataset_quality_duplicate_instructions(self):
         """Test that duplicate instructions are counted correctly."""

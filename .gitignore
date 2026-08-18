@@ -8,6 +8,11 @@
 .env.production.local
 *.pem
 *.key
+*.crt
+*.p12
+*.pfx
+# HuggingFace token cache
+.huggingface/
 
 # =============================================================================
 # DATABASE & DATA STORAGE
@@ -18,6 +23,9 @@ data/*.sqlite3
 *.db
 *.sqlite
 *.sqlite3
+# SQLite write-ahead log / shared memory sidecars
+*.db-wal
+*.db-shm
 
 # =============================================================================
 # GENERATED DATASETS & OUTPUT ARTIFACTS
@@ -27,6 +35,17 @@ outputs/*
 scratch/
 temp/
 tmp/
+
+# Fine-tuning model weights and checkpoints (can be tens of GB)
+outputs/finetune/
+*.safetensors
+*.bin
+*.pt
+*.ckpt
+# PEFT adapter files saved locally
+adapter_model.safetensors
+adapter_model.bin
+adapter_config.json
 
 # =============================================================================
 # PYTHON & TESTING
@@ -44,6 +63,16 @@ venv/
 .venv/
 env/
 ENV/
+# Distribution / packaging
+*.egg-info/
+dist/
+build/
+*.egg
+.eggs/
+# Type checking caches
+.pytype/
+.dmypy.json
+dmypy.json
 
 # =============================================================================
 # FRONTEND & NODE.JS
@@ -54,14 +83,52 @@ frontend/out/
 frontend/build/
 frontend/dist/
 frontend/.turbo/
+# TypeScript incremental build info (regenerated on every build)
+frontend/tsconfig.tsbuildinfo
 .npm
 *.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
 
 # =============================================================================
-# IDE & SYSTEM FILES
+# IDE & EDITOR FILES
 # =============================================================================
 .claude/
 .vscode/
 .idea/
+*.swp
+*.swo
+*~
+.direnv/
+
+# =============================================================================
+# OS FILES
+# =============================================================================
 .DS_Store
+.DS_Store?
+._*
 Thumbs.db
+ehthumbs.db
+desktop.ini
+
+# =============================================================================
+# DOCKER & INFRASTRUCTURE
+# =============================================================================
+# Local docker-compose overrides (may contain secrets)
+docker-compose.override.yml
+docker-compose.local.yml
+# Mounted data volumes
+prometheus_data/
+grafana_data/
+redis_data/
+qdrant_data/
+
+# =============================================================================
+# STALE / BACKUP FILES
+# =============================================================================
+*.backup
+*.bak
+*.orig
+*.old

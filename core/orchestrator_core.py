@@ -44,7 +44,8 @@ class JobStatus(Enum):
     COMPLETED = "completed"
     FAILED = "failed"
     CANCELLED = "cancelled"
-    NEGOTIATING = "negotiating"  # When constraints are difficult
+    NEGOTIATING = "negotiating"      # When constraints are difficult
+    AWAITING_REVIEW = "awaiting_review"  # Paused at HITL gate
 
 
 @dataclass
@@ -301,6 +302,8 @@ class DatasetOrchestrator:
         self.config = config
         self.router = router
         self.db = db
+        # Expose the raw DatabaseManager so nodes like _human_review_node can call update_job
+        self.db_manager = getattr(db, "db", None) if db is not None else None
         self.ws_manager = ws_manager
         if observability:
             self.observability = observability
@@ -1276,38 +1279,108 @@ class DatasetOrchestrator:
         }
 
     async def _human_review_node(self, state: AgentState) -> AgentState:
-        """Submit constructed samples to human review queue."""
+        """
+        Human-in-the-loop (HITL) gate.
+
+        1. Submits all constructed samples to the persistent review queue.
+        2. If `human_review_mode` is "blocking" (default when human_review=True),
+           pauses the pipeline and awaits a reviewer calling
+           POST /api/review/jobs/{job_id}/resume.
+        3. Once resumed, marks the job approved and continues to export.
+
+        Config keys:
+          human_review        (bool, default True)  — enable HITL gate
+          human_review_mode   (str)  — "blocking" | "async"
+            blocking: wait for explicit /resume call (real HITL)
+            async:    submit for review but continue immediately
+          hitl_timeout_seconds (int) — max seconds to wait (0 = unlimited)
+        """
         job = state["job"]
         job_id = job["id"]
         samples = state.get("constructed_samples", [])
         config = job.get("config", {})
 
-        # Only submit if review is enabled in config
-        if config.get("human_review", True) and samples:
+        hitl_enabled = config.get("human_review", True)
+        hitl_mode = config.get("human_review_mode", "blocking")
+        hitl_timeout = int(config.get("hitl_timeout_seconds", 0))
+
+        submitted = 0
+        review_service = None
+
+        if hitl_enabled and samples:
+            # ── Resolve the ReviewService ──────────────────────────────
+            # Try to get the shared instance from app state first
             try:
-                from core.review_service import ReviewService
-                svc = ReviewService()
-                submitted = 0
+                # When running inside the FastAPI lifespan, the service is
+                # stored as a module-level singleton via _review_service_instance.
+                from core import _review_service_instance  # type: ignore
+                review_service = _review_service_instance
+            except (ImportError, AttributeError):
+                review_service = None
+
+            if review_service is not None:
                 for sample in samples:
-                    svc.submit(
-                        instruction=sample.get("instruction", ""),
-                        response=sample.get("response", ""),
-                        job_id=job_id,
-                        quality_score=sample.get("quality_score", 0.5),
-                        source_url=sample.get("metadata", {}).get("source_url", ""),
+                    try:
+                        await review_service.submit(
+                            instruction=sample.get("instruction", ""),
+                            response=sample.get("response", ""),
+                            job_id=job_id,
+                            dataset_id=sample.get("dataset_id", ""),
+                            source_url=sample.get("metadata", {}).get("source_url", ""),
+                            source_text=sample.get("source_text", ""),
+                            quality_score=float(sample.get("quality_score", 0.5)),
+                            hallucination_risk=float(sample.get("hallucination_risk", 0.0)),
+                            duplicate_score=float(sample.get("duplicate_score", 0.0)),
+                            diversity_score=float(sample.get("diversity_score", 0.0)),
+                        )
+                        submitted += 1
+                    except Exception as sub_err:
+                        logger.warning("Failed to submit sample for review: %s", sub_err)
+
+                logger.info("Job %s: submitted %d samples for human review (mode=%s)",
+                            job_id, submitted, hitl_mode)
+            else:
+                logger.warning("Job %s: review service not available — skipping submission", job_id)
+
+        # ── Blocking HITL gate ─────────────────────────────────────────
+        approved = False
+        if hitl_enabled and hitl_mode == "blocking" and review_service is not None:
+            # Update DB status so the UI shows the job is paused
+            try:
+                if self.db_manager:
+                    await self.db_manager.update_job(
+                        job_id,
+                        status=JobStatus.AWAITING_REVIEW.value,
+                        current_stage="human_review",
                     )
-                    submitted += 1
-                logger.info(f"Submitted {submitted} samples from job {job_id} for review")
-                state["messages"].append(f"Submitted {submitted} samples for human review")
-            except Exception as e:
-                logger.warning(f"Failed to submit samples for review: {e}")
-                state["messages"].append("Review submission skipped (service unavailable)")
+            except Exception:
+                pass
+
+            event = await review_service.pause_job_for_review(job_id)
+            logger.info("Job %s paused at HITL gate — waiting for reviewer", job_id)
+
+            try:
+                if hitl_timeout > 0:
+                    await asyncio.wait_for(event.wait(), timeout=float(hitl_timeout))
+                else:
+                    await event.wait()
+                approved = True
+                logger.info("Job %s resumed after HITL approval", job_id)
+            except asyncio.TimeoutError:
+                logger.warning("Job %s HITL timeout (%ds) — auto-approving", job_id, hitl_timeout)
+                approved = True   # Timeout = auto-approve (configurable behaviour)
+        else:
+            # async mode or service unavailable — continue without waiting
+            approved = True
 
         return {
             **state,
-            "human_approval_needed": True,
-            "human_approved": False,
-            "human_review_pending": True,
+            "human_approval_needed": hitl_enabled,
+            "human_approved": approved,
+            "messages": state.get("messages", []) + [
+                f"HITL gate: {submitted} samples submitted for review, "
+                f"mode={hitl_mode}, approved={approved}"
+            ],
         }
 
     async def _error_handler_node(self, state: AgentState) -> AgentState:

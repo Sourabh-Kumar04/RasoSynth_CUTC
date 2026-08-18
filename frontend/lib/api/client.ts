@@ -1056,6 +1056,83 @@ dataset_samples_generated_total 4520`
 
     return parse({});
   }
+
+  // ── Fine-tune API ──────────────────────────────────────────────────────────
+
+  async getSupportedModels() {
+    return this.request<{ models: any[] }>('/api/finetune/models')
+  }
+
+  async createFineTuneJob(config: Record<string, any>) {
+    return this.request<any>('/api/finetune/jobs', {
+      method: 'POST',
+      body: JSON.stringify(config),
+    })
+  }
+
+  async listFineTuneJobs(limit = 100) {
+    return this.request<{ jobs: any[] }>('/api/finetune/jobs', {
+      params: { limit },
+    })
+  }
+
+  async getFineTuneJob(jobId: string) {
+    return this.request<any>(`/api/finetune/jobs/${jobId}`)
+  }
+
+  async cancelFineTuneJob(jobId: string) {
+    return this.request<any>(`/api/finetune/jobs/${jobId}`, { method: 'DELETE' })
+  }
+
+  // ── Review API ────────────────────────────────────────────────────────────
+
+  async getReviewQueue(params?: { status?: string; job_id?: string; page?: number; page_size?: number }) {
+    return this.request<any>('/api/review/queue', { params: params as any })
+  }
+
+  async getReviewItem(itemId: string) {
+    return this.request<any>(`/api/review/queue/${itemId}`)
+  }
+
+  async approveReviewItem(itemId: string, reviewer: string, notes = '') {
+    return this.request<any>(`/api/review/queue/${itemId}/approve`, {
+      method: 'POST',
+      body: JSON.stringify({ reviewer, notes }),
+    })
+  }
+
+  async rejectReviewItem(itemId: string, reviewer: string, notes = '') {
+    return this.request<any>(`/api/review/queue/${itemId}/reject`, {
+      method: 'POST',
+      body: JSON.stringify({ reviewer, notes }),
+    })
+  }
+
+  async editReviewItem(itemId: string, reviewer: string, edited_instruction?: string, edited_response?: string, notes = '') {
+    return this.request<any>(`/api/review/queue/${itemId}/edit`, {
+      method: 'POST',
+      body: JSON.stringify({ reviewer, edited_instruction, edited_response, notes }),
+    })
+  }
+
+  async flagReviewItem(itemId: string, reviewer: string, notes = '') {
+    return this.request<any>(`/api/review/queue/${itemId}/flag`, {
+      method: 'POST',
+      body: JSON.stringify({ reviewer, notes }),
+    })
+  }
+
+  async getReviewStats() {
+    return this.request<any>('/api/review/stats')
+  }
+
+  async resumeHITLJob(jobId: string) {
+    return this.request<any>(`/api/review/jobs/${jobId}/resume`, { method: 'POST' })
+  }
+
+  async getHITLJobStatus(jobId: string) {
+    return this.request<any>(`/api/review/jobs/${jobId}/status`)
+  }
 }
 
 class MockWebSocket {

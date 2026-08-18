@@ -33,11 +33,19 @@ class QualityBenchmark:
         self.results = BenchmarkResults()
 
     async def run_all(self) -> dict:
-        """Run all benchmarks."""
-        await self.benchmark_generation_quality()
-        await self.benchmark_latency()
-        await self.benchmark_provider_quality()
-        await self.benchmark_cost_efficiency()
+        """Run all benchmarks and store each result."""
+        result = await self.benchmark_generation_quality()
+        self.results.add("benchmark_generation_quality", result)
+
+        result = await self.benchmark_latency()
+        self.results.add("benchmark_latency", result)
+
+        result = await self.benchmark_provider_quality()
+        self.results.add("benchmark_provider_quality", result)
+
+        result = await self.benchmark_cost_efficiency()
+        self.results.add("benchmark_cost_efficiency", result)
+
         return self.results.to_dict()
 
     async def benchmark_generation_quality(self) -> dict:

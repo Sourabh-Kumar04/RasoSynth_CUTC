@@ -505,11 +505,13 @@ class DatasetDiversityAnalyzer:
 
     def _shannon_entropy(self, counts: dict) -> float:
         """Compute Shannon entropy from a count or probability distribution."""
-        total = sum(counts.values()) if counts else 1
+        # Filter to only numeric values — dict may contain sentinel strings or nested dicts
+        numeric = {k: v for k, v in counts.items() if isinstance(v, (int, float))}
+        total = sum(numeric.values()) if numeric else 0
         if total == 0:
             return 0.0
         entropy = 0.0
-        for count in counts.values():
+        for count in numeric.values():
             if count > 0:
                 p = count / total
                 entropy -= p * math.log2(p)

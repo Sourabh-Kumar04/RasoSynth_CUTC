@@ -84,6 +84,7 @@ from api.provider_validator import ProviderValidator
 from api.auth import get_auth_manager, UserRole, User, get_current_user
 from api.review import router as review_router
 from api.quality import router as quality_router
+from api.finetune import router as finetune_router
 
 # Rate limiter for security (in-memory token bucket)
 class RateLimiter:
@@ -483,6 +484,47 @@ async def lifespan(app: FastAPI):
                 f"cache={'ready' if cache else 'disabled'}")
     logger.info("=" * 72)
 
+    # (10) ReviewService — DB-backed human review queue
+    review_service = None
+    if db is not None:
+        try:
+            from core.review_service import ReviewService as _ReviewService
+            review_service = _ReviewService(db.db)
+            app.state.review_service = review_service
+            # Make the singleton available for the orchestrator's HITL node
+            import core as _core_pkg
+            _core_pkg._review_service_instance = review_service
+            logger.info("  ✓ ReviewService (DB-backed) initialized")
+        except Exception as e:
+            logger.warning(f"  ⚠ ReviewService init failed: {e}")
+    else:
+        logger.warning("  ⚠ ReviewService skipped (no db)")
+
+    # (11) FinetuneJobManager
+    ft_manager = None
+    if db is not None:
+        try:
+            from finetuning.job_manager import FinetuneJobManager as _FTManager
+            ft_manager = _FTManager(db.db)
+            app.state.ft_manager = ft_manager
+            logger.info("  ✓ FinetuneJobManager initialized")
+        except Exception as e:
+            logger.warning(f"  ⚠ FinetuneJobManager init failed: {e}")
+    else:
+        logger.warning("  ⚠ FinetuneJobManager skipped (no db)")
+
+    # Also expose db on app.state for route dependencies
+    app.state.db = db
+
+    logger.info("=" * 72)
+    logger.info(
+        f"Startup complete — orchestrator={'ready' if orchestrator else 'NOT READY'}, "
+        f"db={'ready' if db else 'NOT READY'}, "
+        f"review={'ready' if review_service else 'disabled'}, "
+        f"finetune={'ready' if ft_manager else 'disabled'}"
+    )
+    logger.info("=" * 72)
+
     yield
 
     # ---- Shutdown ----
@@ -509,6 +551,11 @@ async def lifespan(app: FastAPI):
 
 
 app = FastAPI(lifespan=lifespan)
+
+# ── Sub-routers ────────────────────────────────────────────────────────────────
+app.include_router(review_router)
+app.include_router(quality_router)
+app.include_router(finetune_router)
 
 # Security: Add custom middleware
 app.add_middleware(SecurityHeadersMiddleware)

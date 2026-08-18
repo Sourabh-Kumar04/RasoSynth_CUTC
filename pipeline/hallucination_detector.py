@@ -270,19 +270,22 @@ class HallucinationDetector:
         sentences = re.split(r"[.!?]+", text)
         for sent in sentences:
             sent = sent.strip()
-            if not sent:
+            if not sent or len(sent) < 10:
                 continue
-            # Declarative sentences that make claims
+            # Accept declarative sentences: starts with capital, contains any verb signal
             if sent[0].isupper() and any(
                 w in sent.lower()
                 for w in [
                     " is ", " are ", " was ", " were ",
                     " has ", " have ", " will ", " can ",
                     " may ", " must ", " should ",
+                    # Active verbs common in factual claims
+                    " orbits ", " contains ", " produces ", " causes ",
+                    " affects ", " includes ", " requires ", " provides ",
+                    " takes ", " uses ", " makes ", " creates ",
                 ]
             ):
-                if len(sent) > 20:
-                    claims.append(sent)
+                claims.append(sent)
         return claims
 
     def _extract_citations(self, text: str) -> list[dict]:

@@ -13,6 +13,8 @@ import {
   CheckCircle2,
   Loader2,
   BarChart3,
+  Cpu,
+  ClipboardCheck,
 } from 'lucide-react'
 import { clsx } from 'clsx'
 import { Button } from '@/components/ui/button'
@@ -90,6 +92,18 @@ export function Sidebar() {
               <Button variant="ghost" className="w-full justify-start gap-2">
                 <BarChart3 className="h-4 w-4" />
                 Quality Dashboard
+              </Button>
+            </Link>
+            <Link href="/finetune">
+              <Button variant="ghost" className="w-full justify-start gap-2">
+                <Cpu className="h-4 w-4" />
+                Fine-Tune Studio
+              </Button>
+            </Link>
+            <Link href="/review">
+              <Button variant="ghost" className="w-full justify-start gap-2">
+                <ClipboardCheck className="h-4 w-4" />
+                Review Queue
               </Button>
             </Link>
           </div>
