@@ -1,5 +1,5 @@
 """
-Auto-Resume System for RasoDataset-Agent.
+Auto-Resume System for RasoSynthTune.
 
 On startup, detects incomplete jobs (running, pending) and resumes them.
 Uses checkpoints from CheckpointManager where available.

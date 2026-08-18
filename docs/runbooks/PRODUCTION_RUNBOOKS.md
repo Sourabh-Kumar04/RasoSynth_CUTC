@@ -1,6 +1,6 @@
 # Production Operations Runbooks
 
-Complete operational runbooks for RasoDataset-Agent platform.
+Complete operational runbooks for RasoSynthTune platform.
 
 ---
 
@@ -40,7 +40,7 @@ curl -s http://localhost:8000/api/v2/metrics | jq '.circuit_breakers'
 curl -s http://localhost:8000/api/v2/providers
 
 # Review error logs
-grep "provider" /var/log/ai-dataset-engineer/error.log | tail -100
+grep "provider" /var/log/rasosynthtune/error.log | tail -100
 ```
 
 ### Severity Classification
@@ -57,7 +57,7 @@ grep "provider" /var/log/ai-dataset-engineer/error.log | tail -100
 1. **Identify affected provider**
    ```bash
    # Check which provider is failing
-   grep "ProviderError" /var/log/ai-dataset-engineer/error.log | head -20
+   grep "ProviderError" /var/log/rasosynthtune/error.log | head -20
    ```
 
 2. **Enable fallback routing**
@@ -184,7 +184,7 @@ redis-cli info stats | grep evicted
    ```bash
    # Set environment variable
    export CACHE_ENABLED=false
-   systemctl restart ai-dataset-engineer
+   systemctl restart rasosynthtune
    ```
 
 4. **Manual cache warmup** (after recovery)
@@ -226,7 +226,7 @@ curl -s http://localhost:8000/metrics | grep "process_resident_memory"
 
 1. **Restart affected workers**
    ```bash
-   kubectl rollout restart deployment/ai-dataset-engineer
+   kubectl rollout restart deployment/rasosynthtune
    ```
 
 2. **Force garbage collection** (temporary)
@@ -268,7 +268,7 @@ curl -s http://localhost:8000/metrics | grep "process_resident_memory"
 
 ```bash
 # Check for blocking operations
-grep -r "time.sleep" /opt/ai-dataset-engineer/ | grep -v async
+grep -r "time.sleep" /opt/rasosynthtune/ | grep -v async
 
 # Profile async execution
 python -c "
@@ -299,13 +299,13 @@ curl -s http://localhost:8000/metrics | grep event_loop_lag
 
 2. **Restart service**
    ```bash
-   systemctl restart ai-dataset-engineer
+   systemctl restart rasosynthtune
    ```
 
 3. **Reduce concurrency**
    ```bash
    export UVICORN_WORKERS=2  # Reduce from 4
-   systemctl restart ai-dataset-engineer
+   systemctl restart rasosynthtune
    ```
 
 ### Prevention
@@ -329,7 +329,7 @@ curl -s http://localhost:8000/metrics | grep event_loop_lag
 curl -s http://localhost:8000/api/v2/metrics | jq '.circuit_breakers'
 
 # Review recent errors
-grep "circuit" /var/log/ai-dataset-engineer/error.log | tail -50
+grep "circuit" /var/log/rasosynthtune/error.log | tail -50
 ```
 
 ### Mitigation Steps
@@ -377,13 +377,13 @@ grep "circuit" /var/log/ai-dataset-engineer/error.log | tail -50
 kubectl get deployment ai-dataset-engineer -o jsonpath='{.spec.template.spec.containers[0].image}'
 
 # 2. Get deployment history
-kubectl rollout history deployment/ai-dataset-engineer
+kubectl rollout history deployment/rasosynthtune
 
 # 3. Rollback to previous version
-kubectl rollout undo deployment/ai-dataset-engineer
+kubectl rollout undo deployment/rasosynthtune
 
 # 4. Verify rollback
-kubectl rollout status deployment/ai-dataset-engineer
+kubectl rollout status deployment/rasosynthtune
 
 # 5. Check application health
 curl http://localhost:8000/health
@@ -435,7 +435,7 @@ curl -s http://localhost:8000/api/v2/orchestration/jobs?status=running
 ps -eLf | grep python | grep -v grep | wc -l
 
 # Check for deadlocks in logs
-grep -i "deadlock\|stuck\|hang" /var/log/ai-dataset-engineer/error.log
+grep -i "deadlock\|stuck\|hang" /var/log/rasosynthtune/error.log
 ```
 
 ### Mitigation Steps
@@ -454,7 +454,7 @@ grep -i "deadlock\|stuck\|hang" /var/log/ai-dataset-engineer/error.log
 
 3. **Restart orchestration workers**
    ```bash
-   kubectl rollout restart deployment/ai-dataset-engineer-worker
+   kubectl rollout restart deployment/rasosynthtune-worker
    ```
 
 4. **Check for external dependencies**
@@ -489,7 +489,7 @@ curl -s http://localhost:8000/metrics | jq '.streaming'
 curl -s http://localhost:8000/api/v2/metrics | jq '.sse_connections'
 
 # Review streaming logs
-grep -i "stream\|sse" /var/log/ai-dataset-engineer/error.log | tail -100
+grep -i "stream\|sse" /var/log/rasosynthtune/error.log | tail -100
 ```
 
 ### Mitigation Steps
@@ -511,7 +511,7 @@ grep -i "stream\|sse" /var/log/ai-dataset-engineer/error.log | tail -100
 4. **Disable streaming** (emergency fallback)
    ```bash
    export STREAMING_ENABLED=false
-   systemctl restart ai-dataset-engineer
+   systemctl restart rasosynthtune
    ```
 
 ### Recovery Steps
@@ -537,7 +537,7 @@ grep -i "stream\|sse" /var/log/ai-dataset-engineer/error.log | tail -100
 curl -s http://localhost:8000/metrics | jq '.retries'
 
 # Review retry pattern
-grep "retry" /var/log/ai-dataset-engineer/error.log | tail -200 | \
+grep "retry" /var/log/rasosynthtune/error.log | tail -200 | \
   awk '{print $5}' | sort | uniq -c | sort -rn
 
 # Check circuit breaker state
@@ -550,7 +550,7 @@ curl -s http://localhost:8000/metrics | jq '.circuit_breakers'
    ```bash
    export RETRY_POLICY=conservative
    export MAX_RETRIES=1
-   systemctl restart ai-dataset-engineer
+   systemctl restart rasosynthtune
    ```
 
 2. **Implement exponential backoff**
@@ -604,7 +604,7 @@ ps aux | grep postgres | wc -l
    kubectl scale deployment ai-dataset-engineer --replicas=2
 
    # Or scale up pool
-   kubectl set env deployment/ai-dataset-engineer DB_POOL_SIZE=20
+   kubectl set env deployment/rasosynthtune DB_POOL_SIZE=20
    ```
 
 2. **Kill idle connections**
@@ -617,7 +617,7 @@ ps aux | grep postgres | wc -l
 
 3. **Restart application** (if connections leaked)
    ```bash
-   kubectl rollout restart deployment/ai-dataset-engineer
+   kubectl rollout restart deployment/rasosynthtune
    ```
 
 ### Prevention
@@ -711,7 +711,7 @@ curl -s http://localhost:8000/api/v2/metrics | jq '.queue_depth'
 2. **Preserve evidence**
    ```bash
    # Capture logs
-   cp /var/log/ai-dataset-engineer/*.log /backup/security-$(date +%Y%m%d)/
+   cp /var/log/rasosynthtune/*.log /backup/security-$(date +%Y%m%d)/
 
    # Capture network traffic
    tcpdump -i eth0 -w /backup/capture-$(date +%Y%m%d).pcap
@@ -735,7 +735,7 @@ curl -s http://localhost:8000/api/v2/metrics | jq '.queue_depth'
 
 5. **Review access logs**
    ```bash
-   grep {suspicious_ip} /var/log/ai-dataset-engineer/access.log
+   grep {suspicious_ip} /var/log/rasosynthtune/access.log
    ```
 
 ### Recovery Steps

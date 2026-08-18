@@ -1,6 +1,6 @@
 # Release Management
 
-This document outlines the release lifecycle, versioning strategy, and deployment procedures for the RasoDataset-Agent platform.
+This document outlines the release lifecycle, versioning strategy, and deployment procedures for the RasoSynthTune platform.
 
 ## Versioning Strategy
 
@@ -101,7 +101,7 @@ pytest tests/ --tb=short -v
 pytest tests/e2e/ -v
 
 # Verify Docker build
-docker build -t ai-dataset-engineer:v1.1.0 .
+docker build -t rasosynthtune:v1.1.0 .
 ```
 
 ### Phase 5: Merge to Production

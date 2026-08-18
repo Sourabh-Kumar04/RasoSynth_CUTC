@@ -1,4 +1,4 @@
-"""Pytest configuration and fixtures for RasoDataset-Agent tests."""
+"""Pytest configuration and fixtures for RasoSynthTune tests."""
 import asyncio
 import os
 import sys

@@ -283,7 +283,7 @@ async def health_check_urls(
                 ) as client:
                     resp = await client.head(
                         source.url,
-                        headers={"User-Agent": "RasoDataset-Agent/1.0"},
+                        headers={"User-Agent": "RasoSynthTune/2.0"},
                     )
                     if resp.status_code < 400:
                         # Update metadata with resolved URL and status
@@ -724,7 +724,7 @@ class DiscoveryPipeline:
         Usage:  response = await self._fetch("https://api.example.com/data", params={"q": "..."})
         """
         default_headers = {
-            "User-Agent": "RasoDataset-Agent/1.0 (+https://github.com/raso/dataset-engineer)",
+            "User-Agent": "RasoSynthTune/2.0 (+https://github.com/raso/dataset-engineer)",
             "Accept": "application/json, text/html, */*",
         }
         if headers:
@@ -3013,7 +3013,7 @@ class DiscoveryPipeline:
                         url,
                         headers={
                             "User-Agent": (
-                                "Mozilla/5.0 (compatible; RasoDataset-Agent/1.0"
+                                "Mozilla/5.0 (compatible; RasoSynthTune/2.0"
                                 "; +https://github.com/raso/dataset-engineer)"
                             ),
                         },

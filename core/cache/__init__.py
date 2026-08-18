@@ -2,7 +2,7 @@
 Redis-Based Intelligent Distributed Caching Layer
 
 Multi-level caching architecture with semantic awareness, distributed coordination,
-and adaptive optimization for the RasoDataset-Agent ecosystem.
+and adaptive optimization for the RasoSynthTune ecosystem.
 """
 
 from core.cache.base import (

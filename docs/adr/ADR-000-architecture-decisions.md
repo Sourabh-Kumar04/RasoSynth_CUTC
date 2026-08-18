@@ -1,6 +1,6 @@
 # Architecture Decision Records
 
-This document contains key architectural decisions for the RasoDataset-Agent platform.
+This document contains key architectural decisions for the RasoSynthTune platform.
 
 ---
 

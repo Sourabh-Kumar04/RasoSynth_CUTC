@@ -1,6 +1,6 @@
 # Branching Strategy
 
-This document describes the Git branching architecture for the RasoDataset-Agent platform.
+This document describes the Git branching architecture for the RasoSynthTune platform.
 
 ## Overview
 

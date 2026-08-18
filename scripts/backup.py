@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-Automated Backup Script for RasoDataset-Agent.
+Automated Backup Script for RasoSynthTune.
 
 Supports:
 - PostgreSQL/SQLite database backup
@@ -320,7 +320,7 @@ class BackupManager:
 
 
 def main():
-    parser = argparse.ArgumentParser(description="RasoDataset-Agent Backup Tool")
+    parser = argparse.ArgumentParser(description="RasoSynthTune Backup Tool")
     parser.add_argument("--backup-dir", default="backups", help="Backup storage directory")
     parser.add_argument("--db-only", action="store_true", help="Database backup only")
     parser.add_argument("--data-only", action="store_true", help="Data backup only")

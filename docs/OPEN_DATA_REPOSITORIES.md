@@ -1,6 +1,6 @@
 # Open Data Repositories — Comprehensive Reference
 
-This document catalogs open data repositories actively used by the RasoDataset-Agent
+This document catalogs open data repositories actively used by the RasoSynthTune
 discovery pipeline.  Sources are organized by type with API access details.
 
 ## Primary ML Dataset Repositories

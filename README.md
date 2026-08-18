@@ -1,125 +1,120 @@
-# RasoDataset-Agent
+# RasoSynthTune
 
-A production-ready autonomous AI dataset generation system that discovers, extracts, filters, and constructs high-quality fine-tuning datasets using multi-provider AI orchestration.
+> **Autonomous AI Dataset Synthesis & Fine-Tuning Platform**
+
+RasoSynthTune is a production-ready system that autonomously discovers, extracts, filters, and constructs high-quality fine-tuning datasets — then fine-tunes open-source models on them, all through a single unified platform.
 
 ## Architecture
 
 ```
 ┌─────────────────────────────────────────────────────────────────────────┐
-
 │                           API Layer (FastAPI)                            │
 │  POST /jobs  │  GET /jobs/{id}  │  GET /providers  │  WebSocket stream  │
+│  POST /api/finetune/jobs        │  GET /api/review/queue                │
 └────────────────────────────┬────────────────────────────────────────────┘
                              │
 ┌────────────────────────────▼────────────────────────────────────────────┐
 │                    Orchestration Layer (LangGraph)                      │
-│  ┌─────────┐    ┌─────────┐    ┌─────────┐    ┌─────────┐    ┌─────────┐ │
-│  │Discover │───▶│Extract │───▶│ Filter  │───▶│Construct│───▶│ Export  │ │
-│  └─────────┘    └─────────┘    └─────────┘    └─────────┘    └─────────┘ │
-│       │              │              │              │                    │
-│       └──────────────┴──────────────┴──────────────┘                    │
-│                         Multi-Agent Graph                               │
+│  ┌─────────┐  ┌─────────┐  ┌─────────┐  ┌─────────┐  ┌─────────┐      │
+│  │Discover │─▶│Extract  │─▶│ Filter  │─▶│Construct│─▶│ Export  │      │
+│  └─────────┘  └─────────┘  └─────────┘  └────┬────┘  └─────────┘      │
+│                                               │ HITL gate               │
+│                                          ┌────▼────┐                   │
+│                                          │  Human  │                   │
+│                                          │ Review  │                   │
+│                                          └─────────┘                   │
+└────────────────────────────┬────────────────────────────────────────────┘
+                             │
+┌────────────────────────────▼────────────────────────────────────────────┐
+│                    Fine-Tuning Layer (PEFT / LoRA)                      │
+│  ┌──────────┐  ┌──────────┐  ┌──────────┐  ┌──────────┐               │
+│  │ Llama-3  │  │ Mistral  │  │  Phi-3   │  │ Gemma-2  │  …            │
+│  └──────────┘  └──────────┘  └──────────┘  └──────────┘               │
+│  Unsloth (GPU) · HuggingFace PEFT (CPU fallback) · HF Hub push         │
 └────────────────────────────┬────────────────────────────────────────────┘
                              │
 ┌────────────────────────────▼────────────────────────────────────────────┐
 │                       Provider Router Layer                              │
-│  ┌────────────┐  ┌────────────┐  ┌────────────┐  ┌────────────┐        │
-│  │  Gemini    │  │  NIM       │  │  Claude    │  │  OpenAI    │        │
-│  │  (Primary) │  │  (Primary) │  │  (Fallback)│  │  (Fallback)│        │
-│  └────────────┘  └────────────┘  └────────────┘  └────────────┘        │
-│  ┌────────────┐  ┌────────────┐  ┌────────────┐  ┌────────────┐        │
-│  │  Hugging   │  │  xAI       │  │  Ollama    │  │  vLLM      │        │
-│  │  Face      │  │            │  │  (Local)   │  │            │        │
-│  └────────────┘  └────────────┘  └────────────┘  └────────────┘        │
+│  Gemini (Primary) · NIM (Primary) · Claude · OpenAI · HuggingFace      │
+│  xAI · Groq · DeepSeek · Ollama (local) · OpenRouter · Together        │
 └────────────────────────────┬────────────────────────────────────────────┘
                              │
 ┌────────────────────────────▼────────────────────────────────────────────┐
 │                       Infrastructure Layer                               │
-│  ┌─────────┐  ┌──────────┐  ┌─────────┐  ┌─────────┐  ┌────────────┐    │
-│  │  Redis  │  │PostgreSQL│  │ Qdrant  │  │ Celery   │  │   Ray     │    │
-│  │ (Cache) │  │   (DB)   │  │ (VecDB) │  │(Workers)│  │(Cluster)  │    │
-│  └─────────┘  └──────────┘  └─────────┘  └─────────┘  └────────────┘    │
+│  Redis (cache) · PostgreSQL / SQLite (DB) · Qdrant (vector DB)          │
+│  Celery (workers) · Ray (distributed) · Prometheus (metrics)            │
 └─────────────────────────────────────────────────────────────────────────┘
 ```
 
 ## Quick Start
 
-### Using Docker Compose (Recommended)
+### Docker Compose (Recommended)
 
-The project is pre-configured to use **SQLite** as its default database, providing a **single-command launch** experience with zero PostgreSQL setup. 
-
-We also support a **Demo Mode (Simulated Backend)** that lets you test the entire frontend dashboard (including job runs, real-time WebSocket progress, provider failover, and metrics panels) completely offline.
+Uses **SQLite** by default — zero PostgreSQL setup required.
 
 ```bash
-# Clone and start
-git clone <repo>
-cd ai-dataset-engineer
+git clone https://github.com/Sourabh-Kumar04/RasoSynth_CUTC.git
+cd RasoSynth_CUTC/ai-dataset-engineer
 
-# Copy and configure environment
 cp .env.example .env
-# Edit .env with your API keys (optional if running in Demo Mode!)
+# Edit .env with your API keys (optional — Demo Mode works without them)
 
-# Start all services
 docker compose up --build -d
 
-# Access the API Swagger Docs
-open http://localhost:8000/docs
-
-# Access the Frontend Control Center Dashboard
-open http://localhost:3000
+open http://localhost:8000/docs   # API Swagger
+open http://localhost:3000        # Frontend Dashboard
 ```
 
 ### Manual Setup
 
 ```bash
-# Create virtual environment
 python -m venv .venv
-source .venv/bin/activate  # Linux/Mac
-# or
-.venv\Scripts\activate     # Windows
+source .venv/bin/activate        # Linux/Mac
+# .venv\Scripts\activate         # Windows
 
-# Install dependencies
 pip install -e ".[dev]"
-
-# Configure environment
 cp .env.example .env
 
-# Start infrastructure
 docker-compose up redis postgres qdrant -d
-
-# Run the application
 uvicorn api.server:app --reload
+```
+
+### Fine-Tuning Dependencies (optional)
+
+```bash
+pip install -e ".[finetuning]"   # peft, trl, transformers, accelerate
+pip install unsloth              # optional: 2-4× GPU speedup
 ```
 
 ## Configuration
 
-Configure API keys in `.env`:
-
 ```bash
-# Primary providers
+# Primary LLM providers
 GOOGLE_API_KEY=your_gemini_key
 NVIDIA_API_KEY=your_nvidia_key
-
-# Fallback providers
 ANTHROPIC_API_KEY=your_claude_key
 OPENAI_API_KEY=your_openai_key
 HF_TOKEN=your_hf_token
-XAI_API_KEY=your_xai_key
 
 # Infrastructure
 REDIS_URL=redis://localhost:6379/0
-# PostgreSQL (Production)
-# POSTGRES_URL=postgresql+asyncpg://user:pass@localhost:5432/dataset_engine
-# SQLite (Local Dev / Hackathon Default)
-POSTGRES_URL=sqlite+aiosqlite:///outputs/dataset.db
+POSTGRES_URL=sqlite+aiosqlite:///outputs/dataset.db   # SQLite (default)
+# POSTGRES_URL=postgresql+asyncpg://user:pass@localhost:5432/rasosynthtune
 QDRANT_URL=http://localhost:6333
+
+# HITL review
+HITL_MODE=blocking
+HITL_TIMEOUT_SECONDS=0
+
+# Fine-tuning
+FINETUNE_MAX_CONCURRENT=1
+FINETUNE_MAX_SAMPLES=500000
 ```
 
-## API Usage
-
-### Create a Dataset Generation Job
+## Dataset Generation
 
 ```bash
+# Generate a dataset
 curl -X POST http://localhost:8000/jobs \
   -H "Content-Type: application/json" \
   -d '{
@@ -129,39 +124,15 @@ curl -X POST http://localhost:8000/jobs \
     "quality_level": "standard",
     "export_format": "huggingface"
   }'
-```
 
-### Check Job Status
-
-```bash
+# Check status
 curl http://localhost:8000/jobs/{job_id}
-```
 
-### Download Dataset
-
-```bash
+# Download
 curl http://localhost:8000/jobs/{job_id}/download
 ```
 
-### List Providers
-
-```bash
-curl http://localhost:8000/providers
-```
-
-## Provider Priority
-
-Default provider priority (configurable in `.env`):
-
-1. **Google Gemini** - Primary for reasoning, multimodal, long-context
-2. **NVIDIA NIM** - Primary for embeddings, GPU batch processing
-3. **Anthropic Claude** - Fallback for deep reasoning, data refinement
-4. **OpenAI** - Fallback for structured output, instruction formatting
-5. **Hugging Face** - Open-source inference, embeddings
-6. **xAI** - Reasoning augmentation
-7. **Ollama** - Local fallback model
-
-## Dataset Types Supported
+### Dataset Types
 
 | Type | Description |
 |------|-------------|
@@ -174,78 +145,14 @@ Default provider priority (configurable in `.env`):
 | `conversational` | Dialogue datasets |
 | `tool_calling` | Tool/function calling |
 
-## Export Formats
+### Export Formats
 
-- `jsonl` - JSON Lines
-- `csv` - Comma-separated values
-- `parquet` - Apache Parquet
-- `huggingface` - HuggingFace Dataset format
-- `sql` - PostgreSQL
-- `qdrant` - Vector DB ingestion
-
-## Development
-
-### Prompt Optimization & Evaluation (DSPy-style)
-
-You can run our programmatically driven A/B prompt evaluation engine. It tests prompt variants, performs factual consistency checks, and evaluates performance using t-test statistical significance:
-
-```bash
-python -m research.prompt_optimizer
-```
-
-### Run Tests
-
-```bash
-pytest tests/ -v
-```
-
-### Type Checking
-
-```bash
-mypy src/
-```
-
-### Code Formatting
-
-```bash
-ruff format src/
-```
-
-## Frontend Platform
-
-A production-grade React/Next.js frontend is included for visual workflow management.
-
-```bash
-cd frontend
-pnpm install
-pnpm dev
-```
-
-Access the frontend at http://localhost:3000
-
-### Frontend Features
-
-| Page | Description |
-|------|-------------|
-| `/orchestration` | Real-time workflow monitoring dashboard with pulsing step nodes |
-| `/studio` | AI-powered dataset generation workspace |
-| `/quality` | Dataset quality dashboard with dynamic **Strategic Segmentation** |
-| `/datasets` | Dataset explorer and validation |
-| `/providers` | Multi-provider management console |
-| `/finetune` | **Fine-Tune Studio** — PEFT/LoRA fine-tuning with live training logs |
-| `/review` | **Human Review Queue** — HITL sample review with keyboard shortcuts |
-| `/observability` | System metrics and tracing |
-| `/research` | Provider benchmarking |
-| `/settings` | Platform configuration |
-
-See [frontend/README.md](frontend/README.md) for details.
+`jsonl` · `csv` · `parquet` · `huggingface` · `sql` · `qdrant`
 
 ## Fine-Tuning Integration
 
-After generating a dataset you can fine-tune an open-source model directly:
-
 ```bash
-# Start a fine-tuning job (uses the JSONL output of a dataset job)
+# Fine-tune using the output of a dataset job
 curl -X POST http://localhost:8000/api/finetune/jobs \
   -H "Content-Type: application/json" \
   -d '{
@@ -253,52 +160,52 @@ curl -X POST http://localhost:8000/api/finetune/jobs \
     "base_model": "HuggingFaceTB/SmolLM2-1.7B-Instruct",
     "num_train_epochs": 3,
     "lora_r": 16,
-    "chat_template": "alpaca"
+    "chat_template": "alpaca",
+    "push_to_hub": false
   }'
 
 # Stream live training progress
 wscat -c ws://localhost:8000/api/finetune/jobs/<id>/stream
 
-# List supported base models
+# List supported models
 curl http://localhost:8000/api/finetune/models
 ```
 
-Supported base models: Llama-3 8B, Mistral 7B, Phi-3 Mini, Gemma-2 9B, Qwen-2.5 7B, SmolLM2 1.7B.
-
-Uses [Unsloth](https://github.com/unslothai/unsloth) for 2-4× GPU speedup when available; falls back to plain HuggingFace PEFT on CPU.
-
-Install fine-tuning dependencies:
-
-```bash
-pip install -e ".[finetuning]"
-# Optional GPU acceleration:
-pip install unsloth
-```
-
-## Human-in-the-Loop (HITL) Review
-
-Enable reviewer approval gates in the dataset generation pipeline:
-
-```bash
-# Start a job with blocking HITL (pipeline pauses after construction)
-curl -X POST http://localhost:8000/jobs \
-  -d '{"target_domain": "...", "human_review": true, "human_review_mode": "blocking"}'
-
-# Review samples at http://localhost:3000/review
-# Then resume the pipeline:
-curl -X POST http://localhost:8000/api/review/jobs/<job_id>/resume
-
-# Export approved samples as JSONL for fine-tuning:
-curl http://localhost:8000/api/review/queue/export?job_id=<job_id> -o approved.jsonl
-```
-
-`human_review_mode` options:
-- `blocking` — pipeline pauses and waits for reviewer to call `/resume`
-- `async` — samples submitted for review, pipeline continues immediately
+**Supported base models:** Llama-3 8B, Mistral 7B, Phi-3 Mini 3.8B, Gemma-2 9B, Qwen-2.5 7B, SmolLM2 1.7B
 
 | Endpoint | Description |
 |----------|-------------|
-| `GET /api/review/queue` | List review queue with filters |
+| `POST /api/finetune/jobs` | Start a fine-tuning job |
+| `GET /api/finetune/jobs` | List all jobs |
+| `GET /api/finetune/jobs/{id}` | Get job details |
+| `GET /api/finetune/jobs/{id}/logs` | Last N training events |
+| `WS /api/finetune/jobs/{id}/stream` | Live training event stream |
+| `GET /api/finetune/models` | Supported base model catalogue |
+
+## Human-in-the-Loop (HITL) Review
+
+```bash
+# Start a dataset job with blocking HITL gate
+curl -X POST http://localhost:8000/jobs \
+  -d '{"target_domain": "...", "human_review": true, "human_review_mode": "blocking"}'
+
+# Review samples in the UI at http://localhost:3000/review
+# Keyboard shortcuts: a=approve  r=reject  e=edit  f=flag  Esc=close
+
+# Resume the pipeline after approving
+curl -X POST http://localhost:8000/api/review/jobs/<job_id>/resume
+
+# Export approved samples as JSONL for fine-tuning
+curl "http://localhost:8000/api/review/queue/export?job_id=<job_id>" -o approved.jsonl
+```
+
+`human_review_mode`:
+- `blocking` — pipeline pauses until reviewer calls `/resume`
+- `async` — submit for review and continue immediately
+
+| Endpoint | Description |
+|----------|-------------|
+| `GET /api/review/queue` | List queue with filters |
 | `POST /api/review/queue/{id}/approve` | Approve a sample |
 | `POST /api/review/queue/{id}/reject` | Reject a sample |
 | `POST /api/review/queue/{id}/edit` | Edit and approve |
@@ -306,13 +213,62 @@ curl http://localhost:8000/api/review/queue/export?job_id=<job_id> -o approved.j
 | `GET /api/review/paused` | List jobs paused at HITL gate |
 | `POST /api/review/jobs/{id}/resume` | Resume a paused job |
 
+## Provider Priority
+
+1. **Google Gemini** — primary reasoning, multimodal, long-context
+2. **NVIDIA NIM** — embeddings, GPU batch processing
+3. **Anthropic Claude** — deep reasoning, data refinement
+4. **OpenAI** — structured output, instruction formatting
+5. **HuggingFace** — open-source inference, embeddings
+6. **xAI / Groq / DeepSeek** — reasoning augmentation, fast inference
+7. **Ollama** — local fallback
+
+## Frontend
+
+```bash
+cd frontend
+pnpm install
+pnpm dev        # http://localhost:3000
+```
+
+| Page | Description |
+|------|-------------|
+| `/orchestration` | Real-time workflow monitoring with live DAG |
+| `/studio` | AI-powered dataset generation workspace |
+| `/quality` | Dataset quality dashboard |
+| `/datasets` | Dataset explorer and validation |
+| `/finetune` | **Fine-Tune Studio** — PEFT/LoRA training with live logs |
+| `/review` | **Human Review Queue** — HITL sample review |
+| `/providers` | Multi-provider management console |
+| `/observability` | System metrics and tracing |
+| `/research` | Provider benchmarking |
+| `/settings` | Platform configuration |
+
+## Development
+
+```bash
+# Tests
+pytest tests/ -v
+
+# Type check
+mypy src/
+
+# Format
+ruff format src/
+
+# Prompt optimization (DSPy-style A/B evaluation)
+python -m research.prompt_optimizer
+```
+
 ## Monitoring
 
-- **API**: http://localhost:8000
-- **Swagger Docs**: http://localhost:8000/docs
-- **Frontend**: http://localhost:3000
-- **Prometheus Metrics**: http://localhost:8000/metrics
-- **Flower**: http://localhost:5555
+| Service | URL |
+|---------|-----|
+| API | http://localhost:8000 |
+| Swagger Docs | http://localhost:8000/docs |
+| Frontend | http://localhost:3000 |
+| Prometheus Metrics | http://localhost:8000/metrics |
+| Flower (Celery) | http://localhost:5555 |
 
 ## License
 

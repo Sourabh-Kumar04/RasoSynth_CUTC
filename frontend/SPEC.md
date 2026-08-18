@@ -1,4 +1,4 @@
-# RasoDataset-Agent - Frontend Platform Specification
+# RasoSynthTune — Frontend Platform Specification
 
 **Version**: 1.0.0
 **Architecture**: Enterprise AI-Native Orchestration Platform

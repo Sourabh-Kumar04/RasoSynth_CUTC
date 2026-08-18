@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-Scheduled Backup Runner for RasoDataset-Agent.
+Scheduled Backup Runner for RasoSynthTune.
 
 Designed to be run as a cron job or systemd timer.
 Handles:
@@ -130,7 +130,7 @@ class ScheduledBackupRunner:
 
         import urllib.request
         payload = json.dumps({
-            "text": f"[RasoDataset-Agent] Backup Failed: {message}",
+            "text": f"[RasoSynthTune] Backup Failed: {message}",
             "username": "Backup Bot",
             "icon_emoji": ":floppy_disk:",
         }).encode()
@@ -148,7 +148,7 @@ class ScheduledBackupRunner:
 
 
 def main():
-    parser = argparse.ArgumentParser(description="Scheduled backup runner for RasoDataset-Agent")
+    parser = argparse.ArgumentParser(description="Scheduled backup runner for RasoSynthTune")
     parser.add_argument("--retention", type=int, default=7, help="Number of backups to keep")
     parser.add_argument("--backup-dir", default="backups", help="Backup storage directory")
     args = parser.parse_args()

@@ -76,6 +76,6 @@ async def test_database():
 
 if __name__ == "__main__":
     # Change to the correct directory
-    os.chdir("/mnt/d/00_Academics/RasoDataset-Agent Agent/ai-dataset-engineer")
+    os.chdir("/mnt/d/00_Academics/RasoSynthTune Agent/ai-dataset-engineer")
     success = asyncio.run(test_database())
     sys.exit(0 if success else 1)

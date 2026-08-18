@@ -85,7 +85,7 @@ class WorkerNode:
 class DistributedConfig:
     """Configuration for distributed execution."""
     # Cluster settings
-    cluster_name: str = "dataset-engine"
+    cluster_name: str = "rasosynthtune"
     ray_head_address: str = "auto"
     ray_object_store_memory_gb: float = 0.5
     # Worker settings

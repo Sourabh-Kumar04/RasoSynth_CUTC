@@ -1,5 +1,5 @@
 """
-Admission Control & Concurrent Job Limits for RasoDataset-Agent.
+Admission Control & Concurrent Job Limits for RasoSynthTune.
 
 Provides:
 - Semaphore-based concurrency limiting

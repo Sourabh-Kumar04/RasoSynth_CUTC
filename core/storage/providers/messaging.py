@@ -396,7 +396,7 @@ class EmailProvider(StorageProvider):
             <p><strong>Expires:</strong> {expiration}</p>
             <p><a href="{download_url}">Click here to download</a></p>
             <hr>
-            <p><small>RasoDataset-Agent</small></p>
+            <p><small>RasoSynthTune</small></p>
         </body>
         </html>
         """

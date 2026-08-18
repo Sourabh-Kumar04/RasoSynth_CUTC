@@ -1,4 +1,4 @@
-// API Client for RasoDataset-Agent Backend - Enhanced with Production Hardening
+// API Client for RasoSynthTune Backend - Enhanced with Production Hardening
 
 // Remove /api/v1 prefix - backend uses direct paths like /jobs not /api/v1/jobs
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000'

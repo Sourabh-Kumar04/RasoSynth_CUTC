@@ -1,4 +1,4 @@
-"""Production validation tests for RasoDataset-Agent."""
+"""Production validation tests for RasoSynthTune."""
 import pytest
 import asyncio
 import os
@@ -188,7 +188,7 @@ class TestConfiguration:
     def test_env_variables(self):
         """Test required env variables are set."""
         from dotenv import load_dotenv
-        load_dotenv("/mnt/d/00_Academics/RasoDataset-Agent Agent/ai-dataset-engineer/.env")
+        load_dotenv("/mnt/d/00_Academics/RasoSynthTune Agent/ai-dataset-engineer/.env")
 
         # Demo mode should be enabled for testing
         assert os.getenv("DEMO_MODE") == "true"
@@ -196,7 +196,7 @@ class TestConfiguration:
     def test_jwt_config(self):
         """Test JWT configuration."""
         from dotenv import load_dotenv
-        load_dotenv("/mnt/d/00_Academics/RasoDataset-Agent Agent/ai-dataset-engineer/.env")
+        load_dotenv("/mnt/d/00_Academics/RasoSynthTune Agent/ai-dataset-engineer/.env")
 
         assert os.getenv("JWT_SECRET") is not None
         assert os.getenv("JWT_ALGORITHM") == "HS256"

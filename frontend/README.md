@@ -1,114 +1,101 @@
-# RasoDataset-Agent - Frontend Platform
+# RasoSynthTune — Frontend
 
-Enterprise-grade AI-native frontend for autonomous dataset generation and orchestration.
-
-## Features
-
-- **AI Dataset Generation Studio** - Natural language dataset creation with AI-assisted configuration
-- **Real-Time Orchestration Dashboard** - Live workflow monitoring with animated DAG visualization
-- **Multi-Provider Management Console** - Provider health, latency, and cost analytics
-- **Dataset Explorer** - Browse, validate, and export generated datasets
-- **Observability Dashboard** - System metrics, traces, and log aggregation
-- **Research & Benchmarking** - Provider performance analysis and quality tracking
+Production-grade Next.js dashboard for the RasoSynthTune autonomous dataset synthesis and fine-tuning platform.
 
 ## Tech Stack
 
 - **Framework**: Next.js 14 (App Router)
-- **UI**: React 18 + TypeScript
-- **Styling**: Tailwind CSS + shadcn/ui
-- **State**: Zustand (global) + TanStack Query (server)
-- **Charts**: Recharts + Tremor
+- **Language**: TypeScript
+- **Styling**: Tailwind CSS + shadcn/ui (Radix primitives)
+- **State**: Zustand (global) + TanStack Query (server state)
+- **Charts**: Recharts
 - **Animations**: Framer Motion
+- **Package manager**: pnpm
 
 ## Getting Started
-
-### Prerequisites
-
-- Node.js 18+
-- pnpm or npm
-
-### Installation
 
 ```bash
 cd frontend
 pnpm install
+pnpm dev        # http://localhost:3000
 ```
 
-### Development
+### Environment
 
 ```bash
-pnpm dev
+cp .env.local.example .env.local
+# Set:
+NEXT_PUBLIC_API_URL=http://localhost:8000
 ```
 
-Open [http://localhost:3000](http://localhost:3000)
-
-### Build
+### Production Build
 
 ```bash
 pnpm build
 pnpm start
 ```
 
+## Pages
+
+| Route | Description |
+|-------|-------------|
+| `/orchestration` | Real-time workflow monitoring with animated DAG |
+| `/studio` | AI-powered dataset generation workspace |
+| `/quality` | Dataset quality dashboard — scores, diversity, hallucination |
+| `/datasets` | Dataset explorer, validation, and export |
+| `/finetune` | **Fine-Tune Studio** — launch PEFT/LoRA jobs, live loss chart, training log stream |
+| `/review` | **Human Review Queue** — approve/reject/edit samples, keyboard shortcuts, bulk actions |
+| `/providers` | Multi-provider health, latency, and cost analytics |
+| `/observability` | System metrics, traces, and log aggregation |
+| `/research` | Provider benchmarking and prompt optimization |
+| `/settings` | Platform configuration |
+
 ## Project Structure
 
 ```
 frontend/
-├── app/                    # Next.js app router
-│   ├── (dashboard)/       # Main app layout group
-│   │   ├── studio/       # Dataset generation studio
-│   │   ├── orchestration/ # Workflow monitoring
-│   │   ├── datasets/     # Dataset explorer
-│   │   ├── providers/     # Provider management
-│   │   ├── observability/ # Metrics & traces
-│   │   ├── research/      # Benchmarking
-│   │   └── settings/      # Configuration
-│   └── layout.tsx         # Root layout
+├── app/
+│   ├── (dashboard)/           # Main dashboard layout group
+│   │   ├── datasets/          # Dataset explorer
+│   │   ├── finetune/          # Fine-Tune Studio
+│   │   ├── observability/     # Metrics & traces
+│   │   ├── orchestration/     # Workflow monitoring
+│   │   ├── providers/         # Provider management
+│   │   ├── research/          # Benchmarking
+│   │   ├── review/            # Human review queue
+│   │   ├── settings/          # Configuration
+│   │   └── studio/            # Dataset generation
+│   ├── quality/               # Quality dashboard
+│   ├── layout.tsx             # Root layout
+│   └── page.tsx               # Root redirect
 ├── components/
-│   ├── ui/               # Base UI components
-│   ├── layout/           # Layout components
-│   └── */               # Feature-specific components
+│   ├── ui/                    # Radix/shadcn base components
+│   ├── layout/                # TopNav, Sidebar
+│   └── quality/               # Quality chart components
 ├── lib/
-│   ├── api/             # API client
-│   ├── stores/          # Zustand stores
-│   ├── hooks/           # Custom hooks
-│   └── utils/           # Utilities
-└── types/               # TypeScript types
+│   ├── api/                   # API client (client.ts)
+│   ├── hooks/                 # Custom React hooks
+│   ├── stores/                # Zustand stores
+│   └── streaming/             # SSE/WebSocket helpers
+└── types/
+    └── api.ts                 # Shared API type definitions
 ```
-
-## Environment Variables
-
-Create `.env.local` based on `.env.local.example`:
-
-```bash
-NEXT_PUBLIC_API_URL=http://localhost:8000/api/v1
-```
-
-## Key Pages
-
-| Route | Description |
-|-------|-------------|
-| `/orchestration` | Real-time workflow monitoring dashboard |
-| `/studio` | AI-powered dataset generation workspace |
-| `/datasets` | Dataset explorer and validation |
-| `/providers` | Multi-provider management console |
-| `/observability` | System metrics and tracing |
-| `/research` | Provider benchmarking and experiments |
-| `/settings` | Platform configuration |
 
 ## Design System
 
-- **Theme**: Dark-first with AI-native accents
-- **Colors**: Indigo primary (#6366f1), success green, warning amber, error red
-- **Typography**: Inter for UI, JetBrains Mono for code
-- **Components**: Based on shadcn/ui with custom styling
+- **Theme**: Dark-first (`dark` class on `<html>`)
+- **Brand colours**: Orange-500/600 (primary), Indigo/Accent (secondary)
+- **Typography**: Inter (UI) · JetBrains Mono (code/logs)
+- **CSS variables**: defined in `app/globals.css`, extended in `tailwind.config.ts`
+- **Utilities**: `glass`, `glow`, `grid-bg`, `gradient-text`, `gradient-border`
 
 ## API Integration
 
-The frontend integrates with the backend via:
+All backend calls go through `lib/api/client.ts` (`APIClient` class):
 
-- **REST API** via `lib/api/client.ts`
-- **SSE Streaming** via `lib/api/sse.ts`
-- **TanStack Query** hooks via `lib/hooks/use-api.ts`
+- **REST** — `api.createFineTuneJob(...)`, `api.getReviewQueue(...)`, etc.
+- **WebSocket** — native `WebSocket` for fine-tuning live log stream (`/api/finetune/jobs/{id}/stream`)
+- **Demo mode** — toggle in the top nav; all calls fall back to `MockWebSocket` / in-memory data when enabled
 
 ## License
 

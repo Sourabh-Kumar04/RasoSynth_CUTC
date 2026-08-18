@@ -1,5 +1,5 @@
 """
-Real load testing for RasoDataset-Agent API.
+Real load testing for RasoSynthTune API.
 Tests: 1, 5, 10, 25, 50, 100 concurrent jobs.
 Captures: CPU, RAM, Redis, DB, Provider Latency, Queue Depth.
 
@@ -147,7 +147,7 @@ Target: {self.base_url}
 
 async def main():
     import argparse
-    parser = argparse.ArgumentParser(description="RasoDataset-Agent Load Tester")
+    parser = argparse.ArgumentParser(description="RasoSynthTune Load Tester")
     parser.add_argument("--host", default="http://localhost:8000")
     parser.add_argument("--api-key", default="")
     parser.add_argument("--load-levels", default="1,5,10,25")

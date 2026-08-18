@@ -1,4 +1,4 @@
-// RasoDataset-Agent - Type Definitions
+// RasoSynthTune - Type Definitions
 
 // ============================================
 // Base Types

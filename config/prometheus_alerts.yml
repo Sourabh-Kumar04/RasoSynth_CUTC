@@ -1,4 +1,4 @@
-# Prometheus Alerting Rules for RasoDataset-Agent
+# Prometheus Alerting Rules for RasoSynthTune
 # Deploy to Prometheus rules directory and reload
 
 groups:

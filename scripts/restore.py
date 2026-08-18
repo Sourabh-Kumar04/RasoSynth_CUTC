@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-Restore Script for RasoDataset-Agent.
+Restore Script for RasoSynthTune.
 
 Supports restoring from backups created by scripts/backup.py.
 
@@ -186,7 +186,7 @@ class RestoreManager:
 
 
 def main():
-    parser = argparse.ArgumentParser(description="RasoDataset-Agent Restore Tool")
+    parser = argparse.ArgumentParser(description="RasoSynthTune Restore Tool")
     parser.add_argument("backup_path", nargs="?", help="Path to backup archive")
     parser.add_argument("--db-only", action="store_true", help="Restore database only")
     parser.add_argument("--data-only", action="store_true", help="Restore data only")

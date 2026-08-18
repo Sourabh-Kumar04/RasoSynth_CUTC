@@ -1,4 +1,4 @@
-"""Load and Failure Injection Tests for RasoDataset-Agent.
+"""Load and Failure Injection Tests for RasoSynthTune.
 
 These tests validate the system under load and failure conditions using
 mock infrastructure.  Production load tests require actual PostgreSQL and Redis.

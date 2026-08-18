@@ -79,7 +79,7 @@ finetuning = [
 ]
 
 [project.scripts]
-dataset-engine = "main:main"
+rasosynthtune = "main:main"
 
 [build-system]
 requires = ["hatchling"]

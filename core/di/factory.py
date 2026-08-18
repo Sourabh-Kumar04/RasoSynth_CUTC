@@ -81,7 +81,7 @@ class AppFactory:
 
     def create_app(
         self,
-        title: str = "RasoDataset-Agent",
+        title: str = "RasoSynthTune",
         description: str = "Autonomous AI dataset generation platform",
         version: str = "1.0.0",
         include_health_check: bool = True,
@@ -175,7 +175,7 @@ def create_prod_app() -> FastAPI:
     """Create production application."""
     factory = AppFactory()
     return factory.create_app(
-        title="RasoDataset-Agent",
+        title="RasoSynthTune",
         description="Enterprise-grade autonomous AI dataset generation platform",
         version="1.0.0",
     )
@@ -185,7 +185,7 @@ def create_test_app() -> FastAPI:
     """Create test application."""
     factory = AppFactory()
     return factory.create_app(
-        title="RasoDataset-Agent (Test)",
+        title="RasoSynthTune (Test)",
         description="Test instance",
         version="0.0.0",
     )
