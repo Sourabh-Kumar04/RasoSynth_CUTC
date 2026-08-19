@@ -272,4 +272,5 @@ python -m research.prompt_optimizer
 
 ## License
 
-MIT
+[PolyForm Noncommercial License 1.0.0 (CC BY-NC 4.0)](LICENSE) — Strictly Non-Commercial Use Only.
+

@@ -99,4 +99,5 @@ All backend calls go through `lib/api/client.ts` (`APIClient` class):
 
 ## License
 
-MIT
+[PolyForm Noncommercial License 1.0.0 (CC BY-NC 4.0)](../LICENSE) — Strictly Non-Commercial Use Only.
+
