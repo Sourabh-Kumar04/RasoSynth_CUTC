@@ -18,6 +18,11 @@ const nextConfig = {
   },
   webpack: (config) => {
     config.resolve.alias['@'] = path.resolve(__dirname)
+    config.resolve.modules = [
+      path.resolve(__dirname),
+      path.resolve(__dirname, 'node_modules'),
+      'node_modules',
+    ]
     return config
   },
 }
