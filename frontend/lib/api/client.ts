@@ -834,27 +834,60 @@ dataset_samples_generated_total 4520`
       }
       const initial = [
         {
-          id: 'mock-job-1',
+          id: 'medical-sft-v1-verified',
           status: 'completed',
           progress: 1.0,
-          cost_usd: 1.42,
-          samples_generated: 150,
+          cost_usd: 0.045,
+          samples_generated: 100,
           current_stage: 'completed',
           created_at: new Date(Date.now() - 3600000).toISOString(),
           updated_at: new Date(Date.now() - 3600000).toISOString(),
-          config: { target_domain: 'medicine', dataset_type: 'sft', dataset_size: 150 }
+          config: { target_domain: 'Medical SFT & Clinical Reasoning', dataset_type: 'medical_sft', dataset_size: 100 }
         },
         {
-          id: 'mock-job-2',
-          status: 'failed',
-          progress: 0.45,
-          cost_usd: 0.85,
-          samples_generated: 0,
-          current_stage: 'filtering',
+          id: 'python-concurrency-v1-verified',
+          status: 'completed',
+          progress: 1.0,
+          cost_usd: 0.038,
+          samples_generated: 150,
+          current_stage: 'completed',
           created_at: new Date(Date.now() - 7200000).toISOString(),
           updated_at: new Date(Date.now() - 7200000).toISOString(),
-          config: { target_domain: 'coding', dataset_type: 'coding', dataset_size: 100 }
+          config: { target_domain: 'Python AsyncIO & Threading Architecture', dataset_type: 'coding', dataset_size: 150 }
         },
+        {
+          id: 'job-quantum-qiskit-v1',
+          status: 'completed',
+          progress: 1.0,
+          cost_usd: 0.035,
+          samples_generated: 50,
+          current_stage: 'completed',
+          created_at: new Date(Date.now() - 10800000).toISOString(),
+          updated_at: new Date(Date.now() - 10800000).toISOString(),
+          config: { target_domain: 'Quantum Computing Algorithms & Qiskit Circuit Design', dataset_type: 'quantum_coding', dataset_size: 50 }
+        },
+        {
+          id: 'job-financial-risk-v1',
+          status: 'completed',
+          progress: 1.0,
+          cost_usd: 0.042,
+          samples_generated: 50,
+          current_stage: 'completed',
+          created_at: new Date(Date.now() - 14400000).toISOString(),
+          updated_at: new Date(Date.now() - 14400000).toISOString(),
+          config: { target_domain: 'Financial Risk Analytics & Portfolio Optimization', dataset_type: 'financial_reasoning', dataset_size: 50 }
+        },
+        {
+          id: 'job-robotics-ros2-v1',
+          status: 'completed',
+          progress: 1.0,
+          cost_usd: 0.039,
+          samples_generated: 50,
+          current_stage: 'completed',
+          created_at: new Date(Date.now() - 18000000).toISOString(),
+          updated_at: new Date(Date.now() - 18000000).toISOString(),
+          config: { target_domain: 'Autonomous Robotics & ROS2 Control Systems', dataset_type: 'robotics_coding', dataset_size: 50 }
+        }
       ];
       sessionStorage.setItem('mockJobs', JSON.stringify(initial));
       return initial;
@@ -876,20 +909,44 @@ dataset_samples_generated_total 4520`
       }
       const initial = [
         {
-          id: 'mock-job-1',
-          name: 'Medical SFT Dataset',
-          type: 'sft',
-          size: 150,
+          id: 'medical-sft-v1-verified',
+          name: 'Medical STEMI & Endocrinology SFT',
+          type: 'medical_sft',
+          size: 100,
           created_at: new Date(Date.now() - 3600000).toISOString(),
-          output_path: '/exports/mock-dataset-1.jsonl',
+          output_path: 'outputs/medical-sft-v1-verified/medical-sft-v1-verified.jsonl',
         },
         {
-          id: 'mock-dataset-2',
-          name: 'Code Generation Corpus',
+          id: 'python-concurrency-v1-verified',
+          name: 'Thread-Safe Async Rate Limiter & Concurrency Primitives',
           type: 'coding',
-          size: 85,
+          size: 150,
           created_at: new Date(Date.now() - 7200000).toISOString(),
-          output_path: '/exports/mock-dataset-2.jsonl',
+          output_path: 'outputs/python-concurrency-v1-verified/python-concurrency-v1-verified.jsonl',
+        },
+        {
+          id: 'job-quantum-qiskit-v1',
+          name: 'Quantum Qiskit Circuit Synthesis SFT',
+          type: 'quantum_coding',
+          size: 50,
+          created_at: new Date(Date.now() - 10800000).toISOString(),
+          output_path: 'outputs/job-quantum-qiskit-v1/job-quantum-qiskit-v1.jsonl',
+        },
+        {
+          id: 'job-financial-risk-v1',
+          name: 'Monte Carlo Value-at-Risk (VaR) & Expected Shortfall SFT',
+          type: 'financial_reasoning',
+          size: 50,
+          created_at: new Date(Date.now() - 14400000).toISOString(),
+          output_path: 'outputs/job-financial-risk-v1/job-financial-risk-v1.jsonl',
+        },
+        {
+          id: 'job-robotics-ros2-v1',
+          name: 'ROS2 Humble Control Node & Lifecycle SFT',
+          type: 'robotics_coding',
+          size: 50,
+          created_at: new Date(Date.now() - 18000000).toISOString(),
+          output_path: 'outputs/job-robotics-ros2-v1/job-robotics-ros2-v1.jsonl',
         }
       ];
       sessionStorage.setItem('mockDatasets', JSON.stringify(initial));
@@ -905,37 +962,36 @@ dataset_samples_generated_total 4520`
       const currentJob = jobs.find(j => j.id === id);
       const domain = ((currentJob?.config?.target_domain || currentJob?.config?.prompt || id || '') as string).toLowerCase();
 
-      if (domain.includes('code') || domain.includes('program') || domain.includes('python')) {
+      if (domain.includes('quantum') || domain.includes('qiskit')) {
         return parse({
           records: [
             {
-              instruction: 'Write a python function to compute the Fibonacci series.',
-              response: '```python\ndef fib(n):\n    if n <= 1: return n\n    return fib(n-1) + fib(n-2)\n```',
-              quality_score: 0.96,
-              difficulty_tier: 1
-            },
-            {
-              instruction: 'Implement binary search in Python.',
-              response: '```python\ndef binary_search(arr, x):\n    low, high = 0, len(arr) - 1\n    while low <= high:\n        mid = (low + high) // 2\n        if arr[mid] < x: low = mid + 1\n        elif arr[mid] > x: high = mid - 1\n        else: return mid\n    return -1\n```',
+              instruction: 'Implement a Qiskit quantum circuit for 3-qubit Quantum Phase Estimation (QPE) targeting a T-gate phase eigenstate |1>.',
+              response: '```python\nimport numpy as np\nfrom qiskit import QuantumCircuit, QuantumRegister, ClassicalRegister\n\ndef create_qpe_circuit() -> QuantumCircuit:\n    counting_qr = QuantumRegister(3, name="counting")\n    target_qr = QuantumRegister(1, name="target")\n    cr = ClassicalRegister(3, name="classical")\n    qc = QuantumCircuit(counting_qr, target_qr, cr)\n    qc.x(target_qr[0])\n    for qubit in range(3): qc.h(counting_qr[qubit])\n    qc.cp(np.pi / 4, counting_qr[0], target_qr[0])\n    qc.cp(np.pi / 2, counting_qr[1], target_qr[0])\n    qc.cp(np.pi, counting_qr[2], target_qr[0])\n    return qc\n```',
               quality_score: 0.98,
-              difficulty_tier: 2
+              difficulty_tier: 5
             }
           ]
         });
-      } else if (domain.includes('finance') || domain.includes('market') || domain.includes('stock')) {
+      } else if (domain.includes('code') || domain.includes('python') || domain.includes('concurrency')) {
         return parse({
           records: [
             {
-              instruction: 'What is the Capital Asset Pricing Model (CAPM)?',
-              response: 'The Capital Asset Pricing Model (CAPM) describes the relationship between systematic risk and expected return for assets, particularly stocks. Expected Return = Risk-Free Rate + Beta * (Market Return - Risk-Free Rate).',
-              quality_score: 0.92,
-              difficulty_tier: 1
-            },
+              instruction: 'Write a thread-safe, lock-free thread-pool rate limiter in Python using asyncio.Semaphore and collections.deque.',
+              response: '```python\nimport asyncio, time\nfrom collections import deque\n\nclass SlidingWindowRateLimiter:\n    def __init__(self, max_requests: int, window_seconds: float):\n        self.max_requests = max_requests\n        self.window_seconds = window_seconds\n        self._timestamps = deque()\n        self._lock = asyncio.Lock()\n\n    async def acquire(self):\n        async with self._lock:\n            now = time.monotonic()\n            while self._timestamps and self._timestamps[0] <= now - self.window_seconds:\n                self._timestamps.popleft()\n            if len(self._timestamps) >= self.max_requests:\n                await asyncio.sleep(self._timestamps[0] + self.window_seconds - now)\n            self._timestamps.append(time.monotonic())\n```',
+              quality_score: 0.99,
+              difficulty_tier: 5
+            }
+          ]
+        });
+      } else if (domain.includes('financial') || domain.includes('risk') || domain.includes('var')) {
+        return parse({
+          records: [
             {
-              instruction: 'Explain the difference between NYSE and NASDAQ.',
-              response: 'The NYSE is an auction market where traders buy and sell assets directly between individuals. NASDAQ is a dealer market where trading takes place electronically through dealers.',
-              quality_score: 0.89,
-              difficulty_tier: 2
+              instruction: 'Explain Monte Carlo Value-at-Risk (VaR) and Expected Shortfall (CVaR) for a multi-asset portfolio.',
+              response: '### Monte Carlo VaR & Expected Shortfall (CVaR)\n$$\\text{VaR}_\\alpha(X) = \\inf \\{ l \\in \\mathbb{R} : P(X > l) \\le 1 - \\alpha \\}$$\n```python\nimport numpy as np\ndef calculate_portfolio_var_cvar(weights, cov_matrix, means, portfolio_value=10_000_000):\n    L = np.linalg.cholesky(cov_matrix)\n    Z = np.random.normal(0, 1, size=(len(weights), 100_000))\n    correlated_returns = means[:, np.newaxis] + (L @ Z)\n    portfolio_losses = -(weights @ correlated_returns) * portfolio_value\n    return float(np.percentile(portfolio_losses, 95))\n```',
+              quality_score: 0.97,
+              difficulty_tier: 5
             }
           ]
         });
@@ -943,16 +999,10 @@ dataset_samples_generated_total 4520`
         return parse({
           records: [
             {
-              instruction: 'What are the common symptoms of influenza?',
-              response: 'Common symptoms of influenza include fever, chills, cough, sore throat, runny or stuffy nose, muscle or body aches, headaches, and fatigue.',
-              quality_score: 0.94,
-              difficulty_tier: 1
-            },
-            {
-              instruction: 'Explain how vaccines work.',
-              response: 'Vaccines work by stimulating the immune system to produce antibodies, which protect the body against future infections from the targeted pathogen.',
-              quality_score: 0.95,
-              difficulty_tier: 2
+              instruction: 'A 54-year-old male presents with acute onset retrosternal crushing chest pain radiating to the left jaw, diaphoretic, with BP 150/90 mmHg, HR 105 bpm. ECG shows 2mm ST-elevation in leads II, III, and aVF. What is the diagnosis, immediate management steps, and contraindications?',
+              response: '### Clinical Assessment\n**Diagnosis:** Acute Inferior Wall Myocardial Infarction (STEMI).\n\n### Immediate Management Protocol:\n1. **Oxygen Therapy:** Administer supplemental O2 if SaO2 < 90%.\n2. **Antiplatelet Therapy:** Dual antiplatelet therapy immediately (Aspirin 325mg + Ticagrelor 180mg).\n3. **Reperfusion Strategy:** Immediate transfer for Primary Percutaneous Coronary Intervention (PPCI) < 90 mins.',
+              quality_score: 0.98,
+              difficulty_tier: 5
             }
           ]
         });
