@@ -783,7 +783,7 @@ dataset_samples_generated_total 4520`
       if (stored) {
         try {
           const jobs = JSON.parse(stored);
-          if (Array.isArray(jobs)) {
+          if (Array.isArray(jobs) && !jobs.some((j: any) => j.id === 'mock-job-1' || j.id === 'mock-job-2')) {
             let updated = false;
             const nextJobs = jobs.map((job: any) => {
               if (job.status === 'running') {
@@ -826,6 +826,8 @@ dataset_samples_generated_total 4520`
               }
             }
             return nextJobs;
+          } else {
+            sessionStorage.removeItem('mockJobs');
           }
         } catch (e) {
           console.warn("Corrupt sessionStorage jobs detected, resetting", e);
@@ -899,8 +901,10 @@ dataset_samples_generated_total 4520`
       if (stored) {
         try {
           const datasets = JSON.parse(stored);
-          if (Array.isArray(datasets)) {
+          if (Array.isArray(datasets) && !datasets.some((d: any) => d.id === 'mock-job-1' || d.id === 'mock-dataset-2')) {
             return datasets;
+          } else {
+            sessionStorage.removeItem('mockDatasets');
           }
         } catch (e) {
           console.warn("Corrupt sessionStorage datasets detected, resetting", e);
