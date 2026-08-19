@@ -1,0 +1,19 @@
+{
+  "name": "rasosynthtune-monorepo",
+  "version": "1.0.0",
+  "private": true,
+  "scripts": {
+    "dev": "npm run dev --prefix frontend",
+    "build": "npm install --prefix frontend && npm run build --prefix frontend",
+    "start": "npm run start --prefix frontend",
+    "type-check": "npm run type-check --prefix frontend"
+  },
+  "dependencies": {
+    "next": "14.2.5",
+    "react": "18.3.1",
+    "react-dom": "18.3.1"
+  },
+  "devDependencies": {
+    "typescript": "5.5.3"
+  }
+}
