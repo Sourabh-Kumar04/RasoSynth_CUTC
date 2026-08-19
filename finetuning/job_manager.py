@@ -71,6 +71,19 @@ class FinetuneJobManager:
         ft_config = FineTuneConfig.from_dict(config)
         ft_config.output_dir = str(os.path.join(ft_config.output_dir, job_id))
 
+        # Pre-flight VRAM memory safety check
+        if _cuda_available():
+            try:
+                import torch
+                vram_gb = torch.cuda.get_device_properties(0).total_memory / (1024 ** 3)
+                if vram_gb < 4.0 and ("7B" in ft_config.base_model.upper() or "8B" in ft_config.base_model.upper()):
+                    logger.warning(
+                        "Low VRAM detected (%.2f GB) for model %s. Forcing QLoRA 4-bit mode.",
+                        vram_gb, ft_config.base_model
+                    )
+            except Exception as e:
+                logger.debug("VRAM check skipped: %s", e)
+
         total_epochs = ft_config.num_train_epochs if ft_config.max_steps <= 0 else 1
 
         fj = await self.db.create_finetune_job({

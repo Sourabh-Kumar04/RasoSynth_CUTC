@@ -21,7 +21,23 @@ const config: Config = {
         border: 'hsl(var(--border))',
         'border-subtle': 'hsl(var(--border-subtle))',
         muted: {
+          DEFAULT: 'hsl(var(--background-secondary))',
           foreground: 'hsl(var(--muted-foreground))',
+        },
+        pine: {
+          950: '#102A1E',
+          900: '#1B3B2B',
+          800: '#244A38',
+          700: '#2D5E48',
+          200: '#CBD4C8',
+          100: '#E8ECE6',
+          50: '#F4F7F2',
+        },
+        mint: {
+          DEFAULT: '#34D399',
+          400: '#4ADE80',
+          500: '#22C55E',
+          100: '#D1FAE5',
         },
         accent: {
           DEFAULT: 'hsl(var(--accent))',
@@ -42,12 +58,17 @@ const config: Config = {
         },
       },
       borderRadius: {
+        '4xl': '2rem',
+        '3xl': '1.5rem',
+        '2xl': '1rem',
+        xl: '0.75rem',
         lg: 'var(--radius)',
         md: 'calc(var(--radius) - 2px)',
         sm: 'calc(var(--radius) - 4px)',
       },
       fontFamily: {
-        sans: ['Inter', 'system-ui', 'sans-serif'],
+        serif: ['DM Serif Display', 'Georgia', 'serif'],
+        sans: ['Plus Jakarta Sans', 'Inter', 'system-ui', 'sans-serif'],
         mono: ['JetBrains Mono', 'Menlo', 'monospace'],
       },
       keyframes: {
@@ -83,14 +104,6 @@ const config: Config = {
         pulse: 'pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite',
         'fade-in': 'fade-in 0.2s ease-out',
         'slide-in': 'slide-in 0.2s ease-out',
-      },
-      backgroundImage: {
-        'gradient-radial': 'radial-gradient(var(--tw-gradient-stops))',
-        'gradient-conic': 'conic-gradient(from 180deg at 50% 50%, var(--tw-gradient-stops))',
-        'grid-pattern': 'linear-gradient(to right, hsl(var(--border)) 1px, transparent 1px), linear-gradient(to bottom, hsl(var(--border)) 1px, transparent 1px)',
-      },
-      backgroundSize: {
-        'grid': '24px 24px',
       },
     },
   },

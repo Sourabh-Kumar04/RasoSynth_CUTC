@@ -96,6 +96,16 @@ async def create_finetune_job(
 ):
     payload = body.model_dump()
 
+    # Rate limiting: max active queued jobs check
+    if manager:
+        active_jobs = await manager.list_jobs(limit=100)
+        running_or_pending = [j for j in active_jobs if j.status in ("pending", "running")]
+        if len(running_or_pending) >= 10:
+            raise HTTPException(
+                status_code=429,
+                detail="Too many active fine-tuning jobs queued (limit: 10). Please wait for active jobs to complete."
+            )
+
     # Auto-resolve dataset path from DB
     if payload.get("dataset_id") and not payload.get("dataset_path"):
         dataset = await db.db.get_dataset(payload["dataset_id"])
@@ -117,10 +127,19 @@ async def create_finetune_job(
 
 @router.get("/jobs")
 async def list_finetune_jobs(
-    limit: int = Query(100, ge=1, le=500),
+    limit: int = Query(50, ge=1, le=500),
+    offset: int = Query(0, ge=0),
     manager=Depends(_manager),
 ):
-    return {"jobs": await manager.list_jobs(limit=limit)}
+    all_jobs = await manager.list_jobs(limit=1000)
+    paged = all_jobs[offset : offset + limit]
+    return {
+        "jobs": paged,
+        "total": len(all_jobs),
+        "limit": limit,
+        "offset": offset,
+        "has_more": len(all_jobs) > offset + limit
+    }
 
 
 @router.get("/jobs/{job_id}")

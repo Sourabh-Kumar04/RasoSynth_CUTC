@@ -1,6 +1,6 @@
 """Groq Provider Adapter
 
-Production-grade Groq API integration with:
+Groq API integration with:
 - Ultra-low latency inference
 - Streaming support
 - Fast inference optimization

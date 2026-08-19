@@ -15,14 +15,15 @@ import {
   BarChart3,
   Cpu,
   ClipboardCheck,
+  Zap,
+  Layers,
+  Sparkles
 } from 'lucide-react'
 import { clsx } from 'clsx'
 import { Button } from '@/components/ui/button'
 import { ScrollArea } from '@/components/ui/scroll-area'
 import { Badge, StatusBadge } from '@/components/ui/badge'
 import { api } from '@/lib/api/client'
-
-// REAL data - no mock
 
 export function Sidebar() {
   const [collapsed, setCollapsed] = useState(false)
@@ -39,7 +40,6 @@ export function Sidebar() {
           setRecentJobs(response.data.slice(0, 5))
         }
       } catch (error) {
-        // Silently fail - no recent jobs shown
         console.debug('No recent jobs available')
       } finally {
         setLoading(false)
@@ -50,11 +50,11 @@ export function Sidebar() {
 
   if (collapsed) {
     return (
-      <aside className="flex flex-col h-[calc(100vh-3.5rem)] border-r border-border bg-surface/50 w-12">
+      <aside className="hidden lg:flex flex-col h-[calc(100vh-4rem)] border-r border-[#E2E6E0] bg-[#F6F7F4] w-12 transition-all">
         <Button
           variant="ghost"
           size="icon"
-          className="m-2"
+          className="m-2 text-[#55635B] hover:text-[#1B3B2B] hover:bg-[#E8ECE6]"
           onClick={() => setCollapsed(false)}
         >
           <ChevronRight className="h-4 w-4" />
@@ -64,84 +64,91 @@ export function Sidebar() {
   }
 
   return (
-    <aside className="flex flex-col h-[calc(100vh-3.5rem)] border-r border-border bg-surface/50 w-60">
-      {/* Collapse toggle */}
-      <div className="flex items-center justify-between p-3 border-b border-border">
-        <span className="text-xs font-medium text-muted-foreground">Quick Actions</span>
+    <aside className="hidden lg:flex flex-col h-[calc(100vh-4rem)] border-r border-[#E2E6E0] bg-[#F6F7F4] w-64 transition-all">
+      {/* Sidebar Header */}
+      <div className="flex items-center justify-between p-5 border-b border-[#E2E6E0]">
+        <span className="text-xs font-bold uppercase tracking-wider font-mono text-[#55635B]">
+          Quick Navigation
+        </span>
         <Button
           variant="ghost"
           size="icon"
-          className="h-6 w-6"
+          className="h-6 w-6 text-[#55635B] hover:text-[#1B3B2B] hover:bg-[#E8ECE6] rounded-full"
           onClick={() => setCollapsed(true)}
         >
-          <ChevronLeft className="h-3 w-3" />
+          <ChevronLeft className="h-3.5 w-3.5" />
         </Button>
       </div>
 
       <ScrollArea className="flex-1">
-        <div className="p-3 space-y-6">
+        <div className="p-4 space-y-6">
           {/* Quick Actions */}
           <div className="space-y-2">
-            <Link href="/studio/new">
-              <Button variant="outline" className="w-full justify-start gap-2">
-                <Plus className="h-4 w-4" />
-                New Dataset Job
+            <Link href="/studio">
+              <Button
+                size="sm"
+                className="w-full justify-start gap-2 bg-[#1B3B2B] hover:bg-[#142D21] text-white font-medium text-xs rounded-full shadow-xs"
+              >
+                <Zap className="h-3.5 w-3.5 text-emerald-400 fill-current" />
+                New Workflow Presets
               </Button>
             </Link>
             <Link href="/quality">
-              <Button variant="ghost" className="w-full justify-start gap-2">
-                <BarChart3 className="h-4 w-4" />
-                Quality Dashboard
+              <Button variant="ghost" size="sm" className="w-full justify-start gap-2 text-xs text-[#55635B] hover:text-[#1B3B2B] hover:bg-[#E8ECE6] rounded-full">
+                <BarChart3 className="h-3.5 w-3.5 text-[#1B3B2B]" />
+                Quality Benchmarks
               </Button>
             </Link>
             <Link href="/finetune">
-              <Button variant="ghost" className="w-full justify-start gap-2">
-                <Cpu className="h-4 w-4" />
+              <Button variant="ghost" size="sm" className="w-full justify-start gap-2 text-xs text-[#55635B] hover:text-[#1B3B2B] hover:bg-[#E8ECE6] rounded-full">
+                <Cpu className="h-3.5 w-3.5 text-[#1B3B2B]" />
                 Fine-Tune Studio
               </Button>
             </Link>
             <Link href="/review">
-              <Button variant="ghost" className="w-full justify-start gap-2">
-                <ClipboardCheck className="h-4 w-4" />
-                Review Queue
+              <Button variant="ghost" size="sm" className="w-full justify-start gap-2 text-xs text-[#55635B] hover:text-[#1B3B2B] hover:bg-[#E8ECE6] rounded-full">
+                <ClipboardCheck className="h-3.5 w-3.5 text-[#1B3B2B]" />
+                HITL Inspection Queue
               </Button>
             </Link>
           </div>
 
-          {/* Recent Jobs */}
-          <div className="space-y-2">
+          {/* Recent Active Runs */}
+          <div className="space-y-2.5">
             <div className="flex items-center justify-between">
-              <span className="text-xs font-medium text-muted-foreground">Recent Jobs</span>
-              <Clock className="h-3 w-3 text-muted-foreground" />
+              <span className="text-[11px] font-mono font-bold uppercase tracking-wider text-[#55635B]">
+                Recent Syntheses
+              </span>
+              <Clock className="h-3 w-3 text-[#55635B]" />
             </div>
             {loading ? (
-              <div className="text-xs text-muted-foreground p-2">Loading...</div>
+              <div className="text-xs text-[#55635B] p-2 font-mono">Loading active runs...</div>
             ) : recentJobs.length === 0 ? (
-              <div className="text-xs text-muted-foreground p-2">No jobs yet</div>
+              <div className="text-xs text-[#55635B] p-2 font-mono">No active dataset jobs</div>
             ) : (
-              <div className="space-y-1">
+              <div className="space-y-1.5">
                 {recentJobs.map((job) => (
                   <Link key={job.id} href={`/datasets?job=${job.id}`}>
                     <div
                       className={clsx(
-                        'flex items-center justify-between p-2 rounded-md text-sm cursor-pointer transition-colors hover:bg-surface-hover',
-                        pathname === `/datasets` && 'bg-surface-hover'
+                        'flex items-center justify-between p-2.5 rounded-xl border border-transparent text-xs cursor-pointer transition-colors hover:border-[#D1D8CE] hover:bg-white',
+                        pathname === `/datasets` && 'bg-white border-[#E2E6E0] shadow-xs'
                       )}
                     >
                       <div className="flex items-center gap-2 min-w-0">
                         {job.status === 'running' && (
-                          <Loader2 className="h-3 w-3 animate-spin text-accent shrink-0" />
+                          <Loader2 className="h-3 w-3 animate-spin text-emerald-600 shrink-0" />
                         )}
                         {job.status === 'completed' && (
-                          <CheckCircle2 className="h-3 w-3 text-success shrink-0" />
+                          <CheckCircle2 className="h-3 w-3 text-emerald-600 shrink-0" />
                         )}
                         {job.status === 'failed' && (
-                          <AlertCircle className="h-3 w-3 text-error shrink-0" />
+                          <AlertCircle className="h-3 w-3 text-rose-500 shrink-0" />
                         )}
                         {(job.status === 'pending' || job.status === 'negotiating') && (
-                          <Clock className="h-3 w-3 text-muted-foreground shrink-0" />
+                          <Clock className="h-3 w-3 text-[#55635B] shrink-0" />
                         )}
-                        <span className="truncate">{job.target_domain || job.id}</span>
+                        <span className="truncate font-mono text-[11px] font-medium text-[#1B3B2B]">{job.target_domain || job.id}</span>
                       </div>
                       <StatusBadge status={job.status === 'negotiating' ? 'pending' : job.status} />
                     </div>
@@ -151,20 +158,22 @@ export function Sidebar() {
             )}
           </div>
 
-          {/* System Status - Real data from health endpoint */}
+          {/* System Telemetry Overview - Dark Forest Pine Green Mini Card */}
           <div className="space-y-2">
             <div className="flex items-center justify-between">
-              <span className="text-xs font-medium text-muted-foreground">System Status</span>
-              <Activity className="h-3 w-3 text-success" />
+              <span className="text-[11px] font-mono font-bold uppercase tracking-wider text-[#55635B]">
+                Engine Telemetry
+              </span>
+              <Activity className="h-3 w-3 text-emerald-600" />
             </div>
-            <div className="p-3 rounded-md bg-background/50 space-y-2">
-              <div className="flex justify-between text-xs">
-                <span className="text-muted-foreground">Active Jobs</span>
-                <span className="font-mono">{recentJobs.filter(j => j.status === 'running').length || 0}</span>
+            <div className="p-3.5 rounded-2xl bg-[#1B3B2B] text-white shadow-xs space-y-2">
+              <div className="flex justify-between text-xs font-mono">
+                <span className="text-emerald-100/80">Active Workflows</span>
+                <span className="text-white font-bold">{recentJobs.filter(j => j.status === 'running').length || 0}</span>
               </div>
-              <div className="flex justify-between text-xs">
-                <span className="text-muted-foreground">Completed</span>
-                <span className="font-mono">{recentJobs.filter(j => j.status === 'completed').length || 0}</span>
+              <div className="flex justify-between text-xs font-mono">
+                <span className="text-emerald-100/80">Completed</span>
+                <span className="text-emerald-400 font-bold">{recentJobs.filter(j => j.status === 'completed').length || 0}</span>
               </div>
             </div>
           </div>

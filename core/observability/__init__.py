@@ -1,7 +1,7 @@
 """
 Observability, Telemetry & Intelligence Layer
 
-Production-grade observability infrastructure for distributed AI systems
+Observability infrastructure for distributed AI systems
 with structured logging, distributed tracing, metrics, and AI-native analytics.
 """
 

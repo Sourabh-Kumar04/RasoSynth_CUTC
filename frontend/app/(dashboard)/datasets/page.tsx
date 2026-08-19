@@ -248,33 +248,38 @@ export default function DatasetsPage() {
   const selected = datasets.find((ds) => ds.id === selectedDataset)
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-6 max-w-7xl mx-auto pb-8">
       {/* Page Header */}
-      <div className="flex items-center justify-between">
+      <div className="flex items-center justify-between border-b border-[#E2E6E0] pb-4">
         <div>
-          <h1 className="text-2xl font-semibold">Dataset Explorer</h1>
-          <p className="text-sm text-muted-foreground">
-            Browse, validate, and export generated datasets
+          <div className="flex items-center gap-2.5 mb-1">
+            <span className="text-[10px] font-mono px-2.5 py-0.5 rounded-full bg-[#E8ECE6] border border-[#D1D8CE] text-[#1B3B2B] font-bold uppercase tracking-wider">
+              Synthetic Datasets
+            </span>
+            <h1 className="text-2xl font-bold tracking-tight text-[#1B3B2B]">Dataset Explorer</h1>
+          </div>
+          <p className="text-xs text-[#55635B]">
+            Multi-provider dataset synthesis, automated verification, quality scoring, and stream export
           </p>
         </div>
         <div className="flex items-center gap-2">
-          <Button size="sm" className="gap-2" onClick={() => router.push('/studio')}>
-            <Plus className="h-4 w-4" />
-            New Dataset
+          <Button size="sm" className="gap-2 bg-[#1B3B2B] hover:bg-[#142D21] text-white font-medium shadow-xs rounded-full" onClick={() => router.push('/studio')}>
+            <Plus className="h-4 w-4 text-emerald-400" />
+            New Dataset Workflow
           </Button>
         </div>
       </div>
 
       {/* Error State */}
       {error && (
-        <Card className="border-destructive">
+        <Card className="border-rose-300 bg-rose-50/80 rounded-2xl">
           <CardContent className="p-4 flex items-center gap-4">
-            <AlertCircle className="h-5 w-5 text-destructive" />
+            <AlertCircle className="h-5 w-5 text-rose-600" />
             <div className="flex-1">
-              <p className="text-sm font-medium">Connection Error</p>
-              <p className="text-xs text-muted-foreground">{error}</p>
+              <p className="text-sm font-medium text-rose-900">Connection Error</p>
+              <p className="text-xs text-rose-700">{error}</p>
             </div>
-            <Button variant="outline" size="sm" onClick={fetchJobs}>
+            <Button variant="outline" size="sm" onClick={fetchJobs} className="rounded-full">
               Retry
             </Button>
           </CardContent>
@@ -283,62 +288,62 @@ export default function DatasetsPage() {
 
       {/* Loading State */}
       {isLoading && datasets.length === 0 && (
-        <Card>
+        <Card className="border-[#E2E6E0] bg-white rounded-2xl">
           <CardContent className="p-12 flex flex-col items-center justify-center">
-            <Loader2 className="h-8 w-8 animate-spin text-accent mb-4" />
-            <p className="text-sm text-muted-foreground">Loading datasets...</p>
+            <Loader2 className="h-8 w-8 animate-spin text-[#1B3B2B] mb-4" />
+            <p className="text-sm text-[#55635B] font-mono">Fetching active dataset jobs...</p>
           </CardContent>
         </Card>
       )}
 
       {/* Stats */}
       {!isLoading && (
-        <div className="grid grid-cols-4 gap-4">
-          <Card>
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+          <Card className="border-[#E2E6E0] bg-white hover:border-[#D1D8CE] transition-all rounded-2xl card-shadow">
             <CardContent className="p-4 flex items-center gap-4">
-              <div className="h-10 w-10 rounded-lg bg-accent/10 flex items-center justify-center">
-                <Database className="h-5 w-5 text-accent" />
+              <div className="h-10 w-10 rounded-xl bg-[#E8ECE6] border border-[#D1D8CE] flex items-center justify-center">
+                <Database className="h-5 w-5 text-[#1B3B2B]" />
               </div>
               <div>
-                <p className="text-xs text-muted-foreground">Total Datasets</p>
-                <p className="text-xl font-semibold">{datasets.length}</p>
+                <p className="text-xs text-[#55635B] font-mono uppercase tracking-wider">Total Datasets</p>
+                <p className="text-2xl font-bold font-mono text-[#1B3B2B]">{datasets.length}</p>
               </div>
             </CardContent>
           </Card>
-          <Card>
+          <Card className="border-[#E2E6E0] bg-white hover:border-[#D1D8CE] transition-all rounded-2xl card-shadow">
             <CardContent className="p-4 flex items-center gap-4">
-              <div className="h-10 w-10 rounded-lg bg-success/10 flex items-center justify-center">
-                <CheckCircle2 className="h-5 w-5 text-success" />
+              <div className="h-10 w-10 rounded-xl bg-[#E8ECE6] border border-[#D1D8CE] flex items-center justify-center">
+                <CheckCircle2 className="h-5 w-5 text-[#1B3B2B]" />
               </div>
               <div>
-                <p className="text-xs text-muted-foreground">Validated</p>
-                <p className="text-xl font-semibold">
+                <p className="text-xs text-[#55635B] font-mono uppercase tracking-wider">Validated</p>
+                <p className="text-2xl font-bold font-mono text-[#1B3B2B]">
                   {datasets.filter((ds) => ds.validated).length}
                 </p>
               </div>
             </CardContent>
           </Card>
-          <Card>
+          <Card className="border-[#E2E6E0] bg-white rounded-2xl card-shadow">
             <CardContent className="p-4 flex items-center gap-4">
-              <div className="h-10 w-10 rounded-lg bg-info/10 flex items-center justify-center">
-                <Layers className="h-5 w-5 text-info" />
+              <div className="h-10 w-10 rounded-xl bg-[#E8ECE6] border border-[#D1D8CE] flex items-center justify-center">
+                <Layers className="h-5 w-5 text-[#1B3B2B]" />
               </div>
               <div>
-                <p className="text-xs text-muted-foreground">Total Records</p>
-                <p className="text-xl font-semibold">
+                <p className="text-xs text-[#55635B] font-mono uppercase tracking-wider">Total Records</p>
+                <p className="text-2xl font-bold font-mono text-[#1B3B2B]">
                   {datasets.reduce((acc, ds) => acc + ds.records, 0).toLocaleString()}
                 </p>
               </div>
             </CardContent>
           </Card>
-          <Card>
+          <Card className="border-[#E2E6E0] bg-white rounded-2xl card-shadow">
             <CardContent className="p-4 flex items-center gap-4">
-              <div className="h-10 w-10 rounded-lg bg-warning/10 flex items-center justify-center">
-                <AlertCircle className="h-5 w-5 text-warning" />
+              <div className="h-10 w-10 rounded-xl bg-[#E8ECE6] border border-[#D1D8CE] flex items-center justify-center">
+                <AlertCircle className="h-5 w-5 text-[#1B3B2B]" />
               </div>
               <div>
-                <p className="text-xs text-muted-foreground">Processing</p>
-                <p className="text-xl font-semibold">
+                <p className="text-xs text-[#55635B] font-mono uppercase tracking-wider">Processing</p>
+                <p className="text-2xl font-bold font-mono text-[#1B3B2B]">
                   {datasets.filter((ds) => ds.status === 'processing').length}
                 </p>
               </div>
@@ -348,19 +353,19 @@ export default function DatasetsPage() {
       )}
 
       {/* Filters */}
-      <div className="flex items-center gap-4">
-        <div className="relative flex-1 max-w-sm">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+      <div className="flex flex-wrap items-center gap-3">
+        <div className="relative flex-1 min-w-[200px] max-w-sm">
+          <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 h-4 w-4 text-[#55635B]" />
           <Input
             placeholder="Search datasets..."
             value={search}
             onChange={(e) => setSearch(e.target.value)}
-            className="pl-9"
+            className="pl-10 rounded-full border-[#D1D8CE] bg-white text-[#1B3B2B] w-full"
           />
         </div>
 
         <Select value={modalityFilter} onValueChange={setModalityFilter}>
-          <SelectTrigger className="w-36">
+          <SelectTrigger className="w-full sm:w-36 rounded-full border-[#D1D8CE] bg-white text-[#1B3B2B]">
             <SelectValue placeholder="Modality" />
           </SelectTrigger>
           <SelectContent>
@@ -373,7 +378,7 @@ export default function DatasetsPage() {
         </Select>
 
         <Select value={statusFilter} onValueChange={setStatusFilter}>
-          <SelectTrigger className="w-32">
+          <SelectTrigger className="w-full sm:w-32 rounded-full border-[#D1D8CE] bg-white text-[#1B3B2B]">
             <SelectValue placeholder="Status" />
           </SelectTrigger>
           <SelectContent>
@@ -384,7 +389,7 @@ export default function DatasetsPage() {
         </Select>
 
         <Select value={sortBy} onValueChange={(v: any) => setSortBy(v)}>
-          <SelectTrigger className="w-36">
+          <SelectTrigger className="w-full sm:w-36 rounded-full border-[#D1D8CE] bg-white text-[#1B3B2B]">
             <SelectValue placeholder="Sort by" />
           </SelectTrigger>
           <SelectContent>
@@ -398,15 +403,15 @@ export default function DatasetsPage() {
 
       {/* Empty State */}
       {!isLoading && datasets.length === 0 && !error && (
-        <Card>
+        <Card className="border-[#E2E6E0] bg-white rounded-2xl">
           <CardContent className="p-12 flex flex-col items-center justify-center">
-            <Database className="h-12 w-12 text-muted-foreground/50 mb-4" />
-            <h3 className="text-lg font-medium mb-2">No datasets yet</h3>
-            <p className="text-sm text-muted-foreground mb-6 text-center max-w-md">
+            <Database className="h-12 w-12 text-[#809085] mb-4" />
+            <h3 className="text-lg font-bold text-[#1B3B2B] mb-2">No datasets yet</h3>
+            <p className="text-sm text-[#55635B] mb-6 text-center max-w-md">
               Create your first dataset by describing what you need in the Studio.
               The AI will autonomously generate high-quality training data.
             </p>
-            <Button className="gap-2" onClick={() => router.push('/studio')}>
+            <Button className="gap-2 bg-[#1B3B2B] hover:bg-[#142D21] text-white rounded-full" onClick={() => router.push('/studio')}>
               <Plus className="h-4 w-4" />
               Create Your First Dataset
             </Button>
@@ -416,19 +421,19 @@ export default function DatasetsPage() {
 
       {/* Dataset Table */}
       {datasets.length > 0 && (
-      <Card>
+      <Card className="border-[#E2E6E0] bg-white rounded-2xl card-shadow overflow-hidden">
         <Table>
-          <TableHeader>
+          <TableHeader className="bg-[#F6F7F4]">
             <TableRow>
-              <TableHead className="w-[300px]">Dataset</TableHead>
-              <TableHead>Modality</TableHead>
-              <TableHead>Format</TableHead>
-              <TableHead className="text-right">Size</TableHead>
-              <TableHead className="text-right">Records</TableHead>
-              <TableHead>Quality</TableHead>
-              <TableHead>Status</TableHead>
-              <TableHead>Validated</TableHead>
-              <TableHead className="w-[200px] text-right">Actions</TableHead>
+              <TableHead className="w-[300px] text-[#55635B] font-mono uppercase text-[11px]">Dataset</TableHead>
+              <TableHead className="text-[#55635B] font-mono uppercase text-[11px]">Modality</TableHead>
+              <TableHead className="text-[#55635B] font-mono uppercase text-[11px]">Format</TableHead>
+              <TableHead className="text-right text-[#55635B] font-mono uppercase text-[11px]">Size</TableHead>
+              <TableHead className="text-right text-[#55635B] font-mono uppercase text-[11px]">Records</TableHead>
+              <TableHead className="text-[#55635B] font-mono uppercase text-[11px]">Quality</TableHead>
+              <TableHead className="text-[#55635B] font-mono uppercase text-[11px]">Status</TableHead>
+              <TableHead className="text-[#55635B] font-mono uppercase text-[11px]">Validated</TableHead>
+              <TableHead className="w-[200px] text-right text-[#55635B] font-mono uppercase text-[11px]">Actions</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
@@ -438,69 +443,68 @@ export default function DatasetsPage() {
                 <TableRow
                   key={dataset.id}
                   className={clsx(
-                    'cursor-pointer',
-                    selectedDataset === dataset.id && 'bg-accent/5'
+                    'cursor-pointer hover:bg-[#F6F7F4] transition-colors',
+                    selectedDataset === dataset.id && 'bg-[#E8ECE6]/60'
                   )}
                   onClick={() => setSelectedDataset(dataset.id)}
                 >
                   <TableCell>
                     <div className="flex items-center gap-3">
-                      <div className="h-8 w-8 rounded bg-surface flex items-center justify-center">
-                        <Database className="h-4 w-4 text-muted-foreground" />
+                      <div className="h-8 w-8 rounded-xl bg-[#E8ECE6] border border-[#D1D8CE] flex items-center justify-center">
+                        <Database className="h-4 w-4 text-[#1B3B2B]" />
                       </div>
                       <div>
-                        <p className="font-medium">{dataset.name}</p>
-                        <p className="text-xs text-muted-foreground">{dataset.id}</p>
+                        <p className="font-bold text-xs text-[#1B3B2B]">{dataset.name}</p>
+                        <p className="text-[11px] text-[#55635B] font-mono">{dataset.id}</p>
                       </div>
                     </div>
                   </TableCell>
                   <TableCell>
                     <div className="flex items-center gap-1.5">
-                      <ModalityIcon className="h-4 w-4 text-muted-foreground" />
-                      <span className="text-sm capitalize">{dataset.modality}</span>
+                      <ModalityIcon className="h-4 w-4 text-[#55635B]" />
+                      <span className="text-xs text-[#1B3B2B] capitalize">{dataset.modality}</span>
                     </div>
                   </TableCell>
                   <TableCell>
-                    <Badge variant="outline" className="font-mono text-xs">
+                    <Badge variant="outline" className="font-mono text-[10px] bg-white border-[#D1D8CE] text-[#1B3B2B] rounded-full">
                       {dataset.format}
                     </Badge>
                   </TableCell>
-                  <TableCell className="text-right font-mono text-sm">
+                  <TableCell className="text-right font-mono text-xs text-[#1B3B2B]">
                     {dataset.size}
                   </TableCell>
-                  <TableCell className="text-right font-mono text-sm">
+                  <TableCell className="text-right font-mono text-xs text-[#1B3B2B]">
                     {dataset.records.toLocaleString()}
                   </TableCell>
                   <TableCell>
                     <div className="flex items-center gap-2">
-                      <Progress value={dataset.quality} className="w-16 h-1.5" />
-                      <span className="text-sm font-mono">{dataset.quality}%</span>
+                      <Progress value={dataset.quality} className="w-16 h-1.5 bg-[#E8ECE6]" />
+                      <span className="text-xs font-mono text-[#1B3B2B] font-bold">{dataset.quality}%</span>
                     </div>
                   </TableCell>
                   <TableCell>
                     <Badge
-                      variant={
-                        dataset.status === 'ready' ? 'success' : 'secondary'
-                      }
-                      className="capitalize"
+                      className={clsx(
+                        'capitalize text-[10px] rounded-full',
+                        dataset.status === 'ready' ? 'bg-emerald-100 text-emerald-800 border-emerald-300' : 'bg-[#E8ECE6] text-[#55635B]'
+                      )}
                     >
                       {dataset.status}
                     </Badge>
                   </TableCell>
                   <TableCell>
                     {dataset.validated ? (
-                      <CheckCircle2 className="h-4 w-4 text-success" />
+                      <CheckCircle2 className="h-4 w-4 text-emerald-600" />
                     ) : (
-                      <AlertCircle className="h-4 w-4 text-warning" />
+                      <AlertCircle className="h-4 w-4 text-amber-500" />
                     )}
                   </TableCell>
                   <TableCell>
                     <div className="flex items-center gap-1.5 justify-end">
-                      {/* View button - expands preview panel */}
                       <Button
                         variant="ghost"
                         size="icon"
-                        className="h-8 w-8"
+                        className="h-8 w-8 rounded-full text-[#1B3B2B] hover:bg-[#E8ECE6]"
                         onClick={(e) => {
                           e.stopPropagation()
                           setSelectedDataset(dataset.id)
@@ -509,14 +513,13 @@ export default function DatasetsPage() {
                       >
                         <Eye className="h-4 w-4" />
                       </Button>
-                      {/* Format selector dropdown */}
                       <Select
                         value={downloadFormat[dataset.id] || 'jsonl'}
                         onValueChange={(val) =>
                           setDownloadFormat((prev) => ({ ...prev, [dataset.id]: val }))
                         }
                       >
-                        <SelectTrigger className="h-8 w-[68px] text-xs px-2">
+                        <SelectTrigger className="h-8 w-[68px] text-xs px-2 rounded-full border-[#D1D8CE] bg-white text-[#1B3B2B]">
                           <SelectValue />
                         </SelectTrigger>
                         <SelectContent>
@@ -524,11 +527,10 @@ export default function DatasetsPage() {
                           <SelectItem value="jsonl">JSONL</SelectItem>
                         </SelectContent>
                       </Select>
-                      {/* Download button with loading spinner */}
                       <Button
                         variant="outline"
                         size="sm"
-                        className="h-8 gap-1 text-xs px-2"
+                        className="h-8 gap-1 text-xs px-2.5 rounded-full border-[#D1D8CE] text-[#1B3B2B] hover:bg-[#E8ECE6]"
                         disabled={downloadingIds.has(dataset.id) || dataset.status !== 'ready'}
                         onClick={(e) => {
                           e.stopPropagation()
@@ -553,20 +555,20 @@ export default function DatasetsPage() {
 
       {/* Selected Dataset Details */}
       {selected && (
-        <Card>
-          <CardHeader className="pb-2">
+        <Card className="border-[#E2E6E0] bg-white rounded-2xl card-shadow">
+          <CardHeader className="pb-2 border-b border-[#E2E6E0]">
             <div className="flex items-center justify-between">
-              <CardTitle className="text-lg">{selected.name}</CardTitle>
-              <Button variant="ghost" size="sm" onClick={() => setSelectedDataset(null)}>
+              <CardTitle className="text-lg font-bold text-[#1B3B2B]">{selected.name}</CardTitle>
+              <Button variant="ghost" size="sm" className="rounded-full text-[#1B3B2B] hover:bg-[#E8ECE6]" onClick={() => setSelectedDataset(null)}>
                 <X className="h-4 w-4" />
               </Button>
             </div>
           </CardHeader>
-          <CardContent>
+          <CardContent className="p-6">
             <div className="space-y-4">
               {/* Pipeline Stages */}
               <div className="space-y-2">
-                <p className="text-xs text-muted-foreground">Pipeline Progress</p>
+                <p className="text-xs font-mono text-[#55635B] uppercase">Pipeline Progress</p>
                 <div className="flex items-center gap-1">
                   {PIPELINE_STAGES.map((stage, index) => {
                     const currentStageIndex = PIPELINE_STAGES.findIndex(
@@ -580,9 +582,9 @@ export default function DatasetsPage() {
                         <div
                           className={clsx(
                             'flex items-center justify-center w-8 h-8 rounded-full text-xs font-medium',
-                            isCompleted && 'bg-success/20 text-success',
-                            isCurrent && selected.status !== 'ready' ? 'bg-accent/20 text-accent' : 'bg-surface text-muted-foreground',
-                            !isCompleted && !isCurrent && 'bg-surface text-muted-foreground'
+                            isCompleted && 'bg-emerald-100 text-emerald-800 border border-emerald-300',
+                            isCurrent && selected.status !== 'ready' ? 'bg-[#1B3B2B] text-white' : 'bg-[#E8ECE6] text-[#55635B]',
+                            !isCompleted && !isCurrent && 'bg-[#E8ECE6] text-[#55635B]'
                           )}
                         >
                           {isCompleted ? '✓' : stage.icon}
@@ -591,7 +593,7 @@ export default function DatasetsPage() {
                           <div
                             className={clsx(
                               'w-8 h-0.5',
-                              isCompleted ? 'bg-success/30' : 'bg-border'
+                              isCompleted ? 'bg-emerald-400' : 'bg-[#D1D8CE]'
                             )}
                           />
                         )}
@@ -599,39 +601,39 @@ export default function DatasetsPage() {
                     )
                   })}
                 </div>
-                <div className="flex justify-between text-xs text-muted-foreground">
+                <div className="flex justify-between text-xs text-[#55635B] font-mono">
                   <span>Start</span>
                   <span>Complete</span>
                 </div>
               </div>
 
               {/* Stats Grid */}
-              <div className="grid grid-cols-4 gap-4">
+              <div className="grid grid-cols-4 gap-4 p-3 bg-[#F6F7F4] rounded-xl border border-[#E2E6E0]">
                 <div className="space-y-1">
-                  <p className="text-xs text-muted-foreground">Progress</p>
-                  <p className="text-sm font-mono">{Math.round(selected.quality)}%</p>
+                  <p className="text-xs text-[#55635B] font-mono uppercase">Progress</p>
+                  <p className="text-sm font-mono font-bold text-[#1B3B2B]">{Math.round(selected.quality)}%</p>
                 </div>
                 <div className="space-y-1">
-                  <p className="text-xs text-muted-foreground">Samples</p>
-                  <p className="text-sm font-mono">{selected.records.toLocaleString()}</p>
+                  <p className="text-xs text-[#55635B] font-mono uppercase">Samples</p>
+                  <p className="text-sm font-mono font-bold text-[#1B3B2B]">{selected.records.toLocaleString()}</p>
                 </div>
                 <div className="space-y-1">
-                  <p className="text-xs text-muted-foreground">Created</p>
-                  <p className="text-sm">{selected.created}</p>
+                  <p className="text-xs text-[#55635B] font-mono uppercase">Created</p>
+                  <p className="text-sm font-mono text-[#1B3B2B]">{selected.created}</p>
                 </div>
                 <div className="space-y-1">
-                  <p className="text-xs text-muted-foreground">ID</p>
-                  <p className="text-sm font-mono text-xs">{selected.id.slice(0, 12)}...</p>
+                  <p className="text-xs text-[#55635B] font-mono uppercase">ID</p>
+                  <p className="text-xs font-mono text-[#1B3B2B]">{selected.id.slice(0, 12)}...</p>
                 </div>
               </div>
 
               {/* Tags */}
               {selected.tags.length > 0 && (
                 <div className="space-y-1">
-                  <p className="text-xs text-muted-foreground">Tags</p>
+                  <p className="text-xs text-[#55635B] font-mono uppercase">Tags</p>
                   <div className="flex flex-wrap gap-1">
                     {selected.tags.map((tag: string) => (
-                      <Badge key={tag} variant="secondary" className="text-xs">
+                      <Badge key={tag} variant="secondary" className="text-xs rounded-full bg-[#E8ECE6] text-[#1B3B2B]">
                         {tag}
                       </Badge>
                     ))}
@@ -640,57 +642,57 @@ export default function DatasetsPage() {
               )}
 
               {/* Records Preview */}
-              <div className="space-y-2 border-t pt-4">
+              <div className="space-y-2 border-t border-[#E2E6E0] pt-4">
                 <div className="flex items-center justify-between">
-                  <p className="text-sm font-semibold">Dataset Records Preview (First 10 records)</p>
+                  <p className="text-sm font-bold text-[#1B3B2B]">Dataset Records Preview (First 10 records)</p>
                   {records.length > 0 && (
-                    <span className="text-xs text-muted-foreground">{records.length} records retrieved</span>
+                    <span className="text-xs text-[#55635B] font-mono">{records.length} records retrieved</span>
                   )}
                 </div>
 
                 {recordsLoading ? (
-                  <div className="p-8 flex items-center justify-center bg-surface/50 rounded border border-dashed">
-                    <Loader2 className="h-5 w-5 animate-spin text-accent mr-2" />
-                    <span className="text-xs text-muted-foreground">Loading preview records...</span>
+                  <div className="p-8 flex items-center justify-center bg-[#F6F7F4] rounded-xl border border-dashed border-[#D1D8CE]">
+                    <Loader2 className="h-5 w-5 animate-spin text-[#1B3B2B] mr-2" />
+                    <span className="text-xs text-[#55635B] font-mono">Loading preview records...</span>
                   </div>
                 ) : recordsError ? (
-                  <div className="p-4 bg-destructive/10 rounded border border-destructive/20 text-xs text-destructive">
+                  <div className="p-4 bg-rose-50 rounded-xl border border-rose-200 text-xs text-rose-700">
                     Failed to load preview: {recordsError}
                   </div>
                 ) : records.length === 0 ? (
-                  <div className="p-8 text-center bg-surface/50 rounded border border-dashed text-xs text-muted-foreground">
+                  <div className="p-8 text-center bg-[#F6F7F4] rounded-xl border border-dashed border-[#D1D8CE] text-xs text-[#55635B] font-mono">
                     No preview records available. Ensure pipeline has completed and exported files successfully.
                   </div>
                 ) : (
-                  <div className="max-h-[350px] overflow-y-auto space-y-3 rounded-lg border bg-surface/30 p-3">
+                  <div className="max-h-[350px] overflow-y-auto space-y-3 rounded-2xl border border-[#E2E6E0] bg-[#F6F7F4] p-3">
                     {records.map((rec, i) => (
-                      <div key={i} className="p-3 bg-surface rounded border text-xs space-y-2 hover:border-accent/40 transition">
-                        <div className="flex items-center justify-between text-[10px] text-muted-foreground font-mono">
+                      <div key={i} className="p-3.5 bg-white rounded-xl border border-[#E2E6E0] text-xs space-y-2">
+                        <div className="flex items-center justify-between text-[10px] text-[#55635B] font-mono">
                           <span>Record #{i + 1}</span>
                           {rec.difficulty_tier !== undefined && (
-                            <Badge variant="outline" className="text-[9px] px-1 py-0 font-mono">
+                            <Badge variant="outline" className="text-[9px] px-1.5 py-0 font-mono rounded-full border-[#D1D8CE]">
                               Tier {rec.difficulty_tier}
                             </Badge>
                           )}
                         </div>
                         {rec.instruction || rec.prompt ? (
                           <div className="space-y-1">
-                            <p className="font-semibold text-accent">Prompt / Instruction:</p>
-                            <p className="bg-surface/80 p-2 rounded text-muted-foreground max-w-full overflow-x-auto whitespace-pre-wrap font-sans leading-relaxed">
+                            <p className="font-bold text-[#1B3B2B]">Prompt / Instruction:</p>
+                            <p className="bg-[#F6F7F4] p-2.5 rounded-lg text-[#1B3B2B] max-w-full overflow-x-auto whitespace-pre-wrap font-sans leading-relaxed border border-[#E2E6E0]">
                               {rec.instruction || rec.prompt}
                             </p>
                           </div>
                         ) : null}
                         {rec.response || rec.output ? (
                           <div className="space-y-1">
-                            <p className="font-semibold text-success">Response / Output:</p>
-                            <p className="bg-surface/80 p-2 rounded text-muted-foreground max-w-full overflow-x-auto whitespace-pre-wrap font-sans leading-relaxed">
+                            <p className="font-bold text-emerald-800">Response / Output:</p>
+                            <p className="bg-[#F6F7F4] p-2.5 rounded-lg text-[#1B3B2B] max-w-full overflow-x-auto whitespace-pre-wrap font-sans leading-relaxed border border-[#E2E6E0]">
                               {rec.response || rec.output}
                             </p>
                           </div>
                         ) : null}
                         {!rec.instruction && !rec.prompt && !rec.response && !rec.output ? (
-                          <pre className="text-[11px] font-mono text-muted-foreground bg-surface/80 p-2 rounded overflow-x-auto whitespace-pre">
+                          <pre className="text-[11px] font-mono text-[#1B3B2B] bg-[#F6F7F4] p-2.5 rounded-lg overflow-x-auto whitespace-pre border border-[#E2E6E0]">
                             {JSON.stringify(rec, null, 2)}
                           </pre>
                         ) : null}
@@ -702,16 +704,16 @@ export default function DatasetsPage() {
 
               {/* Download Action with format selector */}
               {selected.status === 'ready' && (
-                <div className="pt-4 flex items-center justify-end gap-2">
+                <div className="pt-4 flex items-center justify-end gap-2 border-t border-[#E2E6E0]">
                   <div className="flex items-center gap-2 mr-auto">
-                    <span className="text-xs text-muted-foreground">Download as:</span>
+                    <span className="text-xs text-[#55635B]">Download as:</span>
                     <Select
                       value={downloadFormat[selected.id] || 'jsonl'}
                       onValueChange={(val) =>
                         setDownloadFormat((prev) => ({ ...prev, [selected.id]: val }))
                       }
                     >
-                      <SelectTrigger className="h-8 w-28 text-xs">
+                      <SelectTrigger className="h-8 w-28 text-xs rounded-full border-[#D1D8CE] bg-white text-[#1B3B2B]">
                         <SelectValue />
                       </SelectTrigger>
                       <SelectContent>
@@ -722,7 +724,7 @@ export default function DatasetsPage() {
                   </div>
                   <Button
                     size="sm"
-                    className="gap-2 bg-success hover:bg-success/90 text-white"
+                    className="gap-2 bg-[#1B3B2B] hover:bg-[#142D21] text-white rounded-full px-5 font-medium"
                     disabled={downloadingIds.has(selected.id)}
                     onClick={() =>
                       handleDownload(selected.id, downloadFormat[selected.id] || 'jsonl')
@@ -730,12 +732,12 @@ export default function DatasetsPage() {
                   >
                     {downloadingIds.has(selected.id) ? (
                       <>
-                        <Loader2 className="h-4 w-4 animate-spin" />
+                        <Loader2 className="h-4 w-4 animate-spin text-emerald-400" />
                         Downloading...
                       </>
                     ) : (
                       <>
-                        <Download className="h-4 w-4" />
+                        <Download className="h-4 w-4 text-emerald-400" />
                         Download Dataset
                       </>
                     )}

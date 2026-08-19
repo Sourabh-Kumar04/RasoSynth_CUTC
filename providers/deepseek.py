@@ -1,6 +1,6 @@
 """DeepSeek Provider Adapter
 
-Production-grade DeepSeek API integration with:
+DeepSeek API integration with:
 - Text generation
 - Streaming support
 - Tool calling (via function calling)

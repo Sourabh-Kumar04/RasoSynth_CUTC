@@ -116,7 +116,7 @@ _log_context: ContextVar[Optional[LogContext]] = ContextVar('log_context', defau
 
 
 class StructuredLogger:
-    """Production-grade structured logger."""
+    """Structured logger."""
 
     def __init__(
         self,

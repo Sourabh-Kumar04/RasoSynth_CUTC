@@ -18,7 +18,7 @@ SCENARIOS = {
 
 An awesome project list showcasing advanced engineering.
 Here are the core libraries:
-* [RasoDataset](https://github.com/VoltAgent/awesome-agent-skills/tree/main/dataset) - A production-grade AI dataset generation system with dynamic adaptivity.
+* [RasoDataset](https://github.com/VoltAgent/awesome-agent-skills/tree/main/dataset) - An AI dataset generation system with dynamic adaptivity.
 * [LLM-Router](https://github.com/VoltAgent/awesome-agent-skills/tree/main/router) - Intelligent failover routing.
 * [Checkpointer](https://github.com/VoltAgent/awesome-agent-skills/tree/main/checkpoints) - Distributed checkpoints for workflow resilience.
 

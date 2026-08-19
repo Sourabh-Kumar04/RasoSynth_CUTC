@@ -2,31 +2,35 @@
 @tailwind components;
 @tailwind utilities;
 
-@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=DM+Serif+Display:ital@0;1&family=Plus+Jakarta+Sans:ital,wght@0,300..800;1,300..800&family=JetBrains+Mono:wght@400;500;600;700&display=swap');
 
 @layer base {
   :root {
-    --background: 240 10% 4%;
-    --background-secondary: 240 10% 7%;
-    --background-tertiary: 240 10% 9%;
-    --foreground: 0 0% 98%;
-    --surface: 240 10% 11%;
-    --surface-hover: 240 10% 14%;
-    --border: 240 10% 18%;
-    --border-subtle: 240 10% 14%;
-    --muted-foreground: 240 5% 65%;
-    --accent: 245 80% 65%;
-    --accent-hover: 245 80% 70%;
-    --accent-muted: 245 80% 55%;
-    --success: 142 70% 45%;
-    --warning: 38 92% 50%;
-    --error: 0 84% 60%;
-    --info: 217 91% 60%;
-    --card: 240 10% 11%;
-    --card-foreground: 0 0% 98%;
-    --popover: 240 10% 11%;
-    --popover-foreground: 0 0% 98%;
-    --radius: 0.5rem;
+    /* RasoSpeak Light Editorial & Forest Sage Palette */
+    --background: 90 12% 97%;           /* #F6F7F4 - Soft Warm Off-White Cream */
+    --background-secondary: 90 10% 93%;  /* #ECEFE9 - Soft Sage Cream */
+    --background-tertiary: 90 10% 88%;   /* #DFE4DC - Soft Surface Divider */
+    --foreground: 150 37% 17%;          /* #1B3B2B - Deep Forest Pine Text */
+    --surface: 0 0% 100%;               /* #FFFFFF - Pure White Card */
+    --surface-hover: 90 12% 96%;       /* #F2F5F0 - Hover State */
+    --border: 90 10% 88%;              /* #E2E6E0 - Subtle Cream Border */
+    --border-subtle: 90 8% 92%;       /* #EBEFE8 - Subdued Divider */
+    --muted-foreground: 150 8% 40%;    /* #55635B - Muted Charcoal Sage */
+    
+    /* Primary Brand Accent: Deep Forest Pine Emerald (#1B3B2B) */
+    --accent: 150 37% 17%;              /* #1B3B2B - Deep Pine Primary */
+    --accent-hover: 150 40% 13%;        /* #142D21 - Dark Pine Hover */
+    --accent-muted: 90 15% 91%;        /* #E4E9E2 - Soft Sage Accent */
+    
+    --success: 150 60% 40%;             /* #1B8A5A - Deep Mint green */
+    --warning: 38 92% 48%;              /* #D97706 - Amber warning */
+    --error: 350 80% 50%;               /* #E11D48 - Crimson red */
+    --info: 200 80% 45%;                /* #0284C7 - Sky blue */
+    --card: 0 0% 100%;                  /* #FFFFFF */
+    --card-foreground: 150 37% 17%;
+    --popover: 0 0% 100%;
+    --popover-foreground: 150 37% 17%;
+    --radius: 1rem;                     /* 16px rounded-2xl modern radius */
   }
 }
 
@@ -36,70 +40,75 @@
   }
 
   body {
-    @apply bg-background text-foreground;
-    font-feature-settings: "rlig" 1, "calt" 1;
+    @apply bg-background text-foreground font-sans antialiased;
+    background-color: #F6F7F4;
+    color: #1B3B2B;
+    font-feature-settings: "cv02", "cv03", "cv04", "cv11";
   }
 
-  /* Custom scrollbar */
+  /* Custom refined light scrollbar */
   ::-webkit-scrollbar {
-    width: 8px;
-    height: 8px;
+    width: 6px;
+    height: 6px;
   }
 
   ::-webkit-scrollbar-track {
-    @apply bg-background-secondary;
+    background-color: #F0F3EE;
   }
 
   ::-webkit-scrollbar-thumb {
-    @apply bg-border rounded-full;
+    background-color: #CBD4C8;
+    border-radius: 9999px;
   }
 
   ::-webkit-scrollbar-thumb:hover {
-    @apply bg-muted-foreground;
+    background-color: #A3B2A0;
   }
 }
 
 @layer utilities {
+  .font-serif {
+    font-family: 'DM Serif Display', Georgia, serif;
+  }
+
   .text-balance {
     text-wrap: balance;
   }
 
-  /* Gradient text */
-  .gradient-text {
-    @apply bg-gradient-to-r from-accent to-purple-500 bg-clip-text text-transparent;
+  /* Pine Green Gradient Text */
+  .gradient-text-pine {
+    @apply bg-gradient-to-r from-[#1B3B2B] via-[#244A38] to-[#102A1E] bg-clip-text text-transparent;
   }
 
-  /* Glow effect */
-  .glow {
-    box-shadow: 0 0 20px -5px hsl(var(--accent) / 0.4);
+  /* Forest Pine Feature Card Styling */
+  .bg-pine-dark {
+    background-color: #1B3B2B;
+    color: #FFFFFF;
   }
 
-  /* Glass effect */
-  .glass {
-    @apply bg-background/80 backdrop-blur-xl border border-border;
+  .bg-pine-card {
+    background-color: #244A38;
+    color: #FFFFFF;
   }
 
-  /* Grid pattern background */
-  .grid-bg {
-    background-image: linear-gradient(to right, hsl(var(--border) / 0.3) 1px, transparent 1px),
-      linear-gradient(to bottom, hsl(var(--border) / 0.3) 1px, transparent 1px);
-    background-size: 32px 32px;
+  /* Soft Light Card Shadow */
+  .card-shadow {
+    box-shadow: 0 4px 20px -2px rgba(27, 59, 43, 0.04), 0 2px 6px -1px rgba(27, 59, 43, 0.02);
   }
 
-  /* Animated gradient border */
-  .gradient-border {
-    position: relative;
+  .card-shadow-hover {
+    box-shadow: 0 10px 25px -3px rgba(27, 59, 43, 0.08), 0 4px 10px -2px rgba(27, 59, 43, 0.04);
   }
 
-  .gradient-border::before {
-    content: '';
-    position: absolute;
-    inset: 0;
-    padding: 1px;
-    border-radius: inherit;
-    background: linear-gradient(135deg, hsl(var(--accent)), hsl(270 70% 60%));
-    -webkit-mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
-    -webkit-mask-composite: xor;
-    mask-composite: exclude;
+  /* Pill Navigation Tabs Backdrop */
+  .pill-nav-bg {
+    background-color: #E8ECE6;
+  }
+
+  /* Soft Glass effect for light theme */
+  .glass-light {
+    background-color: rgba(255, 255, 255, 0.85);
+    backdrop-filter: blur(12px);
+    border: 1px solid #E2E6E0;
   }
 }

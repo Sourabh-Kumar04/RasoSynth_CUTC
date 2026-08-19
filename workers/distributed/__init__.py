@@ -1,7 +1,7 @@
 """
 Distributed Execution & GPU-Accelerated Pipeline Architecture
 
-A production-grade distributed system for large-scale AI dataset processing
+A distributed system for large-scale AI dataset processing
 combining Ray (GPU/compute) and Celery (orchestration).
 
 Architecture:

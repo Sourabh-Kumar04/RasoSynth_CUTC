@@ -1,7 +1,7 @@
 """
 Enterprise Load Testing Framework
 
-Comprehensive production-grade load testing using k6 for:
+Comprehensive load testing using k6 for:
 - Normal traffic simulation
 - Burst traffic
 - Provider throttling

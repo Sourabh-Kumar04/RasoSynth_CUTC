@@ -1,4 +1,4 @@
-"""Production-grade WebSocket manager with Redis pub/sub support."""
+"""WebSocket manager with Redis pub/sub support."""
 import asyncio
 import json
 import logging

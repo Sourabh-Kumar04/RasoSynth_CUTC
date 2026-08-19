@@ -7,7 +7,7 @@
 
 ## 1. Concept & Vision
 
-A production-grade AI-native frontend platform functioning as an **orchestration control center** for autonomous dataset engineering. The interface feels like a blend of Linear's precision, Datadog's observability depth, and LangSmith's AI workflow understanding.
+An AI-native frontend platform functioning as an **orchestration control center** for autonomous dataset engineering. The interface feels like a blend of Linear's precision, Datadog's observability depth, and LangSmith's AI workflow understanding.
 
 The platform transforms complex distributed AI pipeline management into an intuitive, real-time, collaborative workspace where teams can orchestrate, monitor, and optimize autonomous dataset generation at scale.
 

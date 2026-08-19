@@ -1,6 +1,6 @@
 """Together AI Provider Adapter
 
-Production-grade Together API integration with:
+Together API integration with:
 - 100+ open models
 - Fast inference
 - Competitive pricing

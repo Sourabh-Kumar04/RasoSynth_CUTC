@@ -1,6 +1,6 @@
 """LangSmith Observability & Monitoring Integration.
 
-Provides production-grade tracing for dataset generation pipelines, prompt mutations,
+Provides tracing for dataset generation pipelines, prompt mutations,
 LLM calls, and quality scoring evaluations using LangSmith and LangChain tracing.
 """
 

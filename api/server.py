@@ -490,6 +490,7 @@ async def lifespan(app: FastAPI):
         try:
             from core.review_service import ReviewService as _ReviewService
             review_service = _ReviewService(db.db)
+            await review_service.recover_paused_jobs()
             app.state.review_service = review_service
             # Make the singleton available for the orchestrator's HITL node
             import core as _core_pkg
@@ -1371,22 +1372,27 @@ async def download_job_dataset(job_id: str):
     if not samples:
         raise HTTPException(status_code=404, detail="No samples found for this dataset")
 
-    # Serialize to JSONL format
-    lines = []
-    for sample in samples:
-        lines.append(json.dumps({
-            "instruction": sample.get("instruction", ""),
-            "response": sample.get("response", ""),
-            "input": sample.get("input", ""),
-            "quality_score": sample.get("quality_score"),
-            "difficulty_tier": sample.get("difficulty_tier"),
-            "metadata": sample.get("metadata", {}),
-        }))
-    content = "\n".join(lines) + "\n"
-    
+    # Otherwise, stream from the DB samples dynamically using StreamingResponse
+    samples = await db.get_samples(dataset["id"], limit=100000)
+    if not samples:
+        raise HTTPException(status_code=404, detail="No samples found for this dataset")
+
+    async def sample_generator():
+        for sample in samples:
+            item = {
+                "instruction": sample.get("instruction", ""),
+                "response": sample.get("response", ""),
+                "input": sample.get("input", ""),
+                "quality_score": sample.get("quality_score"),
+                "difficulty_tier": sample.get("difficulty_tier"),
+                "metadata": sample.get("metadata", {}),
+            }
+            yield json.dumps(item) + "\n"
+
+    from fastapi.responses import StreamingResponse
     download_name = f"{dataset.get('name', 'dataset')}.jsonl"
-    return Response(
-        content=content,
+    return StreamingResponse(
+        sample_generator(),
         media_type="application/x-ndjson",
         headers={"Content-Disposition": f"attachment; filename={download_name}"}
     )

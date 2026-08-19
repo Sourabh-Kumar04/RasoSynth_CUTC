@@ -30,6 +30,39 @@ class ReviewService:
         # job_id -> asyncio.Event (set when reviewer calls resume_job)
         self._resume_events: dict[str, asyncio.Event] = {}
 
+    async def recover_paused_jobs(self) -> int:
+        """
+        Called once at startup.
+
+        Scans the jobs table for any rows with status='awaiting_review'
+        that were left there by a previous server run, and recreates their
+        asyncio.Event so the pipeline can be resumed via the API.
+
+        Returns the number of jobs recovered.
+        """
+        from sqlalchemy import select
+        from core.db import Job as JobModel
+
+        recovered = 0
+        try:
+            async with self.db.session_maker() as session:
+                result = await session.execute(
+                    select(JobModel).where(JobModel.status == "awaiting_review")
+                )
+                jobs = result.scalars().all()
+                for job in jobs:
+                    if job.id not in self._resume_events:
+                        event = asyncio.Event()
+                        self._resume_events[job.id] = event
+                        recovered += 1
+                        logger.info(
+                            "ReviewService: restored awaiting_review event for job %s", job.id
+                        )
+        except Exception as e:
+            logger.warning("ReviewService: failed to recover paused jobs: %s", e)
+
+        return recovered
+
     # ── Submit / query ────────────────────────────────────────────────────────
 
     async def submit(

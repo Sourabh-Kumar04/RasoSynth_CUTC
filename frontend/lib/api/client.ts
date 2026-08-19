@@ -204,7 +204,7 @@ class APIClient {
   }
 
   private async request<T>(endpoint: string, options: RequestOptions = {}): Promise<T> {
-    const isMock = typeof window !== 'undefined' && (localStorage.getItem('mockMode') === 'true' || localStorage.getItem('mockMode') === null);
+    const isMock = typeof window !== 'undefined' && localStorage.getItem('mockMode') === 'true';
     if (isMock) {
       return this.handleMockRequest<T>(endpoint, options)
     }
@@ -279,10 +279,11 @@ class APIClient {
 
       return response.json()
     } catch (err) {
-      const isConnectionError = err instanceof TypeError || String(err).includes('fetch') || String(err).includes('Failed to fetch')
+      const isConnectionError = err instanceof TypeError || String(err).includes('fetch') || String(err).includes('Failed to fetch') || String(err).includes('HTTP 500') || String(err).includes('HTTP 503') || String(err).includes('HTTP 502')
       if (isConnectionError && typeof window !== 'undefined') {
-        console.warn(`[API Client] Connection to backend ${this.baseUrl} failed. Automatically falling back to Mock/Demo Mode.`, err)
+        console.warn(`[API Client] Connection to backend ${this.baseUrl} failed. Automatically falling back to Hackathon Demo Mode.`, err)
         localStorage.setItem('mockMode', 'true')
+        window.dispatchEvent(new CustomEvent('backend-unreachable-fallback', { detail: { endpoint, error: String(err) } }))
         window.dispatchEvent(new Event('storage'))
         window.dispatchEvent(new Event('mockModeChanged'))
         return this.handleMockRequest<T>(endpoint, options)
@@ -1052,6 +1053,141 @@ dataset_samples_generated_total 4520`
         });
       }
       return parse({ data: jobs });
+    }
+
+    // === Mock Fine-Tuning API ===
+    if (endpoint.startsWith('/api/finetune/models')) {
+      return parse({
+        models: [
+          'HuggingFaceTB/SmolLM2-1.7B-Instruct',
+          'meta-llama/Meta-Llama-3-8B-Instruct',
+          'Qwen/Qwen2.5-7B-Instruct',
+          'unsloth/mistral-7b-v0.3',
+          'microsoft/Phi-3-mini-4k-instruct',
+        ]
+      });
+    }
+
+    if (endpoint.startsWith('/api/finetune/jobs')) {
+      if (method === 'POST') {
+        const bodyObj = options.body ? JSON.parse(options.body as string) : {};
+        return parse({
+          id: `ft-job-${Date.now().toString(36)}`,
+          status: 'pending',
+          base_model: bodyObj.base_model || 'HuggingFaceTB/SmolLM2-1.7B-Instruct',
+          output_model_name: bodyObj.output_model_name || 'RasoSynth-Finetuned-v1',
+          created_at: new Date().toISOString(),
+        });
+      }
+      return parse({
+        jobs: [
+          {
+            id: 'ft-job-demo-1',
+            status: 'running',
+            base_model: 'HuggingFaceTB/SmolLM2-1.7B-Instruct',
+            output_model_name: 'SmolLM2-RasoSynth-Medical-SFT',
+            current_epoch: 2,
+            total_epochs: 3,
+            current_step: 420,
+            total_steps: 600,
+            train_loss: 0.184,
+            eval_loss: 0.210,
+            created_at: new Date(Date.now() - 1800000).toISOString(),
+            updated_at: new Date().toISOString(),
+            config: {
+              learning_rate: 2e-4,
+              lora_r: 16,
+              lora_alpha: 32,
+              per_device_train_batch_size: 4,
+              load_in_4bit: true,
+            }
+          },
+          {
+            id: 'ft-job-demo-2',
+            status: 'completed',
+            base_model: 'meta-llama/Meta-Llama-3-8B-Instruct',
+            output_model_name: 'Llama3-RasoSynth-Reasoning-v2',
+            current_epoch: 3,
+            total_epochs: 3,
+            current_step: 1200,
+            total_steps: 1200,
+            train_loss: 0.112,
+            eval_loss: 0.145,
+            created_at: new Date(Date.now() - 86400000).toISOString(),
+            updated_at: new Date(Date.now() - 82800000).toISOString(),
+            config: {
+              learning_rate: 1e-4,
+              lora_r: 32,
+              lora_alpha: 64,
+              per_device_train_batch_size: 2,
+              load_in_4bit: true,
+            }
+          }
+        ],
+        total: 2,
+        limit: 50,
+        offset: 0,
+        has_more: false,
+      });
+    }
+
+    // === Mock HITL Review API ===
+    if (endpoint.startsWith('/api/review/paused')) {
+      return parse({
+        paused_jobs: ['job-med-sft-001', 'job-code-reasoning-004']
+      });
+    }
+
+    if (endpoint.startsWith('/api/review/stats')) {
+      return parse({
+        total: 125,
+        approved: 98,
+        rejected: 12,
+        pending: 15,
+        paused_jobs_count: 2,
+      });
+    }
+
+    if (endpoint.startsWith('/api/review/queue')) {
+      return parse({
+        items: [
+          {
+            id: 'rev-item-001',
+            job_id: 'job-med-sft-001',
+            instruction: 'Analyze patient symptoms of acute respiratory distress and suggest diagnostic protocol.',
+            response: '1. Immediate pulse oximetry and arterial blood gas (ABG) evaluation.\n2. High-flow nasal cannula oxygenation.\n3. Portable chest radiography to rule out pneumothorax or pulmonary edema.\n4. Administer bronchodilators if wheezing is present.',
+            input: 'Patient: 62yo male, dyspnea, SpO2 88% on room air.',
+            quality_score: 0.94,
+            difficulty_tier: 'tier_3_expert',
+            status: 'pending',
+            created_at: new Date(Date.now() - 300000).toISOString(),
+            metadata: {
+              domain: 'medicine',
+              mutation_type: 'deepening_constraint',
+              dedup_hash: 'sha256-a9b8c7'
+            }
+          },
+          {
+            id: 'rev-item-002',
+            job_id: 'job-code-reasoning-004',
+            instruction: 'Implement a thread-safe LRU cache with O(1) time complexity in Python.',
+            response: '```python\nfrom threading import Lock\n\nclass Node:\n    def __init__(self, key, val):\n        self.key, self.val = key, val\n        self.prev = self.next = None\n\nclass LRUCache:\n    def __init__(self, capacity: int):\n        self.cap = capacity\n        self.cache = {}\n        self.lock = Lock()\n        self.head, self.tail = Node(0, 0), Node(0, 0)\n        self.head.next, self.tail.prev = self.tail, self.head\n```',
+            input: 'Capacity: 1000 items, concurrent access',
+            quality_score: 0.96,
+            difficulty_tier: 'tier_4_master',
+            status: 'pending',
+            created_at: new Date(Date.now() - 600000).toISOString(),
+            metadata: {
+              domain: 'coding',
+              mutation_type: 'concurrency_constraint',
+              dedup_hash: 'sha256-f4e3d2'
+            }
+          }
+        ],
+        total: 2,
+        page: 1,
+        page_size: 10,
+      });
     }
 
     return parse({});

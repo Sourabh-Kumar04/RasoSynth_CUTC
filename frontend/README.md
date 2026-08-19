@@ -1,6 +1,6 @@
 # RasoSynthTune — Frontend
 
-Production-grade Next.js dashboard for the RasoSynthTune autonomous dataset synthesis and fine-tuning platform.
+Next.js dashboard for the RasoSynthTune autonomous dataset synthesis and fine-tuning platform.
 
 ## Tech Stack
 

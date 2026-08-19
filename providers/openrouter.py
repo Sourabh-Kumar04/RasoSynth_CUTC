@@ -1,6 +1,6 @@
 """OpenRouter Provider Adapter
 
-Production-grade OpenRouter API integration with:
+OpenRouter API integration with:
 - Unified access to 100+ models
 - Automatic provider fallback
 - Streaming support

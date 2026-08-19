@@ -63,21 +63,21 @@ function useToast() {
 // ── Helpers ───────────────────────────────────────────────────────────────────
 
 const STATUS_PILL: Record<ReviewItem['review_status'], string> = {
-  pending:   'bg-yellow-500/15 text-yellow-300 border-yellow-500/30',
-  in_review: 'bg-blue-500/15 text-blue-300 border-blue-500/30',
-  approved:  'bg-green-500/15 text-green-300 border-green-500/30',
-  rejected:  'bg-red-500/15 text-red-300 border-red-500/30',
-  flagged:   'bg-orange-500/15 text-orange-300 border-orange-500/30',
+  pending:   'bg-amber-100 text-amber-800 border-amber-300',
+  in_review: 'bg-[#E8ECE6] text-[#1B3B2B] border-[#D1D8CE]',
+  approved:  'bg-emerald-100 text-emerald-800 border-emerald-300',
+  rejected:  'bg-rose-100 text-rose-800 border-rose-300',
+  flagged:   'bg-amber-100 text-amber-900 border-amber-300',
 }
 const STATUS_STRIPE: Record<ReviewItem['review_status'], string> = {
-  pending: 'border-l-yellow-500', in_review: 'border-l-blue-500',
-  approved: 'border-l-green-500', rejected: 'border-l-red-500', flagged: 'border-l-orange-500',
+  pending: 'border-l-amber-500', in_review: 'border-l-[#1B3B2B]',
+  approved: 'border-l-emerald-500', rejected: 'border-l-rose-500', flagged: 'border-l-amber-600',
 }
 
 function difficulty(q: number) {
-  if (q >= 0.75) return { label: 'Easy', color: 'text-green-400' }
-  if (q >= 0.45) return { label: 'Med',  color: 'text-yellow-400' }
-  return { label: 'Hard', color: 'text-red-400' }
+  if (q >= 0.75) return { label: 'Easy', color: 'text-emerald-700' }
+  if (q >= 0.45) return { label: 'Med',  color: 'text-amber-700' }
+  return { label: 'Hard', color: 'text-rose-700' }
 }
 
 // Mini score bar (5 segments, colored based on value)
@@ -85,11 +85,11 @@ function ScoreBar({ value, inverted = false }: { value: number; inverted?: boole
   const pct = inverted ? 1 - value : value
   const segs = 5
   const filled = Math.round(pct * segs)
-  const color = pct >= 0.7 ? 'bg-green-500' : pct >= 0.4 ? 'bg-yellow-500' : 'bg-red-500'
+  const color = pct >= 0.7 ? 'bg-emerald-500' : pct >= 0.4 ? 'bg-amber-500' : 'bg-rose-500'
   return (
     <div className="flex gap-0.5 items-center">
       {Array.from({ length: segs }).map((_, i) => (
-        <div key={i} className={clsx('h-1.5 w-2 rounded-sm', i < filled ? color : 'bg-border')} />
+        <div key={i} className={clsx('h-1.5 w-2 rounded-sm', i < filled ? color : 'bg-[#E8ECE6]')} />
       ))}
     </div>
   )
@@ -101,12 +101,12 @@ function ApprovalRing({ pct }: { pct: number }) {
   const dash = (pct / 100) * circ
   return (
     <svg width={44} height={44} className="-rotate-90">
-      <circle cx={22} cy={22} r={r} fill="none" stroke="hsl(var(--border))" strokeWidth={4} />
-      <circle cx={22} cy={22} r={r} fill="none" stroke="hsl(var(--success))"
+      <circle cx={22} cy={22} r={r} fill="none" stroke="#E2E6E0" strokeWidth={4} />
+      <circle cx={22} cy={22} r={r} fill="none" stroke="#10B981"
         strokeWidth={4} strokeDasharray={`${dash} ${circ}`}
         strokeLinecap="round" />
       <text x={22} y={22} dominantBaseline="middle" textAnchor="middle"
-        className="fill-foreground text-[9px] font-bold rotate-90"
+        className="fill-[#1B3B2B] text-[9px] font-bold rotate-90"
         style={{ transform: 'rotate(90deg)', transformOrigin: '22px 22px', fontSize: 9 }}>
         {Math.round(pct)}%
       </text>
@@ -138,6 +138,8 @@ export default function ReviewPage() {
 
   // Bulk select
   const [selected2, setSelected2] = useState<Set<string>>(new Set())
+  // HITL: jobs currently paused at the review gate
+  const [pausedJobs, setPausedJobs] = useState<string[]>([])
 
   const { toasts, push: toast } = useToast()
   const PAGE_SIZE = 20
@@ -172,17 +174,27 @@ export default function ReviewPage() {
     } catch {}
   }, [statusFilter, jobFilter, page])
 
-  useEffect(() => {
-    ;(async () => {
-      await Promise.all([fetchStats(), fetchQueue()])
-      setLoading(false)
-    })()
-  }, [fetchStats, fetchQueue])
+  const fetchPaused = useCallback(async () => {
+    try {
+      const res = await fetch(`${API_BASE}/api/review/paused`)
+      if (res.ok) {
+        const data = await res.json()
+        setPausedJobs(Array.isArray(data?.paused_jobs) ? data.paused_jobs : [])
+      }
+    } catch {}
+  }, [])
 
   useEffect(() => {
-    const id = setInterval(() => { fetchStats(); fetchQueue() }, 12000)
+    ;(async () => {
+      await Promise.all([fetchStats(), fetchQueue(), fetchPaused()])
+      setLoading(false)
+    })()
+  }, [fetchStats, fetchQueue, fetchPaused])
+
+  useEffect(() => {
+    const id = setInterval(() => { fetchStats(); fetchQueue(); fetchPaused() }, 12000)
     return () => clearInterval(id)
-  }, [fetchStats, fetchQueue])
+  }, [fetchStats, fetchQueue, fetchPaused])
 
   // ── Keyboard shortcuts ────────────────────────────────────────────────────
 
@@ -199,7 +211,6 @@ export default function ReviewPage() {
     }
     window.addEventListener('keydown', handler)
     return () => window.removeEventListener('keydown', handler)
-  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [selected, editing])
 
   // ── Queue navigation ──────────────────────────────────────────────────────
@@ -290,19 +301,19 @@ export default function ReviewPage() {
   // ── Render ────────────────────────────────────────────────────────────────
 
   return (
-    <div className="space-y-5 animate-fade-in">
+    <div className="space-y-6 max-w-7xl mx-auto pb-8 animate-fade-in">
 
       {/* Toasts */}
       <div className="fixed bottom-4 right-4 z-50 space-y-2 pointer-events-none">
         {toasts.map(t => (
           <div key={t.id} className={clsx(
-            'pointer-events-auto flex items-center gap-2 px-4 py-2.5 rounded-lg border shadow-lg text-sm font-medium animate-slide-in',
-            t.variant === 'success' && 'bg-green-950/95 border-green-600/40 text-green-200',
-            t.variant === 'error'   && 'bg-red-950/95 border-red-600/40 text-red-200',
-            t.variant === 'info'    && 'bg-surface border-border text-foreground',
+            'pointer-events-auto flex items-center gap-2 px-4 py-2.5 rounded-full border shadow-lg text-xs font-semibold animate-slide-in',
+            t.variant === 'success' && 'bg-emerald-900 text-white border-emerald-700',
+            t.variant === 'error'   && 'bg-rose-900 text-white border-rose-700',
+            t.variant === 'info'    && 'bg-white text-[#1B3B2B] border-[#D1D8CE]',
           )}>
-            {t.variant === 'success' && <CheckCircle2 className="h-3.5 w-3.5 shrink-0" />}
-            {t.variant === 'error'   && <AlertCircle className="h-3.5 w-3.5 shrink-0" />}
+            {t.variant === 'success' && <CheckCircle2 className="h-3.5 w-3.5 shrink-0 text-emerald-400" />}
+            {t.variant === 'error'   && <AlertCircle className="h-3.5 w-3.5 shrink-0 text-rose-400" />}
             {t.message}
           </div>
         ))}
@@ -310,28 +321,28 @@ export default function ReviewPage() {
 
       {/* Mobile detail sheet */}
       <div className={clsx(
-        'fixed inset-x-0 bottom-0 z-40 bg-background border-t border-border rounded-t-2xl shadow-2xl transition-transform duration-300 md:hidden overflow-y-auto',
+        'fixed inset-x-0 bottom-0 z-40 bg-white border-t border-[#E2E6E0] rounded-t-3xl shadow-2xl transition-transform duration-300 md:hidden overflow-y-auto',
         mobileSheet && selected ? 'translate-y-0' : 'translate-y-full',
       )} style={{ maxHeight: '90vh' }}>
-        <div className="flex items-center justify-between px-4 py-3 border-b border-border sticky top-0 bg-background z-10">
+        <div className="flex items-center justify-between px-4 py-3 border-b border-[#E2E6E0] sticky top-0 bg-white z-10">
           <div className="flex items-center gap-2">
             {currentIdx > 0 && (
-              <Button variant="ghost" size="icon" className="h-7 w-7"
+              <Button variant="ghost" size="icon" className="h-7 w-7 rounded-full text-[#1B3B2B]"
                 onClick={() => navigateTo(currentIdx - 1)}>
                 <ChevronLeft className="h-4 w-4" />
               </Button>
             )}
-            <span className="text-sm font-medium">
+            <span className="text-xs font-mono font-bold text-[#1B3B2B]">
               {currentIdx + 1}/{queueItems.length}
             </span>
             {currentIdx < queueItems.length - 1 && (
-              <Button variant="ghost" size="icon" className="h-7 w-7"
+              <Button variant="ghost" size="icon" className="h-7 w-7 rounded-full text-[#1B3B2B]"
                 onClick={() => navigateTo(currentIdx + 1)}>
                 <ChevronRight className="h-4 w-4" />
               </Button>
             )}
           </div>
-          <Button variant="ghost" size="icon" className="h-7 w-7"
+          <Button variant="ghost" size="icon" className="h-7 w-7 rounded-full text-[#1B3B2B]"
             onClick={() => { setSheet(false); setEditing(false) }}>
             <X className="h-4 w-4" />
           </Button>
@@ -353,17 +364,17 @@ export default function ReviewPage() {
 
       {/* Bulk action bar */}
       {selected2.size > 0 && (
-        <div className="fixed bottom-4 left-1/2 -translate-x-1/2 z-50 flex items-center gap-3 bg-surface border border-border rounded-full px-4 py-2 shadow-2xl animate-slide-in">
-          <span className="text-sm text-muted-foreground">{selected2.size} selected</span>
-          <Button size="sm" className="bg-green-700 hover:bg-green-600 h-7 text-xs rounded-full"
+        <div className="fixed bottom-4 left-1/2 -translate-x-1/2 z-50 flex items-center gap-3 bg-white border border-[#D1D8CE] rounded-full px-5 py-2.5 shadow-xl animate-slide-in">
+          <span className="text-xs font-mono font-bold text-[#1B3B2B]">{selected2.size} selected</span>
+          <Button size="sm" className="bg-emerald-700 hover:bg-emerald-800 text-white h-7 text-xs rounded-full font-medium"
             onClick={() => bulkAct('approve')} disabled={actionLoading}>
-            <CheckCircle2 className="h-3 w-3 mr-1" />Approve all
+            <CheckCircle2 className="h-3 w-3 mr-1 text-emerald-300" />Approve all
           </Button>
           <Button size="sm" variant="destructive" className="h-7 text-xs rounded-full"
             onClick={() => bulkAct('reject')} disabled={actionLoading}>
             <XCircle className="h-3 w-3 mr-1" />Reject all
           </Button>
-          <Button size="sm" variant="ghost" className="h-7 w-7 p-0 rounded-full"
+          <Button size="sm" variant="ghost" className="h-7 w-7 p-0 rounded-full text-[#1B3B2B]"
             onClick={() => setSelected2(new Set())}>
             <X className="h-3.5 w-3.5" />
           </Button>
@@ -371,24 +382,28 @@ export default function ReviewPage() {
       )}
 
       {/* Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-[#E2E6E0] pb-4">
         <div>
-          <h1 className="text-xl sm:text-2xl font-bold flex items-center gap-2">
-            <ClipboardCheck className="h-5 w-5 sm:h-6 sm:w-6 text-orange-400" />
-            Human Review Queue
-          </h1>
-          <p className="text-xs sm:text-sm text-muted-foreground mt-0.5">
-            Review samples — <kbd className="text-xs bg-surface border border-border px-1 rounded">a</kbd> approve&nbsp;
-            <kbd className="text-xs bg-surface border border-border px-1 rounded">r</kbd> reject&nbsp;
-            <kbd className="text-xs bg-surface border border-border px-1 rounded">e</kbd> edit&nbsp;
-            <kbd className="text-xs bg-surface border border-border px-1 rounded">f</kbd> flag
+          <div className="flex items-center gap-2.5 mb-1">
+            <span className="text-[10px] font-mono px-2.5 py-0.5 rounded-full bg-[#E8ECE6] border border-[#D1D8CE] text-[#1B3B2B] font-bold uppercase tracking-wider">
+              Quality Inspection Queue
+            </span>
+            <h1 className="text-2xl font-bold tracking-tight text-[#1B3B2B]">
+              HITL Review Studio
+            </h1>
+          </div>
+          <p className="text-xs text-[#55635B]">
+            Review samples — <kbd className="text-[10px] bg-[#E8ECE6] border border-[#D1D8CE] px-1.5 py-0.5 rounded font-mono text-[#1B3B2B]">a</kbd> approve&nbsp;
+            <kbd className="text-[10px] bg-[#E8ECE6] border border-[#D1D8CE] px-1.5 py-0.5 rounded font-mono text-[#1B3B2B]">r</kbd> reject&nbsp;
+            <kbd className="text-[10px] bg-[#E8ECE6] border border-[#D1D8CE] px-1.5 py-0.5 rounded font-mono text-[#1B3B2B]">e</kbd> edit&nbsp;
+            <kbd className="text-[10px] bg-[#E8ECE6] border border-[#D1D8CE] px-1.5 py-0.5 rounded font-mono text-[#1B3B2B]">f</kbd> flag
           </p>
         </div>
         <div className="flex gap-2 flex-wrap">
-          <Button variant="outline" size="sm" onClick={exportApproved}>
+          <Button variant="outline" size="sm" className="rounded-full border-[#D1D8CE] text-[#1B3B2B] hover:bg-[#E8ECE6]" onClick={exportApproved}>
             <Download className="h-3.5 w-3.5 mr-1" />Export JSONL
           </Button>
-          <Button variant="outline" size="sm" onClick={async () => {
+          <Button variant="outline" size="sm" className="rounded-full border-[#D1D8CE] text-[#1B3B2B] hover:bg-[#E8ECE6]" onClick={async () => {
             setLoading(true)
             await Promise.all([fetchStats(), fetchQueue()])
             setLoading(false)
@@ -399,16 +414,47 @@ export default function ReviewPage() {
         </div>
       </div>
 
+      {/* HITL paused jobs banner */}
+      {pausedJobs.length > 0 && (
+        <div className="rounded-2xl border border-amber-300 bg-amber-50/80 px-4 py-3">
+          <div className="flex items-start gap-3">
+            <AlertCircle className="h-4 w-4 text-amber-700 mt-0.5 shrink-0" />
+            <div className="flex-1 min-w-0">
+              <p className="text-sm font-bold text-amber-950">
+                {pausedJobs.length} dataset job{pausedJobs.length > 1 ? 's' : ''} paused at review gate
+              </p>
+              <p className="text-xs text-amber-800 mt-0.5">
+                Review and approve samples below, then click Resume on each job to continue the pipeline.
+              </p>
+              <div className="flex flex-wrap gap-2 mt-2">
+                {pausedJobs.map(jid => (
+                  <div key={jid} className="flex items-center gap-1.5 bg-white border border-amber-300 rounded-full px-3 py-1">
+                    <span className="text-xs font-mono font-bold text-[#1B3B2B]">{jid.slice(0, 8)}…</span>
+                    <Button
+                      variant="ghost" size="sm"
+                      className="h-5 text-xs px-2 text-[#1B3B2B] hover:bg-[#E8ECE6] rounded-full font-bold"
+                      onClick={() => resumeJob(jid)}
+                    >
+                      <Play className="h-2.5 w-2.5 mr-1 fill-current text-emerald-600" />Resume
+                    </Button>
+                  </div>
+                ))}
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Review progress bar */}
       {stats && stats.total > 0 && (
         <div className="space-y-1.5">
-          <div className="flex items-center justify-between text-xs text-muted-foreground">
+          <div className="flex items-center justify-between text-xs font-mono text-[#55635B]">
             <span>Review progress</span>
-            <span>{stats.approved} / {stats.approved + stats.pending} reviewed ({reviewProgress}%)</span>
+            <span className="font-bold text-[#1B3B2B]">{stats.approved} / {stats.approved + stats.pending} reviewed ({reviewProgress}%)</span>
           </div>
-          <div className="h-2 bg-border rounded-full overflow-hidden">
+          <div className="h-2 bg-[#E8ECE6] rounded-full overflow-hidden">
             <div
-              className="h-full bg-gradient-to-r from-orange-500 to-green-500 rounded-full transition-all duration-700"
+              className="h-full bg-[#1B3B2B] rounded-full transition-all duration-700"
               style={{ width: `${reviewProgress}%` }}
             />
           </div>
@@ -420,10 +466,10 @@ export default function ReviewPage() {
         ? (
           <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
             {Array.from({ length: 4 }).map((_, i) => (
-              <Card key={i} className="bg-surface/40 border-border">
+              <Card key={i} className="bg-white border-[#E2E6E0] rounded-2xl">
                 <CardContent className="pt-3 pb-3 px-4 space-y-2">
-                  <Skeleton className="h-3 w-16" />
-                  <Skeleton className="h-6 w-10" />
+                  <Skeleton className="h-3 w-16 bg-[#E8ECE6]" />
+                  <Skeleton className="h-6 w-10 bg-[#E8ECE6]" />
                 </CardContent>
               </Card>
             ))}
@@ -432,26 +478,26 @@ export default function ReviewPage() {
         : stats && (
           <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-7 gap-3">
             {[
-              { label: 'Total',     val: stats.total,     color: '',               stripe: 'border-l-border' },
-              { label: 'Pending',   val: stats.pending,   color: 'text-yellow-400', stripe: 'border-l-yellow-500' },
-              { label: 'In Review', val: stats.in_review, color: 'text-blue-400',   stripe: 'border-l-blue-500'   },
-              { label: 'Approved',  val: stats.approved,  color: 'text-green-400',  stripe: 'border-l-green-500'  },
-              { label: 'Rejected',  val: stats.rejected,  color: 'text-red-400',    stripe: 'border-l-red-500'    },
-              { label: 'Flagged',   val: stats.flagged,   color: 'text-orange-400', stripe: 'border-l-orange-500' },
+              { label: 'Total',     val: stats.total,     color: 'text-[#1B3B2B]', stripe: 'border-l-slate-400' },
+              { label: 'Pending',   val: stats.pending,   color: 'text-amber-700', stripe: 'border-l-amber-500' },
+              { label: 'In Review', val: stats.in_review, color: 'text-[#1B3B2B]',   stripe: 'border-l-[#1B3B2B]'   },
+              { label: 'Approved',  val: stats.approved,  color: 'text-emerald-700', stripe: 'border-l-emerald-500'  },
+              { label: 'Rejected',  val: stats.rejected,  color: 'text-rose-700', stripe: 'border-l-rose-500'    },
+              { label: 'Flagged',   val: stats.flagged,   color: 'text-amber-800', stripe: 'border-l-amber-600' },
             ].map(({ label, val, color, stripe }) => (
-              <Card key={label} className={clsx('border-l-4 bg-surface/40 border-border animate-fade-in', stripe)}>
+              <Card key={label} className={clsx('border-l-4 bg-white border-[#E2E6E0] rounded-2xl card-shadow animate-fade-in', stripe)}>
                 <CardContent className="pt-3 pb-2 px-4">
-                  <p className="text-xs text-muted-foreground">{label}</p>
-                  <p className={clsx('text-xl font-bold mt-0.5', color)}>{val}</p>
+                  <p className="text-xs text-[#55635B] font-mono uppercase">{label}</p>
+                  <p className={clsx('text-xl font-bold font-mono mt-0.5', color)}>{val}</p>
                 </CardContent>
               </Card>
             ))}
-            <Card className="border-l-4 border-l-green-500 bg-surface/40 border-border animate-fade-in col-span-2 sm:col-span-1">
+            <Card className="border-l-4 border-l-emerald-500 bg-white border-[#E2E6E0] rounded-2xl card-shadow animate-fade-in col-span-2 sm:col-span-1">
               <CardContent className="pt-2 pb-2 px-3 flex items-center gap-3">
                 <ApprovalRing pct={stats.approval_rate} />
                 <div>
-                  <p className="text-xs text-muted-foreground">Approval</p>
-                  <p className="text-sm font-bold text-green-400">{stats.approval_rate}%</p>
+                  <p className="text-xs text-[#55635B] font-mono uppercase">Approval</p>
+                  <p className="text-sm font-bold font-mono text-emerald-700">{stats.approval_rate}%</p>
                 </div>
               </CardContent>
             </Card>
@@ -462,7 +508,7 @@ export default function ReviewPage() {
       {/* Filters */}
       <div className="flex flex-wrap gap-3 items-center">
         <Select value={statusFilter} onValueChange={v => { setStatus(v); setPage(1) }}>
-          <SelectTrigger className="w-36 h-8 text-sm">
+          <SelectTrigger className="w-36 h-8 text-xs rounded-full border-[#D1D8CE] bg-white text-[#1B3B2B]">
             <SelectValue placeholder="Status" />
           </SelectTrigger>
           <SelectContent>
@@ -474,16 +520,16 @@ export default function ReviewPage() {
             <SelectItem value="flagged">Flagged</SelectItem>
           </SelectContent>
         </Select>
-        <Input placeholder="Filter by Job ID" className="w-52 h-8 text-sm"
+        <Input placeholder="Filter by Job ID" className="w-52 h-8 text-xs rounded-full border-[#D1D8CE] bg-white text-[#1B3B2B]"
           value={jobFilter} onChange={e => { setJobFilter(e.target.value); setPage(1) }} />
         {jobFilter && (
-          <Button variant="outline" size="sm" className="h-8"
+          <Button variant="outline" size="sm" className="h-8 rounded-full border-[#D1D8CE] text-[#1B3B2B] hover:bg-[#E8ECE6]"
             onClick={() => resumeJob(jobFilter)}>
-            <Play className="h-3.5 w-3.5 mr-1" />Resume Job
+            <Play className="h-3.5 w-3.5 mr-1 fill-current text-emerald-600" />Resume Job
           </Button>
         )}
         {selected2.size > 0 && (
-          <span className="text-xs text-muted-foreground ml-auto">
+          <span className="text-xs font-mono font-bold text-[#1B3B2B] ml-auto">
             {selected2.size} selected
           </span>
         )}
@@ -493,12 +539,12 @@ export default function ReviewPage() {
       <div className="grid grid-cols-1 md:grid-cols-5 gap-4">
 
         {/* Queue list */}
-        <div className="md:col-span-2 space-y-1.5">
+        <div className="md:col-span-2 space-y-2">
           {loading
             ? Array.from({ length: 6 }).map((_, i) => (
-              <div key={i} className="rounded-lg border-l-4 border-l-border border border-border p-3 space-y-2 animate-pulse">
-                <Skeleton className="h-3 w-full" />
-                <Skeleton className="h-3 w-3/4" />
+              <div key={i} className="rounded-xl border-l-4 border-l-[#D1D8CE] border border-[#E2E6E0] bg-white p-3 space-y-2 animate-pulse">
+                <Skeleton className="h-3 w-full bg-[#E8ECE6]" />
+                <Skeleton className="h-3 w-3/4 bg-[#E8ECE6]" />
                 <div className="flex gap-1">
                   {Array.from({ length: 5 }).map((_, j) => <Skeleton key={j} className="h-1.5 w-2 rounded" />)}
                 </div>
@@ -506,9 +552,9 @@ export default function ReviewPage() {
             ))
             : !queue || !Array.isArray(queue.items) || queue.items.length === 0
               ? (
-                <div className="flex flex-col items-center justify-center py-16 space-y-3">
-                  <ClipboardCheck className="h-10 w-10 text-muted-foreground/20" />
-                  <p className="text-sm text-muted-foreground">No items match this filter</p>
+                <div className="flex flex-col items-center justify-center py-16 space-y-3 bg-white rounded-2xl border border-[#E2E6E0]">
+                  <ClipboardCheck className="h-10 w-10 text-[#809085]" />
+                  <p className="text-xs text-[#55635B] font-mono">No items match this filter</p>
                 </div>
               )
               : (
@@ -520,67 +566,63 @@ export default function ReviewPage() {
                       <div
                         key={item.id}
                         className={clsx(
-                          'border-l-4 rounded-lg p-3 cursor-pointer transition-all group',
-                          'bg-surface/40 border border-border hover:border-orange-500/40 hover:bg-surface/70',
+                          'border-l-4 rounded-xl p-3.5 cursor-pointer transition-all group',
+                          'bg-white border border-[#E2E6E0] card-shadow hover:border-[#D1D8CE] hover:bg-[#F6F7F4]',
                           STATUS_STRIPE[item.review_status],
-                          selected?.id === item.id && 'border-orange-500/60 bg-orange-500/5',
+                          selected?.id === item.id && 'border-[#1B3B2B] bg-[#E8ECE6]/40',
                         )}
                         onClick={() => selectItem(item)}
                       >
-                        <div className="flex items-start gap-2">
+                        <div className="flex items-start gap-2.5">
                           {/* Bulk checkbox */}
                           <button
-                            className="mt-0.5 shrink-0 opacity-0 group-hover:opacity-100 transition-opacity"
+                            className="mt-0.5 shrink-0 opacity-0 group-hover:opacity-100 transition-opacity text-[#1B3B2B]"
                             onClick={e => { e.stopPropagation(); toggleBulk(item.id) }}
                           >
                             {isChecked
-                              ? <CheckSquare className="h-4 w-4 text-orange-400" />
-                              : <Square className="h-4 w-4 text-muted-foreground" />}
+                              ? <CheckSquare className="h-4 w-4 text-[#1B3B2B]" />
+                              : <Square className="h-4 w-4 text-[#809085]" />}
                           </button>
                           <div className="min-w-0 flex-1">
                             <div className="flex items-start justify-between gap-1">
-                              <p className="text-xs line-clamp-2 flex-1 leading-4">
+                              <p className="text-xs font-bold text-[#1B3B2B] line-clamp-2 flex-1 leading-4">
                                 {item.instruction}
                               </p>
-                              <span className={clsx('shrink-0 text-xs px-1.5 py-0.5 rounded-full border ml-1', STATUS_PILL[item.review_status])}>
+                              <span className={clsx('shrink-0 text-[10px] px-2 py-0.5 rounded-full border font-mono ml-1', STATUS_PILL[item.review_status])}>
                                 {item.review_status}
                               </span>
                             </div>
                             {/* Score bars */}
                             <div className="flex items-center gap-3 mt-1.5 flex-wrap">
                               <div className="flex items-center gap-1">
-                                <span className="text-xs text-muted-foreground">Q</span>
+                                <span className="text-[10px] font-mono text-[#55635B]">Q</span>
                                 <ScoreBar value={item.quality_score} />
                               </div>
                               <div className="flex items-center gap-1">
-                                <span className="text-xs text-muted-foreground">Hall</span>
+                                <span className="text-[10px] font-mono text-[#55635B]">Hall</span>
                                 <ScoreBar value={item.hallucination_risk} inverted />
                               </div>
-                              <span className={clsx('text-xs font-medium', diff.color)}>{diff.label}</span>
+                              <span className={clsx('text-[10px] font-bold font-mono', diff.color)}>{diff.label}</span>
                             </div>
-                            <p className="text-xs text-muted-foreground/40 mt-1 truncate">
+                            <p className="text-[10px] font-mono text-[#809085] mt-1 truncate">
                               {item.job_id.slice(0, 8)}
                             </p>
                           </div>
                         </div>
-                        {/* Hover preview */}
-                        <p className="text-xs text-muted-foreground/60 mt-1.5 line-clamp-1 hidden group-hover:block">
-                          ↳ {item.response.slice(0, 100)}…
-                        </p>
                       </div>
                     )
                   })}
 
                   {/* Pagination */}
                   <div className="flex items-center justify-between pt-1">
-                    <Button variant="ghost" size="sm" disabled={page <= 1}
+                    <Button variant="ghost" size="sm" className="rounded-full text-[#1B3B2B]" disabled={page <= 1}
                       onClick={() => setPage(p => p - 1)}>
                       <ChevronLeft className="h-4 w-4" />
                     </Button>
-                    <span className="text-xs text-muted-foreground">
+                    <span className="text-xs font-mono text-[#55635B]">
                       {page} / {queue.total_pages} ({queue.total})
                     </span>
-                    <Button variant="ghost" size="sm" disabled={page >= queue.total_pages}
+                    <Button variant="ghost" size="sm" className="rounded-full text-[#1B3B2B]" disabled={page >= queue.total_pages}
                       onClick={() => setPage(p => p + 1)}>
                       <ChevronRight className="h-4 w-4" />
                     </Button>
@@ -597,15 +639,15 @@ export default function ReviewPage() {
               <div className="space-y-1">
                 {/* Prev/Next navigation */}
                 <div className="flex items-center justify-between mb-2">
-                  <Button variant="ghost" size="sm" className="h-7 text-xs"
+                  <Button variant="ghost" size="sm" className="h-7 text-xs rounded-full text-[#1B3B2B]"
                     disabled={currentIdx <= 0}
                     onClick={() => navigateTo(currentIdx - 1)}>
                     <ChevronLeft className="h-3.5 w-3.5 mr-1" />Prev
                   </Button>
-                  <span className="text-xs text-muted-foreground">
+                  <span className="text-xs font-mono text-[#55635B]">
                     {currentIdx + 1} / {queueItems.length}
                   </span>
-                  <Button variant="ghost" size="sm" className="h-7 text-xs"
+                  <Button variant="ghost" size="sm" className="h-7 text-xs rounded-full text-[#1B3B2B]"
                     disabled={currentIdx >= queueItems.length - 1}
                     onClick={() => navigateTo(currentIdx + 1)}>
                     Next<ChevronRight className="h-3.5 w-3.5 ml-1" />
@@ -623,10 +665,10 @@ export default function ReviewPage() {
               </div>
             )
             : (
-              <div className="flex flex-col items-center justify-center h-full min-h-[380px] border border-dashed border-border rounded-xl gap-3">
-                <ClipboardCheck className="h-10 w-10 text-muted-foreground/20" />
-                <p className="text-sm text-muted-foreground">Select a sample to review</p>
-                <p className="text-xs text-muted-foreground/60">
+              <div className="flex flex-col items-center justify-center h-full min-h-[380px] border border-dashed border-[#D1D8CE] bg-white rounded-2xl gap-3">
+                <ClipboardCheck className="h-10 w-10 text-[#809085]" />
+                <p className="text-xs text-[#55635B] font-mono font-bold">Select a sample to review</p>
+                <p className="text-[11px] text-[#809085] font-mono">
                   Keyboard: a approve · r reject · e edit · f flag
                 </p>
               </div>
@@ -656,18 +698,18 @@ function DetailPane({
   actionLoading, onAct, onSetEditing, onEditInst, onEditResp, onNotes, onReviewer, onResume,
 }: DPProps) {
   return (
-    <Card className="bg-surface/40 border-border">
-      <CardHeader className="pb-2">
+    <Card className="bg-white border-[#E2E6E0] rounded-2xl card-shadow">
+      <CardHeader className="pb-2 border-b border-[#E2E6E0]">
         <div className="flex items-center justify-between flex-wrap gap-2">
-          <CardTitle className="text-sm">Sample Review</CardTitle>
-          <span className={clsx('text-xs px-2 py-0.5 rounded-full border', STATUS_PILL[item.review_status])}>
+          <CardTitle className="text-sm font-bold text-[#1B3B2B]">Sample Review</CardTitle>
+          <span className={clsx('text-[10px] font-mono px-2.5 py-0.5 rounded-full border', STATUS_PILL[item.review_status])}>
             {item.review_status}
           </span>
         </div>
       </CardHeader>
-      <CardContent className="space-y-4">
+      <CardContent className="space-y-4 p-4">
         {/* Score grid */}
-        <div className="grid grid-cols-2 gap-2 text-xs bg-background/40 rounded-lg p-3 border border-border/40">
+        <div className="grid grid-cols-2 gap-2 text-xs bg-[#F6F7F4] rounded-xl p-3 border border-[#E2E6E0]">
           {[
             { label: 'Quality',          val: item.quality_score,      inv: false },
             { label: 'Hallucin. risk',   val: item.hallucination_risk,  inv: true  },
@@ -675,35 +717,35 @@ function DetailPane({
             { label: 'Diversity',        val: item.diversity_score,     inv: false },
           ].map(({ label, val, inv }) => (
             <div key={label} className="flex items-center justify-between gap-2">
-              <span className="text-muted-foreground shrink-0">{label}</span>
+              <span className="text-[#55635B] font-mono text-[11px] shrink-0">{label}</span>
               <div className="flex items-center gap-1.5">
                 <ScoreBar value={val} inverted={inv} />
-                <span className="font-mono w-7 text-right">{(val * 100).toFixed(0)}%</span>
+                <span className="font-mono w-7 text-right font-bold text-[#1B3B2B]">{(val * 100).toFixed(0)}%</span>
               </div>
             </div>
           ))}
-          <div className="col-span-2 text-muted-foreground/60 truncate">
-            Job: <code className="text-xs">{item.job_id}</code>
+          <div className="col-span-2 text-[#55635B] font-mono text-[11px] truncate">
+            Job: <code className="text-xs font-bold text-[#1B3B2B]">{item.job_id}</code>
           </div>
         </div>
 
         {/* Instruction */}
         <div>
           <div className="flex items-center justify-between mb-1">
-            <label className="text-xs font-medium text-muted-foreground">Instruction</label>
+            <label className="text-xs font-bold text-[#1B3B2B]">Instruction</label>
             {editing && (
-              <span className="text-xs text-muted-foreground/60">
+              <span className="text-xs font-mono text-[#55635B]">
                 {editInstruction.length} chars
               </span>
             )}
           </div>
           {editing
             ? <textarea
-                className="w-full bg-background border border-border rounded-md p-2 text-sm min-h-[72px] resize-y focus:outline-none focus:ring-1 focus:ring-orange-500/40"
+                className="w-full bg-[#F6F7F4] border border-[#D1D8CE] rounded-xl p-2.5 text-xs text-[#1B3B2B] min-h-[72px] resize-y focus:outline-none focus:ring-1 focus:ring-[#1B3B2B]"
                 value={editInstruction}
                 onChange={e => onEditInst(e.target.value)}
               />
-            : <div className="bg-background rounded-md p-2.5 text-sm border border-border/40 whitespace-pre-wrap leading-relaxed max-h-28 overflow-y-auto">
+            : <div className="bg-[#F6F7F4] rounded-xl p-3 text-xs text-[#1B3B2B] border border-[#E2E6E0] whitespace-pre-wrap leading-relaxed max-h-28 overflow-y-auto font-sans">
                 {item.instruction}
               </div>
           }
@@ -712,21 +754,21 @@ function DetailPane({
         {/* Response */}
         <div>
           <div className="flex items-center justify-between mb-1">
-            <label className="text-xs font-medium text-muted-foreground">Response</label>
+            <label className="text-xs font-bold text-[#1B3B2B]">Response</label>
             {editing && (
-              <span className="text-xs text-muted-foreground/60">
+              <span className="text-xs font-mono text-[#55635B]">
                 {editResponse.length} chars
               </span>
             )}
           </div>
           {editing
             ? <textarea
-                className="w-full bg-background border border-border rounded-md p-2 text-sm min-h-[100px] resize-y focus:outline-none focus:ring-1 focus:ring-orange-500/40"
+                className="w-full bg-[#F6F7F4] border border-[#D1D8CE] rounded-xl p-2.5 text-xs text-[#1B3B2B] min-h-[100px] resize-y focus:outline-none focus:ring-1 focus:ring-[#1B3B2B]"
                 value={editResponse}
                 onChange={e => onEditResp(e.target.value)}
               />
             : <ScrollArea className="max-h-44">
-                <div className="bg-background rounded-md p-2.5 text-sm border border-border/40 whitespace-pre-wrap leading-relaxed">
+                <div className="bg-[#F6F7F4] rounded-xl p-3 text-xs text-[#1B3B2B] border border-[#E2E6E0] whitespace-pre-wrap leading-relaxed font-sans">
                   {item.response}
                 </div>
               </ScrollArea>
@@ -734,75 +776,67 @@ function DetailPane({
         </div>
 
         {item.source_url && (
-          <p className="text-xs text-muted-foreground truncate">
+          <p className="text-xs text-[#55635B] truncate">
             Source:{' '}
             <a href={item.source_url} target="_blank" rel="noopener noreferrer"
-              className="text-orange-400 hover:underline">{item.source_url}</a>
+              className="text-[#1B3B2B] font-bold hover:underline">{item.source_url}</a>
           </p>
         )}
 
         {/* Notes + reviewer */}
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
           <div>
-            <label className="text-xs mb-1 block text-muted-foreground">Reviewer name</label>
+            <label className="text-xs mb-1 block font-bold text-[#1B3B2B]">Reviewer name</label>
             <Input value={reviewer} onChange={e => onReviewer(e.target.value)}
-              className="h-8 text-sm" placeholder="your-name" />
+              className="h-8 text-xs rounded-full border-[#D1D8CE]" placeholder="your-name" />
           </div>
           <div>
-            <label className="text-xs mb-1 block text-muted-foreground">Notes (optional)</label>
+            <label className="text-xs mb-1 block font-bold text-[#1B3B2B]">Notes (optional)</label>
             <Input value={notes} onChange={e => onNotes(e.target.value)}
-              className="h-8 text-sm" placeholder="Add a note…" />
+              className="h-8 text-xs rounded-full border-[#D1D8CE]" placeholder="Add a note…" />
           </div>
         </div>
 
         {/* Action buttons */}
-        <div className="flex flex-wrap gap-2">
-          {!editing ? (
-            <>
-              <Button size="sm" className="bg-green-700 hover:bg-green-600 text-white h-8"
-                disabled={actionLoading} onClick={() => onAct('approve', item)}>
-                <CheckCircle2 className="h-3.5 w-3.5 mr-1" />Approve
-                <kbd className="ml-1 text-xs opacity-60 font-normal">a</kbd>
-              </Button>
-              <Button size="sm" variant="destructive" className="h-8"
-                disabled={actionLoading} onClick={() => onAct('reject', item)}>
-                <XCircle className="h-3.5 w-3.5 mr-1" />Reject
-                <kbd className="ml-1 text-xs opacity-60 font-normal">r</kbd>
-              </Button>
-              <Button size="sm" variant="outline" className="h-8"
-                disabled={actionLoading} onClick={() => onSetEditing(true)}>
-                <Pencil className="h-3.5 w-3.5 mr-1" />Edit
-                <kbd className="ml-1 text-xs opacity-60 font-normal">e</kbd>
-              </Button>
-              <Button size="sm" variant="outline"
-                className="h-8 border-orange-500/40 text-orange-400 hover:bg-orange-500/10"
-                disabled={actionLoading} onClick={() => onAct('flag', item)}>
-                <Flag className="h-3.5 w-3.5 mr-1" />Flag
-                <kbd className="ml-1 text-xs opacity-60 font-normal">f</kbd>
-              </Button>
-              {actionLoading && <Loader2 className="h-4 w-4 animate-spin self-center ml-1" />}
-            </>
-          ) : (
-            <>
-              <Button size="sm" className="bg-green-700 hover:bg-green-600 text-white h-8"
-                disabled={actionLoading} onClick={() => onAct('edit', item)}>
-                <CheckCircle2 className="h-3.5 w-3.5 mr-1" />Save &amp; Approve
-              </Button>
-              <Button size="sm" variant="outline" className="h-8"
-                onClick={() => onSetEditing(false)}>Cancel</Button>
-            </>
-          )}
-        </div>
-
-        {/* HITL resume */}
-        <div className="border-t border-border/40 pt-3 space-y-2">
-          <p className="text-xs text-muted-foreground">
-            If this dataset job is paused at a review gate, resume it here after approving.
-          </p>
-          <Button size="sm" variant="outline"
-            className="h-8 border-orange-500/40 text-orange-400 hover:bg-orange-500/10"
-            onClick={() => onResume(item.job_id)}>
-            <Play className="h-3.5 w-3.5 mr-1" />Resume Dataset Job
+        <div className="flex flex-wrap gap-2 pt-2 border-t border-[#E2E6E0]">
+          <Button
+            size="sm"
+            className="bg-[#1B3B2B] hover:bg-[#142D21] text-white font-medium text-xs rounded-full flex-1"
+            disabled={actionLoading}
+            onClick={() => editing ? onAct('edit', item) : onAct('approve', item)}
+          >
+            <CheckCircle2 className="h-3.5 w-3.5 mr-1 text-emerald-400" />
+            {editing ? 'Save & Approve' : 'Approve (a)'}
+          </Button>
+          <Button
+            size="sm"
+            variant="destructive"
+            className="text-xs rounded-full flex-1"
+            disabled={actionLoading}
+            onClick={() => onAct('reject', item)}
+          >
+            <XCircle className="h-3.5 w-3.5 mr-1" />
+            Reject (r)
+          </Button>
+          <Button
+            size="sm"
+            variant="outline"
+            className="text-xs rounded-full border-[#D1D8CE] text-[#1B3B2B]"
+            disabled={actionLoading}
+            onClick={() => onSetEditing(!editing)}
+          >
+            <Pencil className="h-3.5 w-3.5 mr-1" />
+            {editing ? 'Cancel edit' : 'Edit (e)'}
+          </Button>
+          <Button
+            size="sm"
+            variant="outline"
+            className="text-xs rounded-full border-[#D1D8CE] text-amber-800"
+            disabled={actionLoading}
+            onClick={() => onAct('flag', item)}
+          >
+            <Flag className="h-3.5 w-3.5 mr-1" />
+            Flag (f)
           </Button>
         </div>
       </CardContent>
