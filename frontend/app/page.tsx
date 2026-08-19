@@ -79,11 +79,12 @@ export default function OverviewDashboardPage() {
   const completedFTJobs = finetuneJobs.filter((j) => j.status === 'completed')
 
   return (
-    <div className="min-h-screen bg-[#F6F7F4] text-[#1B3B2B]">
+    <div className="min-h-screen bg-[#F6F7F4] text-[#1B3B2B] flex flex-col">
       <TopNav />
-      <div className="flex">
+      <div className="flex-1 flex w-full">
         <Sidebar />
-        <main className="flex-1 p-4 sm:p-6 max-w-7xl mx-auto space-y-6 w-full overflow-x-hidden">
+        <main className="flex-1 min-w-0 p-4 sm:p-6 lg:p-8">
+          <div className="w-full max-w-7xl mx-auto space-y-6">
           {/* Top Banner Header */}
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-[#E2E6E0] pb-5">
             <div>
@@ -389,6 +390,7 @@ export default function OverviewDashboardPage() {
               </div>
             </CardContent>
           </Card>
+          </div>
         </main>
       </div>
     </div>

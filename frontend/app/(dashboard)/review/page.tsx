@@ -301,7 +301,7 @@ export default function ReviewPage() {
   // ── Render ────────────────────────────────────────────────────────────────
 
   return (
-    <div className="space-y-6 max-w-7xl mx-auto pb-8 animate-fade-in">
+    <div className="space-y-6 w-full pb-8 animate-fade-in">
 
       {/* Toasts */}
       <div className="fixed bottom-4 right-4 z-50 space-y-2 pointer-events-none">

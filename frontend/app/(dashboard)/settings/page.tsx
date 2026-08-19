@@ -70,7 +70,7 @@ export default function SettingsPage() {
   const redisOk = health?.redis
 
   return (
-    <div className="space-y-6 max-w-5xl mx-auto pb-8 animate-fade-in">
+    <div className="space-y-6 w-full pb-8 animate-fade-in">
 
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-[#E2E6E0] pb-4">

@@ -6,7 +6,6 @@ import { useState, useEffect } from 'react'
 import {
   FlaskConical,
   Database,
-  Bell,
   Search,
   Command,
   Activity,
@@ -17,7 +16,6 @@ import {
   ClipboardCheck,
   Zap,
   Sparkles,
-  Layers,
   Menu,
   X
 } from 'lucide-react'
@@ -82,7 +80,7 @@ export function TopNav() {
   }
 
   return (
-    <header className="sticky top-0 z-50 w-full border-b border-[#E2E6E0] bg-[#F6F7F4]/90 backdrop-blur-md">
+    <header className="sticky top-0 z-50 w-full border-b border-[#E2E6E0] bg-[#F6F7F4]/95 backdrop-blur-md">
       {/* Demo Mode Notice Banner */}
       {showFallbackNotice && (
         <div className="bg-amber-500/10 border-b border-amber-500/20 px-4 py-1.5 text-xs flex items-center justify-between text-amber-800">
@@ -109,10 +107,10 @@ export function TopNav() {
         </div>
       )}
 
-      <div className="flex h-16 items-center justify-between px-6 sm:px-8 lg:px-12 max-w-[1600px] mx-auto">
-        {/* Brand Logo */}
-        <div className="flex items-center gap-6">
-          <Link href="/" className="flex items-center gap-2.5 group">
+      <div className="flex h-16 items-center justify-between px-4 sm:px-6 lg:px-8 w-full gap-4">
+        {/* Brand Logo & Navigation */}
+        <div className="flex items-center gap-4 lg:gap-6 min-w-0">
+          <Link href="/" className="flex items-center gap-2.5 group shrink-0">
             <div className="h-9 w-9 rounded-xl bg-[#1B3B2B] text-white flex items-center justify-center shadow-xs transition-transform group-hover:scale-105">
               <Sparkles className="h-4 w-4 text-emerald-400 font-bold" />
             </div>
@@ -124,30 +122,31 @@ export function TopNav() {
           </Link>
 
           {/* Live Telemetry Indicator */}
-          <div className="hidden xl:flex items-center gap-2 px-3 py-1 rounded-full border border-[#D1D8CE] bg-[#E8ECE6] text-[11px] font-mono text-[#1B3B2B]">
+          <div className="hidden 2xl:flex items-center gap-2 px-3 py-1 rounded-full border border-[#D1D8CE] bg-[#E8ECE6] text-[11px] font-mono text-[#1B3B2B] shrink-0">
             <span className="h-2 w-2 rounded-full bg-emerald-500 animate-pulse" />
             <span className="font-semibold uppercase tracking-wider text-[10px] text-[#55635B]">Telemetry:</span>
             <span className="font-bold">Online (99.8%)</span>
           </div>
 
-          {/* Desktop Navigation */}
-          <nav className="hidden lg:flex items-center gap-1.5 bg-[#E8ECE6]/80 p-1 rounded-full border border-[#D1D8CE]">
+          {/* Desktop Navigation Links */}
+          <nav className="hidden lg:flex items-center gap-1 bg-[#E8ECE6]/80 p-1 rounded-full border border-[#D1D8CE] overflow-x-auto max-w-[45vw] 2xl:max-w-none">
             {navItems.map((item) => {
               const Icon = item.icon
               const isActive = pathname.startsWith(item.href)
 
               return (
-                <Link key={item.href} href={item.href}>
+                <Link key={item.href} href={item.href} className="shrink-0">
                   <button
+                    title={item.label}
                     className={clsx(
-                      'flex items-center gap-1.5 px-3 py-1 text-xs font-medium rounded-full transition-all duration-150',
+                      'flex items-center gap-1.5 px-2.5 py-1 text-xs font-medium rounded-full transition-all duration-150 shrink-0',
                       isActive
                         ? 'bg-[#1B3B2B] text-white font-semibold shadow-xs'
                         : 'text-[#55635B] hover:text-[#1B3B2B] hover:bg-white/60'
                     )}
                   >
-                    <Icon className={clsx("h-3.5 w-3.5", isActive ? "text-emerald-300" : "text-[#55635B]")} />
-                    <span>{item.label}</span>
+                    <Icon className={clsx("h-3.5 w-3.5 shrink-0", isActive ? "text-emerald-300" : "text-[#55635B]")} />
+                    <span className={clsx(isActive ? 'inline' : 'hidden 2xl:inline')}>{item.label}</span>
                   </button>
                 </Link>
               )
@@ -156,7 +155,7 @@ export function TopNav() {
         </div>
 
         {/* Right Controls & Mobile Menu Toggle */}
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-2 shrink-0">
           {/* Quick Search */}
           <Button variant="outline" size="sm" className="hidden md:flex gap-2 text-[#55635B] border-[#D1D8CE] hover:bg-[#E8ECE6] rounded-full">
             <Search className="h-3.5 w-3.5 text-[#1B3B2B]" />
@@ -179,21 +178,15 @@ export function TopNav() {
                 : 'border-[#D1D8CE] text-[#1B3B2B] hover:bg-[#E8ECE6]'
             )}
           >
-            <Zap className={clsx("h-3.5 w-3.5", mockMode ? "text-emerald-400" : "text-[#1B3B2B]")} />
-            <span>{mockMode ? 'Offline Demo' : 'Live Mode'}</span>
+            <Zap className={clsx('h-3.5 w-3.5', mockMode ? 'text-emerald-400 fill-current' : 'text-[#1B3B2B]')} />
+            <span className="hidden sm:inline">{mockMode ? 'Offline Demo' : 'Live API'}</span>
           </Button>
 
-          {/* Notifications */}
-          <Button variant="ghost" size="icon" className="relative text-[#1B3B2B] hover:bg-[#E8ECE6] rounded-full">
-            <Bell className="h-4 w-4" />
-            <span className="absolute top-2 right-2 h-2 w-2 rounded-full bg-emerald-500" />
-          </Button>
-
-          {/* Mobile Navigation Toggle */}
+          {/* Mobile Menu Button */}
           <Button
             variant="ghost"
             size="icon"
-            className="lg:hidden text-[#1B3B2B] hover:bg-[#E8ECE6] rounded-full"
+            className="lg:hidden h-9 w-9 rounded-full text-[#1B3B2B] hover:bg-[#E8ECE6]"
             onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
           >
             {mobileMenuOpen ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
@@ -203,27 +196,41 @@ export function TopNav() {
 
       {/* Mobile Drawer Menu */}
       {mobileMenuOpen && (
-        <div className="lg:hidden border-b border-[#E2E6E0] bg-[#F6F7F4] px-4 py-3 space-y-1 animate-in slide-in-from-top-2 duration-200">
-          {navItems.map((item) => {
-            const Icon = item.icon
-            const isActive = pathname.startsWith(item.href)
+        <div className="lg:hidden border-t border-[#E2E6E0] bg-white p-4 space-y-2 animate-fade-in shadow-xl">
+          <div className="flex items-center justify-between px-3 py-2 bg-[#F6F7F4] rounded-xl text-xs font-mono text-[#1B3B2B] border border-[#E2E6E0]">
+            <span className="flex items-center gap-2">
+              <span className="h-2 w-2 rounded-full bg-emerald-500 animate-pulse" />
+              Telemetry Status
+            </span>
+            <span className="font-bold text-emerald-700">Online (99.8%)</span>
+          </div>
 
-            return (
-              <Link key={item.href} href={item.href} onClick={() => setMobileMenuOpen(false)}>
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  className={clsx(
-                    'w-full justify-start gap-3 text-xs font-medium py-2.5 rounded-xl',
-                    isActive ? 'bg-[#1B3B2B] text-white font-semibold' : 'text-[#55635B] hover:bg-[#E8ECE6]'
-                  )}
+          <div className="grid grid-cols-2 sm:grid-cols-3 gap-2 pt-2">
+            {navItems.map((item) => {
+              const Icon = item.icon
+              const isActive = pathname.startsWith(item.href)
+
+              return (
+                <Link
+                  key={item.href}
+                  href={item.href}
+                  onClick={() => setMobileMenuOpen(false)}
                 >
-                  <Icon className={clsx("h-4 w-4", isActive ? "text-emerald-300" : "text-[#55635B]")} />
-                  <span>{item.label}</span>
-                </Button>
-              </Link>
-            )
-          })}
+                  <div
+                    className={clsx(
+                      'flex items-center gap-2 p-2.5 rounded-xl border text-xs font-medium transition-all',
+                      isActive
+                        ? 'bg-[#1B3B2B] text-white border-[#1B3B2B] font-semibold'
+                        : 'bg-[#F6F7F4] text-[#1B3B2B] border-[#E2E6E0] hover:bg-[#E8ECE6]'
+                    )}
+                  >
+                    <Icon className={clsx('h-4 w-4 shrink-0', isActive ? 'text-emerald-300' : 'text-[#1B3B2B]')} />
+                    <span className="truncate">{item.label}</span>
+                  </div>
+                </Link>
+              )
+            })}
+          </div>
         </div>
       )}
     </header>

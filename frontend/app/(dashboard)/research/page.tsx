@@ -78,7 +78,7 @@ export default function ResearchPage() {
   const techEntries = rawTech && typeof rawTech === 'object' && !Array.isArray(rawTech) ? Object.entries(rawTech) : []
 
   return (
-    <div className="space-y-6 max-w-7xl mx-auto pb-8 animate-fade-in">
+    <div className="space-y-6 w-full pb-8 animate-fade-in">
 
       {/* Toast */}
       {toast && (

@@ -50,7 +50,7 @@ export function Sidebar() {
 
   if (collapsed) {
     return (
-      <aside className="hidden lg:flex flex-col h-[calc(100vh-4rem)] border-r border-[#E2E6E0] bg-[#F6F7F4] w-12 transition-all">
+      <aside className="hidden lg:flex flex-col w-14 min-w-[56px] shrink-0 border-r border-[#E2E6E0] bg-[#F6F7F4] transition-all min-h-full">
         <Button
           variant="ghost"
           size="icon"
@@ -64,7 +64,7 @@ export function Sidebar() {
   }
 
   return (
-    <aside className="hidden lg:flex flex-col h-[calc(100vh-4rem)] border-r border-[#E2E6E0] bg-[#F6F7F4] w-64 transition-all">
+    <aside className="hidden lg:flex flex-col w-64 min-w-[256px] shrink-0 border-r border-[#E2E6E0] bg-[#F6F7F4] transition-all min-h-full">
       {/* Sidebar Header */}
       <div className="flex items-center justify-between p-5 border-b border-[#E2E6E0]">
         <span className="text-xs font-bold uppercase tracking-wider font-mono text-[#55635B]">

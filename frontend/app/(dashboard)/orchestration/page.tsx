@@ -119,7 +119,7 @@ export default function OrchestrationPage() {
   }
 
   return (
-    <div className="space-y-6 max-w-7xl mx-auto pb-8">
+    <div className="space-y-6 w-full pb-8">
       {/* Page Header */}
       <div className="flex items-center justify-between border-b border-[#E2E6E0] pb-4">
         <div>
