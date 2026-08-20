@@ -24,6 +24,7 @@ import { clsx } from 'clsx'
 import { Button } from '@/components/ui/button'
 import { OnboardingModal } from '@/components/onboarding/OnboardingModal'
 import { CommandPalette } from '@/components/search/CommandPalette'
+import { InteractiveProductTour } from '@/components/onboarding/InteractiveProductTour'
 
 export interface NavGroup {
   name: string
@@ -135,6 +136,9 @@ export function TopNav() {
 
       {/* Global Interactive Command Palette Search */}
       <CommandPalette open={showSearch} onOpenChange={setShowSearch} />
+
+      {/* Floating Interactive Product Tour Widget */}
+      <InteractiveProductTour />
 
       {/* Demo Mode Notice Banner */}
       {showFallbackNotice && (

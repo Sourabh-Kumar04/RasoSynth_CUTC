@@ -151,77 +151,7 @@ export default function OverviewDashboardPage() {
             </Card>
           )}
 
-          {/* Onboarding Quick-Start Guide Card */}
-          <Card className="border-[#D1D8CE] bg-white rounded-2xl p-5 card-shadow space-y-4">
-            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-[#E2E6E0] pb-3">
-              <div className="flex items-center gap-2.5">
-                <div className="h-8 w-8 rounded-xl bg-[#1B3B2B] text-white flex items-center justify-center font-bold text-xs shadow-xs">
-                  <Sparkles className="h-4 w-4 text-emerald-400" />
-                </div>
-                <div>
-                  <h3 className="text-base font-bold text-[#1B3B2B]">How to Use RasoSynthTune — 4-Step Workflow</h3>
-                  <p className="text-xs text-[#55635B]">Follow these core steps to synthesize high-craft datasets and fine-tune AI models.</p>
-                </div>
-              </div>
-              <Button
-                variant="outline"
-                size="sm"
-                className="text-xs border-[#D1D8CE] text-[#1B3B2B] hover:bg-[#E8ECE6] rounded-full self-start sm:self-auto"
-                onClick={() => router.push('/studio')}
-              >
-                ⚡ Open Studio Presets
-              </Button>
-            </div>
 
-            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-3">
-              {[
-                {
-                  step: '1. Build Studio',
-                  desc: 'Describe prompts or select 1-Click Presets (Medical, Coding, Legal).',
-                  href: '/studio',
-                  icon: FlaskConical,
-                  action: 'Launch Studio →'
-                },
-                {
-                  step: '2. Verify & Score',
-                  desc: 'Multi-provider consensus, hallucination check, & 4-tier deduplication.',
-                  href: '/quality',
-                  icon: BarChart2,
-                  action: 'Quality Benchmarks →'
-                },
-                {
-                  step: '3. Human Curation',
-                  desc: 'HITL inspection queue to approve, edit, or reject dataset samples.',
-                  href: '/review',
-                  icon: ClipboardCheck,
-                  action: 'Review Queue →'
-                },
-                {
-                  step: '4. Train & Export',
-                  desc: 'Export JSONL/Parquet or train PEFT/LoRA adapter models in Studio.',
-                  href: '/finetune',
-                  icon: Cpu,
-                  action: 'Fine-Tune Models →'
-                }
-              ].map((item) => {
-                const Icon = item.icon
-                return (
-                  <div key={item.step} className="p-3.5 rounded-xl bg-[#F6F7F4] border border-[#E2E6E0] flex flex-col justify-between space-y-2">
-                    <div>
-                      <div className="flex items-center gap-2 mb-1">
-                        <Icon className="h-4 w-4 text-[#1B3B2B]" />
-                        <span className="text-xs font-bold text-[#1B3B2B]">{item.step}</span>
-                      </div>
-                      <p className="text-[11px] text-[#55635B] leading-relaxed">{item.desc}</p>
-                    </div>
-                    <Link href={item.href} className="text-[11px] font-bold text-[#1B3B2B] hover:underline flex items-center gap-1 pt-1">
-                      {item.action}
-                    </Link>
-                  </div>
-                )
-              })}
-            </div>
-          </Card>
 
           {/* Telemetry Stat Overview Grid */}
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
