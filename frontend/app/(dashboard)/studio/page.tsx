@@ -289,16 +289,51 @@ export default function StudioPage() {
                 </CardDescription>
               </CardHeader>
               <CardContent className="space-y-4">
-                {/* Preset Prompts for Instant Workflow Creation (Placed Above Textarea) */}
-                <div className="pb-3 border-b border-[#E2E6E0]">
+                {/* Textarea Input (Front and Center - Immediately Visible Without Scrolling) */}
+                <div className="relative pt-1">
+                  <textarea
+                    value={naturalLanguageInput}
+                    onChange={(e) => setNaturalLanguageInput(e.target.value)}
+                    placeholder="e.g., Generate a multilingual legal reasoning dataset with 10,000 examples in English, Spanish, and French. Focus on contract analysis and include explanations for each legal decision..."
+                    className="w-full h-36 p-4 rounded-xl border border-[#D1D8CE] bg-[#F6F7F4] text-[#1B3B2B] text-xs resize-none focus:outline-none focus:ring-2 focus:ring-[#1B3B2B] placeholder:text-[#809085]"
+                  />
+                  <div className="absolute bottom-3 right-3 flex items-center gap-2">
+                    <Badge variant="secondary" className="text-xs rounded-full bg-[#E8ECE6] text-[#1B3B2B]">
+                      {naturalLanguageInput.length} / 2000
+                    </Badge>
+                  </div>
+                </div>
+
+                {/* Primary Action Buttons (Immediately Visible Without Scrolling) */}
+                <div className="flex items-center gap-2">
+                  <Button variant="outline" className="flex-1 gap-2 border-[#D1D8CE] text-[#1B3B2B] hover:bg-[#E8ECE6] rounded-full" disabled={isSubmitting}>
+                    <Sparkles className="h-4 w-4 text-emerald-600" />
+                    Enhance Prompt
+                  </Button>
+                  <Button
+                    className="flex-1 gap-2 bg-[#1B3B2B] hover:bg-[#142D21] text-white rounded-full font-medium shadow-sm"
+                    onClick={handleGenerateDataset}
+                    disabled={isSubmitting || !naturalLanguageInput.trim()}
+                  >
+                    {isSubmitting ? (
+                      <Loader2 className="h-4 w-4 animate-spin text-emerald-400" />
+                    ) : (
+                      <Zap className="h-4 w-4 text-emerald-400 fill-current" />
+                    )}
+                    {isSubmitting ? 'Creating...' : 'Generate Configuration'}
+                  </Button>
+                </div>
+
+                {/* Preset Prompts for Instant Workflow Creation (Placed Below Action Buttons) */}
+                <div className="pt-3 border-t border-[#E2E6E0]">
                   <div className="flex items-center justify-between mb-2.5">
                     <p className="text-xs font-bold text-[#1B3B2B] font-mono uppercase tracking-wider flex items-center gap-1.5">
                       <Zap className="h-3.5 w-3.5 fill-current text-[#1B3B2B]" />
                       1-Click Industry Benchmark Prompts
                     </p>
-                    <span className="text-[10px] text-[#55635B] font-mono">Select to Auto-Fill &amp; Configure</span>
+                    <span className="text-[10px] text-[#55635B] font-mono">Select to Auto-Fill</span>
                   </div>
-                  <div className="grid grid-cols-1 gap-2 max-h-56 overflow-y-auto pr-1">
+                  <div className="grid grid-cols-1 gap-2 max-h-44 overflow-y-auto pr-1">
                     {[
                       {
                         title: '🩺 Medical Clinical Diagnostics & Treatment',
@@ -339,7 +374,7 @@ export default function StudioPage() {
                       <div
                         key={preset.title}
                         title={preset.prompt}
-                        className="group flex flex-col p-2.5 rounded-xl border border-[#E2E6E0] bg-[#F6F7F4] hover:bg-white hover:border-[#D1D8CE] transition-all text-left cursor-pointer"
+                        className="group flex flex-col p-2 rounded-xl border border-[#E2E6E0] bg-[#F6F7F4] hover:bg-white hover:border-[#D1D8CE] transition-all text-left cursor-pointer"
                       >
                         <div className="flex items-center justify-between">
                           <span className="text-xs font-bold text-[#1B3B2B]">
@@ -370,40 +405,6 @@ export default function StudioPage() {
                       </div>
                     ))}
                   </div>
-                </div>
-
-                {/* Textarea Input */}
-                <div className="relative pt-1">
-                  <textarea
-                    value={naturalLanguageInput}
-                    onChange={(e) => setNaturalLanguageInput(e.target.value)}
-                    placeholder="e.g., Generate a multilingual legal reasoning dataset with 10,000 examples in English, Spanish, and French. Focus on contract analysis and include explanations for each legal decision..."
-                    className="w-full h-48 p-4 rounded-xl border border-[#D1D8CE] bg-[#F6F7F4] text-[#1B3B2B] text-xs resize-none focus:outline-none focus:ring-2 focus:ring-[#1B3B2B] placeholder:text-[#809085]"
-                  />
-                  <div className="absolute bottom-3 right-3 flex items-center gap-2">
-                    <Badge variant="secondary" className="text-xs rounded-full bg-[#E8ECE6] text-[#1B3B2B]">
-                      {naturalLanguageInput.length} / 2000
-                    </Badge>
-                  </div>
-                </div>
-
-                <div className="flex items-center gap-2">
-                  <Button variant="outline" className="flex-1 gap-2 border-[#D1D8CE] text-[#1B3B2B] hover:bg-[#E8ECE6] rounded-full" disabled={isSubmitting}>
-                    <Sparkles className="h-4 w-4" />
-                    Enhance Prompt
-                  </Button>
-                  <Button
-                    className="flex-1 gap-2 bg-[#1B3B2B] hover:bg-[#142D21] text-white rounded-full font-medium"
-                    onClick={handleGenerateDataset}
-                    disabled={isSubmitting || !naturalLanguageInput.trim()}
-                  >
-                    {isSubmitting ? (
-                      <Loader2 className="h-4 w-4 animate-spin text-emerald-400" />
-                    ) : (
-                      <Zap className="h-4 w-4 text-emerald-400" />
-                    )}
-                    {isSubmitting ? 'Creating...' : 'Generate Configuration'}
-                  </Button>
                 </div>
               </CardContent>
             </Card>
