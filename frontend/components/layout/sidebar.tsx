@@ -75,7 +75,7 @@ export function Sidebar() {
       {/* ========================================================================= */}
       {/* MOBILE & TABLET RESPONSIVE QUICK WORKSPACE BAR (< lg BREAKPOINTS)          */}
       {/* ========================================================================= */}
-      <div className="lg:hidden w-full bg-[#E8ECE6]/80 border-b border-[#E2E6E0] p-3 px-4 flex flex-col gap-2.5">
+      <div data-tour="sidebar-quick-workspace" className="lg:hidden w-full bg-[#E8ECE6]/80 border-b border-[#E2E6E0] p-3 px-4 flex flex-col gap-2.5">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-2">
             <LayoutGrid className="h-4 w-4 text-[#1B3B2B]" />
@@ -204,7 +204,7 @@ export function Sidebar() {
           </div>
         </aside>
       ) : (
-        <aside className="hidden lg:flex flex-col w-72 min-w-[288px] shrink-0 border-r border-[#E2E6E0] bg-[#F6F7F4] transition-all min-h-[calc(100vh-4rem)]">
+        <aside data-tour="sidebar-quick-workspace" className="hidden lg:flex flex-col w-72 min-w-[288px] shrink-0 border-r border-[#E2E6E0] bg-[#F6F7F4] transition-all min-h-[calc(100vh-4rem)]">
           {/* Sidebar Header */}
           <div className="flex items-center justify-between p-4 border-b border-[#E2E6E0]">
             <span className="text-xs font-bold uppercase tracking-wider font-mono text-[#1B3B2B] flex items-center gap-1.5">

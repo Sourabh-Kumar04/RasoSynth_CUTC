@@ -24,7 +24,7 @@ import { clsx } from 'clsx'
 import { Button } from '@/components/ui/button'
 import { OnboardingModal } from '@/components/onboarding/OnboardingModal'
 import { CommandPalette } from '@/components/search/CommandPalette'
-import { InteractiveProductTour } from '@/components/onboarding/InteractiveProductTour'
+import { SpotlightProductTour } from '@/components/onboarding/SpotlightProductTour'
 
 export interface NavGroup {
   name: string
@@ -131,14 +131,14 @@ export function TopNav() {
 
   return (
     <header className="sticky top-0 z-50 w-full border-b border-[#E2E6E0] bg-[#F6F7F4]/95 backdrop-blur-md">
+      {/* Interactive Spotlight Product Tour Widget & Backdrop */}
+      <SpotlightProductTour />
+
       {/* Auto-popup or requested Onboarding Guided Tour */}
       <OnboardingModal open={showTour} onOpenChange={setShowTour} />
 
       {/* Global Interactive Command Palette Search */}
       <CommandPalette open={showSearch} onOpenChange={setShowSearch} />
-
-      {/* Floating Interactive Product Tour Widget */}
-      <InteractiveProductTour />
 
       {/* Demo Mode Notice Banner */}
       {showFallbackNotice && (
@@ -168,7 +168,7 @@ export function TopNav() {
 
       <div className="flex h-16 items-center justify-between px-4 sm:px-6 lg:px-8 w-full gap-4">
         {/* Brand Logo */}
-        <div className="flex items-center gap-4 lg:gap-6 min-w-0">
+        <div className="flex items-center gap-4 lg:gap-6 min-w-0" data-tour="top-nav-brand">
           <Link href="/" className="flex items-center gap-2.5 group shrink-0">
             <div className="h-9 w-9 rounded-xl bg-[#1B3B2B] text-white flex items-center justify-center shadow-xs transition-transform group-hover:scale-105">
               <Sparkles className="h-4 w-4 text-emerald-400 font-bold" />
@@ -214,6 +214,7 @@ export function TopNav() {
         <div className="flex items-center gap-2 shrink-0">
           {/* Functional Quick Search with Cmd+K */}
           <Button
+            data-tour="top-nav-search"
             variant="outline"
             size="sm"
             onClick={() => setShowSearch(true)}
@@ -228,7 +229,7 @@ export function TopNav() {
           </Button>
 
           {/* Mode Indicator & Toggle */}
-          <div className="flex items-center gap-1.5 bg-[#E8ECE6] p-1 rounded-full border border-[#D1D8CE]">
+          <div data-tour="top-nav-mode" className="flex items-center gap-1.5 bg-[#E8ECE6] p-1 rounded-full border border-[#D1D8CE]">
             <Button
               variant={mockMode ? 'default' : 'outline'}
               size="sm"

@@ -103,6 +103,7 @@ export default function OverviewDashboardPage() {
 
             <div className="flex items-center gap-2.5">
               <Button
+                data-tour="launch-studio-btn"
                 size="sm"
                 className="bg-[#1B3B2B] hover:bg-[#142D21] text-white font-medium gap-2 shadow-xs rounded-full text-xs"
                 onClick={() => router.push('/studio')}
