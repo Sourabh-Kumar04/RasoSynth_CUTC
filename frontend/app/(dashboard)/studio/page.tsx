@@ -338,9 +338,10 @@ export default function StudioPage() {
                     ].map((preset) => (
                       <div
                         key={preset.title}
-                        className="group flex flex-col p-2.5 rounded-xl border border-[#E2E6E0] bg-[#F6F7F4] hover:bg-white hover:border-[#D1D8CE] transition-all text-left"
+                        title={preset.prompt}
+                        className="group flex flex-col p-2.5 rounded-xl border border-[#E2E6E0] bg-[#F6F7F4] hover:bg-white hover:border-[#D1D8CE] transition-all text-left cursor-pointer"
                       >
-                        <div className="flex items-center justify-between mb-1">
+                        <div className="flex items-center justify-between">
                           <span className="text-xs font-bold text-[#1B3B2B]">
                             {preset.title}
                           </span>
@@ -363,7 +364,7 @@ export default function StudioPage() {
                             </Button>
                           </div>
                         </div>
-                        <p className="text-[11px] text-[#55635B] line-clamp-2 leading-relaxed">
+                        <p className="hidden group-hover:block text-[11px] text-[#55635B] leading-relaxed mt-1.5 pt-1.5 border-t border-[#E2E6E0] animate-fade-in">
                           {preset.prompt}
                         </p>
                       </div>
