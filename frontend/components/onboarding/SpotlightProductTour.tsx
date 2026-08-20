@@ -16,7 +16,8 @@ import {
   Activity,
   Layers,
   Search,
-  Sliders
+  Sliders,
+  EyeOff
 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
@@ -137,8 +138,15 @@ export function SpotlightProductTour() {
     return 0
   })
 
-  // Open tour automatically on visit/reload
-  const [isOpen, setIsOpen] = useState(true)
+  // Open tour automatically unless user explicitly opted for "Never Show Again"
+  const [isOpen, setIsOpen] = useState(() => {
+    if (typeof window !== 'undefined') {
+      const optedOut = localStorage.getItem('spotlightTourNeverShowAgain') === 'true'
+      return !optedOut
+    }
+    return true
+  })
+
   const [targetRect, setTargetRect] = useState<DOMRect | null>(null)
   const [windowDimensions, setWindowDimensions] = useState({ width: 1200, height: 800 })
 
@@ -215,9 +223,27 @@ export function SpotlightProductTour() {
 
   const handleComplete = () => {
     setIsOpen(false)
+    if (typeof window !== 'undefined') {
+      sessionStorage.removeItem('spotlightTourStepIndex')
+    }
+    // Return to Studio workspace after tour finishes
+    router.push('/studio')
+  }
+
+  const handleNeverShowAgain = () => {
+    setIsOpen(false)
+    if (typeof window !== 'undefined') {
+      localStorage.setItem('spotlightTourNeverShowAgain', 'true')
+      sessionStorage.removeItem('spotlightTourStepIndex')
+    }
+    // Return to Studio workspace after opt-out
+    router.push('/studio')
   }
 
   const handleRestart = () => {
+    if (typeof window !== 'undefined') {
+      localStorage.removeItem('spotlightTourNeverShowAgain')
+    }
     updateStepIndex(0)
     setIsOpen(true)
     if (pathname !== '/') router.push('/')
@@ -228,7 +254,7 @@ export function SpotlightProductTour() {
       <button
         onClick={handleRestart}
         className="fixed bottom-4 right-4 z-[90] flex items-center gap-2 bg-[#1B3B2B] text-white px-3.5 py-2 rounded-full shadow-2xl border border-emerald-500/30 text-xs font-mono font-bold hover:scale-105 transition-transform"
-        title="Restart Product Tour"
+        title="Start Interactive Product Tour"
       >
         <Sparkles className="h-4 w-4 text-emerald-400 fill-current animate-pulse" />
         <span>⚡ Product Tour</span>
@@ -241,28 +267,23 @@ export function SpotlightProductTour() {
   const StepIcon = step.icon
 
   // Precision Viewport Safety Math (Guarantees zero button overlap and zero screen clipping)
-  const cardWidth = Math.min(400, windowDimensions.width - 32)
-  const cardEstimatedHeight = 240
+  const cardWidth = Math.min(420, windowDimensions.width - 32)
+  const cardEstimatedHeight = 250
 
   let cardLeft = Math.max(16, (windowDimensions.width - cardWidth) / 2)
   let cardTop = Math.max(80, (windowDimensions.height - cardEstimatedHeight) / 2)
 
   if (targetRect) {
-    // Horizontal alignment clamped securely inside viewport
     cardLeft = Math.max(16, Math.min(windowDimensions.width - cardWidth - 16, targetRect.left))
 
-    // Vertical placement: Check available space above vs below target to avoid covering it!
     const spaceBelow = windowDimensions.height - targetRect.bottom
     const spaceAbove = targetRect.top
 
     if (spaceBelow >= cardEstimatedHeight + 20) {
-      // Place BELOW target element with clear 16px gap
       cardTop = targetRect.bottom + 16
     } else if (spaceAbove >= cardEstimatedHeight + 20) {
-      // Place ABOVE target element with clear 16px gap
       cardTop = Math.max(16, targetRect.top - cardEstimatedHeight - 16)
     } else {
-      // Side placement if target occupies vertical center
       cardTop = Math.max(16, Math.min(windowDimensions.height - cardEstimatedHeight - 16, targetRect.top))
       if (targetRect.right + cardWidth + 20 <= windowDimensions.width) {
         cardLeft = targetRect.right + 16
@@ -271,7 +292,6 @@ export function SpotlightProductTour() {
       }
     }
 
-    // Hard viewport bounds clamping
     cardLeft = Math.max(16, Math.min(windowDimensions.width - cardWidth - 16, cardLeft))
     cardTop = Math.max(16, Math.min(windowDimensions.height - cardEstimatedHeight - 16, cardTop))
   }
@@ -316,13 +336,24 @@ export function SpotlightProductTour() {
               <h3 className="text-xs font-bold text-white tracking-tight">{step.title}</h3>
             </div>
           </div>
-          <button
-            onClick={handleComplete}
-            className="text-emerald-300 hover:text-white p-1 rounded-full hover:bg-white/10 transition-colors"
-            title="Exit Tour"
-          >
-            <X className="h-4 w-4" />
-          </button>
+
+          <div className="flex items-center gap-2">
+            <button
+              onClick={handleNeverShowAgain}
+              className="text-[10px] font-mono text-emerald-300/80 hover:text-white flex items-center gap-1 bg-white/10 px-2 py-1 rounded-full transition-colors"
+              title="Don't show interactive tour automatically on reload"
+            >
+              <EyeOff className="h-3 w-3" />
+              <span>Don't show again</span>
+            </button>
+            <button
+              onClick={handleComplete}
+              className="text-emerald-300 hover:text-white p-1 rounded-full hover:bg-white/10 transition-colors"
+              title="Close Tour"
+            >
+              <X className="h-4 w-4" />
+            </button>
+          </div>
         </div>
 
         {/* Step Body */}

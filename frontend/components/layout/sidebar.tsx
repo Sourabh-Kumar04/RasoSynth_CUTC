@@ -204,7 +204,7 @@ export function Sidebar() {
           </div>
         </aside>
       ) : (
-        <aside data-tour="sidebar-quick-workspace" className="hidden lg:flex flex-col w-72 min-w-[288px] shrink-0 border-r border-[#E2E6E0] bg-[#F6F7F4] transition-all min-h-[calc(100vh-4rem)]">
+        <aside className="hidden lg:flex flex-col w-72 min-w-[288px] shrink-0 border-r border-[#E2E6E0] bg-[#F6F7F4] transition-all min-h-[calc(100vh-4rem)]">
           {/* Sidebar Header */}
           <div className="flex items-center justify-between p-4 border-b border-[#E2E6E0]">
             <span className="text-xs font-bold uppercase tracking-wider font-mono text-[#1B3B2B] flex items-center gap-1.5">
@@ -225,7 +225,7 @@ export function Sidebar() {
           <ScrollArea className="flex-1">
             <div className="p-4 space-y-6">
               {/* Quick Actions */}
-              <div className="space-y-2 w-full min-w-0">
+              <div data-tour="sidebar-quick-workspace" className="space-y-2 w-full min-w-0 p-2 bg-[#E8ECE6]/60 rounded-2xl border border-[#D1D8CE]/60">
                 <Link href="/studio" className="w-full block">
                   <Button
                     size="sm"
