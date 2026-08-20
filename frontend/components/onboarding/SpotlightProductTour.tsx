@@ -9,10 +9,8 @@ import {
   Cpu,
   ClipboardCheck,
   BarChart2,
-  ArrowRight,
   CheckCircle2,
   X,
-  Zap,
   ChevronLeft,
   ChevronRight,
   Activity,
@@ -28,8 +26,7 @@ interface SpotlightStep {
   title: string
   subtitle: string
   description: string
-  actionLabel: string
-  actionHref: string
+  pageHref: string
   badgeText: string
   icon: any
 }
@@ -40,8 +37,7 @@ const SPOTLIGHT_STEPS: SpotlightStep[] = [
     title: '1. RasoSynthTune Platform Overview',
     subtitle: 'Autonomous Multi-Provider Synthetic Dataset Engine',
     description: 'Welcome to RasoSynthTune! RasoSynthTune is an end-to-end AI Dataset & Fine-Tuning platform. It automates dataset synthesis, multi-provider consensus, 4-tier deduplication, HITL curation, and PEFT/LoRA model training.',
-    actionLabel: 'Next: Global Search →',
-    actionHref: '/',
+    pageHref: '/',
     badgeText: 'Platform Core',
     icon: Sparkles
   },
@@ -50,8 +46,7 @@ const SPOTLIGHT_STEPS: SpotlightStep[] = [
     title: '2. Instant Cmd+K Command Palette',
     subtitle: 'Keyboard-First Navigation Across All 9 Tools',
     description: 'Press Cmd+K anywhere (or click this Search bar) to launch instant fuzzy search across all pages, 1-Click benchmark presets, quality benchmarks, and fine-tuning parameters.',
-    actionLabel: 'Next: Dual Execution Mode →',
-    actionHref: '/',
+    pageHref: '/',
     badgeText: 'Global Search',
     icon: Search
   },
@@ -60,8 +55,7 @@ const SPOTLIGHT_STEPS: SpotlightStep[] = [
     title: '3. Live API vs Offline Demo Execution',
     subtitle: 'Dual Backend Execution Switcher',
     description: 'Toggle between Live Cloud API execution and Offline Demo mode anytime. Offline Demo mode runs instant 0-latency synthetic data workflows for quick testing.',
-    actionLabel: 'Next: Quick Workspace →',
-    actionHref: '/',
+    pageHref: '/',
     badgeText: 'Execution Engine',
     icon: Sliders
   },
@@ -70,8 +64,7 @@ const SPOTLIGHT_STEPS: SpotlightStep[] = [
     title: '4. Quick Workspace Shortcuts & Telemetry',
     subtitle: 'Fast Workflow Launchpad',
     description: 'Access 1-Click Presets, Quality Benchmarks, Fine-Tune Studio, and HITL Curation Queue, along with real-time active dataset job counters.',
-    actionLabel: 'Next: Synthetic Studio →',
-    actionHref: '/studio',
+    pageHref: '/',
     badgeText: 'Workspace Launcher',
     icon: Layers
   },
@@ -80,8 +73,7 @@ const SPOTLIGHT_STEPS: SpotlightStep[] = [
     title: '5. Build — Dataset Studio & 1-Click Presets',
     subtitle: 'Natural Language Prompts & Benchmark Presets',
     description: 'Synthesize custom datasets from natural language prompts or select 1-Click Industry Presets (Medical Diagnostics, Python Async, Legal Risk, Finance, Cyber Security).',
-    actionLabel: 'Next: Dataset Explorer →',
-    actionHref: '/datasets',
+    pageHref: '/studio',
     badgeText: 'Synthetic Studio',
     icon: FlaskConical
   },
@@ -90,8 +82,7 @@ const SPOTLIGHT_STEPS: SpotlightStep[] = [
     title: '6. Explore — Dataset Manager & Multi-Format Exporter',
     subtitle: 'JSONL, CSV & Parquet Exporting',
     description: 'Explore generated synthetic datasets, filter sample pairs, inspect domain metadata, and export production-ready files in JSONL, CSV, or Parquet formats.',
-    actionLabel: 'Next: Quality Benchmarks →',
-    actionHref: '/quality',
+    pageHref: '/datasets',
     badgeText: 'Dataset Explorer',
     icon: Database
   },
@@ -100,8 +91,7 @@ const SPOTLIGHT_STEPS: SpotlightStep[] = [
     title: '7. Verify — Quality Benchmarks & Consensus',
     subtitle: '4-Tier Deduplication & Hallucination Guarding',
     description: 'Every dataset undergoes 4-tier deduplication (exact, fuzzy, embedding, cluster) and multi-provider agreement validation across Gemini, Claude, NVIDIA NIM, OpenAI.',
-    actionLabel: 'Next: HITL Inspection →',
-    actionHref: '/review',
+    pageHref: '/quality',
     badgeText: 'Quality Engine',
     icon: BarChart2
   },
@@ -110,8 +100,7 @@ const SPOTLIGHT_STEPS: SpotlightStep[] = [
     title: '8. Curate — Human-In-The-Loop Inspection Queue',
     subtitle: 'Rapid Keyboard Hotkeys (A = Approve, R = Reject, E = Edit)',
     description: 'Domain experts inspect, edit, approve, or reject synthetic data samples with rapid hotkeys before sending them to fine-tuning.',
-    actionLabel: 'Next: Fine-Tune Studio →',
-    actionHref: '/finetune',
+    pageHref: '/review',
     badgeText: 'HITL Review',
     icon: ClipboardCheck
   },
@@ -120,8 +109,7 @@ const SPOTLIGHT_STEPS: SpotlightStep[] = [
     title: '9. Train — PEFT & LoRA Fine-Tuning Studio',
     subtitle: 'Parameter-Efficient Model Training & Loss Streaming',
     description: 'Export verified datasets to train parameter-efficient fine-tuning (PEFT / LoRA) adapter models with real-time loss chart streaming and epoch tracking.',
-    actionLabel: 'Next: System Observability →',
-    actionHref: '/observability',
+    pageHref: '/finetune',
     badgeText: 'LoRA Studio',
     icon: Cpu
   },
@@ -130,8 +118,7 @@ const SPOTLIGHT_STEPS: SpotlightStep[] = [
     title: '10. Observe — OpenTelemetry Tracing & Provider Health',
     subtitle: 'Token Budgets, Latency & Metrics',
     description: 'Monitor token cost budgets, provider rate limits, OpenTelemetry system spans, and multi-provider health metrics in real-time.',
-    actionLabel: '⚡ Finish Tour & Start Building',
-    actionHref: '/studio',
+    pageHref: '/observability',
     badgeText: 'Observability',
     icon: Activity
   }
@@ -150,8 +137,15 @@ export function SpotlightProductTour() {
     return 0
   })
 
-  // Always open tour automatically when visiting or reloading website
-  const [isOpen, setIsOpen] = useState(true)
+  // Open tour automatically on visit/reload unless explicitly closed
+  const [isOpen, setIsOpen] = useState(() => {
+    if (typeof window !== 'undefined') {
+      const closed = sessionStorage.getItem('spotlightTourDismissedThisSession') === 'true'
+      return !closed
+    }
+    return true
+  })
+
   const [targetRect, setTargetRect] = useState<DOMRect | null>(null)
   const [windowDimensions, setWindowDimensions] = useState({ width: 1200, height: 800 })
 
@@ -159,9 +153,18 @@ export function SpotlightProductTour() {
     setCurrentStepIndex(newIndex)
     if (typeof window !== 'undefined') {
       sessionStorage.setItem('spotlightTourStepIndex', String(newIndex))
-      sessionStorage.setItem('spotlightTourActive', 'true')
     }
   }
+
+  // Ensure active route page matches current step pageHref
+  useEffect(() => {
+    if (isOpen) {
+      const step = SPOTLIGHT_STEPS[currentStepIndex]
+      if (step && step.pageHref && pathname !== step.pageHref) {
+        router.push(step.pageHref)
+      }
+    }
+  }, [currentStepIndex, isOpen, pathname, router])
 
   // Measure target element rect & screen size
   const measureTarget = useCallback(() => {
@@ -198,8 +201,8 @@ export function SpotlightProductTour() {
       const nextIndex = currentStepIndex + 1
       updateStepIndex(nextIndex)
       const nextStep = SPOTLIGHT_STEPS[nextIndex]
-      if (nextStep.actionHref && nextStep.actionHref !== pathname) {
-        router.push(nextStep.actionHref)
+      if (nextStep.pageHref && nextStep.pageHref !== pathname) {
+        router.push(nextStep.pageHref)
       }
     } else {
       handleComplete()
@@ -211,8 +214,8 @@ export function SpotlightProductTour() {
       const prevIndex = currentStepIndex - 1
       updateStepIndex(prevIndex)
       const prevStep = SPOTLIGHT_STEPS[prevIndex]
-      if (prevStep.actionHref && prevStep.actionHref !== pathname) {
-        router.push(prevStep.actionHref)
+      if (prevStep.pageHref && prevStep.pageHref !== pathname) {
+        router.push(prevStep.pageHref)
       }
     }
   }
@@ -221,12 +224,12 @@ export function SpotlightProductTour() {
     setIsOpen(false)
     if (typeof window !== 'undefined') {
       sessionStorage.removeItem('spotlightTourStepIndex')
-      sessionStorage.removeItem('spotlightTourActive')
+      sessionStorage.setItem('spotlightTourDismissedThisSession', 'true')
     }
   }
 
   if (!isOpen) {
-    return null // No floating button; attached directly to website load/reload
+    return null
   }
 
   const step = SPOTLIGHT_STEPS[currentStepIndex]
