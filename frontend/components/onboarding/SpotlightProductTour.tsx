@@ -137,15 +137,8 @@ export function SpotlightProductTour() {
     return 0
   })
 
-  // Open tour automatically on visit/reload unless explicitly closed
-  const [isOpen, setIsOpen] = useState(() => {
-    if (typeof window !== 'undefined') {
-      const closed = sessionStorage.getItem('spotlightTourDismissedThisSession') === 'true'
-      return !closed
-    }
-    return true
-  })
-
+  // Open tour automatically on visit/reload
+  const [isOpen, setIsOpen] = useState(true)
   const [targetRect, setTargetRect] = useState<DOMRect | null>(null)
   const [windowDimensions, setWindowDimensions] = useState({ width: 1200, height: 800 })
 
@@ -156,7 +149,7 @@ export function SpotlightProductTour() {
     }
   }
 
-  // Ensure active route page matches current step pageHref
+  // Sync active page with tour step
   useEffect(() => {
     if (isOpen) {
       const step = SPOTLIGHT_STEPS[currentStepIndex]
@@ -222,14 +215,25 @@ export function SpotlightProductTour() {
 
   const handleComplete = () => {
     setIsOpen(false)
-    if (typeof window !== 'undefined') {
-      sessionStorage.removeItem('spotlightTourStepIndex')
-      sessionStorage.setItem('spotlightTourDismissedThisSession', 'true')
-    }
+  }
+
+  const handleRestart = () => {
+    updateStepIndex(0)
+    setIsOpen(true)
+    if (pathname !== '/') router.push('/')
   }
 
   if (!isOpen) {
-    return null
+    return (
+      <button
+        onClick={handleRestart}
+        className="fixed bottom-4 right-4 z-[90] flex items-center gap-2 bg-[#1B3B2B] text-white px-3.5 py-2 rounded-full shadow-2xl border border-emerald-500/30 text-xs font-mono font-bold hover:scale-105 transition-transform"
+        title="Restart Product Tour"
+      >
+        <Sparkles className="h-4 w-4 text-emerald-400 fill-current animate-pulse" />
+        <span>⚡ Product Tour</span>
+      </button>
+    )
   }
 
   const step = SPOTLIGHT_STEPS[currentStepIndex]
