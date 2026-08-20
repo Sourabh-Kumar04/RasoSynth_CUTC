@@ -76,7 +76,7 @@ const SPOTLIGHT_STEPS: SpotlightStep[] = [
     icon: Layers
   },
   {
-    targetSelector: '[data-tour="launch-studio-btn"]',
+    targetSelector: '[data-tour="top-nav-brand"]',
     title: '5. Build — Dataset Studio & 1-Click Presets',
     subtitle: 'Natural Language Prompts & Benchmark Presets',
     description: 'Synthesize custom datasets from natural language prompts or select 1-Click Industry Presets (Medical Diagnostics, Python Async, Legal Risk, Finance, Cyber Security).',
@@ -140,10 +140,36 @@ const SPOTLIGHT_STEPS: SpotlightStep[] = [
 export function SpotlightProductTour() {
   const router = useRouter()
   const pathname = usePathname()
-  const [currentStepIndex, setCurrentStepIndex] = useState(0)
-  const [isOpen, setIsOpen] = useState(false)
+
+  // Persist current step in sessionStorage so page transitions do NOT reset state
+  const [currentStepIndex, setCurrentStepIndex] = useState(() => {
+    if (typeof window !== 'undefined') {
+      const saved = sessionStorage.getItem('spotlightTourStepIndex')
+      return saved ? Math.min(SPOTLIGHT_STEPS.length - 1, Math.max(0, parseInt(saved, 10))) : 0
+    }
+    return 0
+  })
+
+  const [isOpen, setIsOpen] = useState(() => {
+    if (typeof window !== 'undefined') {
+      const active = sessionStorage.getItem('spotlightTourActive') === 'true'
+      const completed = localStorage.getItem('spotlightTourCompleted_v4') === 'true'
+      return active || !completed
+    }
+    return false
+  })
+
   const [targetRect, setTargetRect] = useState<DOMRect | null>(null)
   const [windowDimensions, setWindowDimensions] = useState({ width: 1200, height: 800 })
+
+  // Save current step to sessionStorage
+  const updateStepIndex = (newIndex: number) => {
+    setCurrentStepIndex(newIndex)
+    if (typeof window !== 'undefined') {
+      sessionStorage.setItem('spotlightTourStepIndex', String(newIndex))
+      sessionStorage.setItem('spotlightTourActive', 'true')
+    }
+  }
 
   // Measure element coordinates and window dimensions
   const measureTarget = useCallback(() => {
@@ -163,16 +189,6 @@ export function SpotlightProductTour() {
     }
   }, [currentStepIndex])
 
-  // Reset and open on initial load if not completed
-  useEffect(() => {
-    if (typeof window !== 'undefined') {
-      const seen = localStorage.getItem('spotlightTourCompleted_v3')
-      if (!seen) {
-        setIsOpen(true)
-      }
-    }
-  }, [])
-
   useEffect(() => {
     if (isOpen) {
       measureTarget()
@@ -183,12 +199,12 @@ export function SpotlightProductTour() {
         window.removeEventListener('scroll', measureTarget)
       }
     }
-  }, [isOpen, measureTarget])
+  }, [isOpen, measureTarget, currentStepIndex, pathname])
 
   const handleNext = () => {
     if (currentStepIndex < SPOTLIGHT_STEPS.length - 1) {
       const nextIndex = currentStepIndex + 1
-      setCurrentStepIndex(nextIndex)
+      updateStepIndex(nextIndex)
       const nextStep = SPOTLIGHT_STEPS[nextIndex]
       if (nextStep.actionHref && nextStep.actionHref !== pathname) {
         router.push(nextStep.actionHref)
@@ -201,7 +217,7 @@ export function SpotlightProductTour() {
   const handlePrev = () => {
     if (currentStepIndex > 0) {
       const prevIndex = currentStepIndex - 1
-      setCurrentStepIndex(prevIndex)
+      updateStepIndex(prevIndex)
       const prevStep = SPOTLIGHT_STEPS[prevIndex]
       if (prevStep.actionHref && prevStep.actionHref !== pathname) {
         router.push(prevStep.actionHref)
@@ -212,12 +228,14 @@ export function SpotlightProductTour() {
   const handleComplete = () => {
     setIsOpen(false)
     if (typeof window !== 'undefined') {
-      localStorage.setItem('spotlightTourCompleted_v3', 'true')
+      sessionStorage.removeItem('spotlightTourStepIndex')
+      sessionStorage.removeItem('spotlightTourActive')
+      localStorage.setItem('spotlightTourCompleted_v4', 'true')
     }
   }
 
   const handleRestart = () => {
-    setCurrentStepIndex(0)
+    updateStepIndex(0)
     setIsOpen(true)
     if (pathname !== '/') router.push('/')
   }
@@ -321,7 +339,7 @@ export function SpotlightProductTour() {
             {SPOTLIGHT_STEPS.map((_, idx) => (
               <button
                 key={idx}
-                onClick={() => setCurrentStepIndex(idx)}
+                onClick={() => updateStepIndex(idx)}
                 className={`h-2 rounded-full transition-all ${
                   idx === currentStepIndex ? 'w-5 bg-[#1B3B2B]' : 'w-1.5 bg-[#D1D8CE] hover:bg-[#809085]'
                 }`}
