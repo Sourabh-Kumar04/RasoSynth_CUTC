@@ -76,7 +76,7 @@ const SPOTLIGHT_STEPS: SpotlightStep[] = [
     icon: Layers
   },
   {
-    targetSelector: '[data-tour="top-nav-brand"]',
+    targetSelector: '[data-tour="nav-btn-studio"]',
     title: '5. Build — Dataset Studio & 1-Click Presets',
     subtitle: 'Natural Language Prompts & Benchmark Presets',
     description: 'Synthesize custom datasets from natural language prompts or select 1-Click Industry Presets (Medical Diagnostics, Python Async, Legal Risk, Finance, Cyber Security).',
@@ -86,7 +86,7 @@ const SPOTLIGHT_STEPS: SpotlightStep[] = [
     icon: FlaskConical
   },
   {
-    targetSelector: '[data-tour="top-nav-brand"]',
+    targetSelector: '[data-tour="nav-btn-datasets"]',
     title: '6. Explore — Dataset Manager & Multi-Format Exporter',
     subtitle: 'JSONL, CSV & Parquet Exporting',
     description: 'Explore generated synthetic datasets, filter sample pairs, inspect domain metadata, and export production-ready files in JSONL, CSV, or Parquet formats.',
@@ -96,7 +96,7 @@ const SPOTLIGHT_STEPS: SpotlightStep[] = [
     icon: Database
   },
   {
-    targetSelector: '[data-tour="top-nav-brand"]',
+    targetSelector: '[data-tour="nav-btn-quality"]',
     title: '7. Verify — Quality Benchmarks & Consensus',
     subtitle: '4-Tier Deduplication & Hallucination Guarding',
     description: 'Every dataset undergoes 4-tier deduplication (exact, fuzzy, embedding, cluster) and multi-provider agreement validation across Gemini, Claude, NVIDIA NIM, OpenAI.',
@@ -106,7 +106,7 @@ const SPOTLIGHT_STEPS: SpotlightStep[] = [
     icon: BarChart2
   },
   {
-    targetSelector: '[data-tour="top-nav-brand"]',
+    targetSelector: '[data-tour="nav-btn-review"]',
     title: '8. Curate — Human-In-The-Loop Inspection Queue',
     subtitle: 'Rapid Keyboard Hotkeys (A = Approve, R = Reject, E = Edit)',
     description: 'Domain experts inspect, edit, approve, or reject synthetic data samples with rapid hotkeys before sending them to fine-tuning.',
@@ -116,7 +116,7 @@ const SPOTLIGHT_STEPS: SpotlightStep[] = [
     icon: ClipboardCheck
   },
   {
-    targetSelector: '[data-tour="top-nav-brand"]',
+    targetSelector: '[data-tour="nav-btn-finetune"]',
     title: '9. Train — PEFT & LoRA Fine-Tuning Studio',
     subtitle: 'Parameter-Efficient Model Training & Loss Streaming',
     description: 'Export verified datasets to train parameter-efficient fine-tuning (PEFT / LoRA) adapter models with real-time loss chart streaming and epoch tracking.',
@@ -126,7 +126,7 @@ const SPOTLIGHT_STEPS: SpotlightStep[] = [
     icon: Cpu
   },
   {
-    targetSelector: '[data-tour="top-nav-brand"]',
+    targetSelector: '[data-tour="nav-btn-observability"]',
     title: '10. Observe — OpenTelemetry Tracing & Provider Health',
     subtitle: 'Token Budgets, Latency & Metrics',
     description: 'Monitor token cost budgets, provider rate limits, OpenTelemetry system spans, and multi-provider health metrics in real-time.',

@@ -191,6 +191,7 @@ export function TopNav() {
                   return (
                     <Link key={item.href} href={item.href} className="shrink-0">
                       <button
+                        data-tour={`nav-btn-${item.href.replace('/', '')}`}
                         title={item.tooltip || item.label}
                         className={clsx(
                           'flex items-center gap-1.5 px-2.5 py-1 text-xs font-medium rounded-full transition-all duration-150 shrink-0',
