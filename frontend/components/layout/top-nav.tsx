@@ -17,21 +17,53 @@ import {
   Zap,
   Sparkles,
   Menu,
-  X
+  X,
+  BarChart2
 } from 'lucide-react'
 import { clsx } from 'clsx'
 import { Button } from '@/components/ui/button'
 
-const navItems = [
-  { href: '/datasets', label: 'Datasets', icon: Database },
-  { href: '/studio', label: 'Studio', icon: FlaskConical },
-  { href: '/orchestration', label: 'Orchestration', icon: Workflow },
-  { href: '/finetune', label: 'Fine-Tune', icon: Cpu },
-  { href: '/review', label: 'Review', icon: ClipboardCheck },
-  { href: '/observability', label: 'Observability', icon: Activity },
-  { href: '/providers', label: 'Providers', icon: Beaker },
-  { href: '/research', label: 'Research', icon: Beaker },
-  { href: '/settings', label: 'Settings', icon: SettingsIcon },
+export interface NavGroup {
+  name: string
+  items: {
+    href: string
+    label: string
+    icon: any
+    tooltip?: string
+  }[]
+}
+
+export const navGroups: NavGroup[] = [
+  {
+    name: 'Build',
+    items: [
+      { href: '/studio', label: 'Studio', icon: FlaskConical, tooltip: 'AI-Powered Dataset Synthesis Workspace' },
+      { href: '/datasets', label: 'Datasets', icon: Database, tooltip: 'Dataset Explorer & Format Exporter' },
+      { href: '/orchestration', label: 'Orchestration', icon: Workflow, tooltip: 'Real-time DAG Execution Engine' },
+    ],
+  },
+  {
+    name: 'Train & Quality',
+    items: [
+      { href: '/finetune', label: 'Fine-Tune', icon: Cpu, tooltip: 'PEFT / LoRA Training Studio' },
+      { href: '/review', label: 'Review', icon: ClipboardCheck, tooltip: 'Human-in-the-Loop (HITL) Queue' },
+      { href: '/quality', label: 'Quality', icon: BarChart2, tooltip: 'Dataset Benchmarks & Grounding' },
+    ],
+  },
+  {
+    name: 'Operate',
+    items: [
+      { href: '/observability', label: 'Observability', icon: Activity, tooltip: 'OpenTelemetry Metrics & Tracing' },
+      { href: '/providers', label: 'Providers', icon: Beaker, tooltip: 'Multi-Provider Health & Latency' },
+    ],
+  },
+  {
+    name: 'Research & System',
+    items: [
+      { href: '/research', label: 'Research', icon: Beaker, tooltip: 'Provider Benchmarking & DSPy Evaluation' },
+      { href: '/settings', label: 'Settings', icon: SettingsIcon, tooltip: 'Platform Environment & API Keys' },
+    ],
+  },
 ]
 
 export function TopNav() {
@@ -79,6 +111,8 @@ export function TopNav() {
     window.location.reload()
   }
 
+  const allNavItems = navGroups.flatMap(g => g.items)
+
   return (
     <header className="sticky top-0 z-50 w-full border-b border-[#E2E6E0] bg-[#F6F7F4]/95 backdrop-blur-md">
       {/* Demo Mode Notice Banner */}
@@ -86,7 +120,7 @@ export function TopNav() {
         <div className="bg-amber-500/10 border-b border-amber-500/20 px-4 py-1.5 text-xs flex items-center justify-between text-amber-800">
           <div className="flex items-center gap-2">
             <span className="font-bold text-[#1B3B2B]">⚡ Offline Preview Mode:</span>
-            <span>Live backend unreachable. Running instant offline workflow preview for fast testing.</span>
+            <span>Live backend unreachable. Running instant offline workflow preview for testing.</span>
           </div>
           <div className="flex items-center gap-2">
             <Button
@@ -108,7 +142,7 @@ export function TopNav() {
       )}
 
       <div className="flex h-16 items-center justify-between px-4 sm:px-6 lg:px-8 w-full gap-4">
-        {/* Brand Logo & Navigation */}
+        {/* Brand Logo */}
         <div className="flex items-center gap-4 lg:gap-6 min-w-0">
           <Link href="/" className="flex items-center gap-2.5 group shrink-0">
             <div className="h-9 w-9 rounded-xl bg-[#1B3B2B] text-white flex items-center justify-center shadow-xs transition-transform group-hover:scale-105">
@@ -116,45 +150,42 @@ export function TopNav() {
             </div>
             <div className="flex items-center">
               <span className="font-bold text-lg tracking-tight select-none leading-none text-[#1B3B2B]">
-                Raso<span className="text-[#2D5E48]">SynthTune</span>
+                Raso<span className="bg-gradient-to-r from-emerald-600 to-cyan-600 bg-clip-text text-transparent">SynthTune</span>
               </span>
             </div>
           </Link>
 
-          {/* Live Telemetry Indicator */}
-          <div className="hidden 2xl:flex items-center gap-2 px-3 py-1 rounded-full border border-[#D1D8CE] bg-[#E8ECE6] text-[11px] font-mono text-[#1B3B2B] shrink-0">
-            <span className="h-2 w-2 rounded-full bg-emerald-500 animate-pulse" />
-            <span className="font-semibold uppercase tracking-wider text-[10px] text-[#55635B]">Telemetry:</span>
-            <span className="font-bold">Online (99.8%)</span>
-          </div>
+          {/* Desktop Categorized Navigation */}
+          <nav className="hidden lg:flex items-center gap-2 bg-[#E8ECE6]/80 p-1 rounded-full border border-[#D1D8CE]">
+            {navGroups.map((group) => (
+              <div key={group.name} className="flex items-center gap-1 border-r last:border-r-0 border-[#D1D8CE] pr-1.5 last:pr-0">
+                {group.items.map((item) => {
+                  const Icon = item.icon
+                  const isActive = pathname.startsWith(item.href)
 
-          {/* Desktop Navigation Links */}
-          <nav className="hidden lg:flex items-center gap-1 bg-[#E8ECE6]/80 p-1 rounded-full border border-[#D1D8CE] overflow-x-auto max-w-[45vw] 2xl:max-w-none">
-            {navItems.map((item) => {
-              const Icon = item.icon
-              const isActive = pathname.startsWith(item.href)
-
-              return (
-                <Link key={item.href} href={item.href} className="shrink-0">
-                  <button
-                    title={item.label}
-                    className={clsx(
-                      'flex items-center gap-1.5 px-2.5 py-1 text-xs font-medium rounded-full transition-all duration-150 shrink-0',
-                      isActive
-                        ? 'bg-[#1B3B2B] text-white font-semibold shadow-xs'
-                        : 'text-[#55635B] hover:text-[#1B3B2B] hover:bg-white/60'
-                    )}
-                  >
-                    <Icon className={clsx("h-3.5 w-3.5 shrink-0", isActive ? "text-emerald-300" : "text-[#55635B]")} />
-                    <span className={clsx(isActive ? 'inline' : 'hidden 2xl:inline')}>{item.label}</span>
-                  </button>
-                </Link>
-              )
-            })}
+                  return (
+                    <Link key={item.href} href={item.href} className="shrink-0">
+                      <button
+                        title={item.tooltip || item.label}
+                        className={clsx(
+                          'flex items-center gap-1.5 px-2.5 py-1 text-xs font-medium rounded-full transition-all duration-150 shrink-0',
+                          isActive
+                            ? 'bg-[#1B3B2B] text-white font-semibold shadow-xs'
+                            : 'text-[#55635B] hover:text-[#1B3B2B] hover:bg-white/60'
+                        )}
+                      >
+                        <Icon className={clsx("h-3.5 w-3.5 shrink-0", isActive ? "text-emerald-300" : "text-[#55635B]")} />
+                        <span>{item.label}</span>
+                      </button>
+                    </Link>
+                  )
+                })}
+              </div>
+            ))}
           </nav>
         </div>
 
-        {/* Right Controls & Mobile Menu Toggle */}
+        {/* Right Controls */}
         <div className="flex items-center gap-2 shrink-0">
           {/* Quick Search */}
           <Button variant="outline" size="sm" className="hidden md:flex gap-2 text-[#55635B] border-[#D1D8CE] hover:bg-[#E8ECE6] rounded-full">
@@ -165,24 +196,26 @@ export function TopNav() {
             </kbd>
           </Button>
 
-          {/* Demo Mode Toggle */}
-          <Button
-            variant={mockMode ? 'default' : 'outline'}
-            size="sm"
-            onClick={handleToggleMock}
-            title={mockMode ? 'Click to switch to Live Backend' : 'Click to enable Offline Preview Mode'}
-            className={clsx(
-              'gap-1.5 transition-all text-xs font-mono font-medium rounded-full',
-              mockMode
-                ? 'bg-[#1B3B2B] hover:bg-[#142D21] text-white'
-                : 'border-[#D1D8CE] text-[#1B3B2B] hover:bg-[#E8ECE6]'
-            )}
-          >
-            <Zap className={clsx('h-3.5 w-3.5', mockMode ? 'text-emerald-400 fill-current' : 'text-[#1B3B2B]')} />
-            <span className="hidden sm:inline">{mockMode ? 'Offline Demo' : 'Live API'}</span>
-          </Button>
+          {/* Mode Indicator & Toggle */}
+          <div className="flex items-center gap-1.5 bg-[#E8ECE6] p-1 rounded-full border border-[#D1D8CE]">
+            <Button
+              variant={mockMode ? 'default' : 'outline'}
+              size="sm"
+              onClick={handleToggleMock}
+              title={mockMode ? 'Click to switch to Live API Backend' : 'Click to enable Offline Preview Mode'}
+              className={clsx(
+                'gap-1.5 transition-all text-xs font-mono font-medium rounded-full h-7 px-3',
+                mockMode
+                  ? 'bg-amber-600 hover:bg-amber-700 text-white'
+                  : 'bg-[#1B3B2B] hover:bg-[#142D21] text-white border-transparent'
+              )}
+            >
+              <span className={clsx("h-2 w-2 rounded-full", mockMode ? "bg-amber-300" : "bg-emerald-400 animate-pulse")} />
+              <span>{mockMode ? 'Offline Demo' : 'Live API'}</span>
+            </Button>
+          </div>
 
-          {/* Mobile Menu Button */}
+          {/* Mobile Menu Toggle */}
           <Button
             variant="ghost"
             size="icon"
@@ -194,43 +227,42 @@ export function TopNav() {
         </div>
       </div>
 
-      {/* Mobile Drawer Menu */}
+      {/* Mobile Categorized Drawer Menu */}
       {mobileMenuOpen && (
-        <div className="lg:hidden border-t border-[#E2E6E0] bg-white p-4 space-y-2 animate-fade-in shadow-xl">
-          <div className="flex items-center justify-between px-3 py-2 bg-[#F6F7F4] rounded-xl text-xs font-mono text-[#1B3B2B] border border-[#E2E6E0]">
-            <span className="flex items-center gap-2">
-              <span className="h-2 w-2 rounded-full bg-emerald-500 animate-pulse" />
-              Telemetry Status
-            </span>
-            <span className="font-bold text-emerald-700">Online (99.8%)</span>
-          </div>
+        <div className="lg:hidden border-t border-[#E2E6E0] bg-white p-4 space-y-4 animate-fade-in shadow-xl max-h-[85vh] overflow-y-auto">
+          {navGroups.map((group) => (
+            <div key={group.name} className="space-y-1.5">
+              <span className="text-[10px] font-mono font-bold uppercase tracking-wider text-[#55635B] px-1">
+                {group.name}
+              </span>
+              <div className="grid grid-cols-2 gap-2">
+                {group.items.map((item) => {
+                  const Icon = item.icon
+                  const isActive = pathname.startsWith(item.href)
 
-          <div className="grid grid-cols-2 sm:grid-cols-3 gap-2 pt-2">
-            {navItems.map((item) => {
-              const Icon = item.icon
-              const isActive = pathname.startsWith(item.href)
-
-              return (
-                <Link
-                  key={item.href}
-                  href={item.href}
-                  onClick={() => setMobileMenuOpen(false)}
-                >
-                  <div
-                    className={clsx(
-                      'flex items-center gap-2 p-2.5 rounded-xl border text-xs font-medium transition-all',
-                      isActive
-                        ? 'bg-[#1B3B2B] text-white border-[#1B3B2B] font-semibold'
-                        : 'bg-[#F6F7F4] text-[#1B3B2B] border-[#E2E6E0] hover:bg-[#E8ECE6]'
-                    )}
-                  >
-                    <Icon className={clsx('h-4 w-4 shrink-0', isActive ? 'text-emerald-300' : 'text-[#1B3B2B]')} />
-                    <span className="truncate">{item.label}</span>
-                  </div>
-                </Link>
-              )
-            })}
-          </div>
+                  return (
+                    <Link
+                      key={item.href}
+                      href={item.href}
+                      onClick={() => setMobileMenuOpen(false)}
+                    >
+                      <div
+                        className={clsx(
+                          'flex items-center gap-2 p-2.5 rounded-xl border text-xs font-medium transition-all',
+                          isActive
+                            ? 'bg-[#1B3B2B] text-white border-[#1B3B2B] font-semibold'
+                            : 'bg-[#F6F7F4] text-[#1B3B2B] border-[#E2E6E0] hover:bg-[#E8ECE6]'
+                        )}
+                      >
+                        <Icon className={clsx('h-4 w-4 shrink-0', isActive ? 'text-emerald-300' : 'text-[#1B3B2B]')} />
+                        <span className="truncate">{item.label}</span>
+                      </div>
+                    </Link>
+                  )
+                })}
+              </div>
+            </div>
+          ))}
         </div>
       )}
     </header>

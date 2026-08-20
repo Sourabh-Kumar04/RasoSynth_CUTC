@@ -514,8 +514,8 @@ export default function FineTunePage() {
               Fine-Tune Studio
             </h1>
           </div>
-          <p className="text-xs text-[#55635B]">
-            PEFT/LoRA fine-tuning & adapter optimization on synthetic datasets
+          <p className="text-xs text-[#55635B]" title="PEFT/LoRA (Parameter-Efficient Fine-Tuning & Low-Rank Adaptation): Freezes base model weights and trains lightweight parameter adapters, reducing GPU memory by 95%.">
+            Parameter-Efficient Fine-Tuning (PEFT/LoRA) &amp; adapter optimization on synthetic datasets
           </p>
         </div>
         <div className="flex gap-2 self-start sm:self-auto">

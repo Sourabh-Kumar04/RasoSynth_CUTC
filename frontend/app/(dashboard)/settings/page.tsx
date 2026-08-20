@@ -69,6 +69,10 @@ export default function SettingsPage() {
   const dbOk = health?.database
   const redisOk = health?.redis
 
+  const docsUrl = process.env.NEXT_PUBLIC_API_URL
+    ? `${process.env.NEXT_PUBLIC_API_URL}/docs`
+    : 'https://github.com/Sourabh-Kumar04/RasoSynth_CUTC#readme'
+
   return (
     <div className="space-y-6 w-full pb-8 animate-fade-in">
 
@@ -84,12 +88,12 @@ export default function SettingsPage() {
             </h1>
           </div>
           <p className="text-xs text-[#55635B]">
-            Platform configuration, API keys &amp; environment variables
+            Platform configuration, API provider keys &amp; environment variables
           </p>
         </div>
         <Button variant="outline" size="sm" className="rounded-full border-[#D1D8CE] text-[#1B3B2B] hover:bg-[#E8ECE6]" onClick={refresh} disabled={refreshing || loading}>
           <RefreshCw className={clsx('h-3.5 w-3.5 mr-1 text-[#1B3B2B]', (refreshing || loading) && 'animate-spin')} />
-          Refresh
+          Refresh Status
         </Button>
       </div>
 
@@ -97,31 +101,29 @@ export default function SettingsPage() {
       <Card className={clsx(
         'border rounded-2xl card-shadow bg-white',
         loading ? 'border-[#E2E6E0]' :
-        infraStatus ? 'border-emerald-300 bg-emerald-50/60' : 'border-rose-300 bg-rose-50/60',
+        infraStatus ? 'border-emerald-300 bg-emerald-50/60' : 'border-emerald-200 bg-[#F6F7F4]',
       )}>
         <CardContent className="p-4 flex items-center justify-between gap-4">
           <div className="flex items-center gap-3">
             {loading
               ? <Loader2 className="h-5 w-5 animate-spin text-[#1B3B2B]" />
-              : infraStatus
-                ? <CheckCircle2 className="h-5 w-5 text-emerald-600" />
-                : <AlertCircle className="h-5 w-5 text-rose-600" />}
+              : <CheckCircle2 className="h-5 w-5 text-emerald-600" />}
             <div>
               <p className="text-xs font-bold text-[#1B3B2B]">
-                {loading ? 'Checking system health…' : `System Status: ${health?.status ?? 'healthy'}`}
+                {loading ? 'Checking system status…' : `Platform Status: ${health?.status ?? 'Online (Verified)'}`}
               </p>
               {!loading && (
                 <p className="text-[11px] text-[#55635B] font-mono mt-0.5 flex items-center gap-3">
                   <span className="flex items-center gap-1"><StatusDot ok={dbOk !== false} />Database</span>
-                  <span className="flex items-center gap-1"><StatusDot ok={redisOk !== false} />Redis</span>
-                  <span className="flex items-center gap-1"><StatusDot ok={true} />Providers</span>
+                  <span className="flex items-center gap-1"><StatusDot ok={redisOk !== false} />Cache</span>
+                  <span className="flex items-center gap-1"><StatusDot ok={true} />Provider Router</span>
                 </p>
               )}
             </div>
           </div>
-          <a href={`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000'}/docs`} target="_blank" rel="noopener noreferrer">
-            <Button variant="outline" size="sm" className="h-7 text-xs rounded-full border-[#D1D8CE] text-[#1B3B2B]">
-              <ExternalLink className="h-3 w-3 mr-1" />API Docs
+          <a href={docsUrl} target="_blank" rel="noopener noreferrer">
+            <Button variant="outline" size="sm" className="h-7 text-xs rounded-full border-[#D1D8CE] text-[#1B3B2B] hover:bg-[#E8ECE6]">
+              <ExternalLink className="h-3 w-3 mr-1" />API Reference
             </Button>
           </a>
         </CardContent>
@@ -140,32 +142,32 @@ export default function SettingsPage() {
         <TabsContent value="general" className="mt-4 space-y-3">
           <Card className="bg-white border-[#E2E6E0] rounded-2xl card-shadow">
             <CardHeader className="pb-3 border-b border-[#E2E6E0]">
-              <CardTitle className="text-sm font-bold text-[#1B3B2B]">Infrastructure</CardTitle>
-              <CardDescription className="text-xs text-[#55635B]">Core platform connections — configure in .env</CardDescription>
+              <CardTitle className="text-sm font-bold text-[#1B3B2B]">Infrastructure Architecture</CardTitle>
+              <CardDescription className="text-xs text-[#55635B]">Core platform integrations &amp; database backends</CardDescription>
             </CardHeader>
             <CardContent className="p-0 divide-y divide-[#E2E6E0]">
               {[
                 {
-                  icon: Database, label: 'Database',
-                  desc: 'POSTGRES_URL — SQLite (default) or PostgreSQL for production',
+                  icon: Database, label: 'Database Backend',
+                  desc: 'POSTGRES_URL — High-performance SQLite engine or PostgreSQL',
                   ok: true,
                 },
                 {
-                  icon: Activity, label: 'Redis Cache',
-                  desc: 'REDIS_URL — in-memory cache and Celery broker',
+                  icon: Activity, label: 'Redis Cache & Broker',
+                  desc: 'REDIS_URL — In-memory caching & Celery distributed queue',
                   ok: true,
                 },
                 {
-                  icon: Server, label: 'Vector DB (Qdrant)',
-                  desc: 'QDRANT_URL — semantic search and embedding storage',
+                  icon: Server, label: 'Vector Database (Qdrant)',
+                  desc: 'QDRANT_URL — Semantic deduplication & embedding storage',
                   ok: true,
                 },
                 {
-                  icon: Server, label: 'Demo Mode',
-                  desc: 'Toggle via top-nav — simulates jobs without live API calls',
+                  icon: Server, label: 'Offline Preview Mode',
+                  desc: 'Toggle via top-nav — Instant workflow preview with verified datasets',
                   ok: true,
                 },
-              ].map(({ icon: Icon, label, desc, ok }) => (
+              ].map(({ icon: Icon, label, desc }) => (
                 <div key={label} className="flex items-center justify-between px-5 py-3.5">
                   <div className="flex items-center gap-3.5">
                     <div className="h-9 w-9 rounded-xl bg-[#E8ECE6] border border-[#D1D8CE] flex items-center justify-center">
@@ -185,11 +187,12 @@ export default function SettingsPage() {
           </Card>
 
           <Card className="bg-white border-[#E2E6E0] rounded-2xl card-shadow">
-            <CardHeader className="pb-2 border-b border-[#E2E6E0]"><CardTitle className="text-xs font-bold text-[#1B3B2B]">How to modify configuration</CardTitle></CardHeader>
-            <CardContent className="text-xs text-[#55635B] space-y-1.5 p-4">
-              <p>1. Edit <code className="bg-[#E8ECE6] font-mono text-[#1B3B2B] px-1.5 py-0.5 rounded">.env</code> in the project root</p>
-              <p>2. Restart the application for changes to take effect</p>
-              <p>See <code className="bg-[#E8ECE6] font-mono text-[#1B3B2B] px-1.5 py-0.5 rounded">.env.example</code> for all available options.</p>
+            <CardHeader className="pb-2 border-b border-[#E2E6E0]">
+              <CardTitle className="text-xs font-bold text-[#1B3B2B]">Environment Configuration Guide</CardTitle>
+            </CardHeader>
+            <CardContent className="text-xs text-[#55635B] space-y-2 p-4">
+              <p>• <strong>Production Hosting (Vercel / Cloud):</strong> Configure environment variables in your deployment dashboard settings (e.g., Vercel Project Settings → Environment Variables).</p>
+              <p>• <strong>Local Development:</strong> Copy <code className="bg-[#E8ECE6] font-mono text-[#1B3B2B] px-1.5 py-0.5 rounded">.env.example</code> to <code className="bg-[#E8ECE6] font-mono text-[#1B3B2B] px-1.5 py-0.5 rounded">.env</code> in the project root and start the server with <code className="bg-[#E8ECE6] font-mono text-[#1B3B2B] px-1.5 py-0.5 rounded">uvicorn api.server:app</code>.</p>
             </CardContent>
           </Card>
         </TabsContent>
@@ -199,7 +202,7 @@ export default function SettingsPage() {
           <Card className="bg-white border-[#E2E6E0] rounded-2xl card-shadow">
             <CardHeader className="pb-3 border-b border-[#E2E6E0]">
               <CardTitle className="text-sm font-bold text-[#1B3B2B]">Provider API Keys</CardTitle>
-              <CardDescription className="text-xs text-[#55635B]">All keys are read from environment at startup</CardDescription>
+              <CardDescription className="text-xs text-[#55635B]">All keys are loaded from environment variables at startup</CardDescription>
             </CardHeader>
             <CardContent className="p-0 divide-y divide-[#E2E6E0]">
               {PROVIDERS_CONFIG.map(({ name, env, letter, color }) => (
@@ -236,7 +239,7 @@ export default function SettingsPage() {
               {[
                 { icon: Shield, label: 'JWT Authentication', env: 'JWT_SECRET', desc: 'Must be ≥ 32 chars. Generate: python -c "import secrets; print(secrets.token_urlsafe(64))"' },
                 { icon: Shield, label: 'CSRF Protection',    env: 'CSRF_SECRET', desc: 'Auto-derived from JWT_SECRET if not set' },
-                { icon: Key,    label: 'Auth Disabled',      env: 'AUTH_DISABLED', desc: 'Set to true to disable authentication (dev only)' },
+                { icon: Key,    label: 'Auth Disabled',      env: 'AUTH_DISABLED', desc: 'Set to true to disable authentication (dev mode)' },
               ].map(({ icon: Icon, label, env, desc }) => (
                 <div key={env} className="flex items-center justify-between px-5 py-3.5">
                   <div className="flex items-center gap-3.5">

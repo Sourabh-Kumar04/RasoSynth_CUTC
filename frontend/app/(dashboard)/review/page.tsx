@@ -18,7 +18,7 @@ import {
 } from '@/components/ui/select'
 import { api } from '@/lib/api/client'
 
-const API_BASE = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000'
+const API_BASE = process.env.NEXT_PUBLIC_API_URL || ''
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 
