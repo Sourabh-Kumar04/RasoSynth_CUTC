@@ -219,7 +219,7 @@ export default function OverviewDashboardPage() {
           {/* Main Grid Section */}
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
             {/* Active Model Fine-Tuning Runs */}
-            <Card className="lg:col-span-2 border-[#E2E6E0] bg-white rounded-2xl card-shadow">
+            <Card className="lg:col-span-3 border-[#E2E6E0] bg-white rounded-2xl card-shadow">
               <CardHeader className="pb-3 border-b border-[#E2E6E0]">
                 <div className="flex items-center justify-between">
                   <CardTitle className="text-base font-semibold flex items-center gap-2 text-[#1B3B2B]">
@@ -293,47 +293,6 @@ export default function OverviewDashboardPage() {
                     </div>
                   ))
                 )}
-              </CardContent>
-            </Card>
-
-            {/* Preset Workflow Quick Launcher */}
-            <Card className="col-span-1 border-[#E2E6E0] bg-white rounded-2xl card-shadow">
-              <CardHeader className="pb-3 border-b border-[#E2E6E0]">
-                <CardTitle className="text-base font-semibold flex items-center gap-2 text-[#1B3B2B]">
-                  <Zap className="h-4 w-4 text-[#1B3B2B]" />
-                  Preset Workflow Launcher
-                </CardTitle>
-                <CardDescription className="text-xs text-[#55635B]">
-                  Instant 1-click dataset generation templates
-                </CardDescription>
-              </CardHeader>
-              <CardContent className="p-4 space-y-2.5">
-                {[
-                  { title: '🩺 Medical Diagnostics SFT', type: 'Clinical SFT', size: 500 },
-                  { title: '🐍 Python Concurrency Bench', type: 'Code Synthetics', size: 1000 },
-                  { title: '⚖️ Legal Compliance Reasoning', type: 'Legal SFT', size: 750 },
-                  { title: '📊 Financial Market Sentiment', type: 'Finance SFT', size: 1000 }
-                ].map((preset) => (
-                  <div
-                    key={preset.title}
-                    className="p-2.5 rounded-xl border border-[#E2E6E0] bg-[#F6F7F4] hover:bg-white hover:border-[#D1D8CE] transition-all flex items-center justify-between cursor-pointer"
-                    onClick={() => router.push('/studio')}
-                  >
-                    <div>
-                      <p className="text-xs font-semibold text-[#1B3B2B]">{preset.title}</p>
-                      <p className="text-[10px] font-mono text-[#55635B]">
-                        {preset.size} records • {preset.type}
-                      </p>
-                    </div>
-                    <Button
-                      size="sm"
-                      variant="ghost"
-                      className="h-6 px-2.5 text-[10px] bg-[#E8ECE6] text-[#1B3B2B] hover:bg-[#1B3B2B] hover:text-white font-bold rounded-full transition-colors"
-                    >
-                      Launch ⚡
-                    </Button>
-                  </div>
-                ))}
               </CardContent>
             </Card>
           </div>
