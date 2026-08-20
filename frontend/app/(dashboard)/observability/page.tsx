@@ -216,60 +216,42 @@ export default function ObservabilityPage() {
 
         {/* Overview */}
         <TabsContent value="overview" className="mt-6">
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            <Card className="border-[#E2E6E0] bg-white rounded-2xl card-shadow">
-              <CardHeader className="pb-3 border-b border-[#E2E6E0]">
-                <CardTitle className="text-sm font-bold text-[#1B3B2B]">System Health Summary</CardTitle>
-              </CardHeader>
-              <CardContent className="p-4">
-                <div className="space-y-3">
-                  <div className="flex items-center justify-between p-3 rounded-xl bg-[#F6F7F4] border border-[#E2E6E0]">
-                    <div className="flex items-center gap-3">
-                      <Database className="h-4 w-4 text-[#1B3B2B]" />
-                      <span className="text-xs font-bold text-[#1B3B2B]">PostgreSQL Database</span>
-                    </div>
-                    <span className="text-[10px] font-mono font-bold px-2.5 py-0.5 rounded-full bg-emerald-100 text-emerald-800 border border-emerald-300">
-                      Healthy
-                    </span>
+          <Card className="border-[#E2E6E0] bg-white rounded-2xl card-shadow">
+            <CardHeader className="pb-3 border-b border-[#E2E6E0]">
+              <CardTitle className="text-sm font-bold text-[#1B3B2B]">System Health Summary</CardTitle>
+            </CardHeader>
+            <CardContent className="p-4">
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                <div className="flex items-center justify-between p-3.5 rounded-xl bg-[#F6F7F4] border border-[#E2E6E0]">
+                  <div className="flex items-center gap-3">
+                    <Database className="h-4 w-4 text-[#1B3B2B]" />
+                    <span className="text-xs font-bold text-[#1B3B2B]">PostgreSQL Database</span>
                   </div>
-                  <div className="flex items-center justify-between p-3 rounded-xl bg-[#F6F7F4] border border-[#E2E6E0]">
-                    <div className="flex items-center gap-3">
-                      <Server className="h-4 w-4 text-[#1B3B2B]" />
-                      <span className="text-xs font-bold text-[#1B3B2B]">Redis In-Memory Cache</span>
-                    </div>
-                    <span className="text-[10px] font-mono font-bold px-2.5 py-0.5 rounded-full bg-emerald-100 text-emerald-800 border border-emerald-300">
-                      Healthy
-                    </span>
-                  </div>
-                  <div className="flex items-center justify-between p-3 rounded-xl bg-[#F6F7F4] border border-[#E2E6E0]">
-                    <div className="flex items-center gap-3">
-                      <Activity className="h-4 w-4 text-[#1B3B2B]" />
-                      <span className="text-xs font-bold text-[#1B3B2B]">Synthetics API Backend</span>
-                    </div>
-                    <span className="text-[10px] font-mono font-bold px-2.5 py-0.5 rounded-full bg-emerald-100 text-emerald-800 border border-emerald-300">
-                      Healthy (99.9%)
-                    </span>
-                  </div>
+                  <span className="text-[10px] font-mono font-bold px-2.5 py-0.5 rounded-full bg-emerald-100 text-emerald-800 border border-emerald-300">
+                    Healthy
+                  </span>
                 </div>
-              </CardContent>
-            </Card>
-
-            <Card className="border-[#E2E6E0] bg-white rounded-2xl card-shadow">
-              <CardHeader className="pb-3 border-b border-[#E2E6E0]">
-                <CardTitle className="text-sm font-bold text-[#1B3B2B]">About Telemetry &amp; Metrics</CardTitle>
-              </CardHeader>
-              <CardContent className="p-4">
-                <div className="space-y-3 text-xs text-[#55635B] leading-relaxed">
-                  <p>
-                    This dashboard streams live status data from the backend telemetry endpoint at <code className="font-mono bg-[#E8ECE6] text-[#1B3B2B] px-1.5 py-0.5 rounded">/health</code>.
-                  </p>
-                  <p>
-                    The RasoSynthTune platform exposes OpenTelemetry and Prometheus compatible metrics at <code className="font-mono bg-[#E8ECE6] text-[#1B3B2B] px-1.5 py-0.5 rounded">/metrics</code> for seamless integration with Grafana, Datadog, or cloud monitoring backends.
-                  </p>
+                <div className="flex items-center justify-between p-3.5 rounded-xl bg-[#F6F7F4] border border-[#E2E6E0]">
+                  <div className="flex items-center gap-3">
+                    <Server className="h-4 w-4 text-[#1B3B2B]" />
+                    <span className="text-xs font-bold text-[#1B3B2B]">Redis In-Memory Cache</span>
+                  </div>
+                  <span className="text-[10px] font-mono font-bold px-2.5 py-0.5 rounded-full bg-emerald-100 text-emerald-800 border border-emerald-300">
+                    Healthy
+                  </span>
                 </div>
-              </CardContent>
-            </Card>
-          </div>
+                <div className="flex items-center justify-between p-3.5 rounded-xl bg-[#F6F7F4] border border-[#E2E6E0]">
+                  <div className="flex items-center gap-3">
+                    <Activity className="h-4 w-4 text-[#1B3B2B]" />
+                    <span className="text-xs font-bold text-[#1B3B2B]">Synthetics API Backend</span>
+                  </div>
+                  <span className="text-[10px] font-mono font-bold px-2.5 py-0.5 rounded-full bg-emerald-100 text-emerald-800 border border-emerald-300">
+                    Healthy (99.9%)
+                  </span>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
         </TabsContent>
 
         {/* Health Tab */}
