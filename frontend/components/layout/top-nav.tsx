@@ -18,10 +18,12 @@ import {
   Sparkles,
   Menu,
   X,
-  BarChart2
+  BarChart2,
+  HelpCircle
 } from 'lucide-react'
 import { clsx } from 'clsx'
 import { Button } from '@/components/ui/button'
+import { OnboardingModal } from '@/components/onboarding/OnboardingModal'
 
 export interface NavGroup {
   name: string
@@ -71,6 +73,7 @@ export function TopNav() {
   const [mockMode, setMockMode] = useState(false)
   const [showFallbackNotice, setShowFallbackNotice] = useState(false)
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false)
+  const [showTour, setShowTour] = useState(false)
 
   useEffect(() => {
     if (typeof window !== 'undefined') {
@@ -111,10 +114,11 @@ export function TopNav() {
     window.location.reload()
   }
 
-  const allNavItems = navGroups.flatMap(g => g.items)
-
   return (
     <header className="sticky top-0 z-50 w-full border-b border-[#E2E6E0] bg-[#F6F7F4]/95 backdrop-blur-md">
+      {/* Auto-popup or manual Onboarding Guided Tour */}
+      <OnboardingModal open={showTour} onOpenChange={setShowTour} />
+
       {/* Demo Mode Notice Banner */}
       {showFallbackNotice && (
         <div className="bg-amber-500/10 border-b border-amber-500/20 px-4 py-1.5 text-xs flex items-center justify-between text-amber-800">
@@ -194,6 +198,18 @@ export function TopNav() {
             <kbd className="h-4 items-center gap-1 rounded bg-[#E8ECE6] px-1.5 text-[10px] font-mono text-[#55635B]">
               <Command className="h-2.5 w-2.5" />K
             </kbd>
+          </Button>
+
+          {/* Guided Tour & Help */}
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => setShowTour(true)}
+            className="gap-1.5 border-[#D1D8CE] text-[#1B3B2B] hover:bg-[#E8ECE6] rounded-full text-xs font-medium"
+            title="Start 1-Minute Guided Tour"
+          >
+            <HelpCircle className="h-3.5 w-3.5 text-emerald-600" />
+            <span className="hidden sm:inline font-mono text-[11px] font-bold">Guided Tour</span>
           </Button>
 
           {/* Mode Indicator & Toggle */}
