@@ -18,12 +18,12 @@ import {
   Sparkles,
   Menu,
   X,
-  BarChart2,
-  HelpCircle
+  BarChart2
 } from 'lucide-react'
 import { clsx } from 'clsx'
 import { Button } from '@/components/ui/button'
 import { OnboardingModal } from '@/components/onboarding/OnboardingModal'
+import { CommandPalette } from '@/components/search/CommandPalette'
 
 export interface NavGroup {
   name: string
@@ -74,6 +74,20 @@ export function TopNav() {
   const [showFallbackNotice, setShowFallbackNotice] = useState(false)
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false)
   const [showTour, setShowTour] = useState(false)
+  const [showSearch, setShowSearch] = useState(false)
+
+  // Global Cmd+K / Ctrl+K keyboard shortcut listener
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if ((e.metaKey || e.ctrlKey) && e.key === 'k') {
+        e.preventDefault()
+        setShowSearch((prev) => !prev)
+      }
+    }
+
+    window.addEventListener('keydown', handleKeyDown)
+    return () => window.removeEventListener('keydown', handleKeyDown)
+  }, [])
 
   useEffect(() => {
     if (typeof window !== 'undefined') {
@@ -116,8 +130,11 @@ export function TopNav() {
 
   return (
     <header className="sticky top-0 z-50 w-full border-b border-[#E2E6E0] bg-[#F6F7F4]/95 backdrop-blur-md">
-      {/* Auto-popup or manual Onboarding Guided Tour */}
+      {/* Auto-popup or requested Onboarding Guided Tour */}
       <OnboardingModal open={showTour} onOpenChange={setShowTour} />
+
+      {/* Global Interactive Command Palette Search */}
+      <CommandPalette open={showSearch} onOpenChange={setShowSearch} />
 
       {/* Demo Mode Notice Banner */}
       {showFallbackNotice && (
@@ -191,25 +208,19 @@ export function TopNav() {
 
         {/* Right Controls */}
         <div className="flex items-center gap-2 shrink-0">
-          {/* Quick Search */}
-          <Button variant="outline" size="sm" className="hidden md:flex gap-2 text-[#55635B] border-[#D1D8CE] hover:bg-[#E8ECE6] rounded-full">
-            <Search className="h-3.5 w-3.5 text-[#1B3B2B]" />
-            <span className="text-xs">Search...</span>
-            <kbd className="h-4 items-center gap-1 rounded bg-[#E8ECE6] px-1.5 text-[10px] font-mono text-[#55635B]">
-              <Command className="h-2.5 w-2.5" />K
-            </kbd>
-          </Button>
-
-          {/* Guided Tour & Help */}
+          {/* Functional Quick Search with Cmd+K */}
           <Button
             variant="outline"
             size="sm"
-            onClick={() => setShowTour(true)}
-            className="gap-1.5 border-[#D1D8CE] text-[#1B3B2B] hover:bg-[#E8ECE6] rounded-full text-xs font-medium"
-            title="Start 1-Minute Guided Tour"
+            onClick={() => setShowSearch(true)}
+            className="flex gap-2 text-[#55635B] border-[#D1D8CE] hover:bg-[#E8ECE6] rounded-full text-xs font-medium"
+            title="Open Search (Cmd+K)"
           >
-            <HelpCircle className="h-3.5 w-3.5 text-emerald-600" />
-            <span className="hidden sm:inline font-mono text-[11px] font-bold">Guided Tour</span>
+            <Search className="h-3.5 w-3.5 text-[#1B3B2B]" />
+            <span className="hidden sm:inline text-xs">Search...</span>
+            <kbd className="hidden sm:inline-flex h-4 items-center gap-1 rounded bg-[#E8ECE6] px-1.5 text-[10px] font-mono text-[#55635B]">
+              <Command className="h-2.5 w-2.5" />K
+            </kbd>
           </Button>
 
           {/* Mode Indicator & Toggle */}
