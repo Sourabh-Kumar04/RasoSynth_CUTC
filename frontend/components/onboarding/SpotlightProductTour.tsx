@@ -141,7 +141,7 @@ export function SpotlightProductTour() {
   const router = useRouter()
   const pathname = usePathname()
 
-  // Persist current step in sessionStorage so page transitions do NOT reset state
+  // Persist step index in sessionStorage so page transitions preserve step index
   const [currentStepIndex, setCurrentStepIndex] = useState(() => {
     if (typeof window !== 'undefined') {
       const saved = sessionStorage.getItem('spotlightTourStepIndex')
@@ -150,19 +150,11 @@ export function SpotlightProductTour() {
     return 0
   })
 
-  const [isOpen, setIsOpen] = useState(() => {
-    if (typeof window !== 'undefined') {
-      const active = sessionStorage.getItem('spotlightTourActive') === 'true'
-      const completed = localStorage.getItem('spotlightTourCompleted_v4') === 'true'
-      return active || !completed
-    }
-    return false
-  })
-
+  // Always open tour automatically when visiting or reloading website
+  const [isOpen, setIsOpen] = useState(true)
   const [targetRect, setTargetRect] = useState<DOMRect | null>(null)
   const [windowDimensions, setWindowDimensions] = useState({ width: 1200, height: 800 })
 
-  // Save current step to sessionStorage
   const updateStepIndex = (newIndex: number) => {
     setCurrentStepIndex(newIndex)
     if (typeof window !== 'undefined') {
@@ -171,7 +163,7 @@ export function SpotlightProductTour() {
     }
   }
 
-  // Measure element coordinates and window dimensions
+  // Measure target element rect & screen size
   const measureTarget = useCallback(() => {
     if (typeof window !== 'undefined') {
       setWindowDimensions({ width: window.innerWidth, height: window.innerHeight })
@@ -230,45 +222,51 @@ export function SpotlightProductTour() {
     if (typeof window !== 'undefined') {
       sessionStorage.removeItem('spotlightTourStepIndex')
       sessionStorage.removeItem('spotlightTourActive')
-      localStorage.setItem('spotlightTourCompleted_v4', 'true')
     }
   }
 
-  const handleRestart = () => {
-    updateStepIndex(0)
-    setIsOpen(true)
-    if (pathname !== '/') router.push('/')
-  }
-
   if (!isOpen) {
-    return (
-      <button
-        onClick={handleRestart}
-        className="fixed bottom-4 right-4 z-[90] flex items-center gap-2 bg-[#1B3B2B] text-white px-4 py-2.5 rounded-full shadow-2xl border border-emerald-500/30 text-xs font-mono font-bold hover:scale-105 transition-transform"
-        title="Start Interactive Spotlight Tour"
-      >
-        <Sparkles className="h-4 w-4 text-emerald-400 fill-current animate-pulse" />
-        <span>⚡ Product Tour</span>
-      </button>
-    )
+    return null // No floating button; attached directly to website load/reload
   }
 
   const step = SPOTLIGHT_STEPS[currentStepIndex]
   const isLastStep = currentStepIndex === SPOTLIGHT_STEPS.length - 1
   const StepIcon = step.icon
 
-  // Viewport Safety Math (Guarantees zero right-edge clipping on mobile/desktop)
-  const cardWidth = Math.min(420, windowDimensions.width - 32)
+  // Precision Viewport Safety Math (Guarantees zero button overlap and zero screen clipping)
+  const cardWidth = Math.min(400, windowDimensions.width - 32)
+  const cardEstimatedHeight = 240
+
   let cardLeft = Math.max(16, (windowDimensions.width - cardWidth) / 2)
-  let cardTop = Math.max(80, (windowDimensions.height - 300) / 2)
+  let cardTop = Math.max(80, (windowDimensions.height - cardEstimatedHeight) / 2)
 
   if (targetRect) {
+    // Horizontal alignment clamped securely inside viewport
     cardLeft = Math.max(16, Math.min(windowDimensions.width - cardWidth - 16, targetRect.left))
-    if (targetRect.bottom > windowDimensions.height - 300) {
-      cardTop = Math.max(16, targetRect.top - 310)
+
+    // Vertical placement: Check available space above vs below target to avoid covering it!
+    const spaceBelow = windowDimensions.height - targetRect.bottom
+    const spaceAbove = targetRect.top
+
+    if (spaceBelow >= cardEstimatedHeight + 20) {
+      // Place BELOW target element with clear 16px gap
+      cardTop = targetRect.bottom + 16
+    } else if (spaceAbove >= cardEstimatedHeight + 20) {
+      // Place ABOVE target element with clear 16px gap
+      cardTop = Math.max(16, targetRect.top - cardEstimatedHeight - 16)
     } else {
-      cardTop = Math.min(windowDimensions.height - 310, targetRect.bottom + 16)
+      // Side placement if target occupies vertical center
+      cardTop = Math.max(16, Math.min(windowDimensions.height - cardEstimatedHeight - 16, targetRect.top))
+      if (targetRect.right + cardWidth + 20 <= windowDimensions.width) {
+        cardLeft = targetRect.right + 16
+      } else if (targetRect.left - cardWidth - 20 >= 0) {
+        cardLeft = Math.max(16, targetRect.left - cardWidth - 16)
+      }
     }
+
+    // Hard viewport bounds clamping
+    cardLeft = Math.max(16, Math.min(windowDimensions.width - cardWidth - 16, cardLeft))
+    cardTop = Math.max(16, Math.min(windowDimensions.height - cardEstimatedHeight - 16, cardTop))
   }
 
   return (
@@ -290,7 +288,7 @@ export function SpotlightProductTour() {
         />
       )}
 
-      {/* Viewport-Clamped Popover Card */}
+      {/* Viewport & Clearance Clamped Popover Card */}
       <div
         className="fixed z-[102] pointer-events-auto w-[calc(100vw-32px)] sm:w-full max-w-sm sm:max-w-md bg-white border border-[#E2E6E0] rounded-3xl shadow-2xl overflow-hidden transition-all duration-300"
         style={{
