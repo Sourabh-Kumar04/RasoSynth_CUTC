@@ -186,15 +186,7 @@ export default function SettingsPage() {
             </CardContent>
           </Card>
 
-          <Card className="bg-white border-[#E2E6E0] rounded-2xl card-shadow">
-            <CardHeader className="pb-2 border-b border-[#E2E6E0]">
-              <CardTitle className="text-xs font-bold text-[#1B3B2B]">Environment Configuration Guide</CardTitle>
-            </CardHeader>
-            <CardContent className="text-xs text-[#55635B] space-y-2 p-4">
-              <p>• <strong>Production Hosting (Vercel / Cloud):</strong> Configure environment variables in your deployment dashboard settings (e.g., Vercel Project Settings → Environment Variables).</p>
-              <p>• <strong>Local Development:</strong> Copy <code className="bg-[#E8ECE6] font-mono text-[#1B3B2B] px-1.5 py-0.5 rounded">.env.example</code> to <code className="bg-[#E8ECE6] font-mono text-[#1B3B2B] px-1.5 py-0.5 rounded">.env</code> in the project root and start the server with <code className="bg-[#E8ECE6] font-mono text-[#1B3B2B] px-1.5 py-0.5 rounded">uvicorn api.server:app</code>.</p>
-            </CardContent>
-          </Card>
+
         </TabsContent>
 
         {/* Providers */}
