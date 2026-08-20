@@ -61,7 +61,7 @@ const SPOTLIGHT_STEPS: SpotlightStep[] = [
     icon: Sliders
   },
   {
-    targetSelector: '[data-tour="sidebar-quick-workspace"]',
+    targetSelector: '[data-tour="sidebar-quick-workspace-desktop"], [data-tour="sidebar-quick-workspace-mobile"]',
     title: '4. Quick Workspace Shortcuts & Telemetry',
     subtitle: 'Fast Workflow Launchpad',
     description: 'Access 1-Click Presets, Quality Benchmarks, Fine-Tune Studio, and HITL Curation Queue, along with real-time active dataset job counters.',
@@ -138,7 +138,7 @@ export function SpotlightProductTour() {
     return 0
   })
 
-  // Open tour automatically unless user explicitly opted for "Never Show Again"
+  // Open tour automatically unless user explicitly opted out via "Don't Show Again"
   const [isOpen, setIsOpen] = useState(() => {
     if (typeof window !== 'undefined') {
       const optedOut = localStorage.getItem('spotlightTourNeverShowAgain') === 'true'
@@ -167,7 +167,7 @@ export function SpotlightProductTour() {
     }
   }, [currentStepIndex, isOpen, pathname, router])
 
-  // Measure target element rect & screen size
+  // Measure target element rect & screen size (filters for the element visible on screen)
   const measureTarget = useCallback(() => {
     if (typeof window !== 'undefined') {
       setWindowDimensions({ width: window.innerWidth, height: window.innerHeight })
@@ -176,9 +176,15 @@ export function SpotlightProductTour() {
     const step = SPOTLIGHT_STEPS[currentStepIndex]
     if (!step) return
 
-    const element = document.querySelector(step.targetSelector)
-    if (element) {
-      const rect = element.getBoundingClientRect()
+    const elements = Array.from(document.querySelectorAll(step.targetSelector))
+    // Filter for element that is actually visible on screen (width > 0 && height > 0)
+    const visibleElement = elements.find(el => {
+      const rect = el.getBoundingClientRect()
+      return rect.width > 0 && rect.height > 0
+    }) || elements[0]
+
+    if (visibleElement) {
+      const rect = visibleElement.getBoundingClientRect()
       setTargetRect(rect)
     } else {
       setTargetRect(null)
@@ -240,26 +246,8 @@ export function SpotlightProductTour() {
     router.push('/studio')
   }
 
-  const handleRestart = () => {
-    if (typeof window !== 'undefined') {
-      localStorage.removeItem('spotlightTourNeverShowAgain')
-    }
-    updateStepIndex(0)
-    setIsOpen(true)
-    if (pathname !== '/') router.push('/')
-  }
-
   if (!isOpen) {
-    return (
-      <button
-        onClick={handleRestart}
-        className="fixed bottom-4 right-4 z-[90] flex items-center gap-2 bg-[#1B3B2B] text-white px-3.5 py-2 rounded-full shadow-2xl border border-emerald-500/30 text-xs font-mono font-bold hover:scale-105 transition-transform"
-        title="Start Interactive Product Tour"
-      >
-        <Sparkles className="h-4 w-4 text-emerald-400 fill-current animate-pulse" />
-        <span>⚡ Product Tour</span>
-      </button>
-    )
+    return null // Completely removed all tour buttons from UI when closed
   }
 
   const step = SPOTLIGHT_STEPS[currentStepIndex]
@@ -338,17 +326,18 @@ export function SpotlightProductTour() {
           </div>
 
           <div className="flex items-center gap-2">
+            {/* Monochromatic Header Styled Don't Show Again Button */}
             <button
               onClick={handleNeverShowAgain}
-              className="text-[10px] font-mono text-emerald-300/80 hover:text-white flex items-center gap-1 bg-white/10 px-2 py-1 rounded-full transition-colors"
+              className="text-[10px] font-mono text-white/80 hover:text-white flex items-center gap-1 bg-white/10 px-2.5 py-1 rounded-full border border-white/15 transition-colors"
               title="Don't show interactive tour automatically on reload"
             >
-              <EyeOff className="h-3 w-3" />
+              <EyeOff className="h-3 w-3 text-white/80" />
               <span>Don't show again</span>
             </button>
             <button
               onClick={handleComplete}
-              className="text-emerald-300 hover:text-white p-1 rounded-full hover:bg-white/10 transition-colors"
+              className="text-white/80 hover:text-white p-1 rounded-full hover:bg-white/10 transition-colors"
               title="Close Tour"
             >
               <X className="h-4 w-4" />

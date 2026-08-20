@@ -229,23 +229,6 @@ export function TopNav() {
             </kbd>
           </Button>
 
-          {/* Trigger Spotlight Product Tour */}
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={() => {
-              if (typeof window !== 'undefined') {
-                sessionStorage.removeItem('spotlightTourStepIndex')
-                window.location.reload()
-              }
-            }}
-            className="flex gap-1.5 text-[#1B3B2B] border-[#D1D8CE] hover:bg-[#E8ECE6] rounded-full text-xs font-medium"
-            title="Start Interactive Product Tour"
-          >
-            <Sparkles className="h-3.5 w-3.5 text-emerald-600 fill-current" />
-            <span className="hidden sm:inline text-xs">Tour</span>
-          </Button>
-
           {/* Mode Indicator & Toggle */}
           <div data-tour="top-nav-mode" className="flex items-center gap-1.5 bg-[#E8ECE6] p-1 rounded-full border border-[#D1D8CE]">
             <Button

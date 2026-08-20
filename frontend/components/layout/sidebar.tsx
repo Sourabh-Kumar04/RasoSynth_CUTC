@@ -75,7 +75,7 @@ export function Sidebar() {
       {/* ========================================================================= */}
       {/* MOBILE & TABLET RESPONSIVE QUICK WORKSPACE BAR (< lg BREAKPOINTS)          */}
       {/* ========================================================================= */}
-      <div data-tour="sidebar-quick-workspace" className="lg:hidden w-full bg-[#E8ECE6]/80 border-b border-[#E2E6E0] p-3 px-4 flex flex-col gap-2.5">
+      <div data-tour="sidebar-quick-workspace-mobile" className="lg:hidden w-full bg-[#E8ECE6]/80 border-b border-[#E2E6E0] p-3 px-4 flex flex-col gap-2.5">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-2">
             <LayoutGrid className="h-4 w-4 text-[#1B3B2B]" />
@@ -225,7 +225,7 @@ export function Sidebar() {
           <ScrollArea className="flex-1">
             <div className="p-4 space-y-6">
               {/* Quick Actions */}
-              <div data-tour="sidebar-quick-workspace" className="space-y-2 w-full min-w-0 p-2 bg-[#E8ECE6]/60 rounded-2xl border border-[#D1D8CE]/60">
+              <div data-tour="sidebar-quick-workspace-desktop" className="space-y-2 w-full min-w-0 p-2 bg-[#E8ECE6]/60 rounded-2xl border border-[#D1D8CE]/60">
                 <Link href="/studio" className="w-full block">
                   <Button
                     size="sm"
