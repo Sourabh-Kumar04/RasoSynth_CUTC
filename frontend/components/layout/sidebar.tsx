@@ -204,9 +204,9 @@ export function Sidebar() {
           </div>
         </aside>
       ) : (
-        <aside className="hidden lg:flex flex-col w-72 min-w-[288px] shrink-0 border-r border-[#E2E6E0] bg-[#F6F7F4] transition-all sticky top-16 h-[calc(100vh-4rem)] overflow-hidden">
+        <aside className="hidden lg:flex flex-col w-72 min-w-[288px] shrink-0 border-r border-[#E2E6E0] bg-[#F6F7F4] transition-all sticky top-16 max-h-[calc(100vh-5.5rem)] overflow-hidden">
           {/* Sidebar Header */}
-          <div className="flex items-center justify-between p-4 border-b border-[#E2E6E0] shrink-0">
+          <div className="flex items-center justify-between p-3.5 px-4 border-b border-[#E2E6E0] shrink-0">
             <span className="text-xs font-bold uppercase tracking-wider font-mono text-[#1B3B2B] flex items-center gap-1.5">
               <LayoutGrid className="h-3.5 w-3.5 text-[#1B3B2B] shrink-0" />
               Quick Workspace
