@@ -145,26 +145,36 @@ async def extract_intent(
     try:
         data = json.loads(clean)
     except json.JSONDecodeError as parse_err:
-        if not _FALLBACK_ON_ERROR:
-            raise IntentExtractionError(
-                f"LLM returned non-JSON response for intent extraction: {parse_err}\n"
-                f"Raw response: {response_text[:300]}"
-            ) from parse_err
-        logger.warning(
-            f"LLM returned non-JSON response: {parse_err}. Falling back to raw input query.\n"
-            f"Raw response: {response_text[:300]}"
-        )
-        data = {
-            "primary_task": "unknown",
-            "domain": "unknown",
-            "modality": "text",
-            "anti_domains": [],
-            "key_entities": [],
-            "specialized_queries": [raw_input.strip()],
-            "constraints": [],
-            "output_format": "unknown",
-            "confidence": _MIN_CONFIDENCE
-        }
+        # Attempt robust auto-repair for unclosed quotes or missing closing braces
+        repaired_data = None
+        try:
+            repaired = clean.strip()
+            if repaired.count('"') % 2 != 0:
+                repaired += '"'
+            if not repaired.endswith("}"):
+                repaired += '}'
+            repaired_data = json.loads(repaired)
+        except Exception:
+            repaired_data = None
+
+        if repaired_data and isinstance(repaired_data, dict):
+            data = repaired_data
+        else:
+            logger.warning(
+                f"LLM returned non-JSON response for intent extraction: {parse_err}. "
+                f"Applying robust fallback intent for prompt."
+            )
+            data = {
+                "primary_task": "dataset_generation",
+                "domain": "cybersecurity" if "security" in raw_input.lower() or "owasp" in raw_input.lower() else "general",
+                "modality": "code" if "code" in raw_input.lower() or "c++" in raw_input.lower() or "python" in raw_input.lower() else "text",
+                "anti_domains": [],
+                "key_entities": [],
+                "specialized_queries": [raw_input.strip()[:200]],
+                "constraints": [],
+                "output_format": "jsonl",
+                "confidence": _MIN_CONFIDENCE
+            }
 
     # --- Validate required fields ---
     missing = _REQUIRED_FIELDS - data.keys()

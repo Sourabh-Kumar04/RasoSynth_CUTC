@@ -1092,6 +1092,8 @@ class DatasetOrchestrator:
 
         samples = []
 
+        target_dataset_size = config.get("dataset_size", 1000)
+
         # Check if we should use seedless synthetic generation
         generation_mode = config.get("generation_mode", "hybrid")
         allow_seedless = config.get("allow_seedless_generation", True)
@@ -1109,8 +1111,13 @@ class DatasetOrchestrator:
                 cov_planner = CoveragePlanner(config)
                 prompt = config.get("target_domain", "")
                 plan = await planner.create_plan(prompt)
-                coverage = cov_planner.generate_matrix(plan, target_size=config.get("dataset_size", 100))
+                coverage = cov_planner.generate_matrix(plan, target_size=target_dataset_size)
                 plan_dict = plan.model_dump()
+                coverage_dict = coverage.model_dump()
+            else:
+                cov_planner = CoveragePlanner(config)
+                plan_obj = DatasetPlan(**plan_dict)
+                coverage = cov_planner.generate_matrix(plan_obj, target_size=target_dataset_size)
                 coverage_dict = coverage.model_dump()
             
             # Parse plan_dict back to DatasetPlan object
@@ -1123,26 +1130,25 @@ class DatasetOrchestrator:
             max_attempts = config.get("regeneration_attempts", 3)
             cells = coverage_dict.get("cells", [])
 
-            # Fix #5: reset dedup tracker at the start of each batch
             generator.reset_seen_topics()
 
-            # Generate samples using the coverage matrix cells
-            for idx, cell in enumerate(cells):
+            # Generate samples up to target_dataset_size using coverage matrix cells
+            for idx in range(target_dataset_size):
                 if self._is_cancelled(job_id):
                     break
 
                 # Update progress incrementally
-                if idx % max(1, len(cells) // 10) == 0:
-                    prog = 0.7 + (idx / len(cells)) * 0.2
+                if idx % max(1, target_dataset_size // 10) == 0:
+                    prog = 0.7 + (idx / target_dataset_size) * 0.2
                     self._update_job_status(job_id, "construct", prog, samples_generated=len(samples))
 
+                cell = cells[idx % len(cells)] if cells else {}
                 valid_sample = None
                 for attempt in range(max_attempts):
-                    # Fix #2: pass cell_index so difficulty tier varies
                     sample = await generator.generate_sample(
                         plan_obj, cell,
                         cell_index=idx,
-                        total_cells=len(cells),
+                        total_cells=target_dataset_size,
                     )
                     val_res = await validator.validate(sample)
                     if val_res.is_valid:
@@ -1154,7 +1160,7 @@ class DatasetOrchestrator:
                             f"{', '.join(val_res.reasons)}"
                         )
 
-                if valid_sample:
+                if valid_sample and valid_sample.instruction and valid_sample.response:
                     samples.append({
                         "instruction": valid_sample.instruction,
                         "response": valid_sample.response,
@@ -1189,8 +1195,72 @@ class DatasetOrchestrator:
                         "conversation": getattr(constructed, "conversation", None),
                         "metadata": constructed.metadata,
                         "difficulty_tier": constructed.difficulty_tier,
-                        "curriculum_order": constructed.curriculum_order,
+                        "curriculum_order": len(samples),
                     })
+                    if len(samples) >= target_dataset_size:
+                        break
+                if len(samples) >= target_dataset_size:
+                    break
+
+            # If source construction produced fewer samples than target_dataset_size,
+            # augment with synthetic generation up to target_dataset_size
+            if len(samples) < target_dataset_size and generation_mode != "strict_source" and allow_seedless:
+                logger.info(
+                    f"Source extraction produced {len(samples)} samples. "
+                    f"Augmenting with synthetic generation to reach target {target_dataset_size}."
+                )
+                plan_dict = state.get("dataset_plan")
+                coverage_dict = state.get("coverage_matrix")
+
+                if not plan_dict or not coverage_dict:
+                    planner = DatasetPlanner(self.router, config)
+                    cov_planner = CoveragePlanner(config)
+                    prompt = config.get("target_domain", "")
+                    plan = await planner.create_plan(prompt)
+                    coverage = cov_planner.generate_matrix(plan, target_size=target_dataset_size)
+                    plan_dict = plan.model_dump()
+                    coverage_dict = coverage.model_dump()
+                else:
+                    cov_planner = CoveragePlanner(config)
+                    plan_obj = DatasetPlan(**plan_dict)
+                    coverage = cov_planner.generate_matrix(plan_obj, target_size=target_dataset_size)
+                    coverage_dict = coverage.model_dump()
+
+                plan_obj = DatasetPlan(**plan_dict)
+                generator = SeedlessGenerator(self.router, config)
+                validator = MultiStageValidator(self.router, config)
+                max_attempts = config.get("regeneration_attempts", 3)
+                cells = coverage_dict.get("cells", [])
+                generator.reset_seen_topics()
+
+                needed = target_dataset_size - len(samples)
+                for idx in range(needed):
+                    if self._is_cancelled(job_id):
+                        break
+
+                    cell = cells[idx % len(cells)] if cells else {}
+                    valid_sample = None
+                    for attempt in range(max_attempts):
+                        sample = await generator.generate_sample(
+                            plan_obj, cell,
+                            cell_index=len(samples),
+                            total_cells=target_dataset_size,
+                        )
+                        val_res = await validator.validate(sample)
+                        if val_res.is_valid:
+                            valid_sample = sample
+                            break
+
+                    if valid_sample and valid_sample.instruction and valid_sample.response:
+                        samples.append({
+                            "instruction": valid_sample.instruction,
+                            "response": valid_sample.response,
+                            "input": valid_sample.input,
+                            "conversation": getattr(valid_sample, "conversation", None),
+                            "metadata": valid_sample.metadata,
+                            "difficulty_tier": valid_sample.difficulty_tier,
+                            "curriculum_order": len(samples),
+                        })
 
         self._update_job_status(
             job_id,

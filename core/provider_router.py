@@ -23,7 +23,7 @@ class RouterConfig:
     provider_priority: list[str] = field(default_factory=lambda: [
         "huggingface", "google_gemini", "anthropic", "groq", "nvidia_nim", "ollama", "vllm"
     ])
-    max_retries: int = 1
+    max_retries: int = 3
     retry_base_delay: float = 2.0
     retry_max_delay: float = 60.0
     cache_ttl: int = 3600
@@ -345,10 +345,18 @@ class ProviderRouter:
                             self.config.retry_base_delay ** attempt,
                             self.config.retry_max_delay
                         )
+                        logger.warning(
+                            "LLM provider %s attempt %d/%d failed: %s. Retrying in %.1fs...",
+                            provider_name, attempt + 1, self.config.max_retries, e, delay
+                        )
                         await asyncio.sleep(delay + (time.time() % 1))
                         
                     continue
                     
+        logger.error(
+            "LLM service is not working or unavailable after retrying all candidate providers (%s). Last error: %s",
+            providers, last_error
+        )
         return None
     async def embed(
         self,

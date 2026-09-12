@@ -10,6 +10,7 @@ from core.di.container import (
     create_container,
 )
 from core.config import Settings
+from core.di.factory import AppFactory
 
 
 class TestServiceContainer:

@@ -98,7 +98,7 @@ async def test_regeneration_retry_loop():
     
     router.route.side_effect = [mock_response_bad, mock_response_good]
 
-    generator = SeedlessGenerator(router, {})
+    generator = SeedlessGenerator(router, {"regeneration_attempts": 1})
     validator = MultiStageValidator(router, {"validation_strictness": "standard"})
     
     plan = DatasetPlan(

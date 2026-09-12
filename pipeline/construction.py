@@ -301,7 +301,7 @@ class ConstructionPipeline:
             import logging
             import json
             logger = logging.getLogger(__name__)
-            for i, chunk in enumerate(chunks[:5]):  # Limit chunks to avoid too many API calls
+            for i, chunk in enumerate(chunks):  # Process chunks to construct samples
                 difficulty = self._assess_chunk_difficulty(chunk)
 
                 # Check if chunk content has domain keyword alignment
@@ -399,7 +399,8 @@ Output strictly in JSON format as a list of objects:
             
             # Require domain relevance in fallback mode to prevent cross-domain leaks
             if target_domain and target_domain.lower() not in ("general", "custom", "sft"):
-                if target_domain.lower() not in chunk.lower():
+                words = [w for w in re.findall(r'\w+', target_domain.lower()) if len(w) > 3]
+                if words and not any(w in chunk.lower() for w in words) and len(chunk.strip()) < 100:
                     continue
 
             difficulty = self._assess_chunk_difficulty(chunk)
@@ -451,7 +452,7 @@ Output strictly in JSON format as a list of objects:
                     curriculum_order=i * 10 + q_idx,
                 ))
 
-        return samples[:30]
+        return samples
 
     def _construct_coding_adaptive(
         self,
@@ -465,7 +466,7 @@ Output strictly in JSON format as a list of objects:
         code_blocks = re.findall(r'```(\w*)\n(.*?)```', content, re.DOTALL)
         code_blocks += [(ext, code) for ext, code in self._extract_inline_code(content)]
 
-        for i, (lang, code) in enumerate(code_blocks[:20]):
+        for i, (lang, code) in enumerate(code_blocks):
             if len(code) < 20:
                 continue
 
@@ -495,7 +496,7 @@ Output strictly in JSON format as a list of objects:
 
         # Identify statements/claims
         sentences = re.split(r'[.!?]+', content)
-        sentences = [s.strip() for s in sentences if len(s.strip()) > 20][:20]
+        sentences = [s.strip() for s in sentences if len(s.strip()) > 20]
 
         for i, sentence in enumerate(sentences):
             # Generate step-by-step reasoning
@@ -514,7 +515,7 @@ Output strictly in JSON format as a list of objects:
                     curriculum_order=i,
                 ))
 
-        return samples[:15]
+        return samples
 
     def _construct_conversational_adaptive(
         self,
@@ -526,7 +527,7 @@ Output strictly in JSON format as a list of objects:
 
         # Try to identify dialogue patterns
         lines = content.split('\n')
-        lines = [l.strip() for l in lines if l.strip() and len(l.strip()) > 5][:40]
+        lines = [l.strip() for l in lines if l.strip() and len(l.strip()) > 5]
 
         for i in range(0, len(lines) - 1, 2):
             user = lines[i]
@@ -542,7 +543,7 @@ Output strictly in JSON format as a list of objects:
                     format="chatml"
                 ))
 
-        return samples[:20]
+        return samples
 
     def _construct_tool_calling_adaptive(
         self,
@@ -557,7 +558,7 @@ Output strictly in JSON format as a list of objects:
         function_patterns = re.findall(r'def\s+(\w+)\s*\(', content)
         command_patterns = re.findall(r'`[^`]+`', content)
 
-        for i, pattern in enumerate(api_patterns + function_patterns + command_patterns[:10]):
+        for i, pattern in enumerate(api_patterns + function_patterns + command_patterns):
             tool_name = self._extract_tool_name(pattern)
 
             samples.append(ConstructedSample(
@@ -572,7 +573,7 @@ Output strictly in JSON format as a list of objects:
                 curriculum_order=i,
             ))
 
-        return samples[:15]
+        return samples
 
     def _construct_trajectory_adaptive(
         self,
@@ -583,7 +584,7 @@ Output strictly in JSON format as a list of objects:
         samples = []
 
         # Create multi-step trajectories
-        sections = content.split('\n\n')[:5]
+        sections = content.split('\n\n')
 
         for i, section in enumerate(sections):
             trajectory = [
@@ -601,7 +602,7 @@ Output strictly in JSON format as a list of objects:
                 format="json"
             ))
 
-        return samples[:10]
+        return samples
 
     def _construct_multimodal_adaptive(
         self,
@@ -627,7 +628,7 @@ Output strictly in JSON format as a list of objects:
 
         # Code + explanation
         code_blocks = re.findall(r'```[\w]*\n(.*?)```', content, re.DOTALL)
-        for i, code in enumerate(code_blocks[:5]):
+        for i, code in enumerate(code_blocks):
             samples.append(ConstructedSample(
                 instruction="Explain what this code does:",
                 response=self._explain_code(code),
@@ -637,7 +638,7 @@ Output strictly in JSON format as a list of objects:
                 curriculum_order=i,
             ))
 
-        return samples[:10]
+        return samples
 
     async def _augment_synthetic(
         self,
