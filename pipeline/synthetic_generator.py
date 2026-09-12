@@ -177,8 +177,18 @@ class SeedlessGenerator:
 
                 if response and response.content:
                     data = _extract_json_object(response.content)
-                    instruction = data.get("instruction", "").strip()
-                    resp_text = data.get("response", "").strip()
+                    raw_inst = data.get("instruction", "")
+                    raw_resp = data.get("response", "")
+
+                    if isinstance(raw_inst, (dict, list)):
+                        instruction = json.dumps(raw_inst, ensure_ascii=False)
+                    else:
+                        instruction = str(raw_inst or "").strip()
+
+                    if isinstance(raw_resp, (dict, list)):
+                        resp_text = json.dumps(raw_resp, ensure_ascii=False)
+                    else:
+                        resp_text = str(raw_resp or "").strip()
 
                     if not instruction or not resp_text:
                         logger.warning("Empty instruction/response on attempt %d", attempt + 1)

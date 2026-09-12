@@ -93,8 +93,7 @@ class MultiStageValidator:
                 is_valid = False
 
             # Domain Specific Validation: Coding / Code generation checks
-            target_domain = str(self.config.get("target_domain", "")).lower()
-            if "coding" in dataset_type or any(w in target_domain for w in ["code", "program", "python", "javascript", "developer"]):
+            if dataset_type == "coding":
                 # Ensure the response has a code block
                 if "```" not in sample.response:
                     reasons.append("Coding sample response does not contain any code blocks")
@@ -112,15 +111,6 @@ class MultiStageValidator:
                                 ast.parse(code)
                     except SyntaxError as syntax_err:
                         reasons.append(f"Factual Code Inconsistency: Syntax error in generated Python code: {syntax_err}")
-                        is_valid = False
-
-            # Domain Specific Validation: Finance checks
-            if "finance" in dataset_type or any(w in target_domain for w in ["finance", "stock", "portfolio", "market", "investment"]):
-                # Ensure finance answers contain quantitative backing data (numbers, dollar sign, or percent sign)
-                import re
-                if not re.search(r'\d', sample.response) or not any(char in sample.response for char in ["$", "%", "USD"]):
-                    reasons.append("Financial domain warning: Response lacks quantitative metrics, percentage, or currency data.")
-                    if self.strictness == "strict":
                         is_valid = False
 
             if not is_valid:

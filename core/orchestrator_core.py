@@ -212,20 +212,12 @@ class ConstraintAnalyzer:
         return analysis
 
     def _is_niche_domain(self, domain: str) -> bool:
-        """Check if domain appears niche."""
-        niche_indicators = [
-            "obscure", "specialized", "ancient", "historical",
-            "rare", "esoteric", "niche", "arcane"
-        ]
-        return any(ind in domain.lower() for ind in niche_indicators)
+        """Check if domain appears niche based on string complexity."""
+        return len(domain.split()) > 6 or any(char in domain for char in [":", "(", ")"])
 
     def _is_low_resource_domain(self, domain: str) -> bool:
         """Check if domain is likely low-resource."""
-        low_resource_indicators = [
-            "ancient", "historical", "medieval", "tribal",
-            "endangered", "minority", "regional"
-        ]
-        return any(ind in domain.lower() for ind in low_resource_indicators)
+        return len(domain.split()) > 8
 
     def _is_source_domain_relevant(self, source: dict, target_domain: str) -> bool:
         """Verify whether a discovered source is genuinely relevant to target_domain."""
@@ -257,23 +249,15 @@ class ConstraintAnalyzer:
         match_count = sum(1 for kw in domain_keywords if kw in full_content)
         return match_count >= 1
 
-
-
     def _estimate_sources(self, config: dict) -> int:
-        """Estimate number of discoverable sources."""
-        base_estimate = 100
+        """Estimate number of discoverable sources dynamically."""
+        base_estimate = 150
 
-        # Reduce for constraints
         if config.get("allowed_domains"):
             base_estimate *= 0.7
 
         if config.get("time_period"):
             base_estimate *= 0.5
-
-        # Increase for popular domains
-        popular_domains = ["machine learning", "python", "programming", "science"]
-        if any(d in config.get("target_domain", "").lower() for d in popular_domains):
-            base_estimate *= 2
 
         return int(base_estimate)
 
