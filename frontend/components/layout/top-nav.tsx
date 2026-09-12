@@ -189,20 +189,20 @@ export function TopNav() {
                   const isActive = pathname.startsWith(item.href)
 
                   return (
-                    <Link key={item.href} href={item.href} className="shrink-0">
-                      <button
-                        data-tour={`nav-btn-${item.href.replace('/', '')}`}
-                        title={item.tooltip || item.label}
-                        className={clsx(
-                          'flex items-center gap-1.5 px-2.5 py-1 text-xs font-medium rounded-full transition-all duration-150 shrink-0',
-                          isActive
-                            ? 'bg-[#1B3B2B] text-white font-semibold shadow-xs'
-                            : 'text-[#55635B] hover:text-[#1B3B2B] hover:bg-white/60'
-                        )}
-                      >
-                        <Icon className={clsx("h-3.5 w-3.5 shrink-0", isActive ? "text-emerald-300" : "text-[#55635B]")} />
-                        <span>{item.label}</span>
-                      </button>
+                    <Link
+                      key={item.href}
+                      href={item.href}
+                      data-tour={`nav-btn-${item.href.replace('/', '')}`}
+                      title={item.tooltip || item.label}
+                      className={clsx(
+                        'flex items-center gap-1.5 px-2.5 py-1 text-xs font-medium rounded-full transition-all duration-150 shrink-0',
+                        isActive
+                          ? 'bg-[#1B3B2B] text-white font-semibold shadow-xs'
+                          : 'text-[#55635B] hover:text-[#1B3B2B] hover:bg-white/60'
+                      )}
+                    >
+                      <Icon className={clsx("h-3.5 w-3.5 shrink-0", isActive ? "text-emerald-300" : "text-[#55635B]")} />
+                      <span>{item.label}</span>
                     </Link>
                   )
                 })}

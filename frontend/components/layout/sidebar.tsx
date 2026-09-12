@@ -173,18 +173,18 @@ export function Sidebar() {
                   const Icon = item.icon
                   const isActive = pathname.startsWith(item.href)
                   return (
-                    <Link key={item.href} href={item.href}>
-                      <button
-                        title={`${item.label} (${group.name})`}
-                        className={clsx(
-                          'h-9 w-9 rounded-xl flex items-center justify-center transition-all',
-                          isActive
-                            ? 'bg-[#1B3B2B] text-white shadow-xs'
-                            : 'text-[#55635B] hover:bg-[#E8ECE6] hover:text-[#1B3B2B]'
-                        )}
-                      >
-                        <Icon className={clsx('h-4 w-4', isActive ? 'text-emerald-300' : 'text-[#55635B]')} />
-                      </button>
+                    <Link
+                      key={item.href}
+                      href={item.href}
+                      title={`${item.label} (${group.name})`}
+                      className={clsx(
+                        'h-9 w-9 rounded-xl flex items-center justify-center transition-all',
+                        isActive
+                          ? 'bg-[#1B3B2B] text-white shadow-xs'
+                          : 'text-[#55635B] hover:bg-[#E8ECE6] hover:text-[#1B3B2B]'
+                      )}
+                    >
+                      <Icon className={clsx('h-4 w-4', isActive ? 'text-emerald-300' : 'text-[#55635B]')} />
                     </Link>
                   )
                 })}
@@ -193,13 +193,12 @@ export function Sidebar() {
           </div>
 
           <div className="flex flex-col items-center gap-2">
-            <Link href="/studio">
-              <button
-                title="Launch Studio Preset Workflow"
-                className="h-9 w-9 rounded-xl bg-[#1B3B2B] text-white flex items-center justify-center hover:bg-[#142D21] transition-all shadow-xs"
-              >
-                <Zap className="h-4 w-4 text-emerald-400 fill-current" />
-              </button>
+            <Link
+              href="/studio"
+              title="Launch Studio Preset Workflow"
+              className="h-9 w-9 rounded-xl bg-[#1B3B2B] text-white flex items-center justify-center hover:bg-[#142D21] transition-all shadow-xs"
+            >
+              <Zap className="h-4 w-4 text-emerald-400 fill-current" />
             </Link>
           </div>
         </aside>
