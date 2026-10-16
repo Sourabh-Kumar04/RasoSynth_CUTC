@@ -49,6 +49,7 @@ services:
       REDIS_URL: redis://redis:6379/0
       POSTGRES_URL: sqlite+aiosqlite:///app/outputs/dataset.db
       QDRANT_URL: http://qdrant:6333
+      ENABLE_CELERY: "true"
       PYTHONUNBUFFERED: "1"
     depends_on:
       redis:
@@ -72,6 +73,32 @@ services:
       timeout: 10s
       retries: 5
       start_period: 60s
+
+  celery_worker:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    command: ["uv", "run", "celery", "-A", "workers.celery_app.celery_app", "worker", "--loglevel=INFO", "--concurrency=2"]
+    env_file:
+      - .env
+    environment:
+      REDIS_URL: redis://redis:6379/0
+      POSTGRES_URL: sqlite+aiosqlite:///app/outputs/dataset.db
+      QDRANT_URL: http://qdrant:6333
+      ENABLE_CELERY: "true"
+      PYTHONUNBUFFERED: "1"
+    depends_on:
+      redis:
+        condition: service_healthy
+    volumes:
+      - ./outputs:/app/outputs
+    restart: unless-stopped
+    deploy:
+      resources:
+        limits:
+          memory: 4G
+        reservations:
+          memory: 512M
 
   frontend:
     build:

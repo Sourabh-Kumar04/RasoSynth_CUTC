@@ -210,20 +210,28 @@ def export_task(self, job_id: str, samples: list[dict], format: str, config: dic
         return {"job_id": job_id, "error": str(e)}
 
 
-@celery_app.task(name="workers.tasks.run_pipeline")
+@celery_app.task(
+    name="workers.tasks.run_pipeline",
+    ignore_result=True,
+    time_limit=None,
+    soft_time_limit=None,
+)
 def run_pipeline_task(job_id: str, config: dict):
-    """Run the complete pipeline as a chord."""
-    query = config.get("target_domain", "")
-    domain = config.get("target_domain", "")
-    export_format = config.get("export_format", "jsonl")
+    """Run the production orchestrator in a worker-owned service lifespan.
 
-    return chord(
-        discover_task.s(job_id, query, domain, config),
-        extract_task.s(config),
-        filter_task.s(config),
-        construct_task.s(config),
-        export_task.s(export_format, config)
-    )()
+    Dataset jobs use the same LangGraph pipeline, persistence, websocket, and
+    review queue as the API path. The older stage-task chord is retained for
+    explicit stage-level use, but is not the production job runner.
+    """
+    from api.schemas import JobRequest
+    from api.server import app, lifespan, run_pipeline
+
+    async def execute():
+        request = JobRequest.model_validate(config)
+        async with lifespan(app):
+            await run_pipeline(job_id, request)
+
+    asyncio.run(execute())
 
 
 @celery_app.task(name="workers.tasks.refresh_dataset")

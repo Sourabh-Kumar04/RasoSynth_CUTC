@@ -1137,7 +1137,25 @@ async def create_job(request: JobRequest, background_tasks: BackgroundTasks):
         logger.error(f"Failed to persist new job {job_id}: {e}")
         raise HTTPException(status_code=500, detail=f"Failed to create job: {e}")
 
-    background_tasks.add_task(run_pipeline, job_id, request)
+    queued = False
+    if get_settings().enable_celery:
+        try:
+            from workers.celery_app import run_pipeline_task
+            run_pipeline_task.apply_async(
+                args=[job_id, config],
+                retry=False,
+            )
+            queued = True
+            logger.info("Queued dataset job %s with Celery", job_id)
+        except Exception as dispatch_error:
+            logger.warning(
+                "Celery dispatch failed for job %s; using in-process fallback: %s",
+                job_id,
+                dispatch_error,
+            )
+
+    if not queued:
+        background_tasks.add_task(run_pipeline, job_id, request)
 
     return JobResponse(
         id=job_id,
