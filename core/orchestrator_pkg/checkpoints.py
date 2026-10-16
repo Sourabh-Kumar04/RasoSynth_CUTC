@@ -107,7 +107,7 @@ class CheckpointStore:
         redis_url: str,
         checkpoint_ttl_seconds: int = 86400 * 7,  # 7 days
     ):
-        self.postgres_url = postgres_url
+        self.postgres_url = postgres_url.replace("postgresql+asyncpg://", "postgresql://", 1)
         self.redis_url = redis_url
         self.checkpoint_ttl = checkpoint_ttl_seconds
         self._pool: Optional[asyncpg.Pool] = None
@@ -193,17 +193,15 @@ class CheckpointStore:
                 checkpoint.version,
             )
 
-        # Save to Redis for fast access
+        # Save to Redis for fast access. PostgreSQL remains authoritative.
         redis_key = f"checkpoint:{checkpoint.job_id}:latest"
-        await self._redis.setex(
-            redis_key,
-            self.checkpoint_ttl,
-            json.dumps(checkpoint.to_dict())
-        )
-
-        # Also save with checkpoint ID for history
-        history_key = f"checkpoint:{checkpoint.job_id}:{checkpoint.checkpoint_id}"
-        await self._redis.setex(history_key, self.checkpoint_ttl, json.dumps(checkpoint.to_dict()))
+        try:
+            payload = json.dumps(checkpoint.to_dict())
+            await self._redis.setex(redis_key, self.checkpoint_ttl, payload)
+            history_key = f"checkpoint:{checkpoint.job_id}:{checkpoint.checkpoint_id}"
+            await self._redis.setex(history_key, self.checkpoint_ttl, payload)
+        except Exception as exc:
+            logger.warning("Checkpoint cached only in PostgreSQL: %s", exc)
 
         logger.info(f"Checkpoint saved: {checkpoint.checkpoint_id} for job {checkpoint.job_id}")
         return checkpoint.checkpoint_id
@@ -211,10 +209,18 @@ class CheckpointStore:
     async def get_latest(self, job_id: str) -> Optional[Checkpoint]:
         """Get latest checkpoint for a job from Redis (fast path)."""
         redis_key = f"checkpoint:{job_id}:latest"
-        data = await self._redis.get(redis_key)
-        if data:
-            return Checkpoint.from_dict(json.loads(data))
-        return None
+        try:
+            data = await self._redis.get(redis_key)
+            if data:
+                return Checkpoint.from_dict(json.loads(data))
+        except Exception as exc:
+            logger.warning("Checkpoint Redis lookup failed; reading PostgreSQL: %s", exc)
+        async with self._pool.acquire() as conn:
+            row = await conn.fetchrow(
+                "SELECT * FROM orchestration_checkpoints WHERE job_id = $1 ORDER BY created_at DESC LIMIT 1",
+                job_id,
+            )
+        return self._row_to_checkpoint(row) if row else None
 
     async def get_by_id(self, checkpoint_id: str) -> Optional[Checkpoint]:
         """Get specific checkpoint by ID."""
@@ -256,9 +262,13 @@ class CheckpointStore:
                     WHERE checkpoint_id = ANY($1)
                 """, ids)
 
-                # Clean up Redis
+                # Clean up Redis cache entries. PostgreSQL deletion already
+                # succeeded, so a cache error should not fail the operation.
                 for cid in ids:
-                    await self._redis.delete(f"checkpoint:{job_id}:{cid}")
+                    try:
+                        await self._redis.delete(f"checkpoint:{job_id}:{cid}")
+                    except Exception as exc:
+                        logger.warning("Could not remove checkpoint cache entry %s: %s", cid, exc)
 
                 logger.info(f"Deleted {len(ids)} old checkpoints for job {job_id}")
                 return len(ids)
@@ -309,6 +319,10 @@ class CheckpointManager:
         job_id: str,
         stage: CheckpointStage,
         progress: float,
+        sources_discovered: int = 0,
+        sources_extracted: int = 0,
+        samples_filtered: int = 0,
+        samples_generated: int = 0,
         provider_context: Optional[ProviderContext] = None,
         extracted_content: Optional[List] = None,
         filtered_samples: Optional[List] = None,
@@ -320,6 +334,10 @@ class CheckpointManager:
             job_id=job_id,
             stage=stage,
             progress=progress,
+            sources_discovered=sources_discovered,
+            sources_extracted=sources_extracted,
+            samples_filtered=samples_filtered,
+            samples_generated=samples_generated,
             provider_context=provider_context,
             extracted_content=extracted_content or [],
             filtered_samples=filtered_samples or [],

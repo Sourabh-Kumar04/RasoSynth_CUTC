@@ -274,6 +274,7 @@ active_websockets: dict[str, list[WebSocket]] = {}
 
 # Checkpoint and Failover (moved from global to app state)
 checkpoint_manager = None
+checkpoint_store = None
 failover_engine = None
 provider_hot_switcher = None
 
@@ -369,14 +370,14 @@ async def lifespan(app: FastAPI):
         8. DatasetOrchestrator(config, router, db, observability, ws_manager)
         9. ResearchLoop + TechniqueIntegrator  (router-driven research)
 
-    The three checkpoint/failover/hot-switcher globals remain None for now —
-    they are not constructed by this lifespan. Endpoints that need them
-    (`/checkpoints/*`, `/providers/switch`, `/providers/failover`) will continue
-    to return 503 until those classes are wired in.
+    Checkpoint CRUD uses its persistent PostgreSQL store. Provider switching
+    and failover remain unavailable because the current router selects providers
+    per task and has no safe job-scoped switching interface.
     """
     global router, orchestrator, db, cache, observability
     global ws_manager, provider_validator
     global research_loop, technique_integrator
+    global checkpoint_store, checkpoint_manager
 
     settings = get_settings()
 
@@ -416,6 +417,24 @@ async def lifespan(app: FastAPI):
     except Exception as e:
         logger.warning(f"  ⚠ Cache disabled (Redis unreachable): {e}")
         cache = None
+
+    # (4b) Persistent API checkpoints. The graph itself also has a
+    # PostgreSQL checkpointer; this store backs the checkpoint API endpoints.
+    checkpoint_manager = None
+    checkpoint_store = None
+    if settings.postgres_url.startswith(("postgresql://", "postgresql+asyncpg://")):
+        try:
+            from core.orchestrator_pkg.checkpoints import CheckpointManager, CheckpointStore
+            checkpoint_store = CheckpointStore(settings.postgres_url, settings.redis_url)
+            await checkpoint_store.connect()
+            checkpoint_manager = CheckpointManager(checkpoint_store)
+            app.state.checkpoint_manager = checkpoint_manager
+            app.state.checkpoint_store = checkpoint_store
+            logger.info("  ✓ Persistent checkpoint store initialized")
+        except Exception as e:
+            checkpoint_store = None
+            checkpoint_manager = None
+            logger.warning("  ⚠ Persistent checkpoint store unavailable: %s", e)
 
     # (5) WebSocket manager (optional — used by /jobs/{id}/stream). The
     # ``connect()`` method on ConnectionManager is per-connection and takes
@@ -537,6 +556,13 @@ async def lifespan(app: FastAPI):
             logger.info("  ✓ AsyncDB closed")
         except Exception as e:
             logger.warning(f"  ⚠ db.close() failed: {e}")
+
+    if checkpoint_store is not None:
+        try:
+            await checkpoint_store.close()
+            logger.info("  ✓ Checkpoint store closed")
+        except Exception as e:
+            logger.warning("  ⚠ checkpoint store close failed: %s", e)
 
     if cache is not None:
         try:
@@ -1587,7 +1613,7 @@ async def create_checkpoint(request: CreateCheckpointRequest):
     if not checkpoint_manager:
         raise HTTPException(status_code=503, detail="Checkpoint manager not available")
 
-    from core.orchestrator.checkpoints import ProviderContext
+    from core.orchestrator_pkg.checkpoints import ProviderContext
 
     provider_context = None
     if request.provider_name:
@@ -1602,6 +1628,10 @@ async def create_checkpoint(request: CreateCheckpointRequest):
         job_id=request.job_id,
         stage=request.stage,
         progress=request.progress,
+        sources_discovered=request.sources_discovered,
+        sources_extracted=request.sources_extracted,
+        samples_filtered=request.samples_filtered,
+        samples_generated=request.samples_generated,
         provider_context=provider_context,
         extracted_content=request.extracted_content,
         filtered_samples=request.filtered_samples,
@@ -1752,7 +1782,7 @@ async def restore_checkpoint(request: RestoreCheckpointRequest):
         resume_from_stage=resume_state["resume_from_stage"].value,
         progress=resume_state["progress"],
         samples_generated=resume_state["samples_generated"],
-        message="Checkpoint restored successfully",
+        message="Checkpoint state loaded. Automatic pipeline resumption is not wired yet.",
     )
 
 
