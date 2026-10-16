@@ -835,10 +835,12 @@ class DatasetOrchestrator:
                             {k: v for k, v in content.metadata.items() if k != "analysis"}
                         )
                         source_metadata = source.get("metadata", {}) if isinstance(source, dict) else getattr(source, "metadata", {})
+                        source_type = source.get("source_type") if isinstance(source, dict) else getattr(source, "source_type", "")
+                        source_type_value = getattr(source_type, "value", source_type)
                         safe_metadata.update({
                             key: value for key, value in {
                                 "source_url": content.url or source_url,
-                                "source_type": source.get("source_type") if isinstance(source, dict) else str(getattr(source, "source_type", "")),
+                                "source_type": str(source_type_value) if source_type_value else None,
                                 "license": source.get("license") if isinstance(source, dict) else getattr(source, "license", None),
                                 "source_title": source.get("title") if isinstance(source, dict) else getattr(source, "title", None),
                                 "language": content.language or source_metadata.get("language"),
