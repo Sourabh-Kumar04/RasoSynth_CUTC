@@ -1724,10 +1724,11 @@ class DatasetOrchestrator:
                 edited_count += int(item.get("review_decision") == "edit")
                 retained_samples.append(sample)
             samples = retained_samples
+            retained_review_count = len(review_ids) - rejected_count
             logger.info("Job %s resumed after HITL approval", job_id)
             state["messages"].append(
                 f"Review decisions applied: {rejected_count} rejected or unresolved, {edited_count} edited, "
-                f"{len(review_ids) - rejected_count - edited_count} retained."
+                f"{retained_review_count} retained (including edits)."
             )
 
         return {
