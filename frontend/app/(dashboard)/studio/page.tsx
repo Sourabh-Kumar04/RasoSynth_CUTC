@@ -525,8 +525,9 @@ export default function StudioPage() {
                         <p className="text-[10px] leading-relaxed text-[#708076]">Source estimates reflect authority, metadata completeness, and freshness; they do not guarantee query relevance or content quality.</p>
                         {sourcePreview.sources.map((source: any) => {
                           const excluded = excludedSourceUrls.includes(source.url)
+                          const sourceHref = /^https?:\/\//i.test(String(source.url || '')) ? String(source.url) : undefined
                           return (
-                            <label key={source.url} className={`flex gap-3 rounded-xl border p-3 cursor-pointer ${excluded ? 'border-[#D1D8CE] opacity-50 bg-white' : 'border-[#D1D8CE] bg-white'}`}>
+                            <div key={source.url} className={`flex gap-3 rounded-xl border p-3 ${excluded ? 'border-[#D1D8CE] opacity-50 bg-white' : 'border-[#D1D8CE] bg-white'}`}>
                               <input
                                 type="checkbox"
                                 checked={!excluded}
@@ -539,7 +540,9 @@ export default function StudioPage() {
                                 className="mt-0.5 accent-[#1B3B2B]"
                               />
                               <span className="min-w-0">
-                                <span className="block text-xs font-semibold text-[#1B3B2B]">{source.title || source.url}</span>
+                                {sourceHref
+                                  ? <a href={sourceHref} target="_blank" rel="noopener noreferrer" className="block text-xs font-semibold text-[#1B3B2B] underline decoration-[#A8B9AA] underline-offset-2 hover:text-[#446A50]">{source.title || source.url}</a>
+                                  : <span className="block text-xs font-semibold text-[#1B3B2B]">{source.title || source.url}</span>}
                                 <span className="mt-1 block text-[11px] leading-relaxed text-[#55635B]">{source.description || source.url}</span>
                                 <span className="mt-1 block text-[10px] font-mono text-[#708076]">{source.source_type} · source estimate {Number(source.quality_score || 0).toFixed(2)}</span>
                                 <span className="mt-1 block text-[10px] text-[#55635B]">
@@ -549,7 +552,7 @@ export default function StudioPage() {
                                 {source.metadata?.aikosh_file && <span className="mt-1 block text-[10px] font-medium text-[#1B3B2B]">AIKosh file: {source.metadata.aikosh_file.name} · {(Number(source.metadata.aikosh_file.size_bytes) / (1024 * 1024)).toFixed(2)} MiB · available for preview extraction</span>}
                                 {source.metadata?.catalogue_only && <span className="mt-1 block text-[10px] font-semibold text-amber-800">Catalogue listing only; dataset access and reuse terms must be verified before ingestion.</span>}
                               </span>
-                            </label>
+                            </div>
                           )
                         })}
                       </div>
