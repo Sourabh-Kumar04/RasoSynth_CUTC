@@ -19,6 +19,29 @@ services:
         reservations:
           memory: 128M
 
+  postgres:
+    image: postgres:16-alpine
+    ports:
+      - "127.0.0.1:5432:5432"
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB:-dataset_engine}
+      POSTGRES_USER: ${POSTGRES_USER:-dataset_user}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?Set POSTGRES_PASSWORD in .env}
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-dataset_user} -d ${POSTGRES_DB:-dataset_engine}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    restart: unless-stopped
+    deploy:
+      resources:
+        limits:
+          memory: 1G
+        reservations:
+          memory: 128M
+
   qdrant:
     image: qdrant/qdrant:latest
     ports:
@@ -47,12 +70,14 @@ services:
       - .env
     environment:
       REDIS_URL: redis://redis:6379/0
-      POSTGRES_URL: sqlite+aiosqlite:///app/outputs/dataset.db
+      POSTGRES_URL: postgresql+asyncpg://${POSTGRES_USER:-dataset_user}:${POSTGRES_PASSWORD:?Set POSTGRES_PASSWORD in .env}@postgres:5432/${POSTGRES_DB:-dataset_engine}
       QDRANT_URL: http://qdrant:6333
       ENABLE_CELERY: "true"
       PYTHONUNBUFFERED: "1"
     depends_on:
       redis:
+        condition: service_healthy
+      postgres:
         condition: service_healthy
     volumes:
       - ./outputs:/app/outputs
@@ -83,12 +108,14 @@ services:
       - .env
     environment:
       REDIS_URL: redis://redis:6379/0
-      POSTGRES_URL: sqlite+aiosqlite:///app/outputs/dataset.db
+      POSTGRES_URL: postgresql+asyncpg://${POSTGRES_USER:-dataset_user}:${POSTGRES_PASSWORD:?Set POSTGRES_PASSWORD in .env}@postgres:5432/${POSTGRES_DB:-dataset_engine}
       QDRANT_URL: http://qdrant:6333
       ENABLE_CELERY: "true"
       PYTHONUNBUFFERED: "1"
     depends_on:
       redis:
+        condition: service_healthy
+      postgres:
         condition: service_healthy
     volumes:
       - ./outputs:/app/outputs
@@ -144,5 +171,6 @@ networks:
 
 volumes:
   redis_data:
+  postgres_data:
   qdrant_data:
   backups:

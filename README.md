@@ -57,7 +57,7 @@ git clone https://github.com/Sourabh-Kumar04/RasoSynth_CUTC.git
 cd RasoSynth_CUTC/ai-dataset-engineer
 
 cp .env.example .env
-# Edit .env with your API keys (optional — Demo Mode works without them)
+# Set POSTGRES_PASSWORD in .env; API keys are optional for demo mode.
 
 docker compose up --build -d
 
@@ -98,8 +98,10 @@ HF_TOKEN=your_hf_token
 
 # Infrastructure
 REDIS_URL=redis://localhost:6379/0
-POSTGRES_URL=sqlite+aiosqlite:///outputs/dataset.db   # SQLite (default)
-# POSTGRES_URL=postgresql+asyncpg://user:pass@localhost:5432/rasosynthtune
+POSTGRES_USER=dataset_user
+POSTGRES_PASSWORD=choose-a-strong-password
+POSTGRES_DB=dataset_engine
+POSTGRES_URL=postgresql+asyncpg://dataset_user:choose-a-strong-password@localhost:5432/dataset_engine
 QDRANT_URL=http://localhost:6333
 
 # HITL review
@@ -110,6 +112,14 @@ HITL_TIMEOUT_SECONDS=0
 FINETUNE_MAX_CONCURRENT=1
 FINETUNE_MAX_SAMPLES=500000
 ```
+
+Docker Compose runs PostgreSQL, Redis, the API, and a Celery worker. Set
+`POSTGRES_PASSWORD` in `.env` before starting the stack; Compose constructs the
+internal PostgreSQL URL using the `postgres` service name. URL-encode special
+characters in the password used by `POSTGRES_URL` for local app runs. Existing records in
+`outputs/dataset.db` are not migrated automatically when switching from SQLite
+to PostgreSQL. If the SQLite database contains data you need, migrate it before
+changing the deployment's database URL.
 
 ## Dataset Generation
 
