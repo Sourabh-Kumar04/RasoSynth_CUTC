@@ -1347,11 +1347,17 @@ async def create_job(request: JobRequest, background_tasks: BackgroundTasks):
         expected_token = _sign_approved_examples(request.target_domain, request.approved_examples)
         if not request.approved_examples_token or not hmac.compare_digest(request.approved_examples_token, expected_token):
             raise HTTPException(status_code=400, detail="Example batch is invalid or no longer matches this query. Preview the examples again.")
+        if request.approved_example_indices is not None:
+            indices = request.approved_example_indices
+            if not indices or len(set(indices)) != len(indices) or any(index < 0 or index >= len(request.approved_examples) for index in indices):
+                raise HTTPException(status_code=400, detail="Select at least one valid example from the reviewed preview batch.")
 
     job_id = str(uuid.uuid4())
     now = datetime.utcnow()
 
     config = request.model_dump()
+    if request.approved_examples and request.approved_example_indices is not None:
+        config["approved_examples"] = [request.approved_examples[index] for index in request.approved_example_indices]
     config["id"] = job_id
 
     try:

@@ -200,6 +200,7 @@ export default function StudioPage() {
   const [searchQueryOverride, setSearchQueryOverride] = useState('')
   const [searchQueryDirty, setSearchQueryDirty] = useState(false)
   const [exampleBatchPreview, setExampleBatchPreview] = useState<any>(null)
+  const [selectedExampleIndexes, setSelectedExampleIndexes] = useState<number[]>([])
   const [excludedSourceUrls, setExcludedSourceUrls] = useState<string[]>([])
 
   // API state
@@ -287,6 +288,7 @@ export default function StudioPage() {
         max_examples: 3,
       })
       setExampleBatchPreview(preview)
+      setSelectedExampleIndexes((preview.examples || []).map((_: any, index: number) => index))
     } catch (err: any) {
       setSubmitError(err.message || 'Could not generate the example batch')
     } finally {
@@ -302,6 +304,10 @@ export default function StudioPage() {
     }
     if (!exampleBatchPreview?.example_count) {
       setSubmitError('Generate and review at least one source-grounded example before continuing')
+      return
+    }
+    if (!selectedExampleIndexes.length) {
+      setSubmitError('Select at least one preview example to carry into the dataset')
       return
     }
 
@@ -333,6 +339,7 @@ export default function StudioPage() {
         approved_sources: (sourcePreview?.sources || []).filter((source: any) => !excludedSourceUrls.includes(source.url) && !source.metadata?.catalogue_only),
         approved_examples: exampleBatchPreview.examples,
         approved_examples_token: exampleBatchPreview.approved_examples_token,
+        approved_example_indices: selectedExampleIndexes,
         excluded_source_urls: excludedSourceUrls,
         human_review: humanReviewEnabled,
         human_review_percentage: humanReviewPercentage,
@@ -351,7 +358,7 @@ export default function StudioPage() {
     } finally {
       setIsSubmitting(false)
     }
-  }, [naturalLanguageInput, datasetName, selectedTemplate, targetSize, qualityLevel, outputFormat, selectedProviders, generationMode, datasetType, sourcePreview, exampleBatchPreview, excludedSourceUrls, humanReviewEnabled, humanReviewPercentage, resolvedLanguage, secondaryLanguages.join(','), regionRestrictions.join(','), balanceDimensions.join(','), router])
+  }, [naturalLanguageInput, datasetName, selectedTemplate, targetSize, qualityLevel, outputFormat, selectedProviders, generationMode, datasetType, sourcePreview, exampleBatchPreview, selectedExampleIndexes, excludedSourceUrls, humanReviewEnabled, humanReviewPercentage, resolvedLanguage, secondaryLanguages.join(','), regionRestrictions.join(','), balanceDimensions.join(','), router])
 
   return (
     <div className="space-y-6 w-full pb-8">
@@ -565,7 +572,7 @@ export default function StudioPage() {
                       {exampleBatchPreview && (
                         <div className="space-y-2" aria-live="polite">
                           <p className="text-[10px] font-mono uppercase tracking-wider text-[#55635B]">
-                            {exampleBatchPreview.example_count} grounded examples · {exampleBatchPreview.sources_processed} sources processed
+                            {selectedExampleIndexes.length} of {exampleBatchPreview.example_count} examples selected · {exampleBatchPreview.sources_processed} sources processed
                           </p>
                           {exampleBatchPreview.examples?.map((example: any, index: number) => (
                             <article key={`${example.source_url}-${index}`} className="space-y-2 rounded-xl border border-[#E2E6E0] bg-[#F6F7F4] p-3">
@@ -573,6 +580,15 @@ export default function StudioPage() {
                                 <span>Example {index + 1} · quality {Math.round((example.quality_score || 0) * 100)}%</span>
                                 <span className="truncate">{example.source_title || example.source_type}</span>
                               </div>
+                              <label className="flex items-center gap-2 text-[11px] font-medium text-[#1B3B2B]">
+                                <input
+                                  type="checkbox"
+                                  checked={selectedExampleIndexes.includes(index)}
+                                  onChange={() => setSelectedExampleIndexes((current) => current.includes(index) ? current.filter((value) => value !== index) : [...current, index].sort((a, b) => a - b))}
+                                  className="accent-[#1B3B2B]"
+                                />
+                                Include this example in the dataset
+                              </label>
                               <div>
                                 <p className="mb-1 text-[10px] font-semibold uppercase text-[#55635B]">Instruction</p>
                                 <p className="whitespace-pre-wrap text-xs leading-relaxed text-[#1B3B2B]">{example.instruction}</p>
@@ -602,7 +618,7 @@ export default function StudioPage() {
                       <Button
                         className="gap-2 rounded-full bg-[#1B3B2B] text-white hover:bg-[#142D21]"
                         onClick={handleGenerateDataset}
-                        disabled={searchQueryDirty || isPreviewing || isSubmitting || isPreviewingExamples || !exampleBatchPreview?.example_count}
+                        disabled={searchQueryDirty || isPreviewing || isSubmitting || isPreviewingExamples || !exampleBatchPreview?.example_count || !selectedExampleIndexes.length}
                       >
                         {isSubmitting ? <Loader2 className="h-4 w-4 animate-spin" /> : <ArrowRight className="h-4 w-4" />}
                         {isSubmitting ? 'Starting dataset job...' : 'Continue with this search'}
