@@ -444,6 +444,7 @@ export default function StudioPage() {
                 <div className="relative pt-1">
                   <textarea
                     value={naturalLanguageInput}
+                    disabled={isPreviewing || isSubmitting}
                     onChange={(e) => {
                       setNaturalLanguageInput(e.target.value)
                       setSourcePreview(null)
@@ -668,11 +669,15 @@ export default function StudioPage() {
                             <Button
                               variant="ghost"
                               size="sm"
+                              disabled={isPreviewing || isSubmitting}
                               className="h-5 px-2 text-[10px] bg-[#E8ECE6] text-[#1B3B2B] hover:bg-[#1B3B2B] hover:text-white font-bold rounded-full transition-colors"
                               onClick={() => {
                                 setNaturalLanguageInput(preset.prompt)
                                 setTargetSize(preset.size)
                                 setDatasetType(preset.type)
+                                setSourcePreview(null)
+                                setSearchQueryOverride('')
+                                setSearchQueryDirty(false)
                                 setExampleBatchPreview(null)
                                 setDatasetName(preset.title)
                               }}
@@ -811,7 +816,7 @@ export default function StudioPage() {
 
                 <div className="space-y-1.5">
                   <label className="text-xs font-bold text-[#1B3B2B]" htmlFor="dataset-language">Dataset Language</label>
-                  <Select value={datasetLanguage} onValueChange={(value) => { setDatasetLanguage(value); setSourcePreview(null); setExampleBatchPreview(null) }}>
+                  <Select value={datasetLanguage} disabled={isPreviewing || isSubmitting} onValueChange={(value) => { setDatasetLanguage(value); setSourcePreview(null); setSearchQueryOverride(''); setSearchQueryDirty(false); setExampleBatchPreview(null) }}>
                     <SelectTrigger id="dataset-language" className="rounded-full border-[#D1D8CE] text-xs">
                       <SelectValue />
                     </SelectTrigger>
