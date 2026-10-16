@@ -670,6 +670,7 @@ export default function DatasetsPage() {
                       <div className="rounded-xl border border-[#E2E6E0] bg-[#F6F7F4] p-3">
                         <p className="text-[10px] uppercase font-mono text-[#55635B]">Review coverage</p>
                         <p className="text-lg font-bold font-mono text-[#1B3B2B]">{datasetSummary.human_review?.enabled ? `${datasetSummary.human_review.total} items` : 'Not enabled'}</p>
+                        {datasetSummary.human_review?.enabled && <p className="mt-1 text-[10px] text-[#55635B]">{datasetSummary.human_review.requested_percentage}% requested</p>}
                       </div>
                       <div className="rounded-xl border border-[#E2E6E0] bg-[#F6F7F4] p-3">
                         <p className="text-[10px] uppercase font-mono text-[#55635B]">Balance removals</p>

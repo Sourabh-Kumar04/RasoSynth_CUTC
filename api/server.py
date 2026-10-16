@@ -1742,7 +1742,15 @@ async def get_job_dataset_summary(job_id: str):
             scores.append(float(score))
 
     config = job.get("config") or {}
-    review = {"enabled": bool(config.get("human_review")), "total": 0, "approved": 0, "rejected": 0, "pending": 0, "flagged": 0}
+    review = {
+        "enabled": bool(config.get("human_review")),
+        "requested_percentage": float(config.get("human_review_percentage", 10.0)),
+        "total": 0,
+        "approved": 0,
+        "rejected": 0,
+        "pending": 0,
+        "flagged": 0,
+    }
     review_service = getattr(app.state, "review_service", None)
     if review["enabled"] and review_service:
         queue = await review_service.get_queue(job_id=job_id, page=1, page_size=1)
