@@ -425,6 +425,7 @@ class ExtractionPipeline:
         import json
         import os
         import tempfile
+        import unicodedata
         from pathlib import Path, PurePosixPath
 
         metadata = getattr(source, "metadata__", None) or getattr(source, "metadata", {}) or {}
@@ -541,12 +542,14 @@ class ExtractionPipeline:
                     f"File: {filename}",
                     file_content,
                 ]))
+                content = unicodedata.normalize("NFC", content)
                 extracted = await self._process_text(content[:150_000], getattr(source, "url", ""), "utf-8")
                 extracted.metadata.update({
                     "source_type": "ai_kosh",
                     "aikosh_dataset_id": dataset_id,
                     "aikosh_file_path": remote_path,
                     "aikosh_file_size_bytes": actual_size,
+                    "unicode_normalization": "NFC",
                     "license": getattr(source, "license", None),
                 })
                 yield extracted
