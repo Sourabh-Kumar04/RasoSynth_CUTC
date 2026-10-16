@@ -512,6 +512,7 @@ export default function StudioPage() {
                     </div>
                     {sourcePreview.sources?.length ? (
                       <div className="space-y-2 max-h-72 overflow-y-auto">
+                        <p className="text-[10px] leading-relaxed text-[#708076]">Source estimates reflect authority, metadata completeness, and freshness; they do not guarantee query relevance or content quality.</p>
                         {sourcePreview.sources.map((source: any) => {
                           const excluded = excludedSourceUrls.includes(source.url)
                           return (
@@ -530,7 +531,11 @@ export default function StudioPage() {
                               <span className="min-w-0">
                                 <span className="block text-xs font-semibold text-[#1B3B2B]">{source.title || source.url}</span>
                                 <span className="mt-1 block text-[11px] leading-relaxed text-[#55635B]">{source.description || source.url}</span>
-                                <span className="mt-1 block text-[10px] font-mono text-[#708076]">{source.source_type} · score {Number(source.quality_score || 0).toFixed(2)}{source.license ? ` · ${source.license}` : ''}</span>
+                                <span className="mt-1 block text-[10px] font-mono text-[#708076]">{source.source_type} · source estimate {Number(source.quality_score || 0).toFixed(2)}</span>
+                                <span className="mt-1 block text-[10px] text-[#55635B]">
+                                  Language: {Array.isArray(source.language) ? source.language.join(', ') : (source.language || 'not listed')} · License: {source.license || 'not provided'}
+                                  {source.license_status === 'verify_access_and_terms' ? ' · verify access and reuse terms' : ''}
+                                </span>
                                 {source.metadata?.catalogue_only && <span className="mt-1 block text-[10px] font-semibold text-amber-800">Catalogue listing only; dataset access and reuse terms must be verified before ingestion.</span>}
                               </span>
                             </label>

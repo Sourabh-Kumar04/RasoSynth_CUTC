@@ -1157,15 +1157,27 @@ async def preview_job_sources(request: SourcePreviewRequest):
             if source.url in seen:
                 continue
             seen.add(source.url)
+            metadata = source.metadata or {}
+            reported_license = source.license or metadata.get("license") or metadata.get("license_title")
+            reported_language = getattr(source, "language", None) or metadata.get("language") or metadata.get("languages")
+            if isinstance(reported_license, dict):
+                reported_license = reported_license.get("name") or reported_license.get("id") or reported_license.get("spdx_id")
+            if isinstance(reported_language, dict):
+                reported_language = reported_language.get("name") or reported_language.get("code")
+            if isinstance(reported_language, list):
+                reported_language = [str(value) for value in reported_language if value]
+            elif reported_language is not None:
+                reported_language = str(reported_language)
             sources.append({
                 "url": source.url,
                 "title": source.title,
                 "description": source.description,
                 "source_type": source.source_type.value,
                 "quality_score": source.quality_score,
-                "license": source.license,
-                "language": getattr(source, "language", None) or source.metadata.get("language"),
-                "metadata": source.metadata,
+                "license": str(reported_license) if reported_license else None,
+                "license_status": "verify_access_and_terms" if metadata.get("catalogue_only") else ("reported" if reported_license else "not_provided"),
+                "language": reported_language,
+                "metadata": metadata,
             })
             if len(sources) >= max(1, min(request.max_sources, 20)):
                 break
