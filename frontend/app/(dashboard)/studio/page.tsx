@@ -267,7 +267,7 @@ export default function StudioPage() {
     }
   }, [naturalLanguageInput, optimizeQuery, searchQueryOverride, sourcePreview, resolvedLanguage, regionRestrictions.join(',')])
 
-  const handlePreviewExamples = useCallback(async () => {
+  const handlePreviewExamples = useCallback(async (preserveSelected = false) => {
     const selectedSources = (sourcePreview?.sources || [])
       .filter((source: any) => !excludedSourceUrls.includes(source.url) && !source.metadata?.catalogue_only)
       .slice(0, 5)
@@ -277,11 +277,14 @@ export default function StudioPage() {
     }
     setIsPreviewingExamples(true)
     setSubmitError(null)
-    setExampleBatchPreview(null)
+    if (!preserveSelected) setExampleBatchPreview(null)
     try {
       const preview = await api.previewJobExampleBatch({
         query: naturalLanguageInput,
         sources: selectedSources,
+        carry_forward_examples: preserveSelected ? exampleBatchPreview?.examples : undefined,
+        carry_forward_indices: preserveSelected ? selectedExampleIndexes : undefined,
+        carry_forward_token: preserveSelected ? exampleBatchPreview?.approved_examples_token : undefined,
         query_plan: sourcePreview.query_plan,
         dataset_type: selectedTemplate ? (datasetTypeMap[selectedTemplate] || 'sft') : datasetType,
         language: resolvedLanguage,
@@ -294,7 +297,7 @@ export default function StudioPage() {
     } finally {
       setIsPreviewingExamples(false)
     }
-  }, [sourcePreview, excludedSourceUrls, naturalLanguageInput, selectedTemplate, datasetType, resolvedLanguage])
+  }, [sourcePreview, excludedSourceUrls, naturalLanguageInput, selectedTemplate, datasetType, resolvedLanguage, exampleBatchPreview, selectedExampleIndexes])
 
   // Start the full job only after the user has seen the source preview.
   const handleGenerateDataset = useCallback(async () => {
@@ -559,15 +562,28 @@ export default function StudioPage() {
                           <p className="text-xs font-bold text-[#1B3B2B]">Build a sample batch from selected sources</p>
                           <p className="mt-1 text-[11px] text-[#55635B]">Extract, quality-filter, and generate up to 3 examples. Approved examples carry into the final dataset.</p>
                         </div>
-                        <Button
-                          variant="outline"
-                          className="gap-2 rounded-full border-[#D1D8CE] text-[#1B3B2B]"
-                          onClick={handlePreviewExamples}
-                          disabled={searchQueryDirty || isPreviewing || isPreviewingExamples || isSubmitting || !sourcePreview.sources?.some((source: any) => !excludedSourceUrls.includes(source.url) && !source.metadata?.catalogue_only)}
-                        >
-                          {isPreviewingExamples ? <Loader2 className="h-4 w-4 animate-spin" /> : <Sparkles className="h-4 w-4" />}
-                          {isPreviewingExamples ? 'Building examples...' : 'Generate example batch'}
-                        </Button>
+                        <div className="flex flex-wrap gap-2">
+                          <Button
+                            variant="outline"
+                            className="gap-2 rounded-full border-[#D1D8CE] text-[#1B3B2B]"
+                            onClick={() => handlePreviewExamples(false)}
+                            disabled={searchQueryDirty || isPreviewing || isPreviewingExamples || isSubmitting || !sourcePreview.sources?.some((source: any) => !excludedSourceUrls.includes(source.url) && !source.metadata?.catalogue_only)}
+                          >
+                            {isPreviewingExamples ? <Loader2 className="h-4 w-4 animate-spin" /> : <Sparkles className="h-4 w-4" />}
+                            {isPreviewingExamples ? 'Building examples...' : 'Generate fresh batch'}
+                          </Button>
+                          {exampleBatchPreview?.example_count > 0 && selectedExampleIndexes.length > 0 && selectedExampleIndexes.length < 3 && (
+                            <Button
+                              variant="outline"
+                              className="gap-2 rounded-full border-[#D1D8CE] text-[#1B3B2B]"
+                              onClick={() => handlePreviewExamples(true)}
+                              disabled={searchQueryDirty || isPreviewing || isPreviewingExamples || isSubmitting || !sourcePreview.sources?.some((source: any) => !excludedSourceUrls.includes(source.url) && !source.metadata?.catalogue_only)}
+                            >
+                              <Sparkles className="h-4 w-4" />
+                              {selectedExampleIndexes.length < exampleBatchPreview.example_count ? 'Replace excluded examples' : 'Add examples to fill batch'}
+                            </Button>
+                          )}
+                        </div>
                       </div>
                       {exampleBatchPreview && (
                         <div className="space-y-2" aria-live="polite">

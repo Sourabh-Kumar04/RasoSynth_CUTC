@@ -1071,6 +1071,9 @@ class SourcePreviewRequest(BaseModel):
 class ExampleBatchPreviewRequest(BaseModel):
     query: str
     sources: list[dict] = Field(min_length=1, max_length=5)
+    carry_forward_examples: list[dict] = Field(default_factory=list, max_length=3)
+    carry_forward_indices: Optional[list[int]] = Field(default=None, max_length=3)
+    carry_forward_token: Optional[str] = None
     query_plan: Optional[dict] = None
     dataset_type: str = "sft"
     language: str = "en"
@@ -1202,6 +1205,20 @@ async def preview_job_example_batch(request: ExampleBatchPreviewRequest):
     if not orchestrator or not orchestrator.router:
         raise HTTPException(status_code=503, detail="A configured AI provider is required to generate example records")
 
+    if request.carry_forward_examples:
+        expected_token = _sign_approved_examples(request.query, request.carry_forward_examples)
+        if not request.carry_forward_token or not hmac.compare_digest(request.carry_forward_token, expected_token):
+            raise HTTPException(status_code=400, detail="Previously reviewed examples are invalid. Generate a fresh preview batch.")
+        indices = request.carry_forward_indices
+        if indices is None:
+            indices = list(range(len(request.carry_forward_examples)))
+        if not indices or len(set(indices)) != len(indices) or any(index < 0 or index >= len(request.carry_forward_examples) for index in indices):
+            raise HTTPException(status_code=400, detail="Select valid examples to keep before requesting replacements.")
+    elif request.carry_forward_indices is not None or request.carry_forward_token:
+        raise HTTPException(status_code=400, detail="Carry-forward approval data is incomplete.")
+    else:
+        indices = []
+
     from types import SimpleNamespace
     from core.intent import UserIntent
     from pipeline.construction import ConstructionPipeline, DatasetType
@@ -1241,7 +1258,12 @@ async def preview_job_example_batch(request: ExampleBatchPreviewRequest):
     extractor = ExtractionPipeline(config, router=orchestrator.router)
     filtering = FilteringPipeline(orchestrator.router, config)
     construction = ConstructionPipeline(orchestrator.router, config)
-    examples = []
+    examples = [request.carry_forward_examples[index] for index in indices]
+    existing_example_keys = {
+        (" ".join(str(example.get("instruction", "")).casefold().split()),
+         " ".join(str(example.get("response", "")).casefold().split()))
+        for example in request.carry_forward_examples
+    }
     warnings = []
     sources_processed = 0
 
@@ -1298,6 +1320,13 @@ async def preview_job_example_batch(request: ExampleBatchPreviewRequest):
             previous_count = len(examples)
             async with asyncio.timeout(120):
                 async for constructed in construction.construct(filtered, intent, dataset_type=dataset_type):
+                    example_key = (
+                        " ".join(str(constructed.instruction or "").casefold().split()),
+                        " ".join(str(constructed.response or "").casefold().split()),
+                    )
+                    if example_key in existing_example_keys:
+                        continue
+                    existing_example_keys.add(example_key)
                     examples.append({
                         "instruction": constructed.instruction,
                         "response": constructed.response,
