@@ -18,7 +18,6 @@ from langgraph.checkpoint.memory import MemorySaver
 import operator
 from core.intent import UserIntent, IntentExtractionError
 from core.intent_extractor import extract_intent
-import json
 
 
 logger = logging.getLogger(__name__)
@@ -1918,7 +1917,7 @@ class DatasetOrchestrator:
                 )
             else:
                 intent = await extract_intent(
-                    raw_input=json.dumps(job.config),
+                    raw_input=str(job.config.get("target_domain", "")),
                     provider_router=self.router,
                     redis_client=getattr(self, 'redis_client', None),
                 )
