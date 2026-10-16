@@ -1196,7 +1196,7 @@ async def preview_job_sources(request: SourcePreviewRequest):
         "sources": sources,
         "source_count": len(sources),
         "preview_only": True,
-        "notice": "AIKosh catalogue results require access and license verification before dataset content is used.",
+        "notice": "AIKosh files are discovered from the permitted API scope. Review each dataset's access and reuse terms before using its content.",
     }
 
 

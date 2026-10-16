@@ -546,6 +546,7 @@ export default function StudioPage() {
                                   Language: {Array.isArray(source.language) ? source.language.join(', ') : (source.language || 'not listed')} · License: {source.license || 'not provided'}
                                   {['verify_access_and_terms', 'verify_before_use'].includes(source.license_status) ? ' · review access and reuse terms' : ''}
                                 </span>
+                                {source.metadata?.aikosh_file && <span className="mt-1 block text-[10px] font-medium text-[#1B3B2B]">AIKosh file: {source.metadata.aikosh_file.name} · {(Number(source.metadata.aikosh_file.size_bytes) / (1024 * 1024)).toFixed(2)} MiB · available for preview extraction</span>}
                                 {source.metadata?.catalogue_only && <span className="mt-1 block text-[10px] font-semibold text-amber-800">Catalogue listing only; dataset access and reuse terms must be verified before ingestion.</span>}
                               </span>
                             </label>

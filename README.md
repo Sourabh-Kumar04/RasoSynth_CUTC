@@ -88,7 +88,7 @@ pip install unsloth              # optional: 2-4× GPU speedup
 
 ### AIKosh Dataset Discovery (optional)
 
-Install the AIKosh SDK and set `AIKOSH_API_KEY` in `.env` using a key created from your AIKosh account settings to use authenticated dataset catalogue search. Discovery requests only the `permitted` scope. Results remain catalogue entries until the actual files and reuse terms are verified.
+Install the AIKosh SDK and set `AIKOSH_API_KEY` in `.env` using a key created from your AIKosh account settings to use authenticated dataset discovery. Discovery requests only the `permitted` scope. For each result, the app looks for a listed CSV, JSON, JSONL, TXT, or Markdown file up to 10 MiB and reads a bounded sample for grounded example generation. Results without a supported accessible file remain catalogue-only. Review the dataset's access and reuse terms before using its content; the API's permitted scope does not replace license review.
 
 ```bash
 pip install -e ".[aikosh]"
