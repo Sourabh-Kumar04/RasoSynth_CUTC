@@ -1123,8 +1123,39 @@ class DatasetOrchestrator:
             dataset_type = DatasetType.SFT
 
         samples = []
-
+        seen_sample_keys = set()
         target_dataset_size = config.get("dataset_size", 1000)
+
+        def sample_key(instruction: str, response: str) -> tuple[str, str]:
+            return (
+                " ".join(str(instruction or "").casefold().split()),
+                " ".join(str(response or "").casefold().split()),
+            )
+
+        # Reuse the server-signed examples the user reviewed before starting
+        # this job so preview generation is useful work rather than a throwaway.
+        for preview in config.get("approved_examples", []):
+            if len(samples) >= target_dataset_size:
+                break
+            instruction = str(preview.get("instruction", "")).strip()
+            response = str(preview.get("response", "")).strip()
+            if not instruction or not response:
+                continue
+            key = sample_key(instruction, response)
+            if key in seen_sample_keys:
+                continue
+            seen_sample_keys.add(key)
+            samples.append({
+                "instruction": instruction,
+                "response": response,
+                "input": preview.get("input"),
+                "conversation": preview.get("conversation"),
+                "metadata": preview.get("metadata", {}) or {},
+                "source_text": str(preview.get("source_text", ""))[:2000],
+                "quality_score": float(preview.get("quality_score", 0.0) or 0.0),
+                "difficulty_tier": preview.get("difficulty_tier", 3),
+                "curriculum_order": len(samples),
+            })
 
         # Check if we should use seedless synthetic generation
         generation_mode = config.get("generation_mode", "strict_source")
@@ -1165,7 +1196,7 @@ class DatasetOrchestrator:
             generator.reset_seen_topics()
 
             # Generate samples up to target_dataset_size using coverage matrix cells
-            for idx in range(target_dataset_size):
+            for idx in range(max(0, target_dataset_size - len(samples))):
                 if self._is_cancelled(job_id):
                     break
 
@@ -1193,6 +1224,10 @@ class DatasetOrchestrator:
                         )
 
                 if valid_sample and valid_sample.instruction and valid_sample.response:
+                    key = sample_key(valid_sample.instruction, valid_sample.response)
+                    if key in seen_sample_keys:
+                        continue
+                    seen_sample_keys.add(key)
                     samples.append({
                         "instruction": valid_sample.instruction,
                         "response": valid_sample.response,
@@ -1206,6 +1241,8 @@ class DatasetOrchestrator:
             # Source-based / Hybrid source generation
             construction = ConstructionPipeline(self.router, config)
             for item in filtered:
+                if len(samples) >= target_dataset_size:
+                    break
                 if self._is_cancelled(job_id):
                     break
 
@@ -1220,6 +1257,10 @@ class DatasetOrchestrator:
                     self.intent,
                     dataset_type=dataset_type
                 ):
+                    key = sample_key(constructed.instruction, constructed.response)
+                    if key in seen_sample_keys:
+                        continue
+                    seen_sample_keys.add(key)
                     source_metadata = item.get("metadata", {}) or {}
                     provenance = {
                         key: value for key, value in {
@@ -1297,6 +1338,10 @@ class DatasetOrchestrator:
                             break
 
                     if valid_sample and valid_sample.instruction and valid_sample.response:
+                        key = sample_key(valid_sample.instruction, valid_sample.response)
+                        if key in seen_sample_keys:
+                            continue
+                        seen_sample_keys.add(key)
                         samples.append({
                             "instruction": valid_sample.instruction,
                             "response": valid_sample.response,
@@ -1740,6 +1785,10 @@ class DatasetOrchestrator:
             config = job.get("config", {})
             mode = config.get("generation_mode", "strict_source")
             allow_fallback = config.get("allow_seedless_generation", False)
+
+            if config.get("approved_examples"):
+                logger.info("No new samples passed filtering; retaining the signed preview batch approved by the user.")
+                return "continue"
             
             if mode == "synthetic" or (mode == "hybrid" and allow_fallback):
                 logger.info("Filter produced 0 samples, but falling back to pure synthetic planning/generation.")

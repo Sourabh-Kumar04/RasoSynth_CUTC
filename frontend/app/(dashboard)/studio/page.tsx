@@ -312,6 +312,8 @@ export default function StudioPage() {
         specialized_queries: sourcePreview?.specialized_queries || [],
         query_plan: sourcePreview?.query_plan,
         approved_sources: (sourcePreview?.sources || []).filter((source: any) => !excludedSourceUrls.includes(source.url) && !source.metadata?.catalogue_only),
+        approved_examples: exampleBatchPreview.examples,
+        approved_examples_token: exampleBatchPreview.approved_examples_token,
         excluded_source_urls: excludedSourceUrls,
         human_review: humanReviewEnabled,
         human_review_percentage: humanReviewPercentage,
@@ -506,7 +508,7 @@ export default function StudioPage() {
                       <div className="flex flex-wrap items-center justify-between gap-3">
                         <div>
                           <p className="text-xs font-bold text-[#1B3B2B]">Build a sample batch from selected sources</p>
-                          <p className="mt-1 text-[11px] text-[#55635B]">Extract, quality-filter, and generate up to 3 examples. This does not create a job.</p>
+                          <p className="mt-1 text-[11px] text-[#55635B]">Extract, quality-filter, and generate up to 3 examples. Approved examples carry into the final dataset.</p>
                         </div>
                         <Button
                           variant="outline"
@@ -538,6 +540,12 @@ export default function StudioPage() {
                                 <p className="whitespace-pre-wrap text-xs leading-relaxed text-[#1B3B2B]">{example.response}</p>
                               </div>
                               <a href={example.source_url} target="_blank" rel="noreferrer" className="block truncate text-[10px] text-emerald-800 underline">Source: {example.source_url}</a>
+                              {example.source_text && (
+                                <details className="rounded-lg border border-[#D1D8CE] bg-white p-2">
+                                  <summary className="cursor-pointer text-[10px] font-semibold text-[#55635B]">Check source context</summary>
+                                  <p className="mt-2 max-h-32 overflow-y-auto whitespace-pre-wrap text-[10px] leading-relaxed text-[#55635B]">{example.source_text}</p>
+                                </details>
+                              )}
                             </article>
                           ))}
                           {exampleBatchPreview.warnings?.map((warning: string, index: number) => (

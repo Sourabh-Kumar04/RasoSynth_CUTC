@@ -200,6 +200,21 @@ class CSRFTokenManager:
 _csrf_manager = CSRFTokenManager()
 
 
+def _sign_approved_examples(query: str, examples: list[dict]) -> str:
+    """Sign server-generated preview examples so jobs cannot inject records."""
+    payload = json.dumps(
+        {"query": query, "examples": examples},
+        sort_keys=True,
+        separators=(",", ":"),
+        default=str,
+    )
+    # Prefer configured shared secrets so a preview request handled by one API
+    # worker can be submitted to another worker in a multi-process deployment.
+    from core.config import get_settings
+    shared_secret = os.getenv("CSRF_SECRET") or get_settings().jwt_secret or _csrf_manager._secret
+    return hmac.new(shared_secret.encode(), payload.encode(), "sha256").hexdigest()
+
+
 class CSRFMiddleware(BaseHTTPMiddleware):
     """Middleware that validates CSRF tokens on state-changing methods (POST, PUT, DELETE).
 
@@ -1254,6 +1269,7 @@ async def preview_job_example_batch(request: ExampleBatchPreviewRequest):
                         "instruction": constructed.instruction,
                         "response": constructed.response,
                         "input": constructed.input,
+                        "source_text": filtered.content[:2000],
                         "quality_score": filtered.quality_score,
                         "difficulty_tier": constructed.difficulty_tier,
                         "source_url": url,
@@ -1271,9 +1287,11 @@ async def preview_job_example_batch(request: ExampleBatchPreviewRequest):
         if len(examples) >= request.max_examples:
             break
 
+    final_examples = examples[:request.max_examples]
     return {
-        "examples": examples[:request.max_examples],
-        "example_count": min(len(examples), request.max_examples),
+        "examples": final_examples,
+        "example_count": len(final_examples),
+        "approved_examples_token": _sign_approved_examples(request.query, final_examples),
         "sources_processed": sources_processed,
         "warnings": warnings,
         "preview_only": True,
@@ -1291,6 +1309,11 @@ async def create_job(request: JobRequest, background_tasks: BackgroundTasks):
         raise HTTPException(status_code=503, detail="Orchestrator not initialized")
     if not db:
         raise HTTPException(status_code=503, detail="Database not available")
+
+    if request.approved_examples:
+        expected_token = _sign_approved_examples(request.target_domain, request.approved_examples)
+        if not request.approved_examples_token or not hmac.compare_digest(request.approved_examples_token, expected_token):
+            raise HTTPException(status_code=400, detail="Example batch is invalid or no longer matches this query. Preview the examples again.")
 
     job_id = str(uuid.uuid4())
     now = datetime.utcnow()
