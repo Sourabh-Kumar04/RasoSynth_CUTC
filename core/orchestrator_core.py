@@ -278,7 +278,7 @@ class ConstraintAnalyzer:
 class DatasetOrchestrator:
     """Enhanced orchestrator with constraint awareness and intelligent adaptation."""
 
-    def __init__(self, config: dict, router, db=None, observability=None, ws_manager=None):
+    def __init__(self, config: dict, router, db=None, observability=None, ws_manager=None, redis_client=None):
         self.config = config
         self.router = router
         self.db = db
@@ -297,7 +297,7 @@ class DatasetOrchestrator:
         self.active_jobs: dict[str, Job] = {}
         self._cancellation_events: dict[str, asyncio.Event] = {}
         self.constraint_analyzer = ConstraintAnalyzer(config)
-        self.redis_client = None  # Redis client for intent caching (optional)
+        self.redis_client = redis_client  # Redis client for intent caching (optional)
 
     def _is_source_relevant(self, source, intent: UserIntent | None) -> bool:
         """

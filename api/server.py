@@ -507,6 +507,7 @@ async def lifespan(app: FastAPI):
                 db=db,
                 observability=observability,
                 ws_manager=ws_manager,
+                redis_client=cache.redis if cache is not None else None,
             )
             logger.info("  ✓ DatasetOrchestrator initialized")
         except Exception as e:
@@ -1151,7 +1152,11 @@ async def preview_job_sources(request: SourcePreviewRequest):
             logger.warning("Ignoring invalid saved query plan: %s", exc)
     if intent is None and request.optimize_query and orchestrator.router:
         try:
-            intent = await extract_intent(request.query, orchestrator.router)
+            intent = await extract_intent(
+                request.query,
+                orchestrator.router,
+                redis_client=cache.redis if cache is not None else None,
+            )
         except Exception as exc:
             logger.warning("Query planning failed; previewing the original request: %s", exc)
 
