@@ -481,7 +481,7 @@ class DatasetOrchestrator:
         """
         job = state["job"]
         job_id = job["id"]
-        config = job["config"]
+        config = {**self.config, **job["config"]}
         intent = state["intent"]
 
         self._update_job_status(job_id, "discover", 0.1)
@@ -816,7 +816,8 @@ class DatasetOrchestrator:
 
         from pipeline.extraction import ExtractionPipeline
 
-        extraction = ExtractionPipeline(self.config, self.router)
+        extraction_config = {**self.config, **job["config"]}
+        extraction = ExtractionPipeline(extraction_config, self.router)
         extracted = []
 
         for source in sources:
@@ -935,7 +936,8 @@ class DatasetOrchestrator:
 
         from pipeline.filtering import FilteringPipeline
 
-        filtering = FilteringPipeline(self.router, self.config)
+        filtering_config = {**self.config, **job["config"]}
+        filtering = FilteringPipeline(self.router, filtering_config)
         filtered = []
 
         target_domain = (intent.domain if intent else "") or job["config"].get("target_domain", "")
