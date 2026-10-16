@@ -326,7 +326,7 @@ class APIClient {
     })
   }
 
-  async previewJobSources(data: { query: string; optimize_query?: boolean; language?: string; region_restrictions?: string[]; max_sources?: number }): Promise<any> {
+  async previewJobSources(data: { query: string; optimize_query?: boolean; override_query?: string; query_plan?: Record<string, any>; language?: string; region_restrictions?: string[]; max_sources?: number }): Promise<any> {
     return this.request<any>('/jobs/preview', {
       method: 'POST',
       body: JSON.stringify(data),

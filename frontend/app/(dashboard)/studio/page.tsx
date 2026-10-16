@@ -197,6 +197,8 @@ export default function StudioPage() {
   const [humanReviewPercentage, setHumanReviewPercentage] = useState(10)
   const [optimizeQuery, setOptimizeQuery] = useState(true)
   const [sourcePreview, setSourcePreview] = useState<any>(null)
+  const [searchQueryOverride, setSearchQueryOverride] = useState('')
+  const [searchQueryDirty, setSearchQueryDirty] = useState(false)
   const [exampleBatchPreview, setExampleBatchPreview] = useState<any>(null)
   const [excludedSourceUrls, setExcludedSourceUrls] = useState<string[]>([])
 
@@ -247,18 +249,22 @@ export default function StudioPage() {
       const preview = await api.previewJobSources({
         query: naturalLanguageInput,
         optimize_query: optimizeQuery,
+        override_query: searchQueryOverride.trim() || undefined,
+        query_plan: searchQueryOverride.trim() && sourcePreview?.query_plan ? sourcePreview.query_plan : undefined,
         language: resolvedLanguage,
         region_restrictions: regionRestrictions,
         max_sources: 8,
       })
       setSourcePreview(preview)
+      setSearchQueryOverride(preview.improved_query || '')
+      setSearchQueryDirty(false)
       setExcludedSourceUrls(preview.sources.filter((source: any) => source.metadata?.catalogue_only).map((source: any) => source.url))
     } catch (err: any) {
       setSubmitError(err.message || 'Could not preview sources')
     } finally {
       setIsPreviewing(false)
     }
-  }, [naturalLanguageInput, optimizeQuery, resolvedLanguage, regionRestrictions.join(',')])
+  }, [naturalLanguageInput, optimizeQuery, searchQueryOverride, sourcePreview, resolvedLanguage, regionRestrictions.join(',')])
 
   const handlePreviewExamples = useCallback(async () => {
     const selectedSources = (sourcePreview?.sources || [])
@@ -441,6 +447,8 @@ export default function StudioPage() {
                     onChange={(e) => {
                       setNaturalLanguageInput(e.target.value)
                       setSourcePreview(null)
+                      setSearchQueryOverride('')
+                      setSearchQueryDirty(false)
                       setExampleBatchPreview(null)
                     }}
                     placeholder="e.g., Generate a multilingual legal reasoning dataset with 10,000 examples in English, Spanish, and French. Focus on contract analysis and include explanations for each legal decision..."
@@ -455,7 +463,7 @@ export default function StudioPage() {
 
                 {/* Primary Action Buttons (Immediately Visible Without Scrolling) */}
                 <div className="flex items-center gap-2">
-                  <Button variant="outline" className="flex-1 gap-2 border-[#D1D8CE] text-[#1B3B2B] hover:bg-[#E8ECE6] rounded-full" disabled={isSubmitting || isPreviewing || isPreviewingExamples} onClick={() => { setOptimizeQuery(!optimizeQuery); setSourcePreview(null); setExampleBatchPreview(null) }}>
+                  <Button variant="outline" className="flex-1 gap-2 border-[#D1D8CE] text-[#1B3B2B] hover:bg-[#E8ECE6] rounded-full" disabled={isSubmitting || isPreviewing || isPreviewingExamples} onClick={() => { setOptimizeQuery(!optimizeQuery); setSourcePreview(null); setSearchQueryOverride(''); setSearchQueryDirty(false); setExampleBatchPreview(null) }}>
                     <Sparkles className="h-4 w-4 text-emerald-600" />
                     Query optimization {optimizeQuery ? 'on' : 'off'}
                   </Button>
@@ -483,8 +491,23 @@ export default function StudioPage() {
                       <Badge className="bg-[#E8ECE6] text-[#1B3B2B]">Preview only</Badge>
                     </div>
                     <div className="rounded-xl border border-[#D1D8CE] bg-white p-3">
-                      <p className="text-[10px] font-mono uppercase tracking-wider text-[#708076]">Improved search query</p>
-                      <p className="mt-1 text-xs text-[#1B3B2B]">{sourcePreview.improved_query}</p>
+                      <label htmlFor="improved-search-query" className="text-[10px] font-mono uppercase tracking-wider text-[#708076]">Improved search query · editable</label>
+                      <textarea
+                        id="improved-search-query"
+                        value={searchQueryOverride}
+                        onChange={(event) => {
+                          setSearchQueryOverride(event.target.value)
+                          setSearchQueryDirty(event.target.value !== sourcePreview.improved_query)
+                          setExampleBatchPreview(null)
+                        }}
+                        rows={2}
+                        className="mt-1 w-full rounded-lg border border-[#D1D8CE] bg-[#F6F7F4] p-2 text-xs text-[#1B3B2B] focus:outline-none focus:ring-2 focus:ring-[#1B3B2B]"
+                      />
+                      {searchQueryDirty && <p className="mt-1 text-[10px] text-amber-800">Refresh the source batch to apply this query before generating examples.</p>}
+                      <Button variant="outline" size="sm" className="mt-2 rounded-full border-[#D1D8CE] text-[#1B3B2B]" onClick={handlePreviewSources} disabled={!searchQueryDirty || !searchQueryOverride.trim() || isPreviewing || isSubmitting || isPreviewingExamples}>
+                        {isPreviewing ? <Loader2 className="mr-2 h-3.5 w-3.5 animate-spin" /> : <Database className="mr-2 h-3.5 w-3.5" />}
+                        Search with revised query
+                      </Button>
                     </div>
                     {sourcePreview.sources?.length ? (
                       <div className="space-y-2 max-h-72 overflow-y-auto">
@@ -527,7 +550,7 @@ export default function StudioPage() {
                           variant="outline"
                           className="gap-2 rounded-full border-[#D1D8CE] text-[#1B3B2B]"
                           onClick={handlePreviewExamples}
-                          disabled={isPreviewingExamples || isSubmitting || !sourcePreview.sources?.some((source: any) => !excludedSourceUrls.includes(source.url) && !source.metadata?.catalogue_only)}
+                          disabled={searchQueryDirty || isPreviewing || isPreviewingExamples || isSubmitting || !sourcePreview.sources?.some((source: any) => !excludedSourceUrls.includes(source.url) && !source.metadata?.catalogue_only)}
                         >
                           {isPreviewingExamples ? <Loader2 className="h-4 w-4 animate-spin" /> : <Sparkles className="h-4 w-4" />}
                           {isPreviewingExamples ? 'Building examples...' : 'Generate example batch'}
@@ -573,7 +596,7 @@ export default function StudioPage() {
                       <Button
                         className="gap-2 rounded-full bg-[#1B3B2B] text-white hover:bg-[#142D21]"
                         onClick={handleGenerateDataset}
-                        disabled={isSubmitting || isPreviewingExamples || !exampleBatchPreview?.example_count}
+                        disabled={searchQueryDirty || isPreviewing || isSubmitting || isPreviewingExamples || !exampleBatchPreview?.example_count}
                       >
                         {isSubmitting ? <Loader2 className="h-4 w-4 animate-spin" /> : <ArrowRight className="h-4 w-4" />}
                         {isSubmitting ? 'Starting dataset job...' : 'Continue with this search'}

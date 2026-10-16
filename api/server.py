@@ -1061,6 +1061,8 @@ async def get_csrf_token(request: Request):
 class SourcePreviewRequest(BaseModel):
     query: str
     optimize_query: bool = True
+    override_query: Optional[str] = None
+    query_plan: Optional[dict] = None
     language: str = "en"
     region_restrictions: list[str] = Field(default_factory=list)
     max_sources: int = 8
@@ -1084,15 +1086,34 @@ async def preview_job_sources(request: SourcePreviewRequest):
     from pipeline.discovery import DiscoveryPipeline
 
     intent = None
-    if request.optimize_query and orchestrator.router:
+    if request.query_plan:
+        try:
+            intent = UserIntent(
+                primary_task=request.query_plan.get("primary_task", "custom dataset generation"),
+                domain=request.query_plan.get("domain") or request.query.strip(),
+                modality=request.query_plan.get("modality", "text"),
+                anti_domains=request.query_plan.get("anti_domains", []),
+                key_entities=request.query_plan.get("key_entities", []),
+                specialized_queries=request.query_plan.get("specialized_queries", []),
+                constraints=request.query_plan.get("constraints", []),
+                output_format=request.query_plan.get("output_format", "jsonl"),
+                confidence=float(request.query_plan.get("confidence", 0.5)),
+                raw_input=request.query,
+            )
+        except (TypeError, ValueError) as exc:
+            logger.warning("Ignoring invalid saved query plan: %s", exc)
+    if intent is None and request.optimize_query and orchestrator.router:
         try:
             intent = await extract_intent(request.query, orchestrator.router)
         except Exception as exc:
             logger.warning("Query planning failed; previewing the original request: %s", exc)
 
     specialized = list(getattr(intent, "specialized_queries", []) or [])
-    improved_query = specialized[0] if specialized else request.query.strip()
-    planned_queries = specialized[:10] or [improved_query]
+    improved_query = (request.override_query or "").strip() or (specialized[0] if specialized else request.query.strip())
+    if request.override_query and request.override_query.strip():
+        planned_queries = [improved_query] + [query for query in specialized if query != improved_query][:9]
+    else:
+        planned_queries = specialized[:10] or [improved_query]
     preview_queries = planned_queries[:2]
     query_plan = ({
         "primary_task": intent.primary_task,
