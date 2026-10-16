@@ -143,11 +143,13 @@ export default function StudioPage() {
   const [humanReviewPercentage, setHumanReviewPercentage] = useState(10)
   const [optimizeQuery, setOptimizeQuery] = useState(true)
   const [sourcePreview, setSourcePreview] = useState<any>(null)
+  const [exampleBatchPreview, setExampleBatchPreview] = useState<any>(null)
   const [excludedSourceUrls, setExcludedSourceUrls] = useState<string[]>([])
 
   // API state
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [isPreviewing, setIsPreviewing] = useState(false)
+  const [isPreviewingExamples, setIsPreviewingExamples] = useState(false)
   const [submitError, setSubmitError] = useState<string | null>(null)
   const [createdJob, setCreatedJob] = useState<any>(null)
 
@@ -175,6 +177,7 @@ export default function StudioPage() {
     setIsPreviewing(true)
     setSubmitError(null)
     setSourcePreview(null)
+    setExampleBatchPreview(null)
     setExcludedSourceUrls([])
     try {
       const preview = await api.previewJobSources({
@@ -191,10 +194,42 @@ export default function StudioPage() {
     }
   }, [naturalLanguageInput, optimizeQuery])
 
+  const handlePreviewExamples = useCallback(async () => {
+    const selectedSources = (sourcePreview?.sources || [])
+      .filter((source: any) => !excludedSourceUrls.includes(source.url) && !source.metadata?.catalogue_only)
+      .slice(0, 5)
+    if (!selectedSources.length) {
+      setSubmitError('Select at least one accessible source before building example records')
+      return
+    }
+    setIsPreviewingExamples(true)
+    setSubmitError(null)
+    setExampleBatchPreview(null)
+    try {
+      const preview = await api.previewJobExampleBatch({
+        query: naturalLanguageInput,
+        sources: selectedSources,
+        query_plan: sourcePreview.query_plan,
+        dataset_type: selectedTemplate ? (datasetTypeMap[selectedTemplate] || 'sft') : datasetType,
+        language: 'en',
+        max_examples: 3,
+      })
+      setExampleBatchPreview(preview)
+    } catch (err: any) {
+      setSubmitError(err.message || 'Could not generate the example batch')
+    } finally {
+      setIsPreviewingExamples(false)
+    }
+  }, [sourcePreview, excludedSourceUrls, naturalLanguageInput, selectedTemplate, datasetType])
+
   // Start the full job only after the user has seen the source preview.
   const handleGenerateDataset = useCallback(async () => {
     if (!naturalLanguageInput.trim()) {
       setSubmitError('Please describe your dataset')
+      return
+    }
+    if (!exampleBatchPreview?.example_count) {
+      setSubmitError('Generate and review at least one source-grounded example before continuing')
       return
     }
 
@@ -237,7 +272,7 @@ export default function StudioPage() {
     } finally {
       setIsSubmitting(false)
     }
-  }, [naturalLanguageInput, selectedTemplate, targetSize, qualityLevel, outputFormat, selectedProviders, generationMode, datasetType, sourcePreview, excludedSourceUrls, humanReviewEnabled, humanReviewPercentage, router])
+  }, [naturalLanguageInput, selectedTemplate, targetSize, qualityLevel, outputFormat, selectedProviders, generationMode, datasetType, sourcePreview, exampleBatchPreview, excludedSourceUrls, humanReviewEnabled, humanReviewPercentage, router])
 
   return (
     <div className="space-y-6 w-full pb-8">
@@ -333,6 +368,7 @@ export default function StudioPage() {
                     onChange={(e) => {
                       setNaturalLanguageInput(e.target.value)
                       setSourcePreview(null)
+                      setExampleBatchPreview(null)
                     }}
                     placeholder="e.g., Generate a multilingual legal reasoning dataset with 10,000 examples in English, Spanish, and French. Focus on contract analysis and include explanations for each legal decision..."
                     className="w-full h-36 p-4 rounded-xl border border-[#D1D8CE] bg-[#F6F7F4] text-[#1B3B2B] text-xs resize-none focus:outline-none focus:ring-2 focus:ring-[#1B3B2B] placeholder:text-[#809085]"
@@ -346,7 +382,7 @@ export default function StudioPage() {
 
                 {/* Primary Action Buttons (Immediately Visible Without Scrolling) */}
                 <div className="flex items-center gap-2">
-                  <Button variant="outline" className="flex-1 gap-2 border-[#D1D8CE] text-[#1B3B2B] hover:bg-[#E8ECE6] rounded-full" disabled={isSubmitting || isPreviewing} onClick={() => { setOptimizeQuery(!optimizeQuery); setSourcePreview(null) }}>
+                  <Button variant="outline" className="flex-1 gap-2 border-[#D1D8CE] text-[#1B3B2B] hover:bg-[#E8ECE6] rounded-full" disabled={isSubmitting || isPreviewing || isPreviewingExamples} onClick={() => { setOptimizeQuery(!optimizeQuery); setSourcePreview(null); setExampleBatchPreview(null) }}>
                     <Sparkles className="h-4 w-4 text-emerald-600" />
                     Query optimization {optimizeQuery ? 'on' : 'off'}
                   </Button>
@@ -387,7 +423,10 @@ export default function StudioPage() {
                                 type="checkbox"
                                 checked={!excluded}
                                 disabled={Boolean(source.metadata?.catalogue_only)}
-                                onChange={() => setExcludedSourceUrls((urls) => excluded ? urls.filter((url) => url !== source.url) : [...urls, source.url])}
+                                onChange={() => {
+                                  setExcludedSourceUrls((urls) => excluded ? urls.filter((url) => url !== source.url) : [...urls, source.url])
+                                  setExampleBatchPreview(null)
+                                }}
                                 aria-label={`Include ${source.title}`}
                                 className="mt-0.5 accent-[#1B3B2B]"
                               />
@@ -405,12 +444,57 @@ export default function StudioPage() {
                       <p className="rounded-xl border border-dashed border-[#C8D5C9] p-4 text-xs text-[#55635B]">No sources appeared in this batch. Refine the request or broaden its topic, language, or region before continuing.</p>
                     )}
                     {sourcePreview.notice && <p className="text-[10px] leading-relaxed text-[#708076]">{sourcePreview.notice}</p>}
+                    <div className="space-y-3 rounded-xl border border-[#D1D8CE] bg-white p-3">
+                      <div className="flex flex-wrap items-center justify-between gap-3">
+                        <div>
+                          <p className="text-xs font-bold text-[#1B3B2B]">Build a sample batch from selected sources</p>
+                          <p className="mt-1 text-[11px] text-[#55635B]">Extract, quality-filter, and generate up to 3 examples. This does not create a job.</p>
+                        </div>
+                        <Button
+                          variant="outline"
+                          className="gap-2 rounded-full border-[#D1D8CE] text-[#1B3B2B]"
+                          onClick={handlePreviewExamples}
+                          disabled={isPreviewingExamples || isSubmitting || !sourcePreview.sources?.some((source: any) => !excludedSourceUrls.includes(source.url) && !source.metadata?.catalogue_only)}
+                        >
+                          {isPreviewingExamples ? <Loader2 className="h-4 w-4 animate-spin" /> : <Sparkles className="h-4 w-4" />}
+                          {isPreviewingExamples ? 'Building examples...' : 'Generate example batch'}
+                        </Button>
+                      </div>
+                      {exampleBatchPreview && (
+                        <div className="space-y-2" aria-live="polite">
+                          <p className="text-[10px] font-mono uppercase tracking-wider text-[#55635B]">
+                            {exampleBatchPreview.example_count} grounded examples · {exampleBatchPreview.sources_processed} sources processed
+                          </p>
+                          {exampleBatchPreview.examples?.map((example: any, index: number) => (
+                            <article key={`${example.source_url}-${index}`} className="space-y-2 rounded-xl border border-[#E2E6E0] bg-[#F6F7F4] p-3">
+                              <div className="flex items-center justify-between gap-2 text-[10px] font-mono text-[#708076]">
+                                <span>Example {index + 1} · quality {Math.round((example.quality_score || 0) * 100)}%</span>
+                                <span className="truncate">{example.source_title || example.source_type}</span>
+                              </div>
+                              <div>
+                                <p className="mb-1 text-[10px] font-semibold uppercase text-[#55635B]">Instruction</p>
+                                <p className="whitespace-pre-wrap text-xs leading-relaxed text-[#1B3B2B]">{example.instruction}</p>
+                              </div>
+                              <div>
+                                <p className="mb-1 text-[10px] font-semibold uppercase text-[#55635B]">Response</p>
+                                <p className="whitespace-pre-wrap text-xs leading-relaxed text-[#1B3B2B]">{example.response}</p>
+                              </div>
+                              <a href={example.source_url} target="_blank" rel="noreferrer" className="block truncate text-[10px] text-emerald-800 underline">Source: {example.source_url}</a>
+                            </article>
+                          ))}
+                          {exampleBatchPreview.warnings?.map((warning: string, index: number) => (
+                            <p key={index} className="text-[11px] text-amber-800">{warning}</p>
+                          ))}
+                          {!exampleBatchPreview.example_count && <p className="text-xs text-amber-800">No examples passed the preview quality checks. Refine the request or choose different sources.</p>}
+                        </div>
+                      )}
+                    </div>
                     <div className="flex flex-wrap items-center justify-between gap-3 border-t border-[#D1D8CE] pt-3">
-                      <span className="text-[11px] text-[#55635B]">The full crawl and AI generation start only after you continue.</span>
+                      <span className="text-[11px] text-[#55635B]">Review these examples. Edit your query or sources to regenerate them.</span>
                       <Button
                         className="gap-2 rounded-full bg-[#1B3B2B] text-white hover:bg-[#142D21]"
                         onClick={handleGenerateDataset}
-                        disabled={isSubmitting || !sourcePreview.sources?.some((source: any) => !excludedSourceUrls.includes(source.url))}
+                        disabled={isSubmitting || isPreviewingExamples || !exampleBatchPreview?.example_count}
                       >
                         {isSubmitting ? <Loader2 className="h-4 w-4 animate-spin" /> : <ArrowRight className="h-4 w-4" />}
                         {isSubmitting ? 'Starting dataset job...' : 'Continue with this search'}
@@ -487,6 +571,7 @@ export default function StudioPage() {
                                 setNaturalLanguageInput(preset.prompt)
                                 setTargetSize(preset.size)
                                 setDatasetType(preset.type)
+                                setExampleBatchPreview(null)
                                 setDatasetName(preset.title)
                               }}
                             >
@@ -609,7 +694,7 @@ export default function StudioPage() {
 
                 <div className="space-y-1.5">
                   <label className="text-xs font-bold text-[#1B3B2B]">Dataset Type</label>
-                  <Select value={datasetType} onValueChange={setDatasetType}>
+                  <Select value={datasetType} onValueChange={(value) => { setDatasetType(value); setExampleBatchPreview(null) }}>
                     <SelectTrigger className="rounded-full border-[#D1D8CE] text-xs">
                       <SelectValue />
                     </SelectTrigger>
@@ -808,7 +893,7 @@ export default function StudioPage() {
                   'cursor-pointer transition-all border-[#E2E6E0] bg-white rounded-2xl card-shadow hover:border-[#1B3B2B]',
                   selectedTemplate === template.id && 'border-[#1B3B2B] bg-[#E8ECE6]/40'
                 )}
-                onClick={() => setSelectedTemplate(template.id)}
+                onClick={() => { setSelectedTemplate(template.id); setExampleBatchPreview(null) }}
               >
                 <CardContent className="p-4">
                   <div className="flex items-start justify-between mb-3">

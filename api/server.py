@@ -1051,6 +1051,15 @@ class SourcePreviewRequest(BaseModel):
     max_sources: int = 8
 
 
+class ExampleBatchPreviewRequest(BaseModel):
+    query: str
+    sources: list[dict] = Field(min_length=1, max_length=5)
+    query_plan: Optional[dict] = None
+    dataset_type: str = "sft"
+    language: str = "en"
+    max_examples: int = Field(default=3, ge=1, le=3)
+
+
 @app.post("/jobs/preview", tags=["Jobs"])
 async def preview_job_sources(request: SourcePreviewRequest):
     """Build an improved search plan and fetch a small source-only preview."""
@@ -1136,6 +1145,138 @@ async def preview_job_sources(request: SourcePreviewRequest):
         "source_count": len(sources),
         "preview_only": True,
         "notice": "AIKosh catalogue results require access and license verification before dataset content is used.",
+    }
+
+
+@app.post("/jobs/preview/batch", tags=["Jobs"])
+async def preview_job_example_batch(request: ExampleBatchPreviewRequest):
+    """Extract, filter, and generate a tiny grounded example batch for approval."""
+    if not orchestrator or not orchestrator.router:
+        raise HTTPException(status_code=503, detail="A configured AI provider is required to generate example records")
+
+    from types import SimpleNamespace
+    from core.intent import UserIntent
+    from pipeline.construction import ConstructionPipeline, DatasetType
+    from pipeline.extraction import ExtractionPipeline, _is_safe_url
+    from pipeline.filtering import FilteringPipeline
+    from pipeline.discovery import SourceType
+
+    plan = request.query_plan or {}
+    intent = UserIntent(
+        primary_task=plan.get("primary_task", "custom dataset generation"),
+        domain=plan.get("domain") or request.query.strip(),
+        modality=plan.get("modality", "text"),
+        anti_domains=plan.get("anti_domains", []),
+        key_entities=plan.get("key_entities", []),
+        specialized_queries=plan.get("specialized_queries", [request.query.strip()]),
+        constraints=plan.get("constraints", []),
+        output_format=plan.get("output_format", "jsonl"),
+        confidence=float(plan.get("confidence", 0.5)),
+        raw_input=request.query,
+    )
+    config = {
+        "target_domain": intent.domain,
+        "dataset_type": request.dataset_type,
+        "language": request.language,
+        "quality_level": "high",
+        "quality_threshold": 0.55,
+        "timeout": 20,
+        "min_length": 80,
+        "max_length": 20000,
+        "synthetic_ratio": 0.0,
+    }
+    try:
+        dataset_type = DatasetType(request.dataset_type)
+    except ValueError:
+        dataset_type = DatasetType.SFT
+
+    extractor = ExtractionPipeline(config, router=orchestrator.router)
+    filtering = FilteringPipeline(orchestrator.router, config)
+    construction = ConstructionPipeline(orchestrator.router, config)
+    examples = []
+    warnings = []
+    sources_processed = 0
+
+    for source_data in request.sources:
+        metadata = source_data.get("metadata") or {}
+        if metadata.get("catalogue_only"):
+            warnings.append("Skipped an AIKosh catalogue page; choose a dataset download you can access and whose license you have verified.")
+            continue
+        url = str(source_data.get("url", ""))
+        is_safe, reason = _is_safe_url(url)
+        if not is_safe:
+            warnings.append(f"Skipped unsafe source URL: {reason}")
+            continue
+        try:
+            source_type = SourceType(source_data.get("source_type", SourceType.WEB_PAGE.value))
+        except ValueError:
+            source_type = SourceType.WEB_PAGE
+        source = SimpleNamespace(
+            url=url,
+            source_type=source_type,
+            title=source_data.get("title", ""),
+            description=source_data.get("description", ""),
+            license=source_data.get("license"),
+            metadata=metadata,
+            metadata__=metadata,
+        )
+
+        try:
+            extracted = None
+            async with asyncio.timeout(120):
+                async for content in extractor.extract(source):
+                    if content.content and content.content_type != "error":
+                        extracted = content
+                        break
+            if extracted is None:
+                warnings.append(f"Could not extract usable text from {source.title or url}")
+                continue
+            sources_processed += 1
+
+            provenance = {
+                "source_url": url,
+                "source_type": source_type.value,
+                "source_title": source.title,
+                "license": source.license,
+                "language": extracted.language or request.language,
+            }
+            extracted.metadata = {**(extracted.metadata or {}), **{k: v for k, v in provenance.items() if v}}
+            filtered = await asyncio.wait_for(filtering.filter(extracted, intent), timeout=60)
+            if not filtered:
+                warnings.append(f"Source text did not pass quality checks: {source.title or url}")
+                continue
+
+            filtered.metadata = {**(filtered.metadata or {}), **{k: v for k, v in provenance.items() if v}}
+            previous_count = len(examples)
+            async with asyncio.timeout(120):
+                async for constructed in construction.construct(filtered, intent, dataset_type=dataset_type):
+                    examples.append({
+                        "instruction": constructed.instruction,
+                        "response": constructed.response,
+                        "input": constructed.input,
+                        "quality_score": filtered.quality_score,
+                        "difficulty_tier": constructed.difficulty_tier,
+                        "source_url": url,
+                        "source_title": source.title,
+                        "source_type": source_type.value,
+                        "metadata": {**(constructed.metadata or {}), **provenance},
+                    })
+                    if len(examples) >= request.max_examples:
+                        break
+            if len(examples) == previous_count:
+                warnings.append(f"No valid examples were returned for {source.title or url}")
+        except Exception as exc:
+            logger.warning("Example batch preview failed for %s: %s", url, exc)
+            warnings.append(f"Could not build examples from {source.title or url}: {exc}")
+        if len(examples) >= request.max_examples:
+            break
+
+    return {
+        "examples": examples[:request.max_examples],
+        "example_count": min(len(examples), request.max_examples),
+        "sources_processed": sources_processed,
+        "warnings": warnings,
+        "preview_only": True,
     }
 
 @app.post("/jobs", response_model=JobResponse, status_code=201, tags=["Jobs"])

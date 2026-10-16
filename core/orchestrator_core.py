@@ -15,11 +15,6 @@ from datetime import datetime
 from enum import Enum
 from langgraph.graph import StateGraph, END
 from langgraph.checkpoint.memory import MemorySaver
-try:
-    from langgraph.checkpoint.postgres import AsyncPostgresSaver
-    POSTGRES_SAVER_AVAILABLE = True
-except ImportError:
-    POSTGRES_SAVER_AVAILABLE = False
 import operator
 from core.intent import UserIntent, IntentExtractionError
 from core.intent_extractor import extract_intent
@@ -297,19 +292,7 @@ class DatasetOrchestrator:
             from core.config import Settings
             self.observability = ObservabilityManager(Settings())
 
-        # Initialize checkpointer - use PostgreSQL for persistence when available
-        if POSTGRES_SAVER_AVAILABLE and self.config.get("postgres_url"):
-            try:
-                self.checkpointer = AsyncPostgresSaver.from_conn_string(self.config["postgres_url"])
-                logger.info("Using PostgreSQL for LangGraph checkpoint persistence")
-            except Exception as e:
-                logger.warning(f"Failed to initialize AsyncPostgresSaver: {e}. Falling back to MemorySaver.")
-                self.checkpointer = MemorySaver()
-        else:
-            self.checkpointer = MemorySaver()
-            if not POSTGRES_SAVER_AVAILABLE:
-                logger.warning("AsyncPostgresSaver not available. Using MemorySaver for checkpoints (state lost on restart).")
-
+        self.checkpointer = MemorySaver()
         self.graph = self._build_graph()
         self.active_jobs: dict[str, Job] = {}
         self._cancellation_events: dict[str, asyncio.Event] = {}

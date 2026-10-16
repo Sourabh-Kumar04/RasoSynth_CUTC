@@ -333,6 +333,13 @@ class APIClient {
     })
   }
 
+  async previewJobExampleBatch(data: { query: string; sources: any[]; query_plan?: Record<string, any>; dataset_type?: string; language?: string; max_examples?: number }): Promise<any> {
+    return this.request<any>('/jobs/preview/batch', {
+      method: 'POST',
+      body: JSON.stringify(data),
+    })
+  }
+
   async cancelJob(id: string) {
     return this.request<any>(`/jobs/${id}/cancel`, { method: 'POST' })
   }
