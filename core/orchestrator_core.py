@@ -1720,26 +1720,43 @@ class DatasetOrchestrator:
             retained_samples = []
             rejected_count = 0
             edited_count = 0
+            duplicate_count = 0
+            reviewed_sample_ids = {id(sample): sample_id for sample_id, sample in review_ids.items()}
+            retained_sample_keys = set()
             for sample in samples:
-                sample_id = next((key for key, value in review_ids.items() if value is sample), None)
-                if not sample_id:
-                    retained_samples.append(sample)
-                    continue
-                item = by_review_id.get(sample_id, {})
-                if item.get("review_status") != "approved":
+                sample_id = reviewed_sample_ids.get(id(sample))
+                if sample_id:
+                    item = by_review_id.get(sample_id, {})
+                    if item.get("review_status") != "approved":
+                        rejected_count += 1
+                        continue
+                    edited_instruction = str(item.get("edited_instruction") or "").strip()
+                    edited_response = str(item.get("edited_response") or "").strip()
+                    if edited_instruction:
+                        sample["instruction"] = edited_instruction
+                    if edited_response:
+                        sample["response"] = edited_response
+
+                instruction_key = " ".join(str(sample.get("instruction", "")).casefold().split())
+                response_key = " ".join(str(sample.get("response", "")).casefold().split())
+                if not instruction_key or not response_key:
                     rejected_count += 1
                     continue
-                if item.get("edited_instruction"):
-                    sample["instruction"] = item["edited_instruction"]
-                if item.get("edited_response"):
-                    sample["response"] = item["edited_response"]
-                edited_count += int(item.get("review_decision") == "edit")
+                sample_key = (instruction_key, response_key)
+                if sample_key in retained_sample_keys:
+                    duplicate_count += 1
+                    rejected_count += int(sample_id is not None)
+                    continue
+                retained_sample_keys.add(sample_key)
+                if sample_id and by_review_id.get(sample_id, {}).get("review_decision") == "edit":
+                    edited_count += 1
                 retained_samples.append(sample)
             samples = retained_samples
             retained_review_count = len(review_ids) - rejected_count
             logger.info("Job %s resumed after HITL approval", job_id)
             state["messages"].append(
-                f"Review decisions applied: {rejected_count} rejected or unresolved, {edited_count} edited, "
+                f"Review decisions applied: {rejected_count} rejected or unresolved, "
+                f"{duplicate_count} duplicate edits removed, {edited_count} edited, "
                 f"{retained_review_count} retained (including edits)."
             )
 
