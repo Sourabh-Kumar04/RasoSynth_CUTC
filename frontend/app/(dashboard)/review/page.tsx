@@ -424,7 +424,7 @@ export default function ReviewPage() {
                 {pausedJobs.length} dataset job{pausedJobs.length > 1 ? 's' : ''} paused at review gate
               </p>
               <p className="text-xs text-amber-800 mt-0.5">
-                Review and approve samples below, then click Resume on each job to continue the pipeline.
+                Approvals are applied automatically. Resume can also wake a job immediately when the API and worker share a process.
               </p>
               <div className="flex flex-wrap gap-2 mt-2">
                 {pausedJobs.map(jid => (

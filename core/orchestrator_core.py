@@ -1593,15 +1593,25 @@ class DatasetOrchestrator:
             logger.info("Job %s paused at HITL gate — waiting for reviewer", job_id)
 
             try:
-                deadline = asyncio.get_running_loop().time() + hitl_timeout if hitl_timeout > 0 else None
+                loop = asyncio.get_running_loop()
+                deadline = loop.time() + hitl_timeout if hitl_timeout > 0 else None
+                # Review decisions are stored in the shared database, but a
+                # Celery worker and the API process have separate asyncio
+                # events. Poll the DB periodically so API-side approvals also
+                # release jobs running in another process.
+                poll_interval = 2.0
                 while True:
-                    if deadline is None:
-                        await event.wait()
-                    else:
-                        remaining = deadline - asyncio.get_running_loop().time()
-                        if remaining <= 0:
-                            raise asyncio.TimeoutError
-                        await asyncio.wait_for(event.wait(), timeout=remaining)
+                    remaining = deadline - loop.time() if deadline is not None else None
+                    if remaining is not None and remaining <= 0:
+                        raise asyncio.TimeoutError
+                    wait_seconds = min(poll_interval, remaining) if remaining is not None else poll_interval
+                    try:
+                        await asyncio.wait_for(event.wait(), timeout=wait_seconds)
+                    except asyncio.TimeoutError:
+                        # A timeout is a polling tick unless the configured
+                        # overall HITL deadline has actually elapsed.
+                        if deadline is not None and loop.time() >= deadline:
+                            raise
 
                     queue = await review_service.get_queue(job_id=job_id, page=1, page_size=500)
                     review_items = list(queue.get("items", []))
