@@ -285,6 +285,7 @@ research_loop: Optional[ResearchLoop] = None
 technique_integrator: Optional[TechniqueIntegrator] = None
 ws_manager: Optional[ConnectionManager] = None
 provider_validator: Optional[ProviderValidator] = None
+admission_controller = None
 active_websockets: dict[str, list[WebSocket]] = {}
 
 # Checkpoint and Failover (moved from global to app state)
@@ -391,7 +392,7 @@ async def lifespan(app: FastAPI):
     """
     global router, orchestrator, db, cache, observability
     global ws_manager, provider_validator
-    global research_loop, technique_integrator
+    global research_loop, technique_integrator, admission_controller
     global checkpoint_store, checkpoint_manager
 
     settings = get_settings()
@@ -423,6 +424,24 @@ async def lifespan(app: FastAPI):
     except Exception as e:
         logger.error(f"  ✗ AsyncDB init failed: {e}")
         db = None
+
+    # (3b) Process-local job admission control. API and Celery worker processes
+    # each enforce their own configured concurrency limit.
+    try:
+        from core.admission_control import AdmissionController
+        admission_controller = AdmissionController(
+            max_concurrent_jobs=settings.max_concurrent_jobs,
+            max_queue_size=50,
+            db=db,
+            observability=observability,
+        )
+        await admission_controller.start()
+        app.state.admission_controller = admission_controller
+        logger.info("  ✓ AdmissionController initialized (max_concurrent=%d)", settings.max_concurrent_jobs)
+    except Exception as e:
+        admission_controller = None
+        app.state.admission_controller = None
+        logger.warning("  ⚠ AdmissionController unavailable: %s", e)
 
     # (4) Redis-backed cache (optional — server works without it)
     try:
@@ -564,6 +583,15 @@ async def lifespan(app: FastAPI):
 
     # ---- Shutdown ----
     logger.info("RasoSynthTune: shutting down")
+
+    if admission_controller is not None:
+        try:
+            await admission_controller.stop()
+            logger.info("  ✓ AdmissionController stopped")
+        except Exception as e:
+            logger.warning("  ⚠ AdmissionController stop failed: %s", e)
+        admission_controller = None
+        app.state.admission_controller = None
 
     if db is not None:
         try:
@@ -2207,26 +2235,21 @@ async def run_pipeline(job_id: str, request: JobRequest):
     - No silent fallbacks to demo/simulation mode
     - Admission control limits concurrent execution
     """
+    if not orchestrator:
+        logger.error(f"Cannot run pipeline {job_id}: orchestrator not initialized")
+        if db:
+            await db.update_job(job_id, status="failed", error="Orchestrator not initialized")
+        return
+
+    if not db:
+        logger.error(f"Cannot run pipeline {job_id}: database not available")
+        raise RuntimeError(f"Database connection required for job execution. Job {job_id} cannot proceed.")
+
     # Phase 2: Acquire admission slot (may wait if at capacity)
     admission = None
     admission_acquired = False
     try:
-        from core.admission_control import AdmissionController
-        # Import app state via global reference
-        if hasattr(request, 'app') and hasattr(request.app.state, 'admission_controller'):
-            admission = request.app.state.admission_controller
-        if not admission:
-            # Fallback: try global reference
-            import sys
-            for frame_info in sys._current_frames().values():
-                for obj in (frame_info.f_locals, frame_info.f_globals):
-                    for var_name, var_val in obj.items():
-                        if 'admission_controller' in str(var_name) and 'AdmissionController' in str(type(var_val)):
-                            admission = var_val
-                            break
-                    if admission:
-                        break
-
+        admission = admission_controller
         if admission:
             admission_acquired = await admission.acquire(job_id)
             if not admission_acquired:
@@ -2238,17 +2261,8 @@ async def run_pipeline(job_id: str, request: JobRequest):
     except Exception as e:
         logger.warning(f"Admission control check failed for {job_id}: {e}")
 
-    if not orchestrator:
-        logger.error(f"Cannot run pipeline {job_id}: orchestrator not initialized")
-        if db:
-            await db.update_job(job_id, status="failed", error="Orchestrator not initialized")
-        return
-
-    if not db:
-        logger.error(f"Cannot run pipeline {job_id}: database not available")
-        raise RuntimeError(f"Database connection required for job execution. Job {job_id} cannot proceed.")
-
-    observability.log_job_event(job_id, "pipeline_started")
+    if observability is not None:
+        observability.log_job_event(job_id, "pipeline_started")
 
     job = Job(
         id=job_id,
@@ -2280,7 +2294,8 @@ async def run_pipeline(job_id: str, request: JobRequest):
             )
             raise ValueError(f"Pipeline completed but generated 0 samples. Details: {rejection_details}")
 
-        observability.log_job_event(job_id, "pipeline_completed")
+        if observability is not None:
+            observability.log_job_event(job_id, "pipeline_completed")
         # Persist completed status and final progress to DB
         try:
             await db.update_job(
@@ -2298,7 +2313,8 @@ async def run_pipeline(job_id: str, request: JobRequest):
             logger.error(f"Failed to update completed job status in DB: {db_error}")
     except Exception as e:
         logger.error(f"Pipeline {job_id} failed: {e}")
-        observability.log_job_event(job_id, "pipeline_failed", {"error": str(e)})
+        if observability is not None:
+            observability.log_job_event(job_id, "pipeline_failed", {"error": str(e)})
         # Update job status in database
         try:
             await db.update_job(job_id, status="failed", error=str(e), current_stage=job.current_stage)
