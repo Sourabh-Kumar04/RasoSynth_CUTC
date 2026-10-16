@@ -1280,8 +1280,20 @@ class DiscoveryPipeline:
         for src in all_sources:
             src.quality_score = score_source(src)
 
-        # Sort by quality score (best first) and filter below threshold
-        all_sources.sort(key=lambda s: s.quality_score, reverse=True)
+        # Keep the configured primary repository at the front. AIKosh is
+        # inserted first only for India/Indic requests, so it gets first look
+        # in those previews while candidates within each source retain quality
+        # ordering. Other requests remain globally quality-ranked.
+        aikosh_prioritized = bool(source_types and source_types[0] == SourceType.AI_KOSH)
+        if aikosh_prioritized:
+            all_sources.sort(
+                key=lambda source: (
+                    source.source_type != SourceType.AI_KOSH,
+                    -source.quality_score,
+                )
+            )
+        else:
+            all_sources.sort(key=lambda s: s.quality_score, reverse=True)
         all_sources = [
             s for s in all_sources
             if s.quality_score >= self._quality_filter_threshold
