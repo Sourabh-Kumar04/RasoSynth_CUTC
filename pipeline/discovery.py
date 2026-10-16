@@ -417,6 +417,7 @@ def _trim_query(q: str) -> str:
 
 
 class SourceType(Enum):
+    AI_KOSH = "ai_kosh"
     WEB_PAGE = "web_page"
     GITHUB_REPO = "github_repo"
     GITHUB_FILE = "github_file"
@@ -1121,7 +1122,9 @@ class DiscoveryPipeline:
         self,
         query: str,
         target_domain: str,
-        source_types: list[SourceType] | None = None
+        source_types: list[SourceType] | None = None,
+        preview: bool = False,
+        query_is_optimized: bool = False,
     ) -> AsyncGenerator[DiscoveredSource, None]:
         """Discover sources using multiple strategies and search engines.
 
@@ -1202,7 +1205,13 @@ class DiscoveryPipeline:
         ]
 
         # ── 3-tier query sanitisation ────────────────────────────────────
-        extraction = await self._sanitize_query(query)
+        if query_is_optimized:
+            extraction = self.QueryExtractionResult(
+                query=_trim_query(query), method="approved_query", model=None,
+                confidence=1.0, details="Using query already approved by the user.",
+            )
+        else:
+            extraction = await self._sanitize_query(query)
         self._LOG.info(
             "DISCOVERY query extraction: method=%s model=%s confidence=%.2f "
             "extracted=%r for raw prompt of %d chars",
@@ -1232,6 +1241,10 @@ class DiscoveryPipeline:
 
         # Generate multiple search queries
         queries = self._generate_search_queries(sanitised_query, target_domain)
+        if preview:
+            # The preview should be a low-cost relevance check, not a hidden
+            # full crawl. One focused query per selected repository is enough.
+            queries = queries[:1]
 
         # ── Phase 1: Check cache first ──────────────────────────────────
         for st in source_types:
@@ -1317,6 +1330,27 @@ class DiscoveryPipeline:
         try:
             if source_type == SourceType.WEB_PAGE:
                 return await self._discover_web_enhanced(query, target_domain)
+            elif source_type == SourceType.AI_KOSH:
+                # AIKosh currently exposes a browsable catalogue, but the
+                # public search/download API contract is not confirmed here.
+                # Discover official catalogue pages only; downstream access
+                # and license checks must happen before extracting content.
+                results = await self._search_duckduckgo(
+                    f"site:aikosh.indiaai.gov.in/home/datasets {query}"
+                )
+                official = []
+                for source in results:
+                    if "aikosh.indiaai.gov.in" not in source.url.lower():
+                        continue
+                    source.source_type = SourceType.AI_KOSH
+                    source.metadata = {
+                        **(source.metadata or {}),
+                        "catalogue_only": True,
+                        "access_status": "verify_before_download",
+                        "license_status": "verify_before_use",
+                    }
+                    official.append(source)
+                return official
             # ── Primary dataset repositories ──────────────────
             elif source_type == SourceType.HF_DATASET:
                 return await self._discover_huggingface(query, target_domain)

@@ -131,6 +131,7 @@ class AgentState(TypedDict):
     filter_retry_count: int
     dataset_plan: dict | None
     coverage_matrix: dict | None
+    balance_report: dict | None
 
 
 class ConstraintAnalyzer:
@@ -366,14 +367,12 @@ class DatasetOrchestrator:
         workflow.add_edge("discover", "extract")
         workflow.add_edge("extract", "filter")
         workflow.add_edge("plan", "construct")
-        workflow.add_edge("construct", "export")
+        workflow.add_edge("construct", "human_review")
+        workflow.add_edge("human_review", "export")
         workflow.add_edge("export", END)
 
         # NOTE: filter intentionally has NO unconditional edge.
-        # The add_conditional_edges below defines every possible target:
-        #   "continue" → "construct" | "review" → "human_review"
-        #   "retry" → "extract"        | "adapt" → "adapt_strategy"
-        #   "fail" → END
+        # Its conditional routes choose construction, retry, adaptation or end.
         # Adding an unconditional add_edge("filter", "construct") on top
         # would duplicate the destination and trigger
         # INVALID_CONCURRENT_GRAPH_UPDATE on any state key returned by
@@ -396,7 +395,7 @@ class DatasetOrchestrator:
             self._quality_threshold_check,
             {
                 "continue": "construct",
-                "review": "human_review",
+                "review": "construct",
                 "retry": "extract",
                 "adapt": "adapt_strategy",
                 "fail": END
@@ -410,15 +409,6 @@ class DatasetOrchestrator:
                 "retry": "discover",
                 "proceed": "construct",
                 "reduce": "construct"
-            }
-        )
-
-        workflow.add_conditional_edges(
-            "human_review",
-            self._human_approval_check,
-            {
-                "approved": "construct",
-                "rejected": END
             }
         )
 
@@ -453,7 +443,7 @@ class DatasetOrchestrator:
         """Check if constraints are feasible."""
         job = state.get("job", {})
         config = job.get("config", {})
-        mode = config.get("generation_mode", "hybrid")
+        mode = config.get("generation_mode", "strict_source")
         
         if mode == "synthetic":
             logger.info("Generation mode is set to synthetic. Proceeding directly to planning.")
@@ -517,7 +507,7 @@ class DatasetOrchestrator:
 
         discovery = DiscoveryPipeline(config, router=self.router)
 
-        target_domain = config.get("target_domain", "")
+        target_domain = (self.intent.domain if self.intent else "") or config.get("target_domain", "")
         # If target_domain is not provided but we have source_urls, extract domain from the first URL
         if not target_domain and config.get("source_urls"):
             from urllib.parse import urlparse
@@ -532,6 +522,7 @@ class DatasetOrchestrator:
 
         # Determine source types based on constraints
         source_types = self._determine_source_types(config)
+        excluded_source_urls = set(config.get("excluded_source_urls", []))
 
         # Generate multiple query variations for better coverage
         queries = self._get_discovery_queries(self.intent)
@@ -544,7 +535,11 @@ class DatasetOrchestrator:
             for query in queries:
                 if self._is_cancelled(job_id):
                     break
-                async for source in discovery.discover(query, target_domain, source_types):
+                async for source in discovery.discover(
+                    query, target_domain, source_types, query_is_optimized=True
+                ):
+                    if source.url in excluded_source_urls:
+                        continue
                     # Apply domain relevance pre-filter to skip off-topic sources early.
                     # ``_is_source_relevant`` lives on DatasetOrchestrator and uses intent.
                     if self._is_source_relevant(source):
@@ -574,6 +569,8 @@ class DatasetOrchestrator:
                 "title": source.title,
                 "description": source.description,
                 "metadata": source.metadata,
+                "license": source.license,
+                "quality_score": source.quality_score,
                 "language": getattr(source, 'language', language),
             })
             progress.total_processed += 1
@@ -655,6 +652,17 @@ class DatasetOrchestrator:
             SourceType.WEB_PAGE,         # General web (fallback)
             SourceType.GITHUB_REPO,      # GitHub repos (for code, not primary datasets)
         ]
+
+        # Make India's national catalogue a preferred source for India- and
+        # Indic-focused requests while keeping global discovery available.
+        india_focus = any(term in target_domain for term in (
+            "india", "indian", "indic", "hindi", "tamil", "telugu",
+            "bengali", "marathi", "kannada", "malayalam", "punjabi",
+            "gujarati", "odia", "assamese", "urdu", "sanskrit", "manipuri",
+            "konkani", "kashmiri", "sindhi", "dogri", "maithili", "santali", "bodo",
+        ))
+        if india_focus:
+            source_types.insert(0, SourceType.AI_KOSH)
 
         # For ML domains, prioritize ML-specific and high-quality dataset sources
         if is_ml_domain:
@@ -750,10 +758,23 @@ class DatasetOrchestrator:
                 return False
 
         # Pre-filter sources
-        reachable_sources = []
+        crawlable_sources = []
+        catalogue_only_sources = []
+        for source in sources:
+            metadata = source.get("metadata", {}) if isinstance(source, dict) else getattr(source, "metadata", {})
+            if metadata.get("catalogue_only"):
+                catalogue_only_sources.append(source)
+            else:
+                crawlable_sources.append(source)
+        if catalogue_only_sources:
+            state["warnings"].append(
+                f"Skipped {len(catalogue_only_sources)} AIKosh catalogue listing(s): dataset access and license must be verified before content extraction."
+            )
+        sources = crawlable_sources
         head_tasks = [_is_url_reachable(s.get("url", "") if isinstance(s, dict) else getattr(s, "url", "")) for s in sources]
         head_results = await asyncio.gather(*head_tasks, return_exceptions=True)
 
+        reachable_sources = []
         for source, ok in zip(sources, head_results):
             if ok is True:
                 reachable_sources.append(source)
@@ -787,6 +808,16 @@ class DatasetOrchestrator:
                         safe_metadata = _sanitize_metadata(
                             {k: v for k, v in content.metadata.items() if k != "analysis"}
                         )
+                        source_metadata = source.get("metadata", {}) if isinstance(source, dict) else getattr(source, "metadata", {})
+                        safe_metadata.update({
+                            key: value for key, value in {
+                                "source_url": content.url or source_url,
+                                "source_type": source.get("source_type") if isinstance(source, dict) else str(getattr(source, "source_type", "")),
+                                "license": source.get("license") if isinstance(source, dict) else getattr(source, "license", None),
+                                "source_title": source.get("title") if isinstance(source, dict) else getattr(source, "title", None),
+                                "language": content.language or source_metadata.get("language"),
+                            }.items() if value
+                        })
                         extracted.append({
                             "content": content.content,
                             "content_type": content.content_type,
@@ -877,7 +908,7 @@ class DatasetOrchestrator:
         filtering = FilteringPipeline(self.router, self.config)
         filtered = []
 
-        target_domain = job["config"].get("target_domain", "")
+        target_domain = (self.intent.domain if self.intent else "") or job["config"].get("target_domain", "")
 
         # NOTE: Thresholds are now STATIC (see pipeline/quality_breakdown.py)
         # No runtime learning — ensures deterministic scoring across runs
@@ -1029,10 +1060,10 @@ class DatasetOrchestrator:
                     sample["bypass_reason"] = "zero_sample_situation"
             else:
                 logger.warning(
-                    f"[{job_id}] All extracted items were off-topic for domain '{target_domain}'. "
-                    f"Bypassing extracted sources to use pure seedless synthetic generation."
+                    f"[{job_id}] No extracted items passed relevance checks for '{target_domain}'. "
+                    "Continuing with no samples because source-grounded generation is required."
                 )
-                filtered = []  # Triggers seedless synthetic construction
+                filtered = []
 
         self._update_job_status(
             job_id,
@@ -1079,8 +1110,8 @@ class DatasetOrchestrator:
         target_dataset_size = config.get("dataset_size", 1000)
 
         # Check if we should use seedless synthetic generation
-        generation_mode = config.get("generation_mode", "hybrid")
-        allow_seedless = config.get("allow_seedless_generation", True)
+        generation_mode = config.get("generation_mode", "strict_source")
+        allow_seedless = config.get("allow_seedless_generation", False)
 
         if not filtered and (generation_mode == "synthetic" or allow_seedless):
             logger.info("No crawled reference data found. Launching Pure Synthetic planning & generation.")
@@ -1172,12 +1203,22 @@ class DatasetOrchestrator:
                     self.intent,
                     dataset_type=dataset_type
                 ):
+                    source_metadata = item.get("metadata", {}) or {}
+                    provenance = {
+                        key: value for key, value in {
+                            "source_url": source_metadata.get("source_url") or item.get("source_url"),
+                            "source_type": source_metadata.get("source_type") or item.get("source_type"),
+                            "license": source_metadata.get("license") or item.get("license"),
+                            "language": source_metadata.get("language") or item.get("language"),
+                        }.items() if value
+                    }
                     samples.append({
                         "instruction": constructed.instruction,
                         "response": constructed.response,
                         "input": constructed.input,
                         "conversation": getattr(constructed, "conversation", None),
-                        "metadata": constructed.metadata,
+                        "metadata": {**(constructed.metadata or {}), **provenance},
+                        "quality_score": item.get("quality_score", 0.0),
                         "difficulty_tier": constructed.difficulty_tier,
                         "curriculum_order": len(samples),
                     })
@@ -1261,6 +1302,61 @@ class DatasetOrchestrator:
             "messages": state["messages"] + [f"Constructed {len(samples)} training samples"],
         }
 
+    def _balance_samples(self, samples: list[dict], dimensions: list[str], default_language: str) -> tuple[list[dict], dict]:
+        """Soft-balance labeled groups without fabricating samples."""
+        from collections import Counter
+
+        balanced = list(samples)
+        report = {}
+        aliases = {
+            "topic": lambda sample: (sample.get("metadata", {}) or {}).get("topic")
+                or (sample.get("metadata", {}) or {}).get("domain"),
+            "language": lambda sample: (sample.get("metadata", {}) or {}).get("language") or default_language,
+            "source": lambda sample: (sample.get("metadata", {}) or {}).get("source_type"),
+            "difficulty": lambda sample: sample.get("difficulty_tier"),
+        }
+        for dimension in dimensions:
+            value_for = aliases.get(dimension)
+            if value_for is None or not balanced:
+                continue
+            known_groups = {}
+            unknown = []
+            for index, sample in enumerate(balanced):
+                value = value_for(sample)
+                if value is None or str(value).strip().lower() in {"", "unknown", "unclassified"}:
+                    unknown.append((index, sample))
+                else:
+                    known_groups.setdefault(str(value), []).append((index, sample))
+            if len(known_groups) < 2:
+                continue
+            before = Counter({key: len(items) for key, items in known_groups.items()})
+            cap = (sum(before.values()) + len(known_groups) - 1) // len(known_groups)
+            kept = list(unknown)
+            after = {}
+            def _quality_rank(pair):
+                raw_score = pair[1].get("quality_score", (pair[1].get("metadata", {}) or {}).get("quality_score", 0.0))
+                try:
+                    return -float(raw_score or 0.0)
+                except (TypeError, ValueError):
+                    return 0.0
+
+            for key in sorted(known_groups):
+                ranked = sorted(known_groups[key], key=_quality_rank)
+                selected = ranked[:cap]
+                after[key] = len(selected)
+                kept.extend(selected)
+            balanced = [sample for _, sample in sorted(kept, key=lambda pair: pair[0])]
+            report[dimension] = {
+                "before": dict(before),
+                "after": after,
+                "unclassified_retained": len(unknown),
+                "dropped": sum(before.values()) - sum(after.values()),
+            }
+        report["samples_before"] = len(samples)
+        report["samples_after"] = len(balanced)
+        report["samples_removed"] = len(samples) - len(balanced)
+        return balanced, report
+
     async def _export_node(self, state: AgentState) -> AgentState:
         """Export stage."""
         job = state["job"]
@@ -1269,17 +1365,21 @@ class DatasetOrchestrator:
 
         self._update_job_status(job_id, "export", 0.9)
 
-        # Convert dict samples to objects for downstream attribute access
+        from pipeline.export import ExportPipeline, ExportConfig
+
+        # Build export config from job config + global settings
+        job_config = job.get("config", {})
+        raw_samples, balance_report = self._balance_samples(
+            raw_samples,
+            job_config.get("balance_dimensions", ["topic", "language"]),
+            job_config.get("language", "en"),
+        )
+        # Convert the final balanced dictionaries for exporter and ORM access.
         from types import SimpleNamespace
         samples = [
             SimpleNamespace(**s) if isinstance(s, dict) else s
             for s in raw_samples
         ]
-
-        from pipeline.export import ExportPipeline, ExportConfig
-
-        # Build export config from job config + global settings
-        job_config = job.get("config", {})
         export_config = ExportConfig(
             format=job_config.get("export_format", "jsonl"),
             output_dir=self.config.get("output_dir", "outputs"),
@@ -1305,7 +1405,10 @@ class DatasetOrchestrator:
                     name=export_config.dataset_name,
                     type=export_config.format,
                     size=len(samples),
-                    metadata={"export_path": str(export_result.get("dataset", ""))},
+                    metadata={
+                        "export_path": str(export_result.get("dataset", "")),
+                        "balance_report": balance_report,
+                    },
                     output_path=str(export_result.get("dataset", ""))
                 )
 
@@ -1328,30 +1431,34 @@ class DatasetOrchestrator:
 
         self._update_job_status(
             job_id,
-            "completed",
+            "completed" if samples else "failed",
             1.0,
             samples_generated=len(samples)
         )
 
         return {
             **state,
+            "constructed_samples": raw_samples,
+            "balance_report": balance_report,
             "current_stage": "export",
             "progress": 1.0,
-            "messages": state["messages"] + [f"Exported {len(samples)} samples"],
+            "messages": state["messages"] + [
+                f"Balanced and exported {len(samples)} samples; removed {balance_report['samples_removed']} over-represented samples"
+            ],
         }
 
     async def _human_review_node(self, state: AgentState) -> AgentState:
         """
         Human-in-the-loop (HITL) gate.
 
-        1. Submits all constructed samples to the persistent review queue.
+        1. Submits a deterministic stratified sample to the persistent review queue.
         2. If `human_review_mode` is "blocking" (default when human_review=True),
            pauses the pipeline and awaits a reviewer calling
            POST /api/review/jobs/{job_id}/resume.
         3. Once resumed, marks the job approved and continues to export.
 
         Config keys:
-          human_review        (bool, default True)  — enable HITL gate
+          human_review        (bool, default False) — enable sampled HITL review
           human_review_mode   (str)  — "blocking" | "async"
             blocking: wait for explicit /resume call (real HITL)
             async:    submit for review but continue immediately
@@ -1360,16 +1467,57 @@ class DatasetOrchestrator:
         job = state["job"]
         job_id = job["id"]
         samples = state.get("constructed_samples", [])
+        constructed_count = len(samples)
         config = job.get("config", {})
 
-        hitl_enabled = config.get("human_review", True)
+        hitl_enabled = config.get("human_review", False)
         hitl_mode = config.get("human_review_mode", "blocking")
         hitl_timeout = int(config.get("hitl_timeout_seconds", 0))
+        review_percentage = float(config.get("human_review_percentage", 10.0))
+
+        # Draw a deterministic, approximately stratified audit sample so the
+        # same job always presents the same examples if its state is replayed.
+        review_samples = []
+        if samples and hitl_enabled and review_percentage > 0:
+            import hashlib
+            from collections import defaultdict
+            strata = defaultdict(list)
+            for sample in samples:
+                metadata = sample.get("metadata", {}) or {}
+                key = (
+                    str(metadata.get("topic") or metadata.get("domain") or "unclassified"),
+                    str(metadata.get("language") or config.get("language", "unknown")),
+                    str(sample.get("difficulty_tier", "unknown")),
+                )
+                strata[key].append(sample)
+            ordered_keys = sorted(
+                strata,
+                key=lambda key: hashlib.sha256(f"{job_id}:{key}".encode()).hexdigest(),
+            )
+            buckets = {
+                key: sorted(
+                    strata[key],
+                    key=lambda item: hashlib.sha256(
+                        f"{job_id}:{item.get('instruction', '')}:{item.get('response', '')}".encode()
+                    ).hexdigest(),
+                )
+                for key in ordered_keys
+            }
+            target = min(len(samples), max(1, round(len(samples) * review_percentage / 100)))
+            while len(review_samples) < target:
+                added = False
+                for key in ordered_keys:
+                    if buckets[key] and len(review_samples) < target:
+                        review_samples.append(buckets[key].pop(0))
+                        added = True
+                if not added:
+                    break
 
         submitted = 0
         review_service = None
+        review_ids = {}
 
-        if hitl_enabled and samples:
+        if hitl_enabled and review_samples:
             # ── Resolve the ReviewService ──────────────────────────────
             # Try to get the shared instance from app state first
             try:
@@ -1381,13 +1529,17 @@ class DatasetOrchestrator:
                 review_service = None
 
             if review_service is not None:
-                for sample in samples:
+                for sample in review_samples:
                     try:
+                        import hashlib
+                        sample_review_id = hashlib.sha256(
+                            f"{job_id}:{sample.get('instruction', '')}:{sample.get('response', '')}".encode()
+                        ).hexdigest()
                         await review_service.submit(
                             instruction=sample.get("instruction", ""),
                             response=sample.get("response", ""),
                             job_id=job_id,
-                            dataset_id=sample.get("dataset_id", ""),
+                            dataset_id=sample_review_id,
                             source_url=sample.get("metadata", {}).get("source_url", ""),
                             source_text=sample.get("source_text", ""),
                             quality_score=float(sample.get("quality_score", 0.5)),
@@ -1395,18 +1547,21 @@ class DatasetOrchestrator:
                             duplicate_score=float(sample.get("duplicate_score", 0.0)),
                             diversity_score=float(sample.get("diversity_score", 0.0)),
                         )
+                        review_ids[sample_review_id] = sample
                         submitted += 1
                     except Exception as sub_err:
                         logger.warning("Failed to submit sample for review: %s", sub_err)
 
-                logger.info("Job %s: submitted %d samples for human review (mode=%s)",
-                            job_id, submitted, hitl_mode)
+                logger.info("Job %s: submitted %d/%d stratified audit samples (%.1f%% requested, mode=%s)",
+                            job_id, submitted, constructed_count, review_percentage, hitl_mode)
             else:
-                logger.warning("Job %s: review service not available — skipping submission", job_id)
+                raise RuntimeError(
+                    f"Job {job_id} requested a human review audit, but the review service is unavailable."
+                )
 
         # ── Blocking HITL gate ─────────────────────────────────────────
         approved = False
-        if hitl_enabled and hitl_mode == "blocking" and review_service is not None:
+        if hitl_enabled and hitl_mode == "blocking" and review_service is not None and review_ids:
             # Update DB status so the UI shows the job is paused
             try:
                 if self.db_manager:
@@ -1422,25 +1577,92 @@ class DatasetOrchestrator:
             logger.info("Job %s paused at HITL gate — waiting for reviewer", job_id)
 
             try:
-                if hitl_timeout > 0:
-                    await asyncio.wait_for(event.wait(), timeout=float(hitl_timeout))
-                else:
-                    await event.wait()
+                deadline = asyncio.get_running_loop().time() + hitl_timeout if hitl_timeout > 0 else None
+                while True:
+                    if deadline is None:
+                        await event.wait()
+                    else:
+                        remaining = deadline - asyncio.get_running_loop().time()
+                        if remaining <= 0:
+                            raise asyncio.TimeoutError
+                        await asyncio.wait_for(event.wait(), timeout=remaining)
+
+                    queue = await review_service.get_queue(job_id=job_id, page=1, page_size=500)
+                    review_items = list(queue.get("items", []))
+                    for page in range(2, queue.get("total_pages", 1) + 1):
+                        more = await review_service.get_queue(job_id=job_id, page=page, page_size=500)
+                        review_items.extend(more.get("items", []))
+                    by_review_id = {
+                        str(item.get("dataset_id", "")): item
+                        for item in review_items
+                        if str(item.get("dataset_id", "")) in review_ids
+                    }
+                    pending = [
+                        sample_id for sample_id in review_ids
+                        if by_review_id.get(sample_id, {}).get("review_status") in {None, "pending"}
+                    ]
+                    if not pending:
+                        break
+                    logger.info("Job %s still has %d pending review samples", job_id, len(pending))
+                    event = await review_service.pause_job_for_review(job_id)
+                    if self.db_manager:
+                        await self.db_manager.update_job(
+                            job_id, status=JobStatus.AWAITING_REVIEW.value, current_stage="human_review"
+                        )
+
                 approved = True
-                logger.info("Job %s resumed after HITL approval", job_id)
             except asyncio.TimeoutError:
-                logger.warning("Job %s HITL timeout (%ds) — auto-approving", job_id, hitl_timeout)
-                approved = True   # Timeout = auto-approve (configurable behaviour)
+                logger.warning("Job %s HITL timeout (%ds) — pending reviewed examples will be excluded", job_id, hitl_timeout)
+                approved = True
+                await review_service.resume_job(job_id)
+                queue = await review_service.get_queue(job_id=job_id, page=1, page_size=500)
+                review_items = list(queue.get("items", []))
+                for page in range(2, queue.get("total_pages", 1) + 1):
+                    more = await review_service.get_queue(job_id=job_id, page=page, page_size=500)
+                    review_items.extend(more.get("items", []))
+                by_review_id = {
+                    str(item.get("dataset_id", "")): item
+                    for item in review_items
+                    if str(item.get("dataset_id", "")) in review_ids
+                }
         else:
             # async mode or service unavailable — continue without waiting
             approved = True
 
+        if hitl_enabled and hitl_mode == "blocking" and review_service is not None and review_ids:
+            retained_samples = []
+            rejected_count = 0
+            edited_count = 0
+            for sample in samples:
+                sample_id = next((key for key, value in review_ids.items() if value is sample), None)
+                if not sample_id:
+                    retained_samples.append(sample)
+                    continue
+                item = by_review_id.get(sample_id, {})
+                if item.get("review_status") != "approved":
+                    rejected_count += 1
+                    continue
+                if item.get("edited_instruction"):
+                    sample["instruction"] = item["edited_instruction"]
+                if item.get("edited_response"):
+                    sample["response"] = item["edited_response"]
+                edited_count += int(item.get("review_decision") == "edit")
+                retained_samples.append(sample)
+            samples = retained_samples
+            logger.info("Job %s resumed after HITL approval", job_id)
+            state["messages"].append(
+                f"Review decisions applied: {rejected_count} rejected or unresolved, {edited_count} edited, "
+                f"{len(review_ids) - rejected_count - edited_count} retained."
+            )
+
         return {
             **state,
-            "human_approval_needed": hitl_enabled,
+            "constructed_samples": samples,
+            "human_approval_needed": hitl_enabled and bool(review_samples),
             "human_approved": approved,
             "messages": state.get("messages", []) + [
-                f"HITL gate: {submitted} samples submitted for review, "
+                f"HITL audit: {submitted}/{constructed_count} samples submitted "
+                f"({review_percentage:.1f}% requested), "
                 f"mode={hitl_mode}, approved={approved}"
             ],
         }
@@ -1486,8 +1708,8 @@ class DatasetOrchestrator:
         if not filtered:
             job = state.get("job", {})
             config = job.get("config", {})
-            mode = config.get("generation_mode", "hybrid")
-            allow_fallback = config.get("allow_seedless_generation", True)
+            mode = config.get("generation_mode", "strict_source")
+            allow_fallback = config.get("allow_seedless_generation", False)
             
             if mode == "synthetic" or (mode == "hybrid" and allow_fallback):
                 logger.info("Filter produced 0 samples, but falling back to pure synthetic planning/generation.")
@@ -1567,14 +1789,25 @@ class DatasetOrchestrator:
             "filter_retry_count": 0,
             "dataset_plan": None,
             "coverage_matrix": None,
+            "balance_report": None,
         }
         # Intent extraction - the single source of truth for the request
         try:
-            self.intent = await extract_intent(
-                raw_input=json.dumps(job.config),
-                provider_router=self.router,
-                redis_client=getattr(self, 'redis_client', None),
-            )
+            approved_plan = job.config.get("query_plan")
+            if approved_plan:
+                self.intent = UserIntent(
+                    **approved_plan,
+                    raw_input=job.config.get("target_domain", ""),
+                )
+            else:
+                self.intent = await extract_intent(
+                    raw_input=json.dumps(job.config),
+                    provider_router=self.router,
+                    redis_client=getattr(self, 'redis_client', None),
+                )
+            approved_queries = job.config.get("specialized_queries") or []
+            if approved_queries:
+                self.intent.specialized_queries = approved_queries[:10]
         except IntentExtractionError as e:
             raise e  # will be caught by outer try block
 
@@ -1621,13 +1854,19 @@ class DatasetOrchestrator:
                 job.sources_extracted = len(extracted_content)
                 job.samples_filtered = len(filtered_samples)
 
+                final_status = "completed" if constructed_samples else "failed"
+                if not constructed_samples:
+                    final_state.setdefault("errors", []).append(
+                        "No usable source-grounded samples were produced. Refine the request or broaden the source constraints."
+                    )
+
                 if self.db:
                     try:
                         await self.db.update_job(
                             job_id,
-                            status="completed",
+                            status=final_status,
                             progress=1.0,
-                            current_stage=job.current_stage,
+                            current_stage=job.current_stage if constructed_samples else "failed",
                             samples_generated=job.samples_generated,
                             samples_processed=job.samples_processed,
                             sources_discovered=job.sources_discovered,

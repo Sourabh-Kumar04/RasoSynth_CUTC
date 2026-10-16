@@ -128,8 +128,8 @@ class Settings(BaseSettings):
     dedup_threshold: float = Field(default=0.85)
 
     # Generation Modes & Synthetic settings
-    generation_mode: str = Field(default="hybrid")  # source | hybrid | synthetic
-    allow_seedless_generation: bool = Field(default=True)
+    generation_mode: str = Field(default="strict_source")  # strict_source | hybrid | synthetic
+    allow_seedless_generation: bool = Field(default=False)
     require_reference_sources: bool = Field(default=False)
     minimum_reference_documents: int = Field(default=1)
     planner_enabled: bool = Field(default=True)

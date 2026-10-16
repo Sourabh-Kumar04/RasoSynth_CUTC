@@ -133,6 +133,8 @@ export default function DatasetsPage() {
   const [records, setRecords] = useState<any[]>([])
   const [recordsLoading, setRecordsLoading] = useState(false)
   const [recordsError, setRecordsError] = useState<string | null>(null)
+  const [datasetSummary, setDatasetSummary] = useState<any | null>(null)
+  const [summaryLoading, setSummaryLoading] = useState(false)
 
   // Download state
   const [downloadFormat, setDownloadFormat] = useState<Record<string, string>>({})
@@ -150,19 +152,27 @@ export default function DatasetsPage() {
       const fetchRecords = async () => {
         try {
           setRecordsLoading(true)
+          setSummaryLoading(true)
           setRecordsError(null)
-          const data = await api.getJobRecords(selectedDataset, 10)
-          setRecords(data.records || [])
+          const [dataResult, summaryResult] = await Promise.allSettled([
+            api.getJobRecords(selectedDataset, 10),
+            api.getJobDatasetSummary(selectedDataset),
+          ])
+          if (dataResult.status === 'fulfilled') setRecords(dataResult.value.records || [])
+          else throw dataResult.reason
+          setDatasetSummary(summaryResult.status === 'fulfilled' ? summaryResult.value : null)
         } catch (e: any) {
           console.error('Failed to fetch dataset records:', e)
           setRecordsError(e.message || 'Failed to fetch records')
         } finally {
           setRecordsLoading(false)
+          setSummaryLoading(false)
         }
       }
       fetchRecords()
     } else {
       setRecords([])
+      setDatasetSummary(null)
     }
   }, [selectedDataset])
 
@@ -254,12 +264,12 @@ export default function DatasetsPage() {
         <div>
           <div className="flex items-center gap-2.5 mb-1">
             <span className="text-[10px] font-mono px-2.5 py-0.5 rounded-full bg-[#E8ECE6] border border-[#D1D8CE] text-[#1B3B2B] font-bold uppercase tracking-wider">
-              Synthetic Datasets
+              Source-grounded datasets
             </span>
             <h1 className="text-2xl font-bold tracking-tight text-[#1B3B2B]">Dataset Explorer</h1>
           </div>
           <p className="text-xs text-[#55635B]">
-            Multi-provider dataset synthesis, automated verification, quality scoring, and stream export
+            Curated source discovery, quality review, balanced datasets, and export
           </p>
         </div>
         <div className="flex items-center gap-2">
@@ -408,8 +418,7 @@ export default function DatasetsPage() {
             <Database className="h-12 w-12 text-[#809085] mb-4" />
             <h3 className="text-lg font-bold text-[#1B3B2B] mb-2">No datasets yet</h3>
             <p className="text-sm text-[#55635B] mb-6 text-center max-w-md">
-              Create your first dataset by describing what you need in the Studio.
-              The AI will autonomously generate high-quality training data.
+              Describe the dataset you need in the Studio. Review the first source batch and refine your request before generation begins.
             </p>
             <Button className="gap-2 bg-[#1B3B2B] hover:bg-[#142D21] text-white rounded-full" onClick={() => router.push('/studio')}>
               <Plus className="h-4 w-4" />
@@ -640,6 +649,59 @@ export default function DatasetsPage() {
                   </div>
                 </div>
               )}
+
+              {/* Persisted dataset quality and coverage summary */}
+              <div className="space-y-3 border-t border-[#E2E6E0] pt-4">
+                <div className="flex items-center justify-between">
+                  <p className="text-sm font-bold text-[#1B3B2B]">Dataset quality and coverage</p>
+                  {summaryLoading && <Loader2 className="h-4 w-4 animate-spin text-[#55635B]" />}
+                </div>
+                {datasetSummary && (
+                  <>
+                    <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+                      <div className="rounded-xl border border-[#E2E6E0] bg-[#F6F7F4] p-3">
+                        <p className="text-[10px] uppercase font-mono text-[#55635B]">Final samples</p>
+                        <p className="text-lg font-bold font-mono text-[#1B3B2B]">{datasetSummary.sample_count ?? 0}</p>
+                      </div>
+                      <div className="rounded-xl border border-[#E2E6E0] bg-[#F6F7F4] p-3">
+                        <p className="text-[10px] uppercase font-mono text-[#55635B]">Mean quality</p>
+                        <p className="text-lg font-bold font-mono text-[#1B3B2B]">{datasetSummary.quality?.mean == null ? '—' : `${Math.round(datasetSummary.quality.mean * 100)}%`}</p>
+                      </div>
+                      <div className="rounded-xl border border-[#E2E6E0] bg-[#F6F7F4] p-3">
+                        <p className="text-[10px] uppercase font-mono text-[#55635B]">Review coverage</p>
+                        <p className="text-lg font-bold font-mono text-[#1B3B2B]">{datasetSummary.human_review?.enabled ? `${datasetSummary.human_review.total} items` : 'Not enabled'}</p>
+                      </div>
+                      <div className="rounded-xl border border-[#E2E6E0] bg-[#F6F7F4] p-3">
+                        <p className="text-[10px] uppercase font-mono text-[#55635B]">Balance removals</p>
+                        <p className="text-lg font-bold font-mono text-[#1B3B2B]">{datasetSummary.balance_report?.samples_removed ?? 0}</p>
+                      </div>
+                    </div>
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-3 text-xs">
+                      {(['sources', 'languages', 'topics'] as const).map((dimension) => {
+                        const distribution = datasetSummary[dimension] || {}
+                        const entries = Object.entries(distribution).sort((a, b) => Number(b[1]) - Number(a[1])).slice(0, 8)
+                        return (
+                          <div key={dimension} className="rounded-xl border border-[#E2E6E0] p-3">
+                            <p className="mb-2 text-[10px] uppercase font-mono text-[#55635B]">{dimension} distribution</p>
+                            {entries.length ? entries.map(([label, count]) => (
+                              <div key={label} className="flex justify-between gap-2 py-1 text-[#1B3B2B]">
+                                <span className="truncate">{label}</span><span className="font-mono">{String(count)}</span>
+                              </div>
+                            )) : <p className="text-[#809085]">No metadata recorded</p>}
+                          </div>
+                        )
+                      })}
+                    </div>
+                    {datasetSummary.human_review?.enabled && (
+                        <p className="text-xs text-[#55635B]">Human review: {datasetSummary.human_review.approved} approved, {datasetSummary.human_review.rejected} rejected, {datasetSummary.human_review.pending} pending, {datasetSummary.human_review.flagged ?? 0} flagged.</p>
+                    )}
+                    {datasetSummary.sampled_records < datasetSummary.sample_count && (
+                      <p className="text-[10px] text-[#809085]">Coverage distributions and mean quality are calculated from the first {datasetSummary.sampled_records.toLocaleString()} stored examples.</p>
+                    )}
+                  </>
+                )}
+                {!datasetSummary && !summaryLoading && <p className="text-xs text-[#809085]">Summary is not available for this job yet.</p>}
+              </div>
 
               {/* Records Preview */}
               <div className="space-y-2 border-t border-[#E2E6E0] pt-4">

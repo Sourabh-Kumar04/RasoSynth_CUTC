@@ -137,11 +137,17 @@ export default function StudioPage() {
   const [targetSize, setTargetSize] = useState(1000)
   const [qualityLevel, setQualityLevel] = useState('high')
   const [outputFormat, setOutputFormat] = useState('jsonl')
-  const [generationMode, setGenerationMode] = useState('hybrid')
+  const [generationMode, setGenerationMode] = useState('strict_source')
   const [datasetType, setDatasetType] = useState('sft')
+  const [humanReviewEnabled, setHumanReviewEnabled] = useState(false)
+  const [humanReviewPercentage, setHumanReviewPercentage] = useState(10)
+  const [optimizeQuery, setOptimizeQuery] = useState(true)
+  const [sourcePreview, setSourcePreview] = useState<any>(null)
+  const [excludedSourceUrls, setExcludedSourceUrls] = useState<string[]>([])
 
   // API state
   const [isSubmitting, setIsSubmitting] = useState(false)
+  const [isPreviewing, setIsPreviewing] = useState(false)
   const [submitError, setSubmitError] = useState<string | null>(null)
   const [createdJob, setCreatedJob] = useState<any>(null)
 
@@ -161,7 +167,31 @@ export default function StudioPage() {
     }
   }
 
-  // Handle dataset generation
+  const handlePreviewSources = useCallback(async () => {
+    if (!naturalLanguageInput.trim()) {
+      setSubmitError('Describe the dataset you need first')
+      return
+    }
+    setIsPreviewing(true)
+    setSubmitError(null)
+    setSourcePreview(null)
+    setExcludedSourceUrls([])
+    try {
+      const preview = await api.previewJobSources({
+        query: naturalLanguageInput,
+        optimize_query: optimizeQuery,
+        max_sources: 8,
+      })
+      setSourcePreview(preview)
+      setExcludedSourceUrls(preview.sources.filter((source: any) => source.metadata?.catalogue_only).map((source: any) => source.url))
+    } catch (err: any) {
+      setSubmitError(err.message || 'Could not preview sources')
+    } finally {
+      setIsPreviewing(false)
+    }
+  }, [naturalLanguageInput, optimizeQuery])
+
+  // Start the full job only after the user has seen the source preview.
   const handleGenerateDataset = useCallback(async () => {
     if (!naturalLanguageInput.trim()) {
       setSubmitError('Please describe your dataset')
@@ -185,6 +215,13 @@ export default function StudioPage() {
         cost_budget_usd: targetSize * 0.05, // Rough estimate
         enable_research_loop: true,
         generation_mode: generationMode,
+        allow_seedless_generation: generationMode !== 'strict_source',
+        optimized_query: sourcePreview?.improved_query,
+        specialized_queries: sourcePreview?.specialized_queries || [],
+        query_plan: sourcePreview?.query_plan,
+        excluded_source_urls: excludedSourceUrls,
+        human_review: humanReviewEnabled,
+        human_review_percentage: humanReviewPercentage,
       }
 
       const response = await api.createJob(jobRequest)
@@ -200,7 +237,7 @@ export default function StudioPage() {
     } finally {
       setIsSubmitting(false)
     }
-  }, [naturalLanguageInput, selectedTemplate, targetSize, qualityLevel, outputFormat, selectedProviders, generationMode, datasetType, router])
+  }, [naturalLanguageInput, selectedTemplate, targetSize, qualityLevel, outputFormat, selectedProviders, generationMode, datasetType, sourcePreview, excludedSourceUrls, humanReviewEnabled, humanReviewPercentage, router])
 
   return (
     <div className="space-y-6 w-full pb-8">
@@ -293,7 +330,10 @@ export default function StudioPage() {
                 <div className="relative pt-1">
                   <textarea
                     value={naturalLanguageInput}
-                    onChange={(e) => setNaturalLanguageInput(e.target.value)}
+                    onChange={(e) => {
+                      setNaturalLanguageInput(e.target.value)
+                      setSourcePreview(null)
+                    }}
                     placeholder="e.g., Generate a multilingual legal reasoning dataset with 10,000 examples in English, Spanish, and French. Focus on contract analysis and include explanations for each legal decision..."
                     className="w-full h-36 p-4 rounded-xl border border-[#D1D8CE] bg-[#F6F7F4] text-[#1B3B2B] text-xs resize-none focus:outline-none focus:ring-2 focus:ring-[#1B3B2B] placeholder:text-[#809085]"
                   />
@@ -306,23 +346,78 @@ export default function StudioPage() {
 
                 {/* Primary Action Buttons (Immediately Visible Without Scrolling) */}
                 <div className="flex items-center gap-2">
-                  <Button variant="outline" className="flex-1 gap-2 border-[#D1D8CE] text-[#1B3B2B] hover:bg-[#E8ECE6] rounded-full" disabled={isSubmitting}>
+                  <Button variant="outline" className="flex-1 gap-2 border-[#D1D8CE] text-[#1B3B2B] hover:bg-[#E8ECE6] rounded-full" disabled={isSubmitting || isPreviewing} onClick={() => { setOptimizeQuery(!optimizeQuery); setSourcePreview(null) }}>
                     <Sparkles className="h-4 w-4 text-emerald-600" />
-                    Enhance Prompt
+                    Query optimization {optimizeQuery ? 'on' : 'off'}
                   </Button>
                   <Button
                     className="flex-1 gap-2 bg-[#1B3B2B] hover:bg-[#142D21] text-white rounded-full font-medium shadow-sm"
-                    onClick={handleGenerateDataset}
-                    disabled={isSubmitting || !naturalLanguageInput.trim()}
+                    onClick={handlePreviewSources}
+                    disabled={isSubmitting || isPreviewing || !naturalLanguageInput.trim()}
                   >
-                    {isSubmitting ? (
+                    {isPreviewing ? (
                       <Loader2 className="h-4 w-4 animate-spin text-emerald-400" />
                     ) : (
-                      <Zap className="h-4 w-4 text-emerald-400 fill-current" />
+                      <Database className="h-4 w-4 text-emerald-400" />
                     )}
-                    {isSubmitting ? 'Creating...' : 'Generate Configuration'}
+                    {isPreviewing ? 'Finding a first batch...' : 'Preview source batch'}
                   </Button>
                 </div>
+
+                {sourcePreview && (
+                  <section className="rounded-2xl border border-[#C8D5C9] bg-[#F6F7F4] p-4 space-y-3" aria-live="polite">
+                    <div className="flex items-start justify-between gap-4">
+                      <div>
+                        <p className="text-xs font-mono font-bold uppercase tracking-wider text-[#1B3B2B]">First source batch · {sourcePreview.source_count} found</p>
+                        <p className="mt-1 text-xs text-[#55635B]">Review the direction, exclude weak matches, or edit your request above and preview again.</p>
+                      </div>
+                      <Badge className="bg-[#E8ECE6] text-[#1B3B2B]">Preview only</Badge>
+                    </div>
+                    <div className="rounded-xl border border-[#D1D8CE] bg-white p-3">
+                      <p className="text-[10px] font-mono uppercase tracking-wider text-[#708076]">Improved search query</p>
+                      <p className="mt-1 text-xs text-[#1B3B2B]">{sourcePreview.improved_query}</p>
+                    </div>
+                    {sourcePreview.sources?.length ? (
+                      <div className="space-y-2 max-h-72 overflow-y-auto">
+                        {sourcePreview.sources.map((source: any) => {
+                          const excluded = excludedSourceUrls.includes(source.url)
+                          return (
+                            <label key={source.url} className={`flex gap-3 rounded-xl border p-3 cursor-pointer ${excluded ? 'border-[#D1D8CE] opacity-50 bg-white' : 'border-[#D1D8CE] bg-white'}`}>
+                              <input
+                                type="checkbox"
+                                checked={!excluded}
+                                disabled={Boolean(source.metadata?.catalogue_only)}
+                                onChange={() => setExcludedSourceUrls((urls) => excluded ? urls.filter((url) => url !== source.url) : [...urls, source.url])}
+                                aria-label={`Include ${source.title}`}
+                                className="mt-0.5 accent-[#1B3B2B]"
+                              />
+                              <span className="min-w-0">
+                                <span className="block text-xs font-semibold text-[#1B3B2B]">{source.title || source.url}</span>
+                                <span className="mt-1 block text-[11px] leading-relaxed text-[#55635B]">{source.description || source.url}</span>
+                                <span className="mt-1 block text-[10px] font-mono text-[#708076]">{source.source_type} · score {Number(source.quality_score || 0).toFixed(2)}{source.license ? ` · ${source.license}` : ''}</span>
+                                {source.metadata?.catalogue_only && <span className="mt-1 block text-[10px] font-semibold text-amber-800">Catalogue listing only; dataset access and reuse terms must be verified before ingestion.</span>}
+                              </span>
+                            </label>
+                          )
+                        })}
+                      </div>
+                    ) : (
+                      <p className="rounded-xl border border-dashed border-[#C8D5C9] p-4 text-xs text-[#55635B]">No sources appeared in this batch. Refine the request or broaden its topic, language, or region before continuing.</p>
+                    )}
+                    {sourcePreview.notice && <p className="text-[10px] leading-relaxed text-[#708076]">{sourcePreview.notice}</p>}
+                    <div className="flex flex-wrap items-center justify-between gap-3 border-t border-[#D1D8CE] pt-3">
+                      <span className="text-[11px] text-[#55635B]">The full crawl and AI generation start only after you continue.</span>
+                      <Button
+                        className="gap-2 rounded-full bg-[#1B3B2B] text-white hover:bg-[#142D21]"
+                        onClick={handleGenerateDataset}
+                        disabled={isSubmitting || !sourcePreview.sources?.some((source: any) => !excludedSourceUrls.includes(source.url))}
+                      >
+                        {isSubmitting ? <Loader2 className="h-4 w-4 animate-spin" /> : <ArrowRight className="h-4 w-4" />}
+                        {isSubmitting ? 'Starting dataset job...' : 'Continue with this search'}
+                      </Button>
+                    </div>
+                  </section>
+                )}
 
                 {/* Preset Prompts for Instant Workflow Creation (Placed Below Action Buttons) */}
                 <div className="pt-3 border-t border-[#E2E6E0]">
@@ -567,11 +662,23 @@ export default function StudioPage() {
                       <SelectValue />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="hybrid">Hybrid (Crawl + Fallback)</SelectItem>
-                      <SelectItem value="synthetic">Pure Synthetic (Seedless)</SelectItem>
-                      <SelectItem value="source">Source-Based (Strict)</SelectItem>
+                      <SelectItem value="strict_source">Source-grounded (recommended)</SelectItem>
+                      <SelectItem value="hybrid">Source-grounded + generated gap-fill (opt-in)</SelectItem>
+                      <SelectItem value="synthetic">Pure Synthetic (explicit opt-in)</SelectItem>
                     </SelectContent>
                   </Select>
+                </div>
+
+                <div className="col-span-full flex flex-wrap items-center justify-between gap-3 rounded-xl border border-[#D1D8CE] bg-[#F6F7F4] p-3">
+                  <label className="flex items-start gap-2 text-xs text-[#1B3B2B]">
+                    <input type="checkbox" checked={humanReviewEnabled} onChange={(event) => setHumanReviewEnabled(event.target.checked)} className="mt-0.5 accent-[#1B3B2B]" />
+                    <span><span className="block font-semibold">Pause for a human quality audit</span><span className="mt-0.5 block text-[11px] text-[#55635B]">Review a stratified sample; the remaining examples still receive automatic checks.</span></span>
+                  </label>
+                  <label className="flex items-center gap-2 text-[11px] text-[#55635B]">
+                    Audit sample
+                    <Input type="number" min={1} max={100} value={humanReviewPercentage} onChange={(event) => setHumanReviewPercentage(Math.max(1, Math.min(100, Number(event.target.value) || 1)))} disabled={!humanReviewEnabled} className="h-8 w-20 rounded-full border-[#D1D8CE] text-xs" />
+                    %
+                  </label>
                 </div>
               </CardContent>
             </Card>

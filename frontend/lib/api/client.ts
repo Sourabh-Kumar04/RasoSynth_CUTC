@@ -326,6 +326,13 @@ class APIClient {
     })
   }
 
+  async previewJobSources(data: { query: string; optimize_query?: boolean; language?: string; region_restrictions?: string[]; max_sources?: number }): Promise<any> {
+    return this.request<any>('/jobs/preview', {
+      method: 'POST',
+      body: JSON.stringify(data),
+    })
+  }
+
   async cancelJob(id: string) {
     return this.request<any>(`/jobs/${id}/cancel`, { method: 'POST' })
   }
@@ -554,6 +561,10 @@ class APIClient {
     return this.request<{ records: any[]; count: number; message?: string }>(`/jobs/${jobId}/records`, {
       params: { limit }
     })
+  }
+
+  async getJobDatasetSummary(jobId: string) {
+    return this.request<any>(`/jobs/${jobId}/summary`)
   }
 
   // === Download API ===

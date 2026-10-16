@@ -99,9 +99,17 @@ class JobRequest(BaseModel):
     time_period: Optional[str] = Field(default=None, description="Historical time period (e.g., '2000-2020')")
     enable_research_loop: bool = Field(default=True, description="Enable autonomous research")
     streaming_export: bool = Field(default=False, description="Enable streaming export for large datasets")
-    generation_mode: str = Field(default="hybrid", description="Dataset generation mode: source | hybrid | synthetic")
-    allow_seedless_generation: bool = Field(default=True)
+    generation_mode: str = Field(default="strict_source", description="Dataset generation mode: strict_source | hybrid | synthetic")
+    allow_seedless_generation: bool = Field(default=False)
     require_reference_sources: bool = Field(default=False)
+    excluded_source_urls: list[str] = Field(default_factory=list)
+    optimized_query: Optional[str] = None
+    specialized_queries: list[str] = Field(default_factory=list)
+    query_plan: Optional[dict[str, Any]] = None
+    human_review: bool = Field(default=False, description="Pause for human review of a sample of generated examples")
+    human_review_percentage: float = Field(default=10.0, ge=0.0, le=100.0)
+    human_review_mode: Literal["blocking", "async"] = "blocking"
+    balance_dimensions: list[str] = Field(default_factory=lambda: ["topic", "language"])
     minimum_reference_documents: int = Field(default=1)
     planner_enabled: bool = Field(default=True)
     coverage_planner_enabled: bool = Field(default=True)

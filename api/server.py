@@ -13,7 +13,7 @@ from contextlib import asynccontextmanager
 from datetime import datetime
 from pathlib import Path
 from typing import Optional
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 
 from fastapi import FastAPI, HTTPException, BackgroundTasks, WebSocket, WebSocketDisconnect, Response, Depends, Request, Header
 from fastapi.security import HTTPBearer
@@ -1017,6 +1017,101 @@ async def get_csrf_token(request: Request):
 # Jobs API Endpoints
 # =============================================================================
 
+class SourcePreviewRequest(BaseModel):
+    query: str
+    optimize_query: bool = True
+    language: str = "en"
+    region_restrictions: list[str] = Field(default_factory=list)
+    max_sources: int = 8
+
+
+@app.post("/jobs/preview", tags=["Jobs"])
+async def preview_job_sources(request: SourcePreviewRequest):
+    """Build an improved search plan and fetch a small source-only preview."""
+    if not orchestrator:
+        raise HTTPException(status_code=503, detail="Discovery pipeline is not available")
+    from core.intent_extractor import extract_intent
+    from pipeline.discovery import DiscoveryPipeline
+
+    intent = None
+    if request.optimize_query and orchestrator.router:
+        try:
+            intent = await extract_intent(request.query, orchestrator.router)
+        except Exception as exc:
+            logger.warning("Query planning failed; previewing the original request: %s", exc)
+
+    specialized = list(getattr(intent, "specialized_queries", []) or [])
+    improved_query = specialized[0] if specialized else request.query.strip()
+    planned_queries = specialized[:10] or [improved_query]
+    preview_queries = planned_queries[:2]
+    query_plan = ({
+        "primary_task": intent.primary_task,
+        "domain": intent.domain,
+        "modality": intent.modality,
+        "anti_domains": intent.anti_domains,
+        "key_entities": intent.key_entities,
+        "specialized_queries": planned_queries,
+        "constraints": intent.constraints,
+        "output_format": intent.output_format,
+        "confidence": intent.confidence,
+    } if intent else {
+        "primary_task": "custom dataset generation",
+        "domain": request.query.strip(),
+        "modality": "text",
+        "anti_domains": [],
+        "key_entities": [],
+        "specialized_queries": planned_queries,
+        "constraints": [],
+        "output_format": "jsonl",
+        "confidence": 0.5,
+    })
+    config = {
+        "target_domain": getattr(intent, "domain", "") or improved_query,
+        "language": request.language,
+        "region_restrictions": request.region_restrictions,
+        "max_results": max(1, min(request.max_sources, 20)),
+        "health_check_enabled": False,
+        "quality_min_score": 0.0,
+    }
+    source_config = {**config, "target_domain": request.query}
+    source_types = orchestrator._determine_source_types(source_config)[:5]
+    discovery = DiscoveryPipeline(config, router=orchestrator.router)
+    sources = []
+    seen = set()
+    for query in preview_queries:
+        async for source in discovery.discover(
+            query, config["target_domain"], source_types,
+            preview=True, query_is_optimized=True,
+        ):
+            if source.url in seen:
+                continue
+            seen.add(source.url)
+            sources.append({
+                "url": source.url,
+                "title": source.title,
+                "description": source.description,
+                "source_type": source.source_type.value,
+                "quality_score": source.quality_score,
+                "license": source.license,
+                "language": getattr(source, "language", None) or source.metadata.get("language"),
+                "metadata": source.metadata,
+            })
+            if len(sources) >= max(1, min(request.max_sources, 20)):
+                break
+        if len(sources) >= max(1, min(request.max_sources, 20)):
+            break
+    return {
+        "original_query": request.query,
+        "improved_query": improved_query,
+        "specialized_queries": planned_queries,
+        "preview_queries": preview_queries,
+        "query_plan": query_plan,
+        "sources": sources,
+        "source_count": len(sources),
+        "preview_only": True,
+        "notice": "AIKosh catalogue results require access and license verification before dataset content is used.",
+    }
+
 @app.post("/jobs", response_model=JobResponse, status_code=201, tags=["Jobs"])
 async def create_job(request: JobRequest, background_tasks: BackgroundTasks):
     """Create a new dataset generation job and kick off the pipeline.
@@ -1325,6 +1420,72 @@ async def get_job_records(job_id: str, limit: int = 10):
     except Exception as e:
         logger.error(f"Failed to get records for job {job_id}: {e}")
         raise HTTPException(status_code=500, detail=f"Failed to get records: {e}")
+
+
+@app.get("/jobs/{job_id}/summary", tags=["Jobs"])
+async def get_job_dataset_summary(job_id: str):
+    """Return persisted quality, provenance, balance, and review coverage for a job."""
+    if not db:
+        raise HTTPException(status_code=503, detail="Database not available")
+
+    job = await db.get_job_status(job_id)
+    if not job:
+        raise HTTPException(status_code=404, detail=f"Job {job_id} not found")
+
+    datasets = await db.get_datasets_by_job(job_id)
+    if not datasets:
+        return {
+            "job_id": job_id,
+            "status": job.get("status"),
+            "sample_count": job.get("samples_generated", 0),
+            "balance_report": None,
+            "quality": {"mean": None, "scored_samples": 0},
+            "sources": {},
+            "languages": {},
+            "topics": {},
+            "human_review": {"enabled": bool((job.get("config") or {}).get("human_review")), "total": 0, "approved": 0, "rejected": 0, "pending": 0, "flagged": 0},
+            "sampled_records": 0,
+        }
+
+    from collections import Counter
+    dataset = datasets[0]
+    dataset_meta = dataset.get("metadata") or {}
+    stored = await db.get_samples(dataset["id"], limit=10000)
+    sources, languages, topics = Counter(), Counter(), Counter()
+    scores = []
+    for sample in stored:
+        metadata = sample.get("metadata") or {}
+        for counter, key in ((sources, "source_type"), (languages, "language"), (topics, "topic")):
+            value = metadata.get(key)
+            if value:
+                counter[str(value)] += 1
+        score = sample.get("quality_score")
+        if isinstance(score, (int, float)):
+            scores.append(float(score))
+
+    config = job.get("config") or {}
+    review = {"enabled": bool(config.get("human_review")), "total": 0, "approved": 0, "rejected": 0, "pending": 0, "flagged": 0}
+    review_service = getattr(app.state, "review_service", None)
+    if review["enabled"] and review_service:
+        queue = await review_service.get_queue(job_id=job_id, page=1, page_size=1)
+        review["total"] = queue.get("total", 0)
+        for status in ("approved", "rejected", "pending", "flagged"):
+            status_queue = await review_service.get_queue(status=status, job_id=job_id, page=1, page_size=1)
+            review[status] += status_queue.get("total", 0)
+
+    return {
+        "job_id": job_id,
+        "dataset_id": dataset["id"],
+        "status": job.get("status"),
+        "sample_count": dataset.get("size", len(stored)),
+        "balance_report": dataset_meta.get("balance_report"),
+        "quality": {"mean": round(sum(scores) / len(scores), 4) if scores else None, "scored_samples": len(scores)},
+        "sources": dict(sources),
+        "languages": dict(languages),
+        "topics": dict(topics),
+        "human_review": review,
+        "sampled_records": len(stored),
+    }
 
 
 @app.get("/jobs/{job_id}/download", tags=["Jobs"])
