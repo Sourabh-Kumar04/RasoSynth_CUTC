@@ -108,6 +108,12 @@ class AdmissionController:
                 await self._processor_task
             except asyncio.CancelledError:
                 pass
+        async with self._queue_lock:
+            queued_jobs = [item[2] for item in self._queue]
+            self._queue.clear()
+        for queued in queued_jobs:
+            self._reject_job(queued.job_id, "controller_stopped")
+            queued.cancel_event.set()
         logger.info("AdmissionController stopped")
 
     async def acquire(self, job_id: str, priority: int = 3, timeout: float = 300.0) -> bool:
@@ -138,10 +144,6 @@ class AdmissionController:
             return True
 
         # Slow path: queue the job
-        if len(self._queue) >= self._max_queue_size:
-            self._reject_job(job_id, "queue_full")
-            return False
-
         queued = QueuedJob(
             job_id=job_id,
             enqueued_at=time.monotonic(),
@@ -150,6 +152,9 @@ class AdmissionController:
         )
 
         async with self._queue_lock:
+            if len(self._queue) >= self._max_queue_size:
+                self._reject_job(job_id, "queue_full")
+                return False
             self._queue.append((priority, queued.enqueued_at, queued))
             self._queue.sort(key=lambda x: (x[0], x[1]))  # sort by priority, then FIFO
             self._total_queued += 1
@@ -180,9 +185,10 @@ class AdmissionController:
 
         Must be called in a ``finally`` block after ``acquire()``.
         """
-        if job_id in self._active_jobs:
-            del self._active_jobs[job_id]
-            self._total_completed += 1
+        if job_id not in self._active_jobs:
+            return
+        del self._active_jobs[job_id]
+        self._total_completed += 1
         self._semaphore.release()
         self._update_metrics()
 
