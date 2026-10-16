@@ -413,9 +413,135 @@ class ExtractionPipeline:
         elif source_type == SourceType.ZENODO:
             async for content in self.extract_from_zenodo(source):
                 yield content
+        elif source_type == SourceType.AI_KOSH:
+            async for content in self.extract_from_aikosh(source):
+                yield content
         else:
             async for content in self.extract_from_url(url):
                 yield content
+
+    async def extract_from_aikosh(self, source) -> AsyncGenerator[ExtractedContent, None]:
+        """Download and read one small, permitted text file from AIKosh."""
+        import json
+        import os
+        import tempfile
+        from pathlib import Path, PurePosixPath
+
+        metadata = getattr(source, "metadata__", None) or getattr(source, "metadata", {}) or {}
+        dataset_id = str(metadata.get("aikosh_dataset_id") or "").strip()
+        file_info = metadata.get("aikosh_file") or {}
+        remote_path = str(file_info.get("path") or "").strip().replace("\\", "/")
+        filename = PurePosixPath(remote_path).name
+        extension = Path(filename).suffix.lower()
+        max_bytes = int(self.config.get("aikosh_max_file_size_bytes", 10 * 1024 * 1024))
+        allowed_extensions = {".csv", ".json", ".jsonl", ".txt", ".md"}
+        api_key = self.config.get("aikosh_api_key") or os.getenv("AIKOSH_API_KEY") or os.getenv("AIKOSH_ACCESS_KEY")
+        if not (dataset_id and remote_path and ".." not in PurePosixPath(remote_path).parts and filename and extension in allowed_extensions and api_key):
+            yield ExtractedContent(
+                content="", content_type="error", url=getattr(source, "url", ""),
+                extraction_warnings=["AIKosh file access is unavailable or the listed file format is unsupported."],
+            )
+            return
+
+        try:
+            import aikosh
+        except ImportError:
+            yield ExtractedContent(
+                content="", content_type="error", url=getattr(source, "url", ""),
+                extraction_warnings=["The optional AIKosh SDK is not installed."],
+            )
+            return
+
+        try:
+            with tempfile.TemporaryDirectory(prefix="rasosynth-aikosh-") as temp_dir:
+                destination = Path(temp_dir)
+
+                def _download():
+                    aikosh.set_api_key(api_key)
+                    file_listing = aikosh.list_files(
+                        "dataset",
+                        dataset_id,
+                        filters={"directory_path": "", "page": 1, "limit": 50},
+                    )
+                    payload = file_listing.get("data", {}) if isinstance(file_listing, dict) else {}
+                    files = payload.get("items", payload.get("files", [])) if isinstance(payload, dict) else (payload if isinstance(payload, list) else [])
+                    permitted = False
+                    for listed_file in files if isinstance(files, list) else []:
+                        if not isinstance(listed_file, dict):
+                            continue
+                        listed_path = str(listed_file.get("file_path") or listed_file.get("filePath") or listed_file.get("path") or listed_file.get("fileName") or listed_file.get("name") or listed_file.get("key") or "").strip()
+                        if listed_path != remote_path:
+                            continue
+                        try:
+                            listed_size = int(listed_file.get("size_bytes", listed_file.get("sizeBytes", listed_file.get("fileSize", listed_file.get("size")))))
+                        except (TypeError, ValueError):
+                            match = re.fullmatch(r"\s*(\d+(?:\.\d+)?)\s*(b|bytes|kb|mb|gb)\s*", str(listed_file.get("size") or listed_file.get("fileSize") or "").lower())
+                            if match:
+                                multiplier = {"b": 1, "bytes": 1, "kb": 1024, "mb": 1024 ** 2, "gb": 1024 ** 3}[match.group(2)]
+                                listed_size = int(float(match.group(1)) * multiplier)
+                            else:
+                                listed_size = 0
+                        permitted = 0 < listed_size <= max_bytes
+                        break
+                    if not permitted:
+                        raise PermissionError("AIKosh no longer lists this file as an accessible file within the size limit")
+                    return aikosh.download({
+                        "identifier": dataset_id,
+                        "type": "dataset",
+                        "file_path": remote_path,
+                        "destination_path": str(destination),
+                        "filename": filename,
+                    })
+
+                result = await asyncio.to_thread(_download)
+                local_file = destination / filename
+                if not local_file.is_file():
+                    possible_files = [path for path in destination.rglob("*") if path.is_file() and path.suffix.lower() in allowed_extensions]
+                    if len(possible_files) == 1:
+                        local_file = possible_files[0]
+                if not local_file.is_file():
+                    raise FileNotFoundError(f"AIKosh SDK did not return the requested file ({getattr(result, 'status', 'unknown status')})")
+                actual_size = local_file.stat().st_size
+                if actual_size <= 0 or actual_size > max_bytes:
+                    raise ValueError(f"AIKosh file exceeds the {max_bytes}-byte ingestion limit")
+
+                if extension == ".csv":
+                    import pandas as pd
+                    frame = pd.read_csv(local_file, nrows=100, dtype=str, keep_default_na=False)
+                    file_content = frame.to_csv(index=False)
+                elif extension == ".json":
+                    with local_file.open("r", encoding="utf-8-sig") as handle:
+                        payload = json.load(handle)
+                    if isinstance(payload, list):
+                        payload = payload[:100]
+                    file_content = json.dumps(payload, ensure_ascii=False, indent=2)[:100_000]
+                elif extension == ".jsonl":
+                    with local_file.open("r", encoding="utf-8-sig") as handle:
+                        file_content = "".join(line for _, line in zip(range(100), handle))
+                else:
+                    file_content = local_file.read_text(encoding="utf-8-sig", errors="replace")[:100_000]
+
+                content = "\n".join(filter(None, [
+                    f"Dataset: {getattr(source, 'title', '')}",
+                    f"Description: {getattr(source, 'description', '') or ''}",
+                    f"File: {filename}",
+                    file_content,
+                ]))
+                extracted = await self._process_text(content[:150_000], getattr(source, "url", ""), "utf-8")
+                extracted.metadata.update({
+                    "source_type": "ai_kosh",
+                    "aikosh_dataset_id": dataset_id,
+                    "aikosh_file_path": remote_path,
+                    "aikosh_file_size_bytes": actual_size,
+                    "license": getattr(source, "license", None),
+                })
+                yield extracted
+        except Exception as exc:
+            self._LOG.warning("AIKosh file extraction failed for %s: %s", remote_path, exc)
+            yield ExtractedContent(
+                content="", content_type="error", url=getattr(source, "url", ""),
+                extraction_warnings=[f"Could not download or read the AIKosh file: {exc}"],
+            )
 
     async def extract_from_url(self, url: str) -> AsyncGenerator[ExtractedContent, None]:
         """Extract content from URL with intelligent type detection."""

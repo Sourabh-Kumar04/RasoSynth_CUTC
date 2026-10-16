@@ -544,7 +544,7 @@ export default function StudioPage() {
                                 <span className="mt-1 block text-[10px] font-mono text-[#708076]">{source.source_type} · source estimate {Number(source.quality_score || 0).toFixed(2)}</span>
                                 <span className="mt-1 block text-[10px] text-[#55635B]">
                                   Language: {Array.isArray(source.language) ? source.language.join(', ') : (source.language || 'not listed')} · License: {source.license || 'not provided'}
-                                  {source.license_status === 'verify_access_and_terms' ? ' · verify access and reuse terms' : ''}
+                                  {['verify_access_and_terms', 'verify_before_use'].includes(source.license_status) ? ' · review access and reuse terms' : ''}
                                 </span>
                                 {source.metadata?.catalogue_only && <span className="mt-1 block text-[10px] font-semibold text-amber-800">Catalogue listing only; dataset access and reuse terms must be verified before ingestion.</span>}
                               </span>

@@ -787,7 +787,17 @@ class DatasetOrchestrator:
                 f"Skipped {len(catalogue_only_sources)} AIKosh catalogue listing(s): dataset access and license must be verified before content extraction."
             )
         sources = crawlable_sources
-        head_tasks = [_is_url_reachable(s.get("url", "") if isinstance(s, dict) else getattr(s, "url", "")) for s in sources]
+        async def _source_is_reachable(source) -> bool:
+            metadata = source.get("metadata", {}) if isinstance(source, dict) else getattr(source, "metadata", {})
+            source_type = source.get("source_type") if isinstance(source, dict) else getattr(source, "source_type", None)
+            if getattr(source_type, "value", source_type) == "ai_kosh" and metadata.get("aikosh_file"):
+                # The dataset page may block HEAD requests; the authenticated
+                # SDK file listing already established the selected file.
+                return True
+            url = source.get("url", "") if isinstance(source, dict) else getattr(source, "url", "")
+            return await _is_url_reachable(url)
+
+        head_tasks = [_source_is_reachable(source) for source in sources]
         head_results = await asyncio.gather(*head_tasks, return_exceptions=True)
 
         reachable_sources = []

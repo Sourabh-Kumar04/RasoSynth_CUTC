@@ -1179,7 +1179,7 @@ async def preview_job_sources(request: SourcePreviewRequest):
                 "source_type": source.source_type.value,
                 "quality_score": source.quality_score,
                 "license": str(reported_license) if reported_license else None,
-                "license_status": "verify_access_and_terms" if metadata.get("catalogue_only") else ("reported" if reported_license else "not_provided"),
+                "license_status": metadata.get("license_status") or ("verify_access_and_terms" if metadata.get("catalogue_only") else ("reported" if reported_license else "not_provided")),
                 "language": reported_language,
                 "metadata": metadata,
             })
@@ -1250,6 +1250,7 @@ async def preview_job_example_batch(request: ExampleBatchPreviewRequest):
         "min_length": 80,
         "max_length": 20000,
         "synthetic_ratio": 0.0,
+        "aikosh_api_key": orchestrator.config.get("aikosh_api_key") or get_settings().aikosh_api_key,
     }
     try:
         dataset_type = DatasetType(request.dataset_type)

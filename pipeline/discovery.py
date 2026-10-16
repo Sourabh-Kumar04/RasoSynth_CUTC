@@ -1436,9 +1436,9 @@ class DiscoveryPipeline:
             return []
 
         payload = response.get("data", {}) if isinstance(response, dict) else {}
-        items = payload.get("items", []) if isinstance(payload, dict) else []
+        items = payload.get("items", []) if isinstance(payload, dict) else (payload if isinstance(payload, list) else [])
         sources = []
-        for item in items:
+        for item in items[:8]:
             if not isinstance(item, dict):
                 continue
             identifier = str(item.get("id") or "").strip()
@@ -1449,13 +1449,56 @@ class DiscoveryPipeline:
             license_value = item.get("license") or item.get("licenseName")
             if isinstance(license_value, dict):
                 license_value = license_value.get("name") or license_value.get("id") or license_value.get("spdx_id")
+            accessible_file = None
+            if identifier:
+                try:
+                    file_response = await asyncio.to_thread(
+                        aikosh.list_files,
+                        "dataset",
+                        identifier,
+                        filters={"directory_path": "", "page": 1, "limit": 30},
+                    )
+                    file_payload = file_response.get("data", {}) if isinstance(file_response, dict) else {}
+                    file_items = file_payload.get("items", file_payload.get("files", [])) if isinstance(file_payload, dict) else []
+                    if not isinstance(file_items, list) and isinstance(file_payload, list):
+                        file_items = file_payload
+                    supported_extensions = {".csv", ".json", ".jsonl", ".txt", ".md"}
+                    extension_priority = {".jsonl": 0, ".json": 1, ".csv": 2, ".txt": 3, ".md": 4}
+                    candidates = []
+                    for file_item in file_items if isinstance(file_items, list) else []:
+                        if not isinstance(file_item, dict):
+                            continue
+                        remote_path = str(file_item.get("file_path") or file_item.get("filePath") or file_item.get("path") or file_item.get("fileName") or file_item.get("name") or file_item.get("key") or "").strip()
+                        extension = os.path.splitext(remote_path)[1].lower()
+                        raw_size = file_item.get("size_bytes", file_item.get("sizeBytes", file_item.get("fileSize", file_item.get("size"))))
+                        try:
+                            size_bytes = int(raw_size)
+                        except (TypeError, ValueError):
+                            size_match = re.fullmatch(r"\s*(\d+(?:\.\d+)?)\s*(b|bytes|kb|mb|gb)\s*", str(raw_size or "").lower())
+                            if not size_match:
+                                continue
+                            unit_multiplier = {"b": 1, "bytes": 1, "kb": 1024, "mb": 1024 ** 2, "gb": 1024 ** 3}[size_match.group(2)]
+                            size_bytes = int(float(size_match.group(1)) * unit_multiplier)
+                        if remote_path and extension in supported_extensions and 0 < size_bytes <= 10 * 1024 * 1024:
+                            candidates.append((extension_priority[extension], size_bytes, remote_path, extension))
+                    if candidates:
+                        _, size_bytes, remote_path, extension = min(candidates)
+                        accessible_file = {
+                            "path": remote_path,
+                            "name": os.path.basename(remote_path),
+                            "size_bytes": size_bytes,
+                            "format": extension.lstrip("."),
+                        }
+                except Exception as exc:
+                    self._LOG.info("Could not inspect AIKosh files for dataset %s: %s", identifier, exc)
             metadata = {
                 **item,
                 "aikosh_dataset_id": identifier or None,
-                "catalogue_only": True,
+                "catalogue_only": accessible_file is None,
                 "access_scope": "permitted",
-                "access_status": "api_listed_file_access_not_yet_verified",
+                "access_status": "small_text_file_listed" if accessible_file else "api_listed_file_access_not_verified",
                 "license_status": "verify_before_use",
+                "aikosh_file": accessible_file,
             }
             source = DiscoveredSource(
                 url=f"https://aikosh.indiaai.gov.in/home/datasets/details/{slug or identifier}.html",
