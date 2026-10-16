@@ -290,9 +290,12 @@ class AdmissionController:
 
         # If semaphore has available slots, admit from queue
         if not self._semaphore.locked():
+            next_job = None
             async with self._queue_lock:
                 if self._queue:
                     _, _, next_job = self._queue.pop(0)
+            if next_job is None:
+                return
             await self._semaphore.acquire()
             self._admit_job(next_job.job_id)
             next_job.cancel_event.set()  # signal admission
