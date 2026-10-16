@@ -127,6 +127,7 @@ class AgentState(TypedDict):
     dataset_plan: dict | None
     coverage_matrix: dict | None
     balance_report: dict | None
+    intent: UserIntent | None
 
 
 class ConstraintAnalyzer:
@@ -299,12 +300,12 @@ class DatasetOrchestrator:
         self.constraint_analyzer = ConstraintAnalyzer(config)
         self.redis_client = None  # Redis client for intent caching (optional)
 
-    def _is_source_relevant(self, source) -> bool:
+    def _is_source_relevant(self, source, intent: UserIntent | None) -> bool:
         """
         Reject a source if any term from intent.anti_domains appears
         in its title, description, or URL.
         """
-        if self.intent is None:
+        if intent is None:
             # Defensive: should never happen in normal flow
             return True
         if isinstance(source, dict):
@@ -317,7 +318,7 @@ class DatasetOrchestrator:
             description = (getattr(source, "description", None) or "").lower()
             url = (getattr(source, "url", None) or "").lower()
         combined = f"{title} {description} {url}"
-        for anti in self.intent.anti_domains:
+        for anti in intent.anti_domains:
             if anti in combined:
                 logger.debug(f"Rejected source '{title}' – matched anti-domain '{anti}'")
                 return False
@@ -482,6 +483,7 @@ class DatasetOrchestrator:
         job = state["job"]
         job_id = job["id"]
         config = job["config"]
+        intent = state["intent"]
 
         self._update_job_status(job_id, "discover", 0.1)
 
@@ -491,7 +493,7 @@ class DatasetOrchestrator:
 
         discovery = DiscoveryPipeline(config, router=self.router)
 
-        target_domain = (self.intent.domain if self.intent else "") or config.get("target_domain", "")
+        target_domain = (intent.domain if intent else "") or config.get("target_domain", "")
         # If target_domain is not provided but we have source_urls, extract domain from the first URL
         if not target_domain and config.get("source_urls"):
             from urllib.parse import urlparse
@@ -509,7 +511,7 @@ class DatasetOrchestrator:
         excluded_source_urls = set(config.get("excluded_source_urls", []))
 
         # Generate multiple query variations for better coverage
-        queries = self._get_discovery_queries(self.intent)
+        queries = self._get_discovery_queries(intent)
 
         max_sources = min(config.get("max_results", 500), state.get("constraint_analysis", {}).get("estimated_sources", 200))
         batch_size = config.get("batch_size", 50)  # Process in batches
@@ -553,7 +555,7 @@ class DatasetOrchestrator:
                         continue
                     # Apply domain relevance pre-filter to skip off-topic sources early.
                     # ``_is_source_relevant`` lives on DatasetOrchestrator and uses intent.
-                    if self._is_source_relevant(source):
+                    if self._is_source_relevant(source, intent):
                         seen_urls.add(source.url)
                         yield source
                     else:
@@ -928,6 +930,7 @@ class DatasetOrchestrator:
         job = state["job"]
         job_id = job["id"]
         extracted = state["extracted_content"]
+        intent = state["intent"]
 
         self._update_job_status(job_id, "filter", 0.5)
 
@@ -936,7 +939,7 @@ class DatasetOrchestrator:
         filtering = FilteringPipeline(self.router, self.config)
         filtered = []
 
-        target_domain = (self.intent.domain if self.intent else "") or job["config"].get("target_domain", "")
+        target_domain = (intent.domain if intent else "") or job["config"].get("target_domain", "")
 
         # NOTE: Thresholds are now STATIC (see pipeline/quality_breakdown.py)
         # No runtime learning — ensures deterministic scoring across runs
@@ -965,7 +968,7 @@ class DatasetOrchestrator:
 
             filter_tasks = [
                 asyncio.wait_for(
-                    filtering.filter(content, self.intent, return_all=True),
+                    filtering.filter(content, intent, return_all=True),
                     timeout=filter_timeout
                 )
                 for content in content_objs
@@ -1120,6 +1123,7 @@ class DatasetOrchestrator:
         job_id = job["id"]
         config = job["config"]
         filtered = state["filtered_samples"]
+        intent = state["intent"]
 
         self._update_job_status(job_id, "construct", 0.7)
 
@@ -1266,7 +1270,7 @@ class DatasetOrchestrator:
 
                 async for constructed in construction.construct(
                     sample,
-                    self.intent,
+                    intent,
                     dataset_type=dataset_type
                 ):
                     key = sample_key(constructed.instruction, constructed.response)
@@ -1902,24 +1906,26 @@ class DatasetOrchestrator:
             "dataset_plan": None,
             "coverage_matrix": None,
             "balance_report": None,
+            "intent": None,
         }
         # Intent extraction - the single source of truth for the request
         try:
             approved_plan = job.config.get("query_plan")
             if approved_plan:
-                self.intent = UserIntent(
+                intent = UserIntent(
                     **approved_plan,
                     raw_input=job.config.get("target_domain", ""),
                 )
             else:
-                self.intent = await extract_intent(
+                intent = await extract_intent(
                     raw_input=json.dumps(job.config),
                     provider_router=self.router,
                     redis_client=getattr(self, 'redis_client', None),
                 )
             approved_queries = job.config.get("specialized_queries") or []
             if approved_queries:
-                self.intent.specialized_queries = approved_queries[:10]
+                intent.specialized_queries = approved_queries[:10]
+            initial_state["intent"] = intent
         except IntentExtractionError as e:
             raise e  # will be caught by outer try block
 
