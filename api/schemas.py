@@ -69,7 +69,15 @@ class ConstraintAnalysis(BaseModel):
 
 
 class JobRequest(BaseModel):
-    target_domain: str = Field(..., min_length=1, description="Target domain for dataset generation")
+    target_domain: str = Field(..., min_length=1, max_length=2000, description="Natural-language dataset request")
+
+    @field_validator("target_domain")
+    @classmethod
+    def normalize_target_domain(cls, value: str) -> str:
+        value = value.strip()
+        if not value:
+            raise ValueError("Describe the dataset you want")
+        return value
     dataset_name: Optional[str] = Field(default=None, min_length=1, max_length=120)
     dataset_type: DatasetType = Field(default=DatasetType.SFT)
 

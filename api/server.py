@@ -13,7 +13,7 @@ from contextlib import asynccontextmanager
 from datetime import datetime
 from pathlib import Path
 from typing import Optional
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, field_validator
 
 from fastapi import FastAPI, HTTPException, BackgroundTasks, WebSocket, WebSocketDisconnect, Response, Depends, Request, Header
 from fastapi.security import HTTPBearer
@@ -1087,7 +1087,7 @@ async def get_csrf_token(request: Request):
 # =============================================================================
 
 class SourcePreviewRequest(BaseModel):
-    query: str
+    query: str = Field(min_length=1, max_length=2000)
     optimize_query: bool = True
     override_query: Optional[str] = None
     query_plan: Optional[dict] = None
@@ -1095,9 +1095,17 @@ class SourcePreviewRequest(BaseModel):
     region_restrictions: list[str] = Field(default_factory=list)
     max_sources: int = 8
 
+    @field_validator("query")
+    @classmethod
+    def normalize_query(cls, value: str) -> str:
+        value = value.strip()
+        if not value:
+            raise ValueError("Describe the dataset you want")
+        return value
+
 
 class ExampleBatchPreviewRequest(BaseModel):
-    query: str
+    query: str = Field(min_length=1, max_length=2000)
     sources: list[dict] = Field(min_length=1, max_length=5)
     carry_forward_examples: list[dict] = Field(default_factory=list, max_length=3)
     carry_forward_indices: Optional[list[int]] = Field(default=None, max_length=3)
@@ -1106,6 +1114,14 @@ class ExampleBatchPreviewRequest(BaseModel):
     dataset_type: str = "sft"
     language: str = "en"
     max_examples: int = Field(default=3, ge=1, le=3)
+
+    @field_validator("query")
+    @classmethod
+    def normalize_query(cls, value: str) -> str:
+        value = value.strip()
+        if not value:
+            raise ValueError("Describe the dataset you want")
+        return value
 
 
 @app.post("/jobs/preview", tags=["Jobs"])

@@ -454,6 +454,7 @@ export default function StudioPage() {
                 <div className="relative pt-1">
                   <textarea
                     value={naturalLanguageInput}
+                    maxLength={2000}
                     disabled={isPreviewing || isSubmitting}
                     onChange={(e) => {
                       setNaturalLanguageInput(e.target.value)
