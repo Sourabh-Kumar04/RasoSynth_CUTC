@@ -123,6 +123,54 @@ const formatMap: Record<string, string> = {
   parquet: 'parquet',
 }
 
+const datasetLanguageOptions = [
+  ['auto', 'Auto detect'], ['en', 'English'], ['as', 'Assamese'], ['bn', 'Bengali'],
+  ['brx', 'Bodo'], ['doi', 'Dogri'], ['gu', 'Gujarati'], ['hi', 'Hindi'],
+  ['kn', 'Kannada'], ['ks', 'Kashmiri'], ['kok', 'Konkani'], ['mai', 'Maithili'],
+  ['ml', 'Malayalam'], ['mni', 'Manipuri / Meitei'], ['mr', 'Marathi'], ['ne', 'Nepali'],
+  ['or', 'Odia'], ['pa', 'Punjabi'], ['sa', 'Sanskrit'], ['sat', 'Santali'],
+  ['sd', 'Sindhi'], ['ta', 'Tamil'], ['te', 'Telugu'], ['ur', 'Urdu'],
+  ['ar', 'Arabic'], ['zh', 'Chinese'], ['nl', 'Dutch'], ['fr', 'French'], ['de', 'German'],
+  ['el', 'Greek'], ['he', 'Hebrew'], ['id', 'Indonesian'], ['it', 'Italian'],
+  ['ja', 'Japanese'], ['ko', 'Korean'], ['fa', 'Persian'], ['pl', 'Polish'],
+  ['pt', 'Portuguese'], ['ru', 'Russian'], ['es', 'Spanish'], ['sw', 'Swahili'],
+  ['th', 'Thai'], ['tr', 'Turkish'], ['vi', 'Vietnamese'],
+] as const
+
+const indicLanguageCodes = new Set(['as', 'bn', 'brx', 'doi', 'gu', 'hi', 'kn', 'ks', 'kok', 'mai', 'ml', 'mni', 'mr', 'ne', 'or', 'pa', 'sa', 'sat', 'sd', 'ta', 'te', 'ur'])
+
+function inferDatasetLanguages(query: string): string[] {
+  const normalized = query.toLowerCase()
+  const namedLanguages: Array<[string, string[]]> = [
+    ['hi', ['hindi']], ['bn', ['bengali', 'bangla']], ['ta', ['tamil']],
+    ['te', ['telugu']], ['mr', ['marathi']], ['gu', ['gujarati']],
+    ['kn', ['kannada']], ['ml', ['malayalam']], ['pa', ['punjabi']],
+    ['ur', ['urdu']], ['or', ['odia', 'oriya']], ['as', ['assamese']],
+    ['sa', ['sanskrit']], ['ks', ['kashmiri']], ['kok', ['konkani']],
+    ['mni', ['manipuri', 'meitei']], ['sd', ['sindhi']], ['doi', ['dogri']],
+    ['mai', ['maithili']], ['sat', ['santali']], ['brx', ['bodo']],
+    ['ne', ['nepali']], ['en', ['english']], ['ar', ['arabic']], ['zh', ['chinese', 'mandarin']],
+    ['nl', ['dutch']], ['fr', ['french']], ['de', ['german']], ['el', ['greek']],
+    ['he', ['hebrew']], ['id', ['indonesian']], ['it', ['italian']], ['ja', ['japanese']],
+    ['ko', ['korean']], ['fa', ['persian', 'farsi']], ['pl', ['polish']],
+    ['pt', ['portuguese']], ['ru', ['russian']], ['es', ['spanish']],
+    ['sw', ['swahili']], ['th', ['thai']], ['tr', ['turkish']], ['vi', ['vietnamese']],
+  ]
+  const requested = namedLanguages.filter(([, names]) => names.some((name) => normalized.includes(name))).map(([code]) => code)
+  if (requested.length) return [...requested.filter((code) => code !== 'en'), ...requested.filter((code) => code === 'en')]
+
+  const scripts: Array<[string, RegExp]> = [
+    ['hi', /[\u0900-\u097f]/], ['bn', /[\u0980-\u09ff]/],
+    ['pa', /[\u0a00-\u0a7f]/], ['gu', /[\u0a80-\u0aff]/],
+    ['or', /[\u0b00-\u0b7f]/], ['ta', /[\u0b80-\u0bff]/],
+    ['te', /[\u0c00-\u0c7f]/], ['kn', /[\u0c80-\u0cff]/],
+    ['ml', /[\u0d00-\u0d7f]/], ['ar', /[\u0600-\u06ff]/],
+    ['ru', /[\u0400-\u04ff]/], ['el', /[\u0370-\u03ff]/], ['he', /[\u0590-\u05ff]/],
+    ['ko', /[\uac00-\ud7af]/], ['ja', /[\u3040-\u30ff]/], ['zh', /[\u4e00-\u9fff]/],
+  ]
+  return [scripts.find(([, pattern]) => pattern.test(query))?.[0] || 'en']
+}
+
 export default function StudioPage() {
   const router = useRouter()
   const [activeTab, setActiveTab] = useState('create')
@@ -139,6 +187,7 @@ export default function StudioPage() {
   const [outputFormat, setOutputFormat] = useState('jsonl')
   const [generationMode, setGenerationMode] = useState('strict_source')
   const [datasetType, setDatasetType] = useState('sft')
+  const [datasetLanguage, setDatasetLanguage] = useState('auto')
   const [humanReviewEnabled, setHumanReviewEnabled] = useState(false)
   const [humanReviewPercentage, setHumanReviewPercentage] = useState(10)
   const [optimizeQuery, setOptimizeQuery] = useState(true)
@@ -152,6 +201,10 @@ export default function StudioPage() {
   const [isPreviewingExamples, setIsPreviewingExamples] = useState(false)
   const [submitError, setSubmitError] = useState<string | null>(null)
   const [createdJob, setCreatedJob] = useState<any>(null)
+  const inferredLanguages = inferDatasetLanguages(naturalLanguageInput)
+  const resolvedLanguage = datasetLanguage === 'auto' ? inferredLanguages[0] : datasetLanguage
+  const secondaryLanguages = datasetLanguage === 'auto' ? inferredLanguages.filter((language) => language !== resolvedLanguage) : []
+  const regionRestrictions = indicLanguageCodes.has(resolvedLanguage) ? ['India'] : []
 
   const addConstraint = (type: string) => {
     setConstraints([...constraints, { type, value: '', enabled: true }])
@@ -183,6 +236,8 @@ export default function StudioPage() {
       const preview = await api.previewJobSources({
         query: naturalLanguageInput,
         optimize_query: optimizeQuery,
+        language: resolvedLanguage,
+        region_restrictions: regionRestrictions,
         max_sources: 8,
       })
       setSourcePreview(preview)
@@ -192,7 +247,7 @@ export default function StudioPage() {
     } finally {
       setIsPreviewing(false)
     }
-  }, [naturalLanguageInput, optimizeQuery])
+  }, [naturalLanguageInput, optimizeQuery, resolvedLanguage, regionRestrictions.join(',')])
 
   const handlePreviewExamples = useCallback(async () => {
     const selectedSources = (sourcePreview?.sources || [])
@@ -211,7 +266,7 @@ export default function StudioPage() {
         sources: selectedSources,
         query_plan: sourcePreview.query_plan,
         dataset_type: selectedTemplate ? (datasetTypeMap[selectedTemplate] || 'sft') : datasetType,
-        language: 'en',
+        language: resolvedLanguage,
         max_examples: 3,
       })
       setExampleBatchPreview(preview)
@@ -220,7 +275,7 @@ export default function StudioPage() {
     } finally {
       setIsPreviewingExamples(false)
     }
-  }, [sourcePreview, excludedSourceUrls, naturalLanguageInput, selectedTemplate, datasetType])
+  }, [sourcePreview, excludedSourceUrls, naturalLanguageInput, selectedTemplate, datasetType, resolvedLanguage])
 
   // Start the full job only after the user has seen the source preview.
   const handleGenerateDataset = useCallback(async () => {
@@ -244,7 +299,9 @@ export default function StudioPage() {
         dataset_type: selectedTemplate ? (datasetTypeMap[selectedTemplate] || 'sft') : datasetType,
         dataset_size: targetSize,
         quality_level: qualityLevel,
-        language: 'en',
+        language: resolvedLanguage,
+        region_restrictions: regionRestrictions,
+        secondary_languages: secondaryLanguages,
         export_format: formatMap[outputFormat] || 'jsonl',
         preferred_providers: selectedProviders,
         cost_budget_usd: targetSize * 0.05, // Rough estimate
@@ -273,7 +330,7 @@ export default function StudioPage() {
     } finally {
       setIsSubmitting(false)
     }
-  }, [naturalLanguageInput, selectedTemplate, targetSize, qualityLevel, outputFormat, selectedProviders, generationMode, datasetType, sourcePreview, exampleBatchPreview, excludedSourceUrls, humanReviewEnabled, humanReviewPercentage, router])
+  }, [naturalLanguageInput, selectedTemplate, targetSize, qualityLevel, outputFormat, selectedProviders, generationMode, datasetType, sourcePreview, exampleBatchPreview, excludedSourceUrls, humanReviewEnabled, humanReviewPercentage, resolvedLanguage, secondaryLanguages.join(','), regionRestrictions.join(','), router])
 
   return (
     <div className="space-y-6 w-full pb-8">
@@ -706,6 +763,23 @@ export default function StudioPage() {
                       <SelectItem value="reasoning">Chain of Thought Reasoning</SelectItem>
                     </SelectContent>
                   </Select>
+                </div>
+
+                <div className="space-y-1.5">
+                  <label className="text-xs font-bold text-[#1B3B2B]" htmlFor="dataset-language">Dataset Language</label>
+                  <Select value={datasetLanguage} onValueChange={(value) => { setDatasetLanguage(value); setSourcePreview(null); setExampleBatchPreview(null) }}>
+                    <SelectTrigger id="dataset-language" className="rounded-full border-[#D1D8CE] text-xs">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {datasetLanguageOptions.map(([value, label]) => <SelectItem key={value} value={value}>{label}</SelectItem>)}
+                    </SelectContent>
+                  </Select>
+                  <p className="text-[10px] text-[#708076]">
+                    {datasetLanguage === 'auto'
+                      ? `Detected: ${[resolvedLanguage, ...secondaryLanguages].map((code) => datasetLanguageOptions.find(([option]) => option === code)?.[1] || code).join(' + ')}`
+                      : 'AIKosh is prioritized for Indian language requests.'}
+                  </p>
                 </div>
 
                 <div className="space-y-1.5">
