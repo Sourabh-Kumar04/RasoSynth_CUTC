@@ -123,6 +123,10 @@ const formatMap: Record<string, string> = {
   parquet: 'parquet',
 }
 
+const balanceOptions = [
+  ['topic', 'Topic'], ['language', 'Language'], ['source', 'Source'], ['difficulty', 'Difficulty'],
+] as const
+
 const datasetLanguageOptions = [
   ['auto', 'Auto detect'], ['en', 'English'], ['as', 'Assamese'], ['bn', 'Bengali'],
   ['brx', 'Bodo'], ['doi', 'Dogri'], ['gu', 'Gujarati'], ['hi', 'Hindi'],
@@ -187,6 +191,7 @@ export default function StudioPage() {
   const [outputFormat, setOutputFormat] = useState('jsonl')
   const [generationMode, setGenerationMode] = useState('strict_source')
   const [datasetType, setDatasetType] = useState('sft')
+  const [balanceDimensions, setBalanceDimensions] = useState<string[]>(['topic', 'language', 'source', 'difficulty'])
   const [datasetLanguage, setDatasetLanguage] = useState('auto')
   const [humanReviewEnabled, setHumanReviewEnabled] = useState(false)
   const [humanReviewPercentage, setHumanReviewPercentage] = useState(10)
@@ -220,6 +225,12 @@ export default function StudioPage() {
     } else {
       setSelectedProviders([...selectedProviders, id])
     }
+  }
+
+  const toggleBalanceDimension = (dimension: string) => {
+    setBalanceDimensions((current) => current.includes(dimension)
+      ? current.filter((value) => value !== dimension)
+      : [...current, dimension])
   }
 
   const handlePreviewSources = useCallback(async () => {
@@ -296,12 +307,14 @@ export default function StudioPage() {
       // Build job request from form data
       const jobRequest = {
         target_domain: naturalLanguageInput,
+        dataset_name: datasetName.trim() || undefined,
         dataset_type: selectedTemplate ? (datasetTypeMap[selectedTemplate] || 'sft') : datasetType,
         dataset_size: targetSize,
         quality_level: qualityLevel,
         language: resolvedLanguage,
         region_restrictions: regionRestrictions,
         secondary_languages: secondaryLanguages,
+        balance_dimensions: balanceDimensions,
         export_format: formatMap[outputFormat] || 'jsonl',
         preferred_providers: selectedProviders,
         cost_budget_usd: targetSize * 0.05, // Rough estimate
@@ -332,7 +345,7 @@ export default function StudioPage() {
     } finally {
       setIsSubmitting(false)
     }
-  }, [naturalLanguageInput, selectedTemplate, targetSize, qualityLevel, outputFormat, selectedProviders, generationMode, datasetType, sourcePreview, exampleBatchPreview, excludedSourceUrls, humanReviewEnabled, humanReviewPercentage, resolvedLanguage, secondaryLanguages.join(','), regionRestrictions.join(','), router])
+  }, [naturalLanguageInput, datasetName, selectedTemplate, targetSize, qualityLevel, outputFormat, selectedProviders, generationMode, datasetType, sourcePreview, exampleBatchPreview, excludedSourceUrls, humanReviewEnabled, humanReviewPercentage, resolvedLanguage, secondaryLanguages.join(','), regionRestrictions.join(','), balanceDimensions.join(','), router])
 
   return (
     <div className="space-y-6 w-full pb-8">
@@ -740,7 +753,7 @@ export default function StudioPage() {
               <CardContent className="space-y-4">
                 <div className="space-y-1.5">
                   <label className="text-xs font-bold text-[#1B3B2B]">Dataset Name</label>
-                  <Input placeholder="my-dataset-v1" className="rounded-full border-[#D1D8CE] text-xs" />
+                  <Input value={datasetName} onChange={(event) => setDatasetName(event.target.value)} placeholder="my-dataset-v1" maxLength={120} className="rounded-full border-[#D1D8CE] text-xs" />
                 </div>
 
                 <div className="space-y-1.5">
@@ -792,26 +805,45 @@ export default function StudioPage() {
 
                 <div className="space-y-1.5">
                   <label className="text-xs font-bold text-[#1B3B2B]">Target Size</label>
-                  <Input type="number" placeholder="1000" defaultValue="1000" className="rounded-full border-[#D1D8CE] text-xs" />
+                  <Input type="number" min={1} max={100000} value={targetSize} onChange={(event) => setTargetSize(Math.max(1, Math.min(100000, Math.trunc(Number(event.target.value) || 1))))} className="rounded-full border-[#D1D8CE] text-xs" />
                 </div>
+
+                <fieldset className="space-y-2 rounded-xl border border-[#D1D8CE] bg-[#F6F7F4] p-3">
+                  <legend className="px-1 text-xs font-bold text-[#1B3B2B]">Balance the final dataset by</legend>
+                  <div className="grid grid-cols-2 gap-2">
+                    {balanceOptions.map(([value, label]) => (
+                      <label key={value} className="flex items-center gap-2 text-xs text-[#55635B]">
+                        <input
+                          type="checkbox"
+                          checked={balanceDimensions.includes(value)}
+                          onChange={() => toggleBalanceDimension(value)}
+                          className="accent-[#1B3B2B]"
+                        />
+                        {label}
+                      </label>
+                    ))}
+                  </div>
+                  <p className="text-[10px] leading-relaxed text-[#708076]">Balancing can reduce the final count when some groups have fewer examples.</p>
+                </fieldset>
 
                 <div className="space-y-1.5">
                   <label className="text-xs font-bold text-[#1B3B2B]">Quality Level</label>
-                  <Select defaultValue="high">
+                  <Select value={qualityLevel} onValueChange={setQualityLevel}>
                     <SelectTrigger className="rounded-full border-[#D1D8CE] text-xs">
                       <SelectValue />
                     </SelectTrigger>
                     <SelectContent>
                       <SelectItem value="high">High</SelectItem>
-                      <SelectItem value="medium">Medium</SelectItem>
-                      <SelectItem value="low">Low</SelectItem>
+                      <SelectItem value="draft">Draft</SelectItem>
+                      <SelectItem value="standard">Standard</SelectItem>
+                      <SelectItem value="research">Research</SelectItem>
                     </SelectContent>
                   </Select>
                 </div>
 
                 <div className="space-y-1.5">
                   <label className="text-xs font-bold text-[#1B3B2B]">Output Format</label>
-                  <Select defaultValue="jsonl">
+                  <Select value={outputFormat} onValueChange={setOutputFormat}>
                     <SelectTrigger className="rounded-full border-[#D1D8CE] text-xs">
                       <SelectValue />
                     </SelectTrigger>

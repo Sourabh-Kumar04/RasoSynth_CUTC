@@ -1436,7 +1436,7 @@ class DatasetOrchestrator:
         job_config = job.get("config", {})
         raw_samples, balance_report = self._balance_samples(
             raw_samples,
-            job_config.get("balance_dimensions", ["topic", "language"]),
+            job_config.get("balance_dimensions", ["topic", "language", "source", "difficulty"]),
             job_config.get("language", "en"),
         )
         # Convert the final balanced dictionaries for exporter and ORM access.
@@ -1448,7 +1448,7 @@ class DatasetOrchestrator:
         export_config = ExportConfig(
             format=job_config.get("export_format", "jsonl"),
             output_dir=self.config.get("output_dir", "outputs"),
-            dataset_name=job_config.get("dataset_name", f"dataset_{job_id}"),
+            dataset_name=job_config.get("dataset_name") or f"dataset_{job_id}",
             # Cloud export settings from global config
             s3_bucket=self.config.get("s3_bucket"),
             s3_region=self.config.get("s3_region", "us-east-1"),

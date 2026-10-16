@@ -70,6 +70,7 @@ class ConstraintAnalysis(BaseModel):
 
 class JobRequest(BaseModel):
     target_domain: str = Field(..., min_length=1, description="Target domain for dataset generation")
+    dataset_name: Optional[str] = Field(default=None, min_length=1, max_length=120)
     dataset_type: DatasetType = Field(default=DatasetType.SFT)
 
     @field_validator("dataset_type", mode="before")
@@ -112,7 +113,7 @@ class JobRequest(BaseModel):
     human_review: bool = Field(default=False, description="Pause for human review of a sample of generated examples")
     human_review_percentage: float = Field(default=10.0, ge=0.0, le=100.0)
     human_review_mode: Literal["blocking", "async"] = "blocking"
-    balance_dimensions: list[str] = Field(default_factory=lambda: ["topic", "language"])
+    balance_dimensions: list[str] = Field(default_factory=lambda: ["topic", "language", "source", "difficulty"])
     minimum_reference_documents: int = Field(default=1)
     planner_enabled: bool = Field(default=True)
     coverage_planner_enabled: bool = Field(default=True)
