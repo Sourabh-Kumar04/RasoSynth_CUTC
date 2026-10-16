@@ -102,6 +102,7 @@ class JobRequest(BaseModel):
     generation_mode: str = Field(default="strict_source", description="Dataset generation mode: strict_source | hybrid | synthetic")
     allow_seedless_generation: bool = Field(default=False)
     require_reference_sources: bool = Field(default=False)
+    approved_sources: list[dict[str, Any]] = Field(default_factory=list, max_length=20)
     excluded_source_urls: list[str] = Field(default_factory=list)
     optimized_query: Optional[str] = None
     specialized_queries: list[str] = Field(default_factory=list)

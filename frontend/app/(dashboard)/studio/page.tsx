@@ -254,6 +254,7 @@ export default function StudioPage() {
         optimized_query: sourcePreview?.improved_query,
         specialized_queries: sourcePreview?.specialized_queries || [],
         query_plan: sourcePreview?.query_plan,
+        approved_sources: (sourcePreview?.sources || []).filter((source: any) => !excludedSourceUrls.includes(source.url) && !source.metadata?.catalogue_only),
         excluded_source_urls: excludedSourceUrls,
         human_review: humanReviewEnabled,
         human_review_percentage: humanReviewPercentage,

@@ -485,7 +485,8 @@ class DatasetOrchestrator:
 
         self._update_job_status(job_id, "discover", 0.1)
 
-        from pipeline.discovery import DiscoveryPipeline, SourceType
+        from pipeline.discovery import DiscoveryPipeline, SourceType, DiscoveredSource
+        from pipeline.extraction import _is_safe_url
         from core.pagination import BackpressureIterator, chunked_async_iter, StreamProgress
 
         discovery = DiscoveryPipeline(config, router=self.router)
@@ -515,17 +516,45 @@ class DatasetOrchestrator:
 
         # Create streaming source
         async def source_generator():
+            seen_urls = set()
+            # Sources the user reviewed and approved in Studio enter the full
+            # pipeline first; discovery then broadens coverage from the same
+            # confirmed query plan.
+            for approved in config.get("approved_sources", []):
+                url = str(approved.get("url", ""))
+                if not url or url in excluded_source_urls or approved.get("metadata", {}).get("catalogue_only"):
+                    continue
+                is_safe, reason = _is_safe_url(url)
+                if not is_safe:
+                    logger.warning("Skipping unsafe user-approved source %s: %s", url, reason)
+                    continue
+                try:
+                    source_type = SourceType(approved.get("source_type", SourceType.WEB_PAGE.value))
+                except ValueError:
+                    source_type = SourceType.WEB_PAGE
+                seen_urls.add(url)
+                yield DiscoveredSource(
+                    url=url,
+                    source_type=source_type,
+                    title=str(approved.get("title", "")),
+                    description=approved.get("description"),
+                    metadata=approved.get("metadata") or {},
+                    license=approved.get("license"),
+                    quality_score=float(approved.get("quality_score", 0.0) or 0.0),
+                )
+
             for query in queries:
                 if self._is_cancelled(job_id):
                     break
                 async for source in discovery.discover(
                     query, target_domain, source_types, query_is_optimized=True
                 ):
-                    if source.url in excluded_source_urls:
+                    if source.url in excluded_source_urls or source.url in seen_urls:
                         continue
                     # Apply domain relevance pre-filter to skip off-topic sources early.
                     # ``_is_source_relevant`` lives on DatasetOrchestrator and uses intent.
                     if self._is_source_relevant(source):
+                        seen_urls.add(source.url)
                         yield source
                     else:
                         logger.debug(f"Skipping off-topic source: "
