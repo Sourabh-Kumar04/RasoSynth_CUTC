@@ -1469,6 +1469,7 @@ class DiscoveryPipeline:
                         if not isinstance(file_item, dict):
                             continue
                         remote_path = str(file_item.get("file_path") or file_item.get("filePath") or file_item.get("path") or file_item.get("fileName") or file_item.get("name") or file_item.get("key") or "").strip()
+                        normalized_path = remote_path.replace("\\", "/")
                         extension = os.path.splitext(remote_path)[1].lower()
                         raw_size = file_item.get("size_bytes", file_item.get("sizeBytes", file_item.get("fileSize", file_item.get("size"))))
                         try:
@@ -1479,13 +1480,14 @@ class DiscoveryPipeline:
                                 continue
                             unit_multiplier = {"b": 1, "bytes": 1, "kb": 1024, "mb": 1024 ** 2, "gb": 1024 ** 3}[size_match.group(2)]
                             size_bytes = int(float(size_match.group(1)) * unit_multiplier)
-                        if remote_path and extension in supported_extensions and 0 < size_bytes <= 10 * 1024 * 1024:
+                        if (normalized_path and ".." not in normalized_path.split("/")
+                                and extension in supported_extensions and 0 < size_bytes <= 10 * 1024 * 1024):
                             candidates.append((extension_priority[extension], size_bytes, remote_path, extension))
                     if candidates:
                         _, size_bytes, remote_path, extension = min(candidates)
                         accessible_file = {
                             "path": remote_path,
-                            "name": os.path.basename(remote_path),
+                            "name": os.path.basename(remote_path.replace("\\", "/")),
                             "size_bytes": size_bytes,
                             "format": extension.lstrip("."),
                         }
