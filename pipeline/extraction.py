@@ -469,13 +469,14 @@ class ExtractionPipeline:
                     for listed_file in files if isinstance(files, list) else []:
                         if not isinstance(listed_file, dict):
                             continue
-                        listed_path = str(listed_file.get("file_path") or listed_file.get("filePath") or listed_file.get("path") or listed_file.get("fileName") or listed_file.get("name") or listed_file.get("key") or "").strip()
+                        listed_path = str(listed_file.get("file_path") or listed_file.get("filePath") or listed_file.get("path") or listed_file.get("fileName") or listed_file.get("name") or listed_file.get("key") or "").strip().replace("\\", "/")
                         if listed_path != remote_path:
                             continue
+                        raw_listed_size = listed_file.get("size_bytes", listed_file.get("sizeBytes", listed_file.get("fileSize", listed_file.get("size"))))
                         try:
-                            listed_size = int(listed_file.get("size_bytes", listed_file.get("sizeBytes", listed_file.get("fileSize", listed_file.get("size")))))
+                            listed_size = int(raw_listed_size)
                         except (TypeError, ValueError):
-                            match = re.fullmatch(r"\s*(\d+(?:\.\d+)?)\s*(b|bytes|kb|mb|gb)\s*", str(listed_file.get("size") or listed_file.get("fileSize") or "").lower())
+                            match = re.fullmatch(r"\s*(\d+(?:\.\d+)?)\s*(b|bytes|kb|mb|gb)\s*", str(raw_listed_size or "").lower())
                             if match:
                                 multiplier = {"b": 1, "bytes": 1, "kb": 1024, "mb": 1024 ** 2, "gb": 1024 ** 3}[match.group(2)]
                                 listed_size = int(float(match.group(1)) * multiplier)
