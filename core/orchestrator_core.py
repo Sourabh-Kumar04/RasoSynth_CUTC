@@ -1451,6 +1451,9 @@ class DatasetOrchestrator:
             job_config.get("balance_dimensions", ["topic", "language", "source", "difficulty"]),
             job_config.get("language", "en"),
         )
+        requested_samples = int(job_config.get("dataset_size", 0) or 0)
+        balance_report["requested_samples"] = requested_samples
+        balance_report["samples_short_of_target"] = max(0, requested_samples - len(raw_samples))
         # Convert the final balanced dictionaries for exporter and ORM access.
         from types import SimpleNamespace
         samples = [

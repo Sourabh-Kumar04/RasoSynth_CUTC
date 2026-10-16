@@ -676,6 +676,11 @@ export default function DatasetsPage() {
                         <p className="text-lg font-bold font-mono text-[#1B3B2B]">{datasetSummary.balance_report?.samples_removed ?? 0}</p>
                       </div>
                     </div>
+                    {Number(datasetSummary.balance_report?.samples_short_of_target || 0) > 0 && (
+                      <p role="status" className="rounded-xl border border-amber-300 bg-amber-50 px-3 py-2 text-xs leading-relaxed text-amber-950">
+                        This dataset has {datasetSummary.sample_count ?? 0} of {datasetSummary.balance_report?.requested_samples} requested samples. Fewer qualifying records remained after source filtering, human review, and balancing.
+                      </p>
+                    )}
                     <div className="grid grid-cols-1 md:grid-cols-3 gap-3 text-xs">
                       {(['sources', 'languages', 'topics'] as const).map((dimension) => {
                         const distribution = datasetSummary[dimension] || {}
