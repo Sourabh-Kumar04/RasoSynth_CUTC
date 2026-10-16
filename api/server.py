@@ -431,7 +431,7 @@ async def lifespan(app: FastAPI):
         from core.admission_control import AdmissionController
         admission_controller = AdmissionController(
             max_concurrent_jobs=settings.max_concurrent_jobs,
-            max_queue_size=50,
+            max_queue_size=settings.max_job_queue_size,
             db=db,
             observability=observability,
         )

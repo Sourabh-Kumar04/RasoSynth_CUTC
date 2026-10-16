@@ -79,6 +79,7 @@ class Settings(BaseSettings):
 
     # Resource Limits
     max_concurrent_jobs: int = Field(default=5)
+    max_job_queue_size: int = Field(default=50, ge=0, le=10000)
     token_budget_usd: float = Field(default=100.0)
 
     # Provider Priority Order
@@ -212,6 +213,7 @@ class Settings(BaseSettings):
             "enable_ray": self.enable_ray,
             "enable_hitl": self.enable_hitl,
             "max_concurrent_jobs": self.max_concurrent_jobs,
+            "max_job_queue_size": self.max_job_queue_size,
             "token_budget_usd": self.token_budget_usd,
             "provider_priority": self.provider_priority,
             "rate_limits": self.rate_limits,
