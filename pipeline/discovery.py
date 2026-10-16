@@ -1331,10 +1331,11 @@ class DiscoveryPipeline:
             if source_type == SourceType.WEB_PAGE:
                 return await self._discover_web_enhanced(query, target_domain)
             elif source_type == SourceType.AI_KOSH:
-                # AIKosh currently exposes a browsable catalogue, but the
-                # public search/download API contract is not confirmed here.
-                # Discover official catalogue pages only; downstream access
-                # and license checks must happen before extracting content.
+                api_sources = await self._discover_aikosh_api(query)
+                if api_sources:
+                    return api_sources
+                # Fall back to official catalogue pages when the optional SDK
+                # or API key is unavailable. Pages are not treated as data files.
                 results = await self._search_duckduckgo(
                     f"site:aikosh.indiaai.gov.in/home/datasets {query}"
                 )
@@ -1401,6 +1402,72 @@ class DiscoveryPipeline:
             self._LOG.warning(f"Discovery error for {source_type}: {e}")
 
         return []
+
+    async def _discover_aikosh_api(self, query: str) -> list[DiscoveredSource]:
+        """Search accessible AIKosh dataset metadata through its optional SDK."""
+        import os
+
+        api_key = self.config.get("aikosh_api_key") or os.getenv("AIKOSH_API_KEY") or os.getenv("AIKOSH_ACCESS_KEY")
+        if not api_key:
+            return []
+
+        try:
+            import aikosh
+        except ImportError:
+            self._LOG.info("AIKosh API key is set but the optional 'aikosh' SDK is not installed; using catalogue search")
+            return []
+
+        def _list_datasets():
+            aikosh.set_api_key(api_key)
+            return aikosh.list_directory(
+                "dataset",
+                filters={
+                    "page": 1,
+                    "size": min(max(self.max_per_source, 1), 20),
+                    "keyword": query,
+                    "accessScope": "permitted",
+                },
+            )
+
+        try:
+            response = await asyncio.to_thread(_list_datasets)
+        except Exception as exc:
+            self._LOG.warning("AIKosh API discovery failed; falling back to catalogue search: %s", exc)
+            return []
+
+        payload = response.get("data", {}) if isinstance(response, dict) else {}
+        items = payload.get("items", []) if isinstance(payload, dict) else []
+        sources = []
+        for item in items:
+            if not isinstance(item, dict):
+                continue
+            identifier = str(item.get("id") or "").strip()
+            slug = str(item.get("slug") or item.get("urlSlug") or "").strip()
+            title = str(item.get("title") or item.get("name") or item.get("datasetName") or "AIKosh dataset").strip()
+            if not identifier and not slug:
+                continue
+            license_value = item.get("license") or item.get("licenseName")
+            if isinstance(license_value, dict):
+                license_value = license_value.get("name") or license_value.get("id") or license_value.get("spdx_id")
+            metadata = {
+                **item,
+                "aikosh_dataset_id": identifier or None,
+                "catalogue_only": True,
+                "access_scope": "permitted",
+                "access_status": "api_listed_file_access_not_yet_verified",
+                "license_status": "verify_before_use",
+            }
+            source = DiscoveredSource(
+                url=f"https://aikosh.indiaai.gov.in/home/datasets/details/{slug or identifier}.html",
+                source_type=SourceType.AI_KOSH,
+                title=title,
+                description=str(item.get("description") or item.get("summary") or "AIKosh dataset catalogue entry"),
+                metadata=metadata,
+                license=str(license_value or "") or None,
+            )
+            source.quality_score = score_source(source)
+            sources.append(source)
+        return sources
 
     def _generate_search_queries(self, query: str, target_domain: str) -> list[str]:
         """Generate diverse search queries for comprehensive coverage."""

@@ -1143,6 +1143,7 @@ async def preview_job_sources(request: SourcePreviewRequest):
         "target_domain": getattr(intent, "domain", "") or improved_query,
         "language": request.language,
         "region_restrictions": request.region_restrictions,
+        "aikosh_api_key": get_settings().aikosh_api_key,
         "max_results": max(1, min(request.max_sources, 20)),
         "health_check_enabled": False,
         "quality_min_score": 0.0,

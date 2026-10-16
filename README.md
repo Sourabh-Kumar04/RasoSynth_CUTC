@@ -86,6 +86,14 @@ pip install -e ".[finetuning]"   # peft, trl, transformers, accelerate
 pip install unsloth              # optional: 2-4× GPU speedup
 ```
 
+### AIKosh Dataset Discovery (optional)
+
+Install the AIKosh SDK and set `AIKOSH_API_KEY` in `.env` using a key created from your AIKosh account settings to use authenticated dataset catalogue search. Discovery requests only the `permitted` scope. Results remain catalogue entries until the actual files and reuse terms are verified.
+
+```bash
+pip install -e ".[aikosh]"
+```
+
 ## Configuration
 
 ```bash

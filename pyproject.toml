@@ -67,6 +67,7 @@ dev = [
 ]
 flower = ["flower>=2.0.0"]
 ray = ["ray>=2.35.0"]
+aikosh = ["aikosh>=2.0.0,<3.0.0"]
 # Fine-tuning dependencies — install with: pip install -e ".[finetuning]"
 # Unsloth is optional (NVIDIA GPU only). Install separately if needed.
 finetuning = [

@@ -45,6 +45,9 @@ class Settings(BaseSettings):
     # Hugging Face
     hf_token: Optional[str] = Field(default=None)
 
+    # AIKosh dataset catalogue API (optional; requires an account API key)
+    aikosh_api_key: Optional[str] = Field(default=None)
+
     # XAI (Grok)
     xai_api_key: Optional[str] = Field(default=None)
 
