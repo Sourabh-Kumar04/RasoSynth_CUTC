@@ -1462,8 +1462,8 @@ class DiscoveryPipeline:
                     file_items = file_payload.get("items", file_payload.get("files", [])) if isinstance(file_payload, dict) else []
                     if not isinstance(file_items, list) and isinstance(file_payload, list):
                         file_items = file_payload
-                    supported_extensions = {".csv", ".json", ".jsonl", ".txt", ".md"}
-                    extension_priority = {".jsonl": 0, ".json": 1, ".csv": 2, ".txt": 3, ".md": 4}
+                    supported_extensions = {".csv", ".tsv", ".parquet", ".json", ".jsonl", ".txt", ".md"}
+                    extension_priority = {".jsonl": 0, ".json": 1, ".csv": 2, ".tsv": 3, ".parquet": 4, ".txt": 5, ".md": 6}
                     candidates = []
                     for file_item in file_items if isinstance(file_items, list) else []:
                         if not isinstance(file_item, dict):

@@ -434,7 +434,7 @@ class ExtractionPipeline:
         filename = PurePosixPath(remote_path).name
         extension = Path(filename).suffix.lower()
         max_bytes = int(self.config.get("aikosh_max_file_size_bytes", 10 * 1024 * 1024))
-        allowed_extensions = {".csv", ".json", ".jsonl", ".txt", ".md"}
+        allowed_extensions = {".csv", ".tsv", ".parquet", ".json", ".jsonl", ".txt", ".md"}
         api_key = self.config.get("aikosh_api_key") or os.getenv("AIKOSH_API_KEY") or os.getenv("AIKOSH_ACCESS_KEY")
         if not (dataset_id and remote_path and ".." not in PurePosixPath(remote_path).parts and filename and extension in allowed_extensions and api_key):
             yield ExtractedContent(
@@ -508,6 +508,19 @@ class ExtractionPipeline:
                 if extension == ".csv":
                     import pandas as pd
                     frame = pd.read_csv(local_file, nrows=100, dtype=str, keep_default_na=False)
+                    file_content = frame.to_csv(index=False)
+                elif extension == ".tsv":
+                    import pandas as pd
+                    frame = pd.read_csv(local_file, sep="\t", nrows=100, dtype=str, keep_default_na=False)
+                    file_content = frame.to_csv(index=False, sep="\t")
+                elif extension == ".parquet":
+                    import pyarrow.parquet as pq
+                    parquet_file = pq.ParquetFile(local_file)
+                    column_names = parquet_file.schema.names[:100]
+                    batch = next(parquet_file.iter_batches(batch_size=100, columns=column_names), None)
+                    if batch is None:
+                        raise ValueError("AIKosh Parquet file contains no readable rows")
+                    frame = batch.to_pandas().fillna("").astype(str)
                     file_content = frame.to_csv(index=False)
                 elif extension == ".json":
                     with local_file.open("r", encoding="utf-8-sig") as handle:
