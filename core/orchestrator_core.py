@@ -1014,6 +1014,7 @@ class DatasetOrchestrator:
                             "issues": result.issues,
                             "warnings": result.warnings,
                             "source_url": result.source_url,
+                            "metadata": content_dict.get("metadata", {}) or {},
                             "confidence": result.confidence,
                         })
                         decision = "accepted"
@@ -1229,7 +1230,10 @@ class DatasetOrchestrator:
                         "response": constructed.response,
                         "input": constructed.input,
                         "conversation": getattr(constructed, "conversation", None),
-                        "metadata": {**(constructed.metadata or {}), **provenance},
+                        "metadata": {**(constructed.metadata or {}), **source_metadata, **provenance},
+                        # Give reviewers enough evidence to verify grounding
+                        # without copying an entire extracted document into the queue.
+                        "source_text": str(item.get("content", ""))[:2000],
                         "quality_score": item.get("quality_score", 0.0),
                         "difficulty_tier": constructed.difficulty_tier,
                         "curriculum_order": len(samples),

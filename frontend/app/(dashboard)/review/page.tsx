@@ -783,6 +783,15 @@ function DetailPane({
           </p>
         )}
 
+        {item.source_text && (
+          <details className="rounded-xl border border-[#E2E6E0] bg-[#F6F7F4] p-3">
+            <summary className="cursor-pointer text-xs font-bold text-[#1B3B2B]">View source context</summary>
+            <div className="mt-2 max-h-40 overflow-y-auto whitespace-pre-wrap text-xs leading-relaxed text-[#55635B]">
+              {item.source_text}
+            </div>
+          </details>
+        )}
+
         {/* Notes + reviewer */}
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
           <div>
