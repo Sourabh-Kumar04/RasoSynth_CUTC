@@ -1452,45 +1452,51 @@ class DiscoveryPipeline:
             accessible_file = None
             if identifier:
                 try:
-                    file_response = await asyncio.to_thread(
-                        aikosh.list_files,
-                        "dataset",
-                        identifier,
-                        filters={"directory_path": "", "page": 1, "limit": 30},
-                    )
-                    file_payload = file_response.get("data", {}) if isinstance(file_response, dict) else {}
-                    file_items = file_payload.get("items", file_payload.get("files", [])) if isinstance(file_payload, dict) else []
-                    if not isinstance(file_items, list) and isinstance(file_payload, list):
-                        file_items = file_payload
                     supported_extensions = {".csv", ".tsv", ".parquet", ".json", ".jsonl", ".txt", ".md"}
                     extension_priority = {".jsonl": 0, ".json": 1, ".csv": 2, ".tsv": 3, ".parquet": 4, ".txt": 5, ".md": 6}
-                    candidates = []
-                    for file_item in file_items if isinstance(file_items, list) else []:
-                        if not isinstance(file_item, dict):
-                            continue
-                        remote_path = str(file_item.get("file_path") or file_item.get("filePath") or file_item.get("path") or file_item.get("fileName") or file_item.get("name") or file_item.get("key") or "").strip()
-                        normalized_path = remote_path.replace("\\", "/")
-                        extension = os.path.splitext(remote_path)[1].lower()
-                        raw_size = file_item.get("size_bytes", file_item.get("sizeBytes", file_item.get("fileSize", file_item.get("size"))))
-                        try:
-                            size_bytes = int(raw_size)
-                        except (TypeError, ValueError):
-                            size_match = re.fullmatch(r"\s*(\d+(?:\.\d+)?)\s*(b|bytes|kb|mb|gb)\s*", str(raw_size or "").lower())
-                            if not size_match:
+                    for page in range(1, 11):
+                        file_response = await asyncio.to_thread(
+                            aikosh.list_files,
+                            "dataset",
+                            identifier,
+                            filters={"directory_path": "", "page": page, "limit": 30},
+                        )
+                        file_payload = file_response.get("data", {}) if isinstance(file_response, dict) else {}
+                        file_items = file_payload.get("items", file_payload.get("files", [])) if isinstance(file_payload, dict) else []
+                        if not isinstance(file_items, list) and isinstance(file_payload, list):
+                            file_items = file_payload
+                        if not isinstance(file_items, list) or not file_items:
+                            break
+                        candidates = []
+                        for file_item in file_items:
+                            if not isinstance(file_item, dict):
                                 continue
-                            unit_multiplier = {"b": 1, "bytes": 1, "kb": 1024, "mb": 1024 ** 2, "gb": 1024 ** 3}[size_match.group(2)]
-                            size_bytes = int(float(size_match.group(1)) * unit_multiplier)
-                        if (normalized_path and ".." not in normalized_path.split("/")
-                                and extension in supported_extensions and 0 < size_bytes <= 10 * 1024 * 1024):
-                            candidates.append((extension_priority[extension], size_bytes, remote_path, extension))
-                    if candidates:
-                        _, size_bytes, remote_path, extension = min(candidates)
-                        accessible_file = {
-                            "path": remote_path,
-                            "name": os.path.basename(remote_path.replace("\\", "/")),
-                            "size_bytes": size_bytes,
-                            "format": extension.lstrip("."),
-                        }
+                            remote_path = str(file_item.get("file_path") or file_item.get("filePath") or file_item.get("path") or file_item.get("fileName") or file_item.get("name") or file_item.get("key") or "").strip()
+                            normalized_path = remote_path.replace("\\", "/")
+                            extension = os.path.splitext(remote_path)[1].lower()
+                            raw_size = file_item.get("size_bytes", file_item.get("sizeBytes", file_item.get("fileSize", file_item.get("size"))))
+                            try:
+                                size_bytes = int(raw_size)
+                            except (TypeError, ValueError):
+                                size_match = re.fullmatch(r"\s*(\d+(?:\.\d+)?)\s*(b|bytes|kb|mb|gb)\s*", str(raw_size or "").lower())
+                                if not size_match:
+                                    continue
+                                unit_multiplier = {"b": 1, "bytes": 1, "kb": 1024, "mb": 1024 ** 2, "gb": 1024 ** 3}[size_match.group(2)]
+                                size_bytes = int(float(size_match.group(1)) * unit_multiplier)
+                            if (normalized_path and ".." not in normalized_path.split("/")
+                                    and extension in supported_extensions and 0 < size_bytes <= 10 * 1024 * 1024):
+                                candidates.append((extension_priority[extension], size_bytes, remote_path, extension))
+                        if candidates:
+                            _, size_bytes, remote_path, extension = min(candidates)
+                            accessible_file = {
+                                "path": remote_path,
+                                "name": os.path.basename(remote_path.replace("\\", "/")),
+                                "size_bytes": size_bytes,
+                                "format": extension.lstrip("."),
+                            }
+                            break
+                        if len(file_items) < 30:
+                            break
                 except Exception as exc:
                     self._LOG.info("Could not inspect AIKosh files for dataset %s: %s", identifier, exc)
             metadata = {

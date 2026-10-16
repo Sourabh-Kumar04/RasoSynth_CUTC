@@ -459,32 +459,35 @@ class ExtractionPipeline:
 
                 def _download():
                     aikosh.set_api_key(api_key)
-                    file_listing = aikosh.list_files(
-                        "dataset",
-                        dataset_id,
-                        filters={"directory_path": "", "page": 1, "limit": 50},
-                    )
-                    payload = file_listing.get("data", {}) if isinstance(file_listing, dict) else {}
-                    files = payload.get("items", payload.get("files", [])) if isinstance(payload, dict) else (payload if isinstance(payload, list) else [])
                     permitted = False
-                    for listed_file in files if isinstance(files, list) else []:
-                        if not isinstance(listed_file, dict):
-                            continue
-                        listed_path = str(listed_file.get("file_path") or listed_file.get("filePath") or listed_file.get("path") or listed_file.get("fileName") or listed_file.get("name") or listed_file.get("key") or "").strip().replace("\\", "/")
-                        if listed_path != remote_path:
-                            continue
-                        raw_listed_size = listed_file.get("size_bytes", listed_file.get("sizeBytes", listed_file.get("fileSize", listed_file.get("size"))))
-                        try:
-                            listed_size = int(raw_listed_size)
-                        except (TypeError, ValueError):
-                            match = re.fullmatch(r"\s*(\d+(?:\.\d+)?)\s*(b|bytes|kb|mb|gb)\s*", str(raw_listed_size or "").lower())
-                            if match:
-                                multiplier = {"b": 1, "bytes": 1, "kb": 1024, "mb": 1024 ** 2, "gb": 1024 ** 3}[match.group(2)]
-                                listed_size = int(float(match.group(1)) * multiplier)
-                            else:
-                                listed_size = 0
-                        permitted = 0 < listed_size <= max_bytes
-                        break
+                    for page in range(1, 11):
+                        file_listing = aikosh.list_files(
+                            "dataset",
+                            dataset_id,
+                            filters={"directory_path": "", "page": page, "limit": 50},
+                        )
+                        payload = file_listing.get("data", {}) if isinstance(file_listing, dict) else {}
+                        files = payload.get("items", payload.get("files", [])) if isinstance(payload, dict) else (payload if isinstance(payload, list) else [])
+                        for listed_file in files if isinstance(files, list) else []:
+                            if not isinstance(listed_file, dict):
+                                continue
+                            listed_path = str(listed_file.get("file_path") or listed_file.get("filePath") or listed_file.get("path") or listed_file.get("fileName") or listed_file.get("name") or listed_file.get("key") or "").strip().replace("\\", "/")
+                            if listed_path != remote_path:
+                                continue
+                            raw_listed_size = listed_file.get("size_bytes", listed_file.get("sizeBytes", listed_file.get("fileSize", listed_file.get("size"))))
+                            try:
+                                listed_size = int(raw_listed_size)
+                            except (TypeError, ValueError):
+                                match = re.fullmatch(r"\s*(\d+(?:\.\d+)?)\s*(b|bytes|kb|mb|gb)\s*", str(raw_listed_size or "").lower())
+                                if match:
+                                    multiplier = {"b": 1, "bytes": 1, "kb": 1024, "mb": 1024 ** 2, "gb": 1024 ** 3}[match.group(2)]
+                                    listed_size = int(float(match.group(1)) * multiplier)
+                                else:
+                                    listed_size = 0
+                            permitted = 0 < listed_size <= max_bytes
+                            break
+                        if permitted or not isinstance(files, list) or len(files) < 50:
+                            break
                     if not permitted:
                         raise PermissionError("AIKosh no longer lists this file as an accessible file within the size limit")
                     return aikosh.download({
