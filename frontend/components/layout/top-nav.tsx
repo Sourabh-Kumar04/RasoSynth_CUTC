@@ -18,13 +18,18 @@ import {
   Sparkles,
   Menu,
   X,
-  BarChart2
+  BarChart2,
+  Play,
+  Terminal,
+  Layers,
+  ChevronDown,
 } from 'lucide-react'
+import { motion, AnimatePresence } from 'framer-motion'
 import { clsx } from 'clsx'
 import { Button } from '@/components/ui/button'
-import { OnboardingModal } from '@/components/onboarding/OnboardingModal'
 import { CommandPalette } from '@/components/search/CommandPalette'
 import { SpotlightProductTour } from '@/components/onboarding/SpotlightProductTour'
+import { api } from '@/lib/api/client'
 
 export interface NavGroup {
   name: string
@@ -72,12 +77,12 @@ export const navGroups: NavGroup[] = [
 export function TopNav() {
   const pathname = usePathname()
   const [mockMode, setMockMode] = useState(false)
-  const [showFallbackNotice, setShowFallbackNotice] = useState(false)
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false)
   const [showTour, setShowTour] = useState(false)
   const [showSearch, setShowSearch] = useState(false)
+  const [reviewCount, setReviewCount] = useState(0)
 
-  // Global Cmd+K / Ctrl+K keyboard shortcut listener
+  // Global Cmd+K keyboard shortcut listener
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
       if ((e.metaKey || e.ctrlKey) && e.key === 'k') {
@@ -85,7 +90,6 @@ export function TopNav() {
         setShowSearch((prev) => !prev)
       }
     }
-
     window.addEventListener('keydown', handleKeyDown)
     return () => window.removeEventListener('keydown', handleKeyDown)
   }, [])
@@ -93,211 +97,192 @@ export function TopNav() {
   useEffect(() => {
     if (typeof window !== 'undefined') {
       setMockMode(localStorage.getItem('mockMode') === 'true')
-
       const handleSync = () => {
         setMockMode(localStorage.getItem('mockMode') === 'true')
       }
-
-      const handleFallback = () => {
-        setMockMode(true)
-        setShowFallbackNotice(true)
-      }
-
-      window.addEventListener('storage', handleSync)
       window.addEventListener('mockModeChanged', handleSync)
-      window.addEventListener('backend-unreachable-fallback', handleFallback)
-
+      window.addEventListener('storage', handleSync)
       return () => {
-        window.removeEventListener('storage', handleSync)
         window.removeEventListener('mockModeChanged', handleSync)
-        window.removeEventListener('backend-unreachable-fallback', handleFallback)
+        window.removeEventListener('storage', handleSync)
       }
     }
   }, [])
 
-  const handleToggleMock = () => {
-    const newVal = !mockMode
-    setMockMode(newVal)
-    localStorage.setItem('mockMode', newVal ? 'true' : 'false')
-    window.location.reload()
-  }
-
-  const handleRetryLiveBackend = () => {
-    setMockMode(false)
-    localStorage.setItem('mockMode', 'false')
-    setShowFallbackNotice(false)
-    window.location.reload()
-  }
+  useEffect(() => {
+    async function fetchPendingReviews() {
+      try {
+        const queue = await api.getReviewQueue()
+        if (Array.isArray(queue)) {
+          setReviewCount(queue.filter((q: any) => q.status === 'pending').length)
+        }
+      } catch {
+        // Fallback or offline
+      }
+    }
+    fetchPendingReviews()
+    const timer = setInterval(fetchPendingReviews, 15000)
+    return () => clearInterval(timer)
+  }, [])
 
   return (
-    <header className="sticky top-0 z-50 w-full border-b border-[#E2E6E0] bg-[#F6F7F4]/95 backdrop-blur-md">
-      {/* Interactive Spotlight Product Tour Widget & Backdrop */}
-      <SpotlightProductTour />
+    <>
+      <header className="sticky top-0 z-40 w-full border-b border-[#272738] bg-[#0a0a0f]/95 backdrop-blur-md">
+        {/* Upper Telemetry & Brand Bar */}
+        <div className="flex h-14 items-center justify-between px-4 lg:px-6 gap-3">
+          {/* Logo & Version Badge */}
+          <div className="flex items-center space-x-3 shrink-0">
+            <Link href="/" className="flex items-center space-x-2.5 group">
+              <div className="w-8 h-8 rounded-md bg-[#161622] border border-[#272738] group-hover:border-[#6366f1] flex items-center justify-center transition-all duration-200 shadow-sm relative overflow-hidden">
+                <div className="absolute inset-0 bg-gradient-to-br from-[#6366f1]/20 to-[#10b981]/20 opacity-0 group-hover:opacity-100 transition-opacity" />
+                <Workflow className="w-4 h-4 text-[#6366f1] group-hover:text-[#818cf8] transition-colors relative z-10" />
+              </div>
+              <div className="flex flex-col">
+                <span className="font-bold text-sm tracking-tight text-white flex items-center gap-1.5 font-display">
+                  RasoSynth<span className="text-[#6366f1]">Tune</span>
+                </span>
+                <span className="text-[10px] font-mono text-[#94a3b8] tracking-widest uppercase">
+                  Autonomous Studio
+                </span>
+              </div>
+            </Link>
 
-      {/* Auto-popup or requested Onboarding Guided Tour */}
-      <OnboardingModal open={showTour} onOpenChange={setShowTour} />
-
-      {/* Global Interactive Command Palette Search */}
-      <CommandPalette open={showSearch} onOpenChange={setShowSearch} />
-
-      {/* Demo Mode Notice Banner */}
-      {showFallbackNotice && (
-        <div className="bg-amber-500/10 border-b border-amber-500/20 px-4 py-1.5 text-xs flex items-center justify-between text-amber-800">
-          <div className="flex items-center gap-2">
-            <span className="font-bold text-[#1B3B2B]">⚡ Offline Preview Mode:</span>
-            <span>Live backend unreachable. Running instant offline workflow preview for testing.</span>
+            <span className="hidden sm:inline-flex items-center px-2 py-0.5 rounded text-[10px] font-mono font-medium bg-[#161622] border border-[#272738] text-[#10b981]">
+              <span className="w-1.5 h-1.5 rounded-full bg-[#10b981] animate-pulse mr-1.5" />
+              v3.4-PROD
+            </span>
           </div>
-          <div className="flex items-center gap-2">
-            <Button
-              variant="outline"
-              size="sm"
-              className="h-6 text-[11px] border-amber-600/30 text-amber-900 hover:bg-amber-500/10 rounded-full"
-              onClick={handleRetryLiveBackend}
-            >
-              Retry Live Connection
-            </Button>
+
+          {/* Center Telemetry Badges (Desktop) */}
+          <div className="hidden xl:flex items-center space-x-2 font-mono text-xs">
+            {/* Active Provider Chip */}
+            <div className="flex items-center space-x-1.5 px-2.5 py-1 rounded bg-[#12121a] border border-[#272738]">
+              <Cpu className="w-3.5 h-3.5 text-[#6366f1]" />
+              <span className="text-[#94a3b8]">Provider:</span>
+              <span className="text-white font-medium">Gemini 2.0 / NIM</span>
+            </div>
+
+            {/* Cost Accrual */}
+            <div className="flex items-center space-x-1.5 px-2.5 py-1 rounded bg-[#12121a] border border-[#272738]">
+              <span className="text-[#94a3b8]">Cost:</span>
+              <span className="text-[#10b981] font-semibold">$0.041 / 1k</span>
+            </div>
+
+            {/* GPU VRAM Progress */}
+            <div className="flex items-center space-x-2 px-2.5 py-1 rounded bg-[#12121a] border border-[#272738]">
+              <span className="text-[#94a3b8]">VRAM:</span>
+              <span className="text-white font-medium">78.4%</span>
+              <div className="w-14 h-1.5 bg-[#1a1a24] rounded-full overflow-hidden">
+                <div className="bg-[#10b981] h-full rounded-full" style={{ width: '78.4%' }} />
+              </div>
+            </div>
+
+            {/* Throughput */}
+            <div className="flex items-center space-x-1.5 px-2.5 py-1 rounded bg-[#12121a] border border-[#272738]">
+              <span className="w-1.5 h-1.5 rounded-full bg-[#10b981] animate-pulse" />
+              <span className="text-[#10b981] font-medium">2,420 tok/s</span>
+            </div>
+          </div>
+
+          {/* Search & Actions */}
+          <div className="flex items-center space-x-2.5">
+            {/* Cmd+K Search Trigger */}
             <button
-              onClick={() => setShowFallbackNotice(false)}
-              className="text-[#1B3B2B] hover:opacity-70 ml-2 font-bold"
+              onClick={() => setShowSearch(true)}
+              className="flex items-center space-x-2 px-3 py-1.5 rounded-md bg-[#12121a] hover:bg-[#161622] border border-[#272738] hover:border-[#3b3b52] text-xs text-[#94a3b8] transition-all w-48 sm:w-60 justify-between group"
             >
-              ✕
+              <div className="flex items-center space-x-2">
+                <Search className="w-3.5 h-3.5 text-[#94a3b8] group-hover:text-white transition-colors" />
+                <span className="truncate">Search studio...</span>
+              </div>
+              <kbd className="px-1.5 py-0.5 rounded bg-[#1a1a24] border border-[#272738] text-[10px] font-mono text-[#94a3b8]">
+                ⌘K
+              </kbd>
+            </button>
+
+            {/* Preset Selector */}
+            <Link
+              href="/studio"
+              className="hidden md:inline-flex items-center space-x-1 px-2.5 py-1.5 rounded-md bg-[#12121a] hover:bg-[#161622] border border-[#272738] text-xs text-white transition-colors"
+            >
+              <span className="text-[#94a3b8]">Preset:</span>
+              <span className="text-[#818cf8] font-medium">AI Kosh Indic</span>
+              <ChevronDown className="w-3 h-3 text-[#94a3b8]" />
+            </Link>
+
+            {/* Execution CTA Button */}
+            <Link
+              href="/studio"
+              className="inline-flex items-center space-x-1.5 px-3 py-1.5 rounded-md bg-[#6366f1] hover:bg-[#818cf8] text-white font-mono text-xs font-semibold shadow-sm glow-indigo active:scale-95 transition-all"
+            >
+              <Play className="w-3.5 h-3.5 fill-current" />
+              <span className="hidden sm:inline">Trigger Epoch</span>
+              <span className="text-[10px] opacity-80">⌘↵</span>
+            </Link>
+
+            {/* Mobile menu hamburger */}
+            <button
+              onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
+              className="lg:hidden p-1.5 rounded-md text-[#94a3b8] hover:text-white hover:bg-[#161622]"
+            >
+              {mobileMenuOpen ? <X className="w-5 h-5" /> : <Menu className="w-5 h-5" />}
             </button>
           </div>
         </div>
-      )}
 
-      <div className="flex h-16 items-center justify-between px-4 sm:px-6 lg:px-8 w-full gap-4">
-        {/* Brand Logo */}
-        <div className="flex items-center gap-4 lg:gap-6 min-w-0" data-tour="top-nav-brand">
-          <Link href="/" className="flex items-center gap-2.5 group shrink-0">
-            <div className="h-9 w-9 rounded-xl bg-[#1B3B2B] text-white flex items-center justify-center shadow-xs transition-transform group-hover:scale-105">
-              <Sparkles className="h-4 w-4 text-emerald-400 font-bold" />
-            </div>
-            <div className="flex items-center">
-              <span className="font-bold text-lg tracking-tight select-none leading-none text-[#1B3B2B]">
-                Raso<span className="bg-gradient-to-r from-emerald-600 to-cyan-600 bg-clip-text text-transparent">SynthTune</span>
-              </span>
-            </div>
-          </Link>
-
-          {/* Desktop Categorized Navigation */}
-          <nav className="hidden lg:flex items-center gap-2 bg-[#E8ECE6]/80 p-1 rounded-full border border-[#D1D8CE]">
-            {navGroups.map((group) => (
-              <div key={group.name} className="flex items-center gap-1 border-r last:border-r-0 border-[#D1D8CE] pr-1.5 last:pr-0">
-                {group.items.map((item) => {
-                  const Icon = item.icon
-                  const isActive = pathname.startsWith(item.href)
-
-                  return (
-                    <Link
-                      key={item.href}
-                      href={item.href}
-                      data-tour={`nav-btn-${item.href.replace('/', '')}`}
-                      title={item.tooltip || item.label}
-                      className={clsx(
-                        'flex items-center gap-1.5 px-2.5 py-1 text-xs font-medium rounded-full transition-all duration-150 shrink-0',
-                        isActive
-                          ? 'bg-[#1B3B2B] text-white font-semibold shadow-xs'
-                          : 'text-[#55635B] hover:text-[#1B3B2B] hover:bg-white/60'
-                      )}
-                    >
-                      <Icon className={clsx("h-3.5 w-3.5 shrink-0", isActive ? "text-emerald-300" : "text-[#55635B]")} />
-                      <span>{item.label}</span>
-                    </Link>
-                  )
-                })}
-              </div>
-            ))}
-          </nav>
-        </div>
-
-        {/* Right Controls */}
-        <div className="flex items-center gap-2 shrink-0">
-          {/* Functional Quick Search with Cmd+K */}
-          <Button
-            data-tour="top-nav-search"
-            variant="outline"
-            size="sm"
-            onClick={() => setShowSearch(true)}
-            className="flex gap-2 text-[#55635B] border-[#D1D8CE] hover:bg-[#E8ECE6] rounded-full text-xs font-medium"
-            title="Open Search (Cmd+K)"
-          >
-            <Search className="h-3.5 w-3.5 text-[#1B3B2B]" />
-            <span className="hidden sm:inline text-xs">Search...</span>
-            <kbd className="hidden sm:inline-flex h-4 items-center gap-1 rounded bg-[#E8ECE6] px-1.5 text-[10px] font-mono text-[#55635B]">
-              <Command className="h-2.5 w-2.5" />K
-            </kbd>
-          </Button>
-
-          {/* Mode Indicator & Toggle */}
-          <div data-tour="top-nav-mode" className="flex items-center gap-1.5 bg-[#E8ECE6] p-1 rounded-full border border-[#D1D8CE]">
-            <Button
-              variant={mockMode ? 'default' : 'outline'}
-              size="sm"
-              onClick={handleToggleMock}
-              title={mockMode ? 'Click to switch to Live API Backend' : 'Click to enable Offline Preview Mode'}
-              className={clsx(
-                'gap-1.5 transition-all text-xs font-mono font-medium rounded-full h-7 px-3',
-                mockMode
-                  ? 'bg-amber-600 hover:bg-amber-700 text-white'
-                  : 'bg-[#1B3B2B] hover:bg-[#142D21] text-white border-transparent'
-              )}
-            >
-              <span className={clsx("h-2 w-2 rounded-full", mockMode ? "bg-amber-300" : "bg-emerald-400 animate-pulse")} />
-              <span>{mockMode ? 'Offline Demo' : 'Live API'}</span>
-            </Button>
+        {/* Secondary Navigation Sub-Bar */}
+        <nav className="flex items-center justify-between px-4 lg:px-6 h-9 bg-[#0e0e13] border-t border-[#1c1c28] text-xs overflow-x-auto no-scrollbar">
+          <div className="flex items-center space-x-1 sm:space-x-4 shrink-0">
+            {[
+              { href: '/studio', label: 'Studio', icon: FlaskConical },
+              { href: '/orchestration', label: 'DAG Orchestrator', icon: Workflow },
+              { href: '/datasets', label: 'Datasets', icon: Database },
+              { href: '/review', label: 'HITL Queue', icon: ClipboardCheck, badge: reviewCount },
+              { href: '/finetune', label: 'LoRA Tuner', icon: Cpu },
+              { href: '/quality', label: 'Quality', icon: BarChart2 },
+              { href: '/observability', label: 'Telemetry', icon: Activity },
+              { href: '/providers', label: 'Providers', icon: Beaker },
+            ].map((item) => {
+              const active = pathname === item.href
+              const Icon = item.icon
+              return (
+                <Link
+                  key={item.href}
+                  href={item.href}
+                  className={clsx(
+                    'relative px-2.5 py-1.5 flex items-center space-x-1.5 font-medium transition-colors rounded-sm',
+                    active ? 'text-[#818cf8]' : 'text-[#94a3b8] hover:text-white hover:bg-[#161622]'
+                  )}
+                >
+                  <Icon className={clsx('w-3.5 h-3.5', active ? 'text-[#6366f1]' : 'text-[#94a3b8]')} />
+                  <span>{item.label}</span>
+                  {item.badge !== undefined && item.badge > 0 && (
+                    <span className="px-1.5 py-0.2 rounded-full text-[10px] font-mono bg-[#10b981]/20 text-[#10b981] border border-[#10b981]/40">
+                      {item.badge}
+                    </span>
+                  )}
+                  {active && (
+                    <motion.div
+                      layoutId="subnav-active"
+                      className="absolute bottom-0 left-0 right-0 h-[2px] bg-[#6366f1]"
+                    />
+                  )}
+                </Link>
+              )
+            })}
           </div>
 
-          {/* Mobile Menu Toggle */}
-          <Button
-            variant="ghost"
-            size="icon"
-            className="lg:hidden h-9 w-9 rounded-full text-[#1B3B2B] hover:bg-[#E8ECE6]"
-            onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
-          >
-            {mobileMenuOpen ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
-          </Button>
-        </div>
-      </div>
+          <div className="hidden md:flex items-center space-x-4 text-[11px] font-mono text-[#94a3b8] shrink-0">
+            <span>RUN: <strong className="text-white">SYNTH-2026-AUTON</strong></span>
+            <span className="w-1 h-1 rounded-full bg-[#272738]" />
+            <span>MODE: <strong className="text-[#10b981]">Grounded First</strong></span>
+          </div>
+        </nav>
+      </header>
 
-      {/* Mobile Categorized Drawer Menu */}
-      {mobileMenuOpen && (
-        <div className="lg:hidden border-t border-[#E2E6E0] bg-white p-4 space-y-4 animate-fade-in shadow-xl max-h-[85vh] overflow-y-auto">
-          {navGroups.map((group) => (
-            <div key={group.name} className="space-y-1.5">
-              <span className="text-[10px] font-mono font-bold uppercase tracking-wider text-[#55635B] px-1">
-                {group.name}
-              </span>
-              <div className="grid grid-cols-2 gap-2">
-                {group.items.map((item) => {
-                  const Icon = item.icon
-                  const isActive = pathname.startsWith(item.href)
-
-                  return (
-                    <Link
-                      key={item.href}
-                      href={item.href}
-                      onClick={() => setMobileMenuOpen(false)}
-                    >
-                      <div
-                        className={clsx(
-                          'flex items-center gap-2 p-2.5 rounded-xl border text-xs font-medium transition-all',
-                          isActive
-                            ? 'bg-[#1B3B2B] text-white border-[#1B3B2B] font-semibold'
-                            : 'bg-[#F6F7F4] text-[#1B3B2B] border-[#E2E6E0] hover:bg-[#E8ECE6]'
-                        )}
-                      >
-                        <Icon className={clsx('h-4 w-4 shrink-0', isActive ? 'text-emerald-300' : 'text-[#1B3B2B]')} />
-                        <span className="truncate">{item.label}</span>
-                      </div>
-                    </Link>
-                  )
-                })}
-              </div>
-            </div>
-          ))}
-        </div>
-      )}
-    </header>
+      {/* Command Palette Modal */}
+      <CommandPalette isOpen={showSearch} onClose={() => setShowSearch(false)} />
+      {showTour && <SpotlightProductTour />}
+    </>
   )
 }

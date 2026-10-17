@@ -305,20 +305,20 @@ export function SpotlightProductTour() {
 
       {/* Viewport & Clearance Clamped Popover Card */}
       <div
-        className="fixed z-[102] pointer-events-auto w-[calc(100vw-32px)] sm:w-full max-w-sm sm:max-w-md bg-white border border-[#E2E6E0] rounded-3xl shadow-2xl overflow-hidden transition-all duration-300"
+        className="fixed z-[102] pointer-events-auto w-[calc(100vw-32px)] sm:w-full max-w-sm sm:max-w-md bg-[#12121a] border border-[#272738] rounded-3xl shadow-2xl overflow-hidden transition-all duration-300"
         style={{
           top: `${cardTop}px`,
           left: `${cardLeft}px`,
         }}
       >
         {/* Header Banner */}
-        <div className="bg-[#1B3B2B] text-white p-4 flex items-center justify-between">
+        <div className="bg-[#161622] text-white p-4 flex items-center justify-between border-b border-[#272738]">
           <div className="flex items-center gap-2.5">
-            <div className="h-8 w-8 rounded-xl bg-white/10 flex items-center justify-center border border-white/20">
-              <StepIcon className="h-4 w-4 text-emerald-400" />
+            <div className="h-8 w-8 rounded-xl bg-[#12121a] flex items-center justify-center border border-[#3b3b52]">
+              <StepIcon className="h-4 w-4 text-[#6366f1]" />
             </div>
             <div>
-              <span className="text-[10px] font-mono uppercase tracking-wider text-emerald-400 font-bold">
+              <span className="text-[10px] font-mono uppercase tracking-wider text-[#10b981] font-bold">
                 Product Tour ({currentStepIndex + 1} of {SPOTLIGHT_STEPS.length})
               </span>
               <h3 className="text-xs font-bold text-white tracking-tight">{step.title}</h3>
@@ -329,15 +329,15 @@ export function SpotlightProductTour() {
             {/* Monochromatic Header Styled Don't Show Again Button */}
             <button
               onClick={handleNeverShowAgain}
-              className="text-[10px] font-mono text-white/80 hover:text-white flex items-center gap-1 bg-white/10 px-2.5 py-1 rounded-full border border-white/15 transition-colors"
+              className="text-[10px] font-mono text-[#94a3b8] hover:text-white flex items-center gap-1 bg-[#12121a] px-2.5 py-1 rounded-full border border-[#3b3b52] transition-colors"
               title="Don't show interactive tour automatically on reload"
             >
-              <EyeOff className="h-3 w-3 text-white/80" />
+              <EyeOff className="h-3 w-3 text-[#94a3b8]" />
               <span>Don't show again</span>
             </button>
             <button
               onClick={handleComplete}
-              className="text-white/80 hover:text-white p-1 rounded-full hover:bg-white/10 transition-colors"
+              className="text-[#94a3b8] hover:text-white p-1 rounded-full hover:bg-[#12121a] transition-colors"
               title="Close Tour"
             >
               <X className="h-4 w-4" />
@@ -346,19 +346,19 @@ export function SpotlightProductTour() {
         </div>
 
         {/* Step Body */}
-        <div className="p-4 space-y-3 bg-white">
+        <div className="p-4 space-y-3 bg-[#12121a]">
           <div className="flex items-center justify-between">
-            <Badge variant="outline" className="text-[10px] font-mono rounded-full border-[#D1D8CE] bg-[#F6F7F4] text-[#1B3B2B]">
+            <Badge variant="outline" className="text-[10px] font-mono rounded-full border-[#3b3b52] bg-[#0a0a0f] text-[#6366f1]">
               {step.badgeText}
             </Badge>
-            <span className="text-[10px] font-mono text-[#55635B] truncate max-w-[200px]">{step.subtitle}</span>
+            <span className="text-[10px] font-mono text-[#94a3b8] truncate max-w-[200px]">{step.subtitle}</span>
           </div>
 
-          <p className="text-xs text-[#55635B] leading-relaxed">{step.description}</p>
+          <p className="text-xs text-[#94a3b8] leading-relaxed">{step.description}</p>
         </div>
 
         {/* Footer Controls */}
-        <div className="p-3.5 bg-[#F6F7F4] border-t border-[#E2E6E0] flex items-center justify-between">
+        <div className="p-3.5 bg-[#0a0a0f] border-t border-[#272738] flex items-center justify-between">
           {/* Progress Dots */}
           <div className="flex items-center gap-1">
             {SPOTLIGHT_STEPS.map((_, idx) => (
@@ -366,7 +366,7 @@ export function SpotlightProductTour() {
                 key={idx}
                 onClick={() => updateStepIndex(idx)}
                 className={`h-2 rounded-full transition-all ${
-                  idx === currentStepIndex ? 'w-5 bg-[#1B3B2B]' : 'w-1.5 bg-[#D1D8CE] hover:bg-[#809085]'
+                  idx === currentStepIndex ? 'w-5 bg-[#6366f1]' : 'w-1.5 bg-[#3b3b52] hover:bg-[#64748b]'
                 }`}
               />
             ))}
@@ -379,7 +379,7 @@ export function SpotlightProductTour() {
               size="sm"
               disabled={currentStepIndex === 0}
               onClick={handlePrev}
-              className="h-7 px-2.5 text-xs border-[#D1D8CE] text-[#1B3B2B] rounded-full disabled:opacity-40"
+              className="h-7 px-2.5 text-xs border-[#3b3b52] text-[#6366f1] rounded-full disabled:opacity-40"
             >
               <ChevronLeft className="h-3.5 w-3.5 mr-0.5" />
               <span>Back</span>
@@ -388,7 +388,7 @@ export function SpotlightProductTour() {
             <Button
               size="sm"
               onClick={handleNext}
-              className="h-7 px-3.5 text-xs bg-[#1B3B2B] hover:bg-[#142D21] text-white rounded-full font-medium shadow-xs"
+              className="h-7 px-3.5 text-xs bg-[#6366f1] hover:bg-[#4f46e5] text-white rounded-full font-medium shadow-xs"
             >
               <span>{isLastStep ? 'Finish' : 'Next'}</span>
               {!isLastStep && <ChevronRight className="h-3.5 w-3.5 ml-0.5" />}

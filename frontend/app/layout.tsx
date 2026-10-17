@@ -17,8 +17,8 @@ export default function RootLayout({
   children: React.ReactNode
 }) {
   return (
-    <html lang="en">
-      <body className="font-sans antialiased bg-[#F6F7F4] text-[#1B3B2B]">
+    <html lang="en" className="dark">
+      <body className="font-sans antialiased bg-[#0a0a0f] text-[#f8fafc]">
         <Providers>
           {children}
           <Toaster />

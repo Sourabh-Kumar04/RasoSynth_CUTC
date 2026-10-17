@@ -186,10 +186,10 @@ export function CommandPalette({
 
   return (
     <div className="fixed inset-0 z-[100] flex items-start justify-center pt-20 p-4 bg-black/60 backdrop-blur-xs animate-fade-in">
-      <div className="w-full max-w-lg bg-white border border-[#E2E6E0] rounded-3xl shadow-2xl overflow-hidden flex flex-col">
+      <div className="w-full max-w-lg bg-[#12121a] border border-[#272738] rounded-3xl shadow-2xl overflow-hidden flex flex-col">
         {/* Search Header Input */}
-        <div className="flex items-center gap-3 p-4 border-b border-[#E2E6E0] bg-[#F6F7F4]">
-          <Search className="h-4 w-4 text-[#1B3B2B] shrink-0" />
+        <div className="flex items-center gap-3 p-4 border-b border-[#272738] bg-[#0a0a0f]">
+          <Search className="h-4 w-4 text-[#6366f1] shrink-0" />
           <input
             ref={inputRef}
             type="text"
@@ -199,11 +199,11 @@ export function CommandPalette({
               setSelectedIndex(0)
             }}
             placeholder="Search pages, presets, workflows, settings... (Cmd+K)"
-            className="w-full bg-transparent text-xs text-[#1B3B2B] font-medium outline-none placeholder:text-[#809085]"
+            className="w-full bg-transparent text-xs text-[#f8fafc] font-medium outline-none placeholder:text-[#64748b]"
           />
           <button
             onClick={() => onOpenChange(false)}
-            className="text-[#55635B] hover:text-[#1B3B2B] p-1 rounded-full hover:bg-[#E8ECE6]"
+            className="text-[#94a3b8] hover:text-[#f8fafc] p-1 rounded-full hover:bg-[#161622]"
           >
             <X className="h-4 w-4" />
           </button>
@@ -212,7 +212,7 @@ export function CommandPalette({
         {/* Results List */}
         <div className="max-h-80 overflow-y-auto p-2 space-y-1">
           {filtered.length === 0 ? (
-            <div className="p-8 text-center text-xs text-[#55635B] font-mono">
+            <div className="p-8 text-center text-xs text-[#94a3b8] font-mono">
               No matching pages or features found for &quot;{query}&quot;
             </div>
           ) : (
@@ -229,13 +229,13 @@ export function CommandPalette({
                   }}
                   onMouseEnter={() => setSelectedIndex(idx)}
                   className={`flex items-center justify-between p-3 rounded-2xl cursor-pointer transition-all ${
-                    isSelected ? 'bg-[#1B3B2B] text-white shadow-xs' : 'hover:bg-[#F6F7F4] text-[#1B3B2B]'
+                    isSelected ? 'bg-[#6366f1] text-white shadow-xs' : 'hover:bg-[#161622] text-[#f8fafc]'
                   }`}
                 >
                   <div className="flex items-center gap-3 min-w-0">
                     <div
                       className={`h-8 w-8 rounded-xl flex items-center justify-center shrink-0 ${
-                        isSelected ? 'bg-white/10 text-emerald-400' : 'bg-[#E8ECE6] text-[#1B3B2B]'
+                        isSelected ? 'bg-white/20 text-white' : 'bg-[#161622] text-[#6366f1]'
                       }`}
                     >
                       <Icon className="h-4 w-4" />
@@ -245,18 +245,18 @@ export function CommandPalette({
                         <span className="text-xs font-bold truncate">{item.title}</span>
                         <span
                           className={`text-[9px] font-mono px-1.5 py-0.5 rounded-full ${
-                            isSelected ? 'bg-emerald-950 text-emerald-300' : 'bg-[#E8ECE6] text-[#55635B]'
+                            isSelected ? 'bg-indigo-950 text-indigo-200' : 'bg-[#161622] text-[#94a3b8]'
                           }`}
                         >
                           {item.category}
                         </span>
                       </div>
-                      <p className={`text-[11px] truncate mt-0.5 ${isSelected ? 'text-emerald-100/80' : 'text-[#55635B]'}`}>
+                      <p className={`text-[11px] truncate mt-0.5 ${isSelected ? 'text-indigo-100' : 'text-[#94a3b8]'}`}>
                         {item.subtitle}
                       </p>
                     </div>
                   </div>
-                  <ArrowRight className={`h-4 w-4 shrink-0 ml-2 ${isSelected ? 'text-emerald-400' : 'opacity-0'}`} />
+                  <ArrowRight className={`h-4 w-4 shrink-0 ml-2 ${isSelected ? 'text-white' : 'opacity-0'}`} />
                 </div>
               )
             })
@@ -264,11 +264,11 @@ export function CommandPalette({
         </div>
 
         {/* Footer shortcuts hint */}
-        <div className="p-3 bg-[#F6F7F4] border-t border-[#E2E6E0] flex items-center justify-between text-[10px] font-mono text-[#55635B]">
+        <div className="p-3 bg-[#0a0a0f] border-t border-[#272738] flex items-center justify-between text-[10px] font-mono text-[#94a3b8]">
           <div className="flex items-center gap-3">
-            <span><kbd className="px-1 py-0.5 bg-white rounded border border-[#D1D8CE]">↑↓</kbd> Navigate</span>
-            <span><kbd className="px-1 py-0.5 bg-white rounded border border-[#D1D8CE]">↵</kbd> Select</span>
-            <span><kbd className="px-1 py-0.5 bg-white rounded border border-[#D1D8CE]">ESC</kbd> Close</span>
+            <span><kbd className="px-1 py-0.5 bg-[#161622] text-[#94a3b8] rounded border border-[#3b3b52]">↑↓</kbd> Navigate</span>
+            <span><kbd className="px-1 py-0.5 bg-[#161622] text-[#94a3b8] rounded border border-[#3b3b52]">↵</kbd> Select</span>
+            <span><kbd className="px-1 py-0.5 bg-[#161622] text-[#94a3b8] rounded border border-[#3b3b52]">ESC</kbd> Close</span>
           </div>
           <span>RasoSynthTune Search</span>
         </div>

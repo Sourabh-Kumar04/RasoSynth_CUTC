@@ -4,16 +4,16 @@ import { cva, type VariantProps } from 'class-variance-authority'
 import { clsx } from 'clsx'
 
 const buttonVariants = cva(
-  'inline-flex items-center justify-center whitespace-nowrap rounded-full text-xs sm:text-sm font-medium transition-all duration-150 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#1B3B2B] focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50',
+  'inline-flex items-center justify-center whitespace-nowrap rounded-full text-xs sm:text-sm font-medium transition-all duration-150 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#6366f1] focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50',
   {
     variants: {
       variant: {
-        default: 'bg-[#1B3B2B] text-white hover:bg-[#142D21] shadow-sm font-semibold active:scale-[0.98]',
+        default: 'bg-[#6366f1] text-white hover:bg-[#4f46e5] shadow-sm font-semibold active:scale-[0.98]',
         destructive: 'bg-rose-600 text-white hover:bg-rose-700 shadow-sm active:scale-[0.98]',
-        outline: 'border border-[#D1D8CE] bg-white hover:bg-[#F0F3EE] text-[#1B3B2B] shadow-2xs active:scale-[0.98]',
-        secondary: 'bg-[#E8ECE6] text-[#1B3B2B] hover:bg-[#DEE3DC] border border-transparent active:scale-[0.98]',
-        ghost: 'hover:bg-[#E8ECE6]/80 text-[#1B3B2B]',
-        link: 'text-[#1B3B2B] underline-offset-4 hover:underline',
+        outline: 'border border-[#3b3b52] bg-[#12121a] hover:bg-[#161622] text-[#f8fafc] shadow-2xs active:scale-[0.98]',
+        secondary: 'bg-[#161622] text-[#f8fafc] hover:bg-[#272738] border border-[#3b3b52] active:scale-[0.98]',
+        ghost: 'hover:bg-[#161622] text-[#f8fafc]',
+        link: 'text-[#6366f1] underline-offset-4 hover:underline',
       },
       size: {
         default: 'h-9 px-4 py-2',

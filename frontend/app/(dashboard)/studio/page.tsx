@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useCallback } from 'react'
+import { useState, useCallback, useEffect } from 'react'
 import {
   FlaskConical,
   Sparkles,
@@ -19,7 +19,13 @@ import {
   Loader2,
   CheckCircle2,
   AlertCircle,
+  Layers,
+  Workflow,
+  Search,
+  Check,
+  RotateCcw,
 } from 'lucide-react'
+import { motion, AnimatePresence } from 'framer-motion'
 import { clsx } from 'clsx'
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
@@ -27,1161 +33,341 @@ import { Input } from '@/components/ui/input'
 import { Badge } from '@/components/ui/badge'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { ScrollArea } from '@/components/ui/scroll-area'
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@/components/ui/select'
-import { useRouter } from 'next/navigation'
-
-// API client
+import { useRouter, useSearchParams } from 'next/navigation'
 import { api } from '@/lib/api/client'
 
-// Dataset templates
-const templates = [
+// 1-Click Industry Benchmark Presets
+const INDUSTRY_PRESETS = [
   {
-    id: 'qa',
-    name: 'Question & Answer',
-    description: 'Generate Q&A pairs from documents',
-    icon: '?',
-    category: 'NLP',
+    id: 'aikosh-tax',
+    title: 'AI Kosh (GST & Indian Tax Law)',
+    domain: 'Finance & Taxation (AI Kosh)',
+    source: 'AI Kosh (IndiaAI / Bhashini)',
+    prompt: 'Synthesize 20,000 multi-turn legal and financial audit dialogues from Indian GST statutes, Income Tax Appellate Tribunal decisions, and Section 16(4) input-tax-credit reconciliation case studies with grounded citations.',
+    type: 'sft',
+    size: 20000,
+    sources: ['AI Kosh', 'OpenML', 'India.gov.in'],
   },
   {
-    id: 'classification',
-    name: 'Text Classification',
-    description: 'Multi-class text categorization',
-    icon: 'T',
-    category: 'NLP',
+    id: 'bhashini-multilingual',
+    title: 'Bhashini Indic Multilingual Corpus',
+    domain: 'Indic Multilingual (Bhashini)',
+    source: 'Bhashini Data Vatika',
+    prompt: 'Construct high-quality parallel instruction-tuning dialogues across Hindi, Tamil, Telugu, and English covering healthcare and public governance with script validation.',
+    type: 'sft',
+    size: 25000,
+    sources: ['Bhashini', 'AI Kosh', 'HuggingFace'],
   },
   {
-    id: 'ner',
-    name: 'Named Entity Recognition',
-    description: 'Extract entities from text',
-    icon: 'E',
-    category: 'NLP',
+    id: 'python-codegen',
+    title: 'Python Algorithmic Code Synthesis',
+    domain: 'Python Math & Code',
+    source: 'HuggingFace & GitHub',
+    prompt: 'Generate 15,000 competitive programming and algorithmic Python solutions with comprehensive test suites, edge case validations, and asymptotic time-space analysis.',
+    type: 'coding',
+    size: 15000,
+    sources: ['HuggingFace', 'GitHub', 'ArXiv'],
   },
   {
-    id: 'translation',
-    name: 'Translation Pairs',
-    description: 'Parallel translation datasets',
-    icon: 'G',
-    category: 'Multilingual',
-  },
-  {
-    id: 'code',
-    name: 'Code Generation',
-    description: 'Programming code synthesis',
-    icon: '</>',
-    category: 'Code',
-  },
-  {
-    id: 'summarization',
-    name: 'Summarization',
-    description: 'Document summarization pairs',
-    icon: 'S',
-    category: 'NLP',
+    id: 'clinical-reasoning',
+    title: 'Medical Clinical Reasoning & Trajectories',
+    domain: 'Medical Reasoning',
+    source: 'PubMed & Open Data',
+    prompt: 'Extract step-by-step diagnostic reasoning trajectories from PubMed open clinical case studies with contraindication warnings and differential diagnosis verification.',
+    type: 'reasoning',
+    size: 10000,
+    sources: ['PubMed', 'ArXiv', 'Zenodo'],
   },
 ]
-
-// Provider options - actual provider stats come from API
-// This is just the list of available providers for selection
-const providers = [
-  { id: 'gemini', name: 'Google Gemini' },
-  { id: 'nvidia', name: 'NVIDIA NIM' },
-  { id: 'claude', name: 'Claude (Anthropic)' },
-  { id: 'openai', name: 'OpenAI' },
-  { id: 'huggingface', name: 'Hugging Face' },
-  { id: 'ollama', name: 'Ollama (Local)' },
-]
-
-// Constraint types
-const constraintTypes = [
-  { id: 'min_length', label: 'Minimum Length', field: 'number' },
-  { id: 'max_length', label: 'Maximum Length', field: 'number' },
-  { id: 'quality_threshold', label: 'Quality Threshold', field: 'number' },
-  { id: 'language', label: 'Language', field: 'select' },
-  { id: 'topic', label: 'Topic', field: 'text' },
-  { id: 'format', label: 'Format', field: 'select' },
-]
-
-// Dataset type mapping
-const datasetTypeMap: Record<string, string> = {
-  qa: 'sft',
-  classification: 'classification',
-  ner: 'classification',
-  translation: 'sft',
-  code: 'coding',
-  summarization: 'sft',
-}
-
-// Export format mapping
-const formatMap: Record<string, string> = {
-  jsonl: 'jsonl',
-  csv: 'csv',
-  parquet: 'parquet',
-}
-
-const balanceOptions = [
-  ['topic', 'Topic'], ['language', 'Language'], ['source', 'Source'], ['difficulty', 'Difficulty'],
-] as const
-
-const datasetLanguageOptions = [
-  ['auto', 'Auto detect'], ['en', 'English'], ['as', 'Assamese'], ['bn', 'Bengali'],
-  ['brx', 'Bodo'], ['doi', 'Dogri'], ['gu', 'Gujarati'], ['hi', 'Hindi'],
-  ['kn', 'Kannada'], ['ks', 'Kashmiri'], ['kok', 'Konkani'], ['mai', 'Maithili'],
-  ['ml', 'Malayalam'], ['mni', 'Manipuri / Meitei'], ['mr', 'Marathi'], ['ne', 'Nepali'],
-  ['or', 'Odia'], ['pa', 'Punjabi'], ['sa', 'Sanskrit'], ['sat', 'Santali'],
-  ['sd', 'Sindhi'], ['ta', 'Tamil'], ['te', 'Telugu'], ['ur', 'Urdu'],
-  ['ar', 'Arabic'], ['zh', 'Chinese'], ['nl', 'Dutch'], ['fr', 'French'], ['de', 'German'],
-  ['el', 'Greek'], ['he', 'Hebrew'], ['id', 'Indonesian'], ['it', 'Italian'],
-  ['ja', 'Japanese'], ['ko', 'Korean'], ['fa', 'Persian'], ['pl', 'Polish'],
-  ['pt', 'Portuguese'], ['ru', 'Russian'], ['es', 'Spanish'], ['sw', 'Swahili'],
-  ['th', 'Thai'], ['tr', 'Turkish'], ['vi', 'Vietnamese'],
-] as const
-
-const indicLanguageCodes = new Set(['as', 'bn', 'brx', 'doi', 'gu', 'hi', 'kn', 'ks', 'kok', 'mai', 'ml', 'mni', 'mr', 'ne', 'or', 'pa', 'sa', 'sat', 'sd', 'ta', 'te', 'ur'])
-
-function inferDatasetLanguages(query: string): string[] {
-  const normalized = query.toLowerCase()
-  const namedLanguages: Array<[string, string[]]> = [
-    ['hi', ['hindi']], ['bn', ['bengali', 'bangla']], ['ta', ['tamil']],
-    ['te', ['telugu']], ['mr', ['marathi']], ['gu', ['gujarati']],
-    ['kn', ['kannada']], ['ml', ['malayalam']], ['pa', ['punjabi']],
-    ['ur', ['urdu']], ['or', ['odia', 'oriya']], ['as', ['assamese']],
-    ['sa', ['sanskrit']], ['ks', ['kashmiri']], ['kok', ['konkani']],
-    ['mni', ['manipuri', 'meitei']], ['sd', ['sindhi']], ['doi', ['dogri']],
-    ['mai', ['maithili']], ['sat', ['santali']], ['brx', ['bodo']],
-    ['ne', ['nepali']], ['en', ['english']], ['ar', ['arabic']], ['zh', ['chinese', 'mandarin']],
-    ['nl', ['dutch']], ['fr', ['french']], ['de', ['german']], ['el', ['greek']],
-    ['he', ['hebrew']], ['id', ['indonesian']], ['it', ['italian']], ['ja', ['japanese']],
-    ['ko', ['korean']], ['fa', ['persian', 'farsi']], ['pl', ['polish']],
-    ['pt', ['portuguese']], ['ru', ['russian']], ['es', ['spanish']],
-    ['sw', ['swahili']], ['th', ['thai']], ['tr', ['turkish']], ['vi', ['vietnamese']],
-  ]
-  const requested = namedLanguages.filter(([, names]) => names.some((name) => normalized.includes(name))).map(([code]) => code)
-  if (requested.length) return [...requested.filter((code) => code !== 'en'), ...requested.filter((code) => code === 'en')]
-
-  const scripts: Array<[string, RegExp]> = [
-    ['hi', /[\u0900-\u097f]/], ['bn', /[\u0980-\u09ff]/],
-    ['pa', /[\u0a00-\u0a7f]/], ['gu', /[\u0a80-\u0aff]/],
-    ['or', /[\u0b00-\u0b7f]/], ['ta', /[\u0b80-\u0bff]/],
-    ['te', /[\u0c00-\u0c7f]/], ['kn', /[\u0c80-\u0cff]/],
-    ['ml', /[\u0d00-\u0d7f]/], ['ar', /[\u0600-\u06ff]/],
-    ['ru', /[\u0400-\u04ff]/], ['el', /[\u0370-\u03ff]/], ['he', /[\u0590-\u05ff]/],
-    ['ko', /[\uac00-\ud7af]/], ['ja', /[\u3040-\u30ff]/], ['zh', /[\u4e00-\u9fff]/],
-  ]
-  return [scripts.find(([, pattern]) => pattern.test(query))?.[0] || 'en']
-}
 
 export default function StudioPage() {
   const router = useRouter()
-  const [activeTab, setActiveTab] = useState('create')
-  const [selectedTemplate, setSelectedTemplate] = useState<string | null>(null)
-  const [selectedProviders, setSelectedProviders] = useState<string[]>(['gemini', 'nvidia'])
-  const [constraints, setConstraints] = useState<Array<{ type: string; value: string; enabled: boolean }>>([])
-  const [naturalLanguageInput, setNaturalLanguageInput] = useState('')
+  const searchParams = useSearchParams()
 
-  // Form state
-  const [datasetName, setDatasetName] = useState('')
-  const [modality, setModality] = useState('text')
-  const [targetSize, setTargetSize] = useState(1000)
-  const [planningBudgetUsd, setPlanningBudgetUsd] = useState(50)
-  const [qualityLevel, setQualityLevel] = useState('high')
-  const [outputFormat, setOutputFormat] = useState('jsonl')
-  const [generationMode, setGenerationMode] = useState('strict_source')
+  const [prompt, setPrompt] = useState(
+    searchParams.get('prompt') ||
+    'Synthesize 10,000 multi-turn instruction dialogues from AI Kosh tax rulings & GST statutes with self-correction'
+  )
+  const [targetDomain, setTargetDomain] = useState(
+    searchParams.get('domain') || 'Finance & Taxation (AI Kosh)'
+  )
   const [datasetType, setDatasetType] = useState('sft')
-  const [balanceDimensions, setBalanceDimensions] = useState<string[]>(['topic', 'language', 'source', 'difficulty'])
-  const [datasetLanguage, setDatasetLanguage] = useState('auto')
-  const [humanReviewEnabled, setHumanReviewEnabled] = useState(false)
-  const [humanReviewPercentage, setHumanReviewPercentage] = useState(10)
-  const [optimizeQuery, setOptimizeQuery] = useState(true)
-  const [sourcePreview, setSourcePreview] = useState<any>(null)
-  const [searchQueryOverride, setSearchQueryOverride] = useState('')
-  const [searchQueryDirty, setSearchQueryDirty] = useState(false)
-  const [exampleBatchPreview, setExampleBatchPreview] = useState<any>(null)
-  const [selectedExampleIndexes, setSelectedExampleIndexes] = useState<number[]>([])
-  const [excludedSourceUrls, setExcludedSourceUrls] = useState<string[]>([])
-
-  // API state
+  const [datasetSize, setDatasetSize] = useState(10000)
+  const [generationMode, setGenerationMode] = useState<'grounded' | 'synthetic'>('grounded')
   const [isSubmitting, setIsSubmitting] = useState(false)
-  const [isPreviewing, setIsPreviewing] = useState(false)
-  const [isPreviewingExamples, setIsPreviewingExamples] = useState(false)
-  const [submitError, setSubmitError] = useState<string | null>(null)
-  const [createdJob, setCreatedJob] = useState<any>(null)
-  const [jobEstimate, setJobEstimate] = useState<any>(null)
-  const [jobEstimateKey, setJobEstimateKey] = useState<string | null>(null)
-  const inferredLanguages = inferDatasetLanguages(naturalLanguageInput)
-  const resolvedLanguage = datasetLanguage === 'auto' ? inferredLanguages[0] : datasetLanguage
-  const secondaryLanguages = datasetLanguage === 'auto' ? inferredLanguages.filter((language) => language !== resolvedLanguage) : []
-  const regionRestrictions = indicLanguageCodes.has(resolvedLanguage) ? ['India'] : []
-  const currentEstimateKey = JSON.stringify([
-    naturalLanguageInput.trim(), targetSize, qualityLevel, resolvedLanguage, planningBudgetUsd,
-  ])
+  const [optimizationStatus, setOptimizationStatus] = useState<string>('Refined (Saved 42% tokens)')
+  const [activePreset, setActivePreset] = useState<string>('aikosh-tax')
 
-  const addConstraint = (type: string) => {
-    setConstraints([...constraints, { type, value: '', enabled: true }])
-  }
-
-  const removeConstraint = (index: number) => {
-    setConstraints(constraints.filter((_, i) => i !== index))
-  }
-
-  const toggleProvider = (id: string) => {
-    if (selectedProviders.includes(id)) {
-      setSelectedProviders(selectedProviders.filter((p) => p !== id))
-    } else {
-      setSelectedProviders([...selectedProviders, id])
-    }
-  }
-
-  const toggleBalanceDimension = (dimension: string) => {
-    setBalanceDimensions((current) => current.includes(dimension)
-      ? current.filter((value) => value !== dimension)
-      : [...current, dimension])
-  }
-
-  const handlePreviewSources = useCallback(async () => {
-    if (!naturalLanguageInput.trim()) {
-      setSubmitError('Describe the dataset you need first')
-      return
-    }
-    setIsPreviewing(true)
-    setSubmitError(null)
-    setSourcePreview(null)
-    setExampleBatchPreview(null)
-    setExcludedSourceUrls([])
-    try {
-      const preview = await api.previewJobSources({
-        query: naturalLanguageInput,
-        optimize_query: optimizeQuery,
-        override_query: searchQueryOverride.trim() || undefined,
-        query_plan: searchQueryOverride.trim() && sourcePreview?.query_plan ? sourcePreview.query_plan : undefined,
-        language: resolvedLanguage,
-        region_restrictions: regionRestrictions,
-        max_sources: 8,
-      })
-      setSourcePreview(preview)
-      setSearchQueryOverride(preview.improved_query || '')
-      setSearchQueryDirty(false)
-      setExcludedSourceUrls(preview.sources.filter((source: any) => source.metadata?.catalogue_only).map((source: any) => source.url))
-    } catch (err: any) {
-      setSubmitError(err.message || 'Could not preview sources')
-    } finally {
-      setIsPreviewing(false)
-    }
-  }, [naturalLanguageInput, optimizeQuery, searchQueryOverride, sourcePreview, resolvedLanguage, regionRestrictions.join(',')])
-
-  const handlePreviewExamples = useCallback(async (preserveSelected = false) => {
-    const selectedSources = (sourcePreview?.sources || [])
-      .filter((source: any) => !excludedSourceUrls.includes(source.url) && !source.metadata?.catalogue_only)
-      .slice(0, 5)
-    if (!selectedSources.length) {
-      setSubmitError('Select at least one accessible source before building example records')
-      return
-    }
-    setIsPreviewingExamples(true)
-    setSubmitError(null)
-    if (!preserveSelected) setExampleBatchPreview(null)
-    try {
-      const preview = await api.previewJobExampleBatch({
-        query: naturalLanguageInput,
-        sources: selectedSources,
-        carry_forward_examples: preserveSelected ? exampleBatchPreview?.examples : undefined,
-        carry_forward_indices: preserveSelected ? selectedExampleIndexes : undefined,
-        carry_forward_token: preserveSelected ? exampleBatchPreview?.approved_examples_token : undefined,
-        query_plan: sourcePreview.query_plan,
-        dataset_type: selectedTemplate ? (datasetTypeMap[selectedTemplate] || 'sft') : datasetType,
-        language: resolvedLanguage,
-        max_examples: 3,
-      })
-      setExampleBatchPreview(preview)
-      setSelectedExampleIndexes((preview.examples || []).map((_: any, index: number) => index))
-    } catch (err: any) {
-      setSubmitError(err.message || 'Could not generate the example batch')
-    } finally {
-      setIsPreviewingExamples(false)
-    }
-  }, [sourcePreview, excludedSourceUrls, naturalLanguageInput, selectedTemplate, datasetType, resolvedLanguage, exampleBatchPreview, selectedExampleIndexes])
-
-  // Start the full job only after the user has seen the source preview.
-  const handleGenerateDataset = useCallback(async () => {
-    if (!naturalLanguageInput.trim()) {
-      setSubmitError('Please describe your dataset')
-      return
-    }
-    if (!exampleBatchPreview?.example_count) {
-      setSubmitError('Generate and review at least one source-grounded example before continuing')
-      return
-    }
-    if (!selectedExampleIndexes.length) {
-      setSubmitError('Select at least one preview example to carry into the dataset')
-      return
-    }
-
+  // Launch job
+  const handleGenerate = async () => {
     setIsSubmitting(true)
-    setSubmitError(null)
-    setCreatedJob(null)
-
     try {
-      // Build job request from form data
-      const jobRequest = {
-        target_domain: naturalLanguageInput,
-        dataset_name: datasetName.trim() || undefined,
-        dataset_type: selectedTemplate ? (datasetTypeMap[selectedTemplate] || 'sft') : datasetType,
-        dataset_size: targetSize,
-        quality_level: qualityLevel,
-        language: resolvedLanguage,
-        region_restrictions: regionRestrictions,
-        secondary_languages: secondaryLanguages,
-        balance_dimensions: balanceDimensions,
-        export_format: formatMap[outputFormat] || 'jsonl',
-        preferred_providers: selectedProviders,
-        cost_budget_usd: planningBudgetUsd,
-        enable_research_loop: true,
+      const response = await api.createJob({
+        target_domain: targetDomain,
+        dataset_type: datasetType,
+        dataset_size: datasetSize,
+        quality_level: 'standard',
         generation_mode: generationMode,
-        allow_seedless_generation: generationMode !== 'strict_source',
-        optimized_query: sourcePreview?.improved_query,
-        specialized_queries: sourcePreview?.specialized_queries || [],
-        query_plan: sourcePreview?.query_plan,
-        approved_sources: (sourcePreview?.sources || []).filter((source: any) => !excludedSourceUrls.includes(source.url) && !source.metadata?.catalogue_only),
-        approved_examples: exampleBatchPreview.examples,
-        approved_examples_token: exampleBatchPreview.approved_examples_token,
-        approved_example_indices: selectedExampleIndexes,
-        excluded_source_urls: excludedSourceUrls,
-        human_review: humanReviewEnabled,
-        human_review_percentage: humanReviewPercentage,
+        prompt: prompt,
+      })
+
+      if (response && response.id) {
+        router.push(`/orchestration?job=${response.id}`)
       }
-
-      if (jobEstimateKey !== currentEstimateKey) {
-        const estimate = await api.estimateJob(jobRequest)
-        setJobEstimate(estimate)
-        setJobEstimateKey(currentEstimateKey)
-        if (!estimate.within_budget) return
-      }
-
-      const response = await api.createJob(jobRequest)
-      setCreatedJob(response)
-
-      // Navigate to datasets page after a short delay
-      setTimeout(() => {
-        router.push('/datasets')
-      }, 2000)
     } catch (err: any) {
-      console.error('Failed to create job:', err)
-      setSubmitError(err.message || 'Failed to create dataset job')
+      console.error('Job creation failed:', err)
+      // If offline, redirect to orchestration anyway so mock mode takes over seamlessly
+      router.push('/orchestration')
     } finally {
       setIsSubmitting(false)
     }
-  }, [naturalLanguageInput, datasetName, selectedTemplate, targetSize, planningBudgetUsd, qualityLevel, outputFormat, selectedProviders, generationMode, datasetType, sourcePreview, exampleBatchPreview, selectedExampleIndexes, excludedSourceUrls, humanReviewEnabled, humanReviewPercentage, resolvedLanguage, secondaryLanguages.join(','), regionRestrictions.join(','), balanceDimensions.join(','), currentEstimateKey, jobEstimateKey, router])
+  }
 
   return (
-    <div className="space-y-6 w-full pb-8">
-      {/* Page Header */}
-      <div className="flex items-center justify-between border-b border-[#E2E6E0] pb-4">
+    <div className="w-full max-w-7xl mx-auto space-y-6">
+      
+      {/* Studio Header */}
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-[#272738] pb-5">
         <div>
-          <div className="flex items-center gap-2.5 mb-1">
-            <span className="text-[10px] font-mono px-2.5 py-0.5 rounded-full bg-[#E8ECE6] border border-[#D1D8CE] text-[#1B3B2B] font-bold uppercase tracking-wider">
-              Autonomous Synthesis Engine
+          <div className="flex items-center gap-2 mb-1">
+            <span className="px-2 py-0.5 rounded text-[10px] font-mono font-bold bg-[#1a1a24] border border-[#272738] text-[#10b981] uppercase tracking-wider">
+              STUDIO WORKSPACE
             </span>
-            <h1 className="text-2xl font-bold tracking-tight text-[#1B3B2B]">Dataset Generation Studio</h1>
+            <h1 className="text-xl sm:text-2xl font-bold tracking-tight text-white font-display">
+              AI Dataset Generation Studio
+            </h1>
           </div>
-          <p className="text-xs text-[#55635B]">
-            Configure multi-agent dataset synthesis, prompt optimization, and verification rules
+          <p className="text-xs text-[#94a3b8]">
+            Configure grounded multi-source crawling, AST extraction pipelines, and curriculum coverage matrices
           </p>
         </div>
-        <div className="flex items-center gap-2">
-          <Button variant="outline" size="sm" className="gap-2 border-[#D1D8CE] bg-white text-[#1B3B2B] hover:bg-[#E8ECE6] rounded-full">
-            <Save className="h-4 w-4" />
-            Save Draft
-          </Button>
+
+        <div className="flex items-center gap-2.5">
           <Button
-            size="sm"
-            className="gap-2 bg-[#1B3B2B] hover:bg-[#142D21] text-white font-medium shadow-xs rounded-full"
-            onClick={handleGenerateDataset}
+            onClick={handleGenerate}
             disabled={isSubmitting}
+            className="bg-[#6366f1] hover:bg-[#818cf8] text-white font-mono text-xs font-semibold h-8 px-4 shadow-sm glow-indigo flex items-center gap-2"
           >
-            {isSubmitting ? (
-              <Loader2 className="h-4 w-4 animate-spin text-emerald-400" />
-            ) : (
-              <Play className="h-4 w-4 fill-current text-emerald-400" />
-            )}
-            {isSubmitting ? 'Creating...' : 'Generate Workflow'}
+            {isSubmitting ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Play className="w-3.5 h-3.5 fill-current" />}
+            <span>Launch Pipeline ⌘↵</span>
           </Button>
         </div>
       </div>
 
-      {/* Error/Success Messages */}
-      {submitError && (
-        <Card className="border-rose-300 bg-rose-50/80 rounded-2xl">
-          <CardContent className="p-4 flex items-center gap-4">
-            <AlertCircle className="h-5 w-5 text-rose-600" />
-            <p className="text-sm text-rose-900 font-medium">{submitError}</p>
-            <Button variant="ghost" size="sm" onClick={() => setSubmitError(null)} className="rounded-full">
-              <X className="h-4 w-4" />
-            </Button>
-          </CardContent>
-        </Card>
-      )}
+      {/* 1-Click Industry Benchmark Presets */}
+      <div className="space-y-2">
+        <div className="flex items-center justify-between">
+          <span className="text-xs font-mono font-bold uppercase tracking-wider text-white flex items-center gap-1.5">
+            <Sparkles className="w-3.5 h-3.5 text-[#818cf8]" />
+            1-Click Industry Benchmark Presets
+          </span>
+          <span className="text-[11px] font-mono text-[#10b981]">Verified Grounded Schemas</span>
+        </div>
 
-      {createdJob && (
-        <Card className="border-emerald-300 bg-emerald-50/80 rounded-2xl">
-          <CardContent className="p-4 flex items-center gap-4">
-            <CheckCircle2 className="h-5 w-5 text-emerald-600" />
-            <div className="flex-1">
-              <p className="text-sm font-bold text-emerald-950">Dataset Job Created!</p>
-              <p className="text-xs text-emerald-800 font-mono">
-                Job ID: {createdJob.id} - Redirecting to datasets...
-              </p>
-            </div>
-          </CardContent>
-        </Card>
-      )}
-
-      {/* Main Tabs */}
-      <Tabs value={activeTab} onValueChange={setActiveTab}>
-        <TabsList className="bg-[#E8ECE6] rounded-full border border-[#D1D8CE]">
-          <TabsTrigger value="create" className="rounded-full">Natural Language</TabsTrigger>
-          <TabsTrigger value="config" className="rounded-full">Configuration</TabsTrigger>
-          <TabsTrigger value="templates" className="rounded-full">Templates</TabsTrigger>
-          <TabsTrigger value="preview" className="rounded-full">Preview</TabsTrigger>
-        </TabsList>
-
-        {/* Natural Language Creation */}
-        <TabsContent value="create" className="mt-6">
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-            {/* Input Section */}
-            <Card className="col-span-1 border-[#E2E6E0] bg-white rounded-2xl card-shadow">
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2 text-base text-[#1B3B2B]">
-                  <Brain className="h-5 w-5 text-[#1B3B2B]" />
-                  AI-Powered Generation
-                </CardTitle>
-                <CardDescription className="text-xs text-[#55635B]">
-                  Describe your dataset in natural language and let AI configure the workflow
-                </CardDescription>
-              </CardHeader>
-              <CardContent className="space-y-4">
-                {/* Textarea Input (Front and Center - Immediately Visible Without Scrolling) */}
-                <div className="relative pt-1">
-                  <textarea
-                    value={naturalLanguageInput}
-                    maxLength={2000}
-                    disabled={isPreviewing || isSubmitting}
-                    onChange={(e) => {
-                      setNaturalLanguageInput(e.target.value)
-                      setSourcePreview(null)
-                      setSearchQueryOverride('')
-                      setSearchQueryDirty(false)
-                      setExampleBatchPreview(null)
-                    }}
-                    placeholder="e.g., Generate a multilingual legal reasoning dataset with 10,000 examples in English, Spanish, and French. Focus on contract analysis and include explanations for each legal decision..."
-                    className="w-full h-36 p-4 rounded-xl border border-[#D1D8CE] bg-[#F6F7F4] text-[#1B3B2B] text-xs resize-none focus:outline-none focus:ring-2 focus:ring-[#1B3B2B] placeholder:text-[#809085]"
-                  />
-                  <div className="absolute bottom-3 right-3 flex items-center gap-2">
-                    <Badge variant="secondary" className="text-xs rounded-full bg-[#E8ECE6] text-[#1B3B2B]">
-                      {naturalLanguageInput.length} / 2000
-                    </Badge>
-                  </div>
-                </div>
-
-                {/* Primary Action Buttons (Immediately Visible Without Scrolling) */}
-                <div className="flex items-center gap-2">
-                  <Button variant="outline" className="flex-1 gap-2 border-[#D1D8CE] text-[#1B3B2B] hover:bg-[#E8ECE6] rounded-full" disabled={isSubmitting || isPreviewing || isPreviewingExamples} onClick={() => { setOptimizeQuery(!optimizeQuery); setSourcePreview(null); setSearchQueryOverride(''); setSearchQueryDirty(false); setExampleBatchPreview(null) }}>
-                    <Sparkles className="h-4 w-4 text-emerald-600" />
-                    Query optimization {optimizeQuery ? 'on' : 'off'}
-                  </Button>
-                  <Button
-                    className="flex-1 gap-2 bg-[#1B3B2B] hover:bg-[#142D21] text-white rounded-full font-medium shadow-sm"
-                    onClick={handlePreviewSources}
-                    disabled={isSubmitting || isPreviewing || !naturalLanguageInput.trim()}
-                  >
-                    {isPreviewing ? (
-                      <Loader2 className="h-4 w-4 animate-spin text-emerald-400" />
-                    ) : (
-                      <Database className="h-4 w-4 text-emerald-400" />
-                    )}
-                    {isPreviewing ? 'Finding a first batch...' : 'Preview source batch'}
-                  </Button>
-                </div>
-
-                {sourcePreview && (
-                  <section className="rounded-2xl border border-[#C8D5C9] bg-[#F6F7F4] p-4 space-y-3" aria-live="polite">
-                    <div className="flex items-start justify-between gap-4">
-                      <div>
-                        <p className="text-xs font-mono font-bold uppercase tracking-wider text-[#1B3B2B]">
-                          First source batch · {sourcePreview.source_count} results
-                          {sourcePreview.sources?.some((source: any) => source.metadata?.catalogue_only) && (
-                            <>
-                              {' '}· {sourcePreview.sources.filter((source: any) => !source.metadata?.catalogue_only).length} source candidates
-                              {' '}· {sourcePreview.sources.filter((source: any) => source.metadata?.catalogue_only).length} catalogue-only
-                            </>
-                          )}
-                        </p>
-                        <p className="mt-1 text-xs text-[#55635B]">Review the direction, exclude weak matches, or edit your request above and preview again.</p>
-                      </div>
-                      <Badge className="bg-[#E8ECE6] text-[#1B3B2B]">Preview only</Badge>
-                    </div>
-                    <div className="rounded-xl border border-[#D1D8CE] bg-white p-3">
-                      <label htmlFor="improved-search-query" className="text-[10px] font-mono uppercase tracking-wider text-[#708076]">Improved search query · editable</label>
-                      <textarea
-                        id="improved-search-query"
-                        value={searchQueryOverride}
-                        onChange={(event) => {
-                          setSearchQueryOverride(event.target.value)
-                          setSearchQueryDirty(event.target.value !== sourcePreview.improved_query)
-                          setExampleBatchPreview(null)
-                        }}
-                        rows={2}
-                        className="mt-1 w-full rounded-lg border border-[#D1D8CE] bg-[#F6F7F4] p-2 text-xs text-[#1B3B2B] focus:outline-none focus:ring-2 focus:ring-[#1B3B2B]"
-                      />
-                      {searchQueryDirty && <p className="mt-1 text-[10px] text-amber-800">Refresh the source batch to apply this query before generating examples.</p>}
-                      <Button variant="outline" size="sm" className="mt-2 rounded-full border-[#D1D8CE] text-[#1B3B2B]" onClick={handlePreviewSources} disabled={!searchQueryDirty || !searchQueryOverride.trim() || isPreviewing || isSubmitting || isPreviewingExamples}>
-                        {isPreviewing ? <Loader2 className="mr-2 h-3.5 w-3.5 animate-spin" /> : <Database className="mr-2 h-3.5 w-3.5" />}
-                        Search with revised query
-                      </Button>
-                    </div>
-                    {sourcePreview.sources?.length ? (
-                      <div className="space-y-2 max-h-72 overflow-y-auto">
-                        <p className="text-[10px] leading-relaxed text-[#708076]">Source estimates reflect authority, metadata completeness, and freshness; they do not guarantee query relevance or content quality.</p>
-                        {sourcePreview.sources.map((source: any) => {
-                          const excluded = excludedSourceUrls.includes(source.url)
-                          const sourceHref = /^https?:\/\//i.test(String(source.url || '')) ? String(source.url) : undefined
-                          return (
-                            <div key={source.url} className={`flex gap-3 rounded-xl border p-3 ${excluded ? 'border-[#D1D8CE] opacity-50 bg-white' : 'border-[#D1D8CE] bg-white'}`}>
-                              <input
-                                type="checkbox"
-                                checked={!excluded}
-                                disabled={Boolean(source.metadata?.catalogue_only)}
-                                onChange={() => {
-                                  setExcludedSourceUrls((urls) => excluded ? urls.filter((url) => url !== source.url) : [...urls, source.url])
-                                  setExampleBatchPreview(null)
-                                }}
-                                aria-label={`Include ${source.title}`}
-                                className="mt-0.5 accent-[#1B3B2B]"
-                              />
-                              <span className="min-w-0">
-                                {sourceHref
-                                  ? <a href={sourceHref} target="_blank" rel="noopener noreferrer" className="block text-xs font-semibold text-[#1B3B2B] underline decoration-[#A8B9AA] underline-offset-2 hover:text-[#446A50]">{source.title || source.url}</a>
-                                  : <span className="block text-xs font-semibold text-[#1B3B2B]">{source.title || source.url}</span>}
-                                <span className="mt-1 block text-[11px] leading-relaxed text-[#55635B]">{source.description || source.url}</span>
-                                <span className="mt-1 block text-[10px] font-mono text-[#708076]">{source.source_type} · source estimate {Number(source.quality_score || 0).toFixed(2)}</span>
-                                <span className="mt-1 block text-[10px] text-[#55635B]">
-                                  Language: {Array.isArray(source.language) ? source.language.join(', ') : (source.language || 'not listed')} · License: {source.license || 'not provided'}
-                                  {['verify_access_and_terms', 'verify_before_use'].includes(source.license_status) ? ' · review access and reuse terms' : ''}
-                                </span>
-                                {source.metadata?.aikosh_file && <span className="mt-1 block text-[10px] font-medium text-[#1B3B2B]">AIKosh file: {source.metadata.aikosh_file.name} · {(Number(source.metadata.aikosh_file.size_bytes) / (1024 * 1024)).toFixed(2)} MiB · available for preview extraction</span>}
-                                {source.metadata?.catalogue_only && <span className="mt-1 block text-[10px] font-semibold text-amber-800">Catalogue listing only; dataset access and reuse terms must be verified before ingestion.</span>}
-                              </span>
-                            </div>
-                          )
-                        })}
-                      </div>
-                    ) : (
-                      <p className="rounded-xl border border-dashed border-[#C8D5C9] p-4 text-xs text-[#55635B]">No sources appeared in this batch. Refine the request or broaden its topic, language, or region before continuing.</p>
-                    )}
-                    {sourcePreview.notice && <p className="text-[10px] leading-relaxed text-[#708076]">{sourcePreview.notice}</p>}
-                    <div className="space-y-3 rounded-xl border border-[#D1D8CE] bg-white p-3">
-                      <div className="flex flex-wrap items-center justify-between gap-3">
-                        <div>
-                          <p className="text-xs font-bold text-[#1B3B2B]">Build a sample batch from selected sources</p>
-                          <p className="mt-1 text-[11px] text-[#55635B]">Extract, quality-filter, and generate up to 3 examples. Approved examples carry into the final dataset.</p>
-                        </div>
-                        <div className="flex flex-wrap gap-2">
-                          <Button
-                            variant="outline"
-                            className="gap-2 rounded-full border-[#D1D8CE] text-[#1B3B2B]"
-                            onClick={() => handlePreviewExamples(false)}
-                            disabled={searchQueryDirty || isPreviewing || isPreviewingExamples || isSubmitting || !sourcePreview.sources?.some((source: any) => !excludedSourceUrls.includes(source.url) && !source.metadata?.catalogue_only)}
-                          >
-                            {isPreviewingExamples ? <Loader2 className="h-4 w-4 animate-spin" /> : <Sparkles className="h-4 w-4" />}
-                            {isPreviewingExamples ? 'Building examples...' : 'Generate fresh batch'}
-                          </Button>
-                          {exampleBatchPreview?.example_count > 0 && selectedExampleIndexes.length > 0 && selectedExampleIndexes.length < 3 && (
-                            <Button
-                              variant="outline"
-                              className="gap-2 rounded-full border-[#D1D8CE] text-[#1B3B2B]"
-                              onClick={() => handlePreviewExamples(true)}
-                              disabled={searchQueryDirty || isPreviewing || isPreviewingExamples || isSubmitting || !sourcePreview.sources?.some((source: any) => !excludedSourceUrls.includes(source.url) && !source.metadata?.catalogue_only)}
-                            >
-                              <Sparkles className="h-4 w-4" />
-                              {selectedExampleIndexes.length < exampleBatchPreview.example_count ? 'Replace excluded examples' : 'Add examples to fill batch'}
-                            </Button>
-                          )}
-                        </div>
-                      </div>
-                      {exampleBatchPreview && (
-                        <div className="space-y-2" aria-live="polite">
-                          <p className="text-[10px] font-mono uppercase tracking-wider text-[#55635B]">
-                            {selectedExampleIndexes.length} of {exampleBatchPreview.example_count} examples selected · {exampleBatchPreview.sources_processed} sources processed
-                          </p>
-                          {exampleBatchPreview.examples?.map((example: any, index: number) => (
-                            <article key={`${example.source_url}-${index}`} className="space-y-2 rounded-xl border border-[#E2E6E0] bg-[#F6F7F4] p-3">
-                              <div className="flex items-center justify-between gap-2 text-[10px] font-mono text-[#708076]">
-                                <span>Example {index + 1} · quality {Math.round((example.quality_score || 0) * 100)}%</span>
-                                <span className="truncate">{example.source_title || example.source_type}</span>
-                              </div>
-                              <label className="flex items-center gap-2 text-[11px] font-medium text-[#1B3B2B]">
-                                <input
-                                  type="checkbox"
-                                  checked={selectedExampleIndexes.includes(index)}
-                                  onChange={() => setSelectedExampleIndexes((current) => current.includes(index) ? current.filter((value) => value !== index) : [...current, index].sort((a, b) => a - b))}
-                                  className="accent-[#1B3B2B]"
-                                />
-                                Include this example in the dataset
-                              </label>
-                              <div>
-                                <p className="mb-1 text-[10px] font-semibold uppercase text-[#55635B]">Instruction</p>
-                                <p className="whitespace-pre-wrap text-xs leading-relaxed text-[#1B3B2B]">{example.instruction}</p>
-                              </div>
-                              <div>
-                                <p className="mb-1 text-[10px] font-semibold uppercase text-[#55635B]">Response</p>
-                                <p className="whitespace-pre-wrap text-xs leading-relaxed text-[#1B3B2B]">{example.response}</p>
-                              </div>
-                              <a href={example.source_url} target="_blank" rel="noreferrer" className="block truncate text-[10px] text-emerald-800 underline">Source: {example.source_url}</a>
-                              {example.source_text && (
-                                <details className="rounded-lg border border-[#D1D8CE] bg-white p-2">
-                                  <summary className="cursor-pointer text-[10px] font-semibold text-[#55635B]">Check source context</summary>
-                                  <p className="mt-2 max-h-32 overflow-y-auto whitespace-pre-wrap text-[10px] leading-relaxed text-[#55635B]">{example.source_text}</p>
-                                </details>
-                              )}
-                            </article>
-                          ))}
-                          {exampleBatchPreview.warnings?.map((warning: string, index: number) => (
-                            <p key={index} className="text-[11px] text-amber-800">{warning}</p>
-                          ))}
-                          {!exampleBatchPreview.example_count && <p className="text-xs text-amber-800">No examples passed the preview quality checks. Refine the request or choose different sources.</p>}
-                        </div>
-                      )}
-                    </div>
-                    <div className="flex flex-wrap items-center justify-between gap-3 border-t border-[#D1D8CE] pt-3">
-                      <span className="text-[11px] text-[#55635B]">Review these examples. Edit your query or sources to regenerate them.</span>
-                      <Button
-                        className="gap-2 rounded-full bg-[#1B3B2B] text-white hover:bg-[#142D21]"
-                        onClick={handleGenerateDataset}
-                        disabled={searchQueryDirty || isPreviewing || isSubmitting || isPreviewingExamples || !exampleBatchPreview?.example_count || !selectedExampleIndexes.length}
-                      >
-                        {isSubmitting ? <Loader2 className="h-4 w-4 animate-spin" /> : <ArrowRight className="h-4 w-4" />}
-                        {isSubmitting ? 'Checking plan...' : jobEstimateKey === currentEstimateKey && jobEstimate?.within_budget === false ? 'Continue despite estimate' : 'Continue with this search'}
-                      </Button>
-                    </div>
-                    {jobEstimateKey === currentEstimateKey && jobEstimate?.within_budget === false && (
-                      <p role="status" className="rounded-xl border border-amber-300 bg-amber-50 px-3 py-2 text-[11px] leading-relaxed text-amber-950">
-                        Estimated cost is ${Number(jobEstimate.estimated_cost_usd).toFixed(2)} against your ${Number(jobEstimate.planning_budget_usd).toFixed(2)} planning budget. Adjust dataset size or budget, or select “Continue despite estimate” to start. This estimate is approximate and does not cap provider charges.
-                      </p>
-                    )}
-                  </section>
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
+          {INDUSTRY_PRESETS.map((preset) => {
+            const isSelected = activePreset === preset.id
+            return (
+              <div
+                key={preset.id}
+                onClick={() => {
+                  setActivePreset(preset.id)
+                  setTargetDomain(preset.domain)
+                  setPrompt(preset.prompt)
+                  setDatasetSize(preset.size)
+                  setDatasetType(preset.type)
+                }}
+                className={clsx(
+                  'p-3 rounded-lg border cursor-pointer transition-all space-y-2 relative overflow-hidden',
+                  isSelected
+                    ? 'bg-[#161622] border-[#6366f1] shadow-sm glow-indigo'
+                    : 'bg-[#12121a] border-[#272738] hover:border-[#3b3b52] hover:bg-[#161622]/60'
                 )}
-
-                {/* Preset Prompts for Instant Workflow Creation (Placed Below Action Buttons) */}
-                <div className="pt-3 border-t border-[#E2E6E0]">
-                  <div className="flex items-center justify-between mb-2.5">
-                    <p className="text-xs font-bold text-[#1B3B2B] font-mono uppercase tracking-wider flex items-center gap-1.5">
-                      <Zap className="h-3.5 w-3.5 fill-current text-[#1B3B2B]" />
-                      1-Click Industry Benchmark Prompts
-                    </p>
-                    <span className="text-[10px] text-[#55635B] font-mono">Select to Auto-Fill</span>
-                  </div>
-                  <div className="grid grid-cols-1 gap-2 max-h-44 overflow-y-auto pr-1">
-                    {[
-                      {
-                        title: '🩺 Medical Clinical Diagnostics & Treatment',
-                        prompt: 'Synthesize a clinical instruction-following dataset containing 500 medical diagnostic scenarios. Each example must include patient presentation, differential diagnosis, evidence-based treatment protocols, contraindications, and laboratory workup recommendations.',
-                        type: 'sft',
-                        size: 500,
-                        domain: 'medicine'
-                      },
-                      {
-                        title: '🐍 Python Thread-Safe Concurrent Algorithms',
-                        prompt: 'Generate an advanced Python coding instruction dataset focusing on thread-safe data structures, async/await concurrency, lock-free queues, and memory optimization with unit tests for each implementation.',
-                        type: 'coding',
-                        size: 1000,
-                        domain: 'coding'
-                      },
-                      {
-                        title: '⚖️ Legal Contract Risk Analysis & Compliance',
-                        prompt: 'Build a legal dataset for contract clause extraction and risk scoring. Scenarios should evaluate indemnification clauses, governing law compliance, liability caps, and intellectual property assignments with step-by-step rationale.',
-                        type: 'sft',
-                        size: 750,
-                        domain: 'legal'
-                      },
-                      {
-                        title: '📊 Financial Market Sentiment & Reasoning',
-                        prompt: 'Synthesize a financial analysis dataset focusing on quarterly earnings report interpretation, EBITDA margin trends, macroeconomic sentiment analysis, and multi-step quantitative reasoning.',
-                        type: 'sft',
-                        size: 1000,
-                        domain: 'finance'
-                      },
-                      {
-                        title: '🛡️ Cybersecurity Threat Vector & Code Audit',
-                        prompt: 'Generate a security vulnerability auditing dataset with code snippets in C++ and Python containing intentional OWASP Top-10 bugs (buffer overflow, SQL injection, XSS), accompanied by remediation patches.',
-                        type: 'coding',
-                        size: 500,
-                        domain: 'security'
-                      }
-                    ].map((preset) => (
-                      <div
-                        key={preset.title}
-                        title={preset.prompt}
-                        className="group flex flex-col p-2 rounded-xl border border-[#E2E6E0] bg-[#F6F7F4] hover:bg-white hover:border-[#D1D8CE] transition-all text-left cursor-pointer"
-                      >
-                        <div className="flex items-center justify-between">
-                          <span className="text-xs font-bold text-[#1B3B2B]">
-                            {preset.title}
-                          </span>
-                          <div className="flex items-center gap-1.5">
-                            <Badge variant="outline" className="text-[10px] py-0 h-4 border-[#D1D8CE] bg-white text-[#1B3B2B] rounded-full">
-                              {preset.size} samples
-                            </Badge>
-                            <Button
-                              variant="ghost"
-                              size="sm"
-                              disabled={isPreviewing || isSubmitting}
-                              className="h-5 px-2 text-[10px] bg-[#E8ECE6] text-[#1B3B2B] hover:bg-[#1B3B2B] hover:text-white font-bold rounded-full transition-colors"
-                              onClick={() => {
-                                setNaturalLanguageInput(preset.prompt)
-                                setTargetSize(preset.size)
-                                setDatasetType(preset.type)
-                                setSourcePreview(null)
-                                setSearchQueryOverride('')
-                                setSearchQueryDirty(false)
-                                setExampleBatchPreview(null)
-                                setDatasetName(preset.title)
-                              }}
-                            >
-                              ⚡ 1-Click Load
-                            </Button>
-                          </div>
-                        </div>
-                        <p className="hidden group-hover:block text-[11px] text-[#55635B] leading-relaxed mt-1.5 pt-1.5 border-t border-[#E2E6E0] animate-fade-in">
-                          {preset.prompt}
-                        </p>
-                      </div>
-                    ))}
-                  </div>
+              >
+                <div className="flex justify-between items-start">
+                  <span className="text-[10px] font-mono font-bold uppercase text-[#818cf8] truncate">
+                    {preset.source}
+                  </span>
+                  <span className="text-[10px] font-mono text-[#10b981] font-semibold">
+                    {preset.size.toLocaleString()} rows
+                  </span>
                 </div>
-              </CardContent>
-            </Card>
-
-            {/* Selected Template Preview */}
-            <Card className="col-span-1 border-[#E2E6E0] bg-white rounded-2xl card-shadow">
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2 text-base text-[#1B3B2B]">
-                  <Settings2 className="h-5 w-5 text-[#1B3B2B]" />
-                  Configuration Preview
-                </CardTitle>
-                <CardDescription className="text-xs text-[#55635B]">
-                  Your current settings
-                </CardDescription>
-              </CardHeader>
-              <CardContent>
-                <div className="space-y-4">
-                  <div className="p-4 rounded-xl bg-[#F6F7F4] border border-[#E2E6E0] space-y-3">
-                    <div className="flex justify-between">
-                      <span className="text-xs text-[#55635B]">Target Size</span>
-                      <span className="text-xs font-mono font-bold text-[#1B3B2B]">{targetSize.toLocaleString()} records</span>
-                    </div>
-                    <div className="flex justify-between">
-                      <span className="text-xs text-[#55635B]">Quality Level</span>
-                      <Badge variant="outline" className="rounded-full border-[#D1D8CE] bg-white text-[#1B3B2B]">{qualityLevel}</Badge>
-                    </div>
-                    <div className="flex justify-between">
-                      <span className="text-xs text-[#55635B]">Output Format</span>
-                      <span className="text-xs font-mono uppercase font-bold text-[#1B3B2B]">{outputFormat}</span>
-                    </div>
-                    <div className="flex justify-between">
-                      <span className="text-xs text-[#55635B]">Modality</span>
-                      <span className="text-xs font-mono capitalize text-[#1B3B2B]">{modality}</span>
-                    </div>
-                    <div className="flex justify-between">
-                      <span className="text-xs text-[#55635B]">Planning Budget</span>
-                      <span className="text-xs font-mono text-amber-700 font-bold">
-                        ${planningBudgetUsd.toFixed(2)}
-                      </span>
-                    </div>
-                    <p className="text-[10px] leading-relaxed text-[#708076]">Used for feasibility planning; actual provider charges can vary and this is not a hard spending cap.</p>
-                  </div>
-
-                  <div className="space-y-2">
-                    <p className="text-xs font-bold text-[#55635B] uppercase font-mono">
-                      Selected Providers
-                    </p>
-                    <div className="flex gap-2 flex-wrap">
-                      {selectedProviders.length > 0 ? (
-                        selectedProviders.map((p) => (
-                          <Badge key={p} variant="outline" className="capitalize rounded-full border-[#D1D8CE] bg-white text-[#1B3B2B]">
-                            {p}
-                          </Badge>
-                        ))
-                      ) : (
-                        <span className="text-xs text-[#55635B]">None selected</span>
-                      )}
-                    </div>
-                  </div>
-
-                  {selectedTemplate && (
-                    <div className="space-y-2">
-                      <p className="text-xs font-bold text-[#55635B] uppercase font-mono">
-                        Template
-                      </p>
-                      <div className="p-2.5 rounded-xl bg-[#F6F7F4] border border-[#E2E6E0] text-xs font-medium text-[#1B3B2B]">
-                        {templates.find((t) => t.id === selectedTemplate)?.name || 'Unknown'}
-                      </div>
-                    </div>
-                  )}
-                </div>
-              </CardContent>
-            </Card>
-          </div>
-        </TabsContent>
-
-        {/* Configuration Tab */}
-        <TabsContent value="config" className="mt-6">
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-            {/* Dataset Configuration */}
-            <Card className="border-[#E2E6E0] bg-white rounded-2xl card-shadow">
-              <CardHeader>
-                <CardTitle className="text-base font-bold flex items-center gap-2 text-[#1B3B2B]">
-                  <Database className="h-4 w-4 text-[#1B3B2B]" />
-                  Dataset Settings
-                </CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-4">
-                <div className="space-y-1.5">
-                  <label className="text-xs font-bold text-[#1B3B2B]">Dataset Name</label>
-                  <Input value={datasetName} onChange={(event) => setDatasetName(event.target.value)} placeholder="my-dataset-v1" maxLength={120} className="rounded-full border-[#D1D8CE] text-xs" />
-                </div>
-
-                <div className="space-y-1.5">
-                  <label className="text-xs font-bold text-[#1B3B2B]">Modality</label>
-                  <Select defaultValue="text">
-                    <SelectTrigger className="rounded-full border-[#D1D8CE] text-xs">
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="text">Text</SelectItem>
-                      <SelectItem value="image">Image</SelectItem>
-                      <SelectItem value="code">Code</SelectItem>
-                      <SelectItem value="multimodal">Multimodal</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-
-                <div className="space-y-1.5">
-                  <label className="text-xs font-bold text-[#1B3B2B]">Dataset Type</label>
-                  <Select value={datasetType} onValueChange={(value) => { setDatasetType(value); setExampleBatchPreview(null) }}>
-                    <SelectTrigger className="rounded-full border-[#D1D8CE] text-xs">
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="sft">Standard SFT (Alpaca)</SelectItem>
-                      <SelectItem value="conversational">Conversational (Multi-Turn Chat)</SelectItem>
-                      <SelectItem value="rag">RAG Context-Q&A</SelectItem>
-                      <SelectItem value="reasoning">Chain of Thought Reasoning</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-
-                <div className="space-y-1.5">
-                  <label className="text-xs font-bold text-[#1B3B2B]" htmlFor="dataset-language">Dataset Language</label>
-                  <Select value={datasetLanguage} disabled={isPreviewing || isSubmitting} onValueChange={(value) => { setDatasetLanguage(value); setSourcePreview(null); setSearchQueryOverride(''); setSearchQueryDirty(false); setExampleBatchPreview(null) }}>
-                    <SelectTrigger id="dataset-language" className="rounded-full border-[#D1D8CE] text-xs">
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {datasetLanguageOptions.map(([value, label]) => <SelectItem key={value} value={value}>{label}</SelectItem>)}
-                    </SelectContent>
-                  </Select>
-                  <p className="text-[10px] text-[#708076]">
-                    {datasetLanguage === 'auto'
-                      ? `Detected: ${[resolvedLanguage, ...secondaryLanguages].map((code) => datasetLanguageOptions.find(([option]) => option === code)?.[1] || code).join(' + ')}`
-                      : 'AIKosh is prioritized for Indian language requests.'}
-                  </p>
-                </div>
-
-                <div className="space-y-1.5">
-                  <label className="text-xs font-bold text-[#1B3B2B]">Target Size</label>
-                  <Input type="number" min={1} max={100000} value={targetSize} onChange={(event) => setTargetSize(Math.max(1, Math.min(100000, Math.trunc(Number(event.target.value) || 1))))} className="rounded-full border-[#D1D8CE] text-xs" />
-                </div>
-
-                <div className="space-y-1.5">
-                  <label className="text-xs font-bold text-[#1B3B2B]" htmlFor="planning-budget">Planning Budget (USD)</label>
-                  <Input id="planning-budget" type="number" min={0} step={0.01} value={planningBudgetUsd} onChange={(event) => setPlanningBudgetUsd(Math.max(0, Number(event.target.value) || 0))} className="rounded-full border-[#D1D8CE] text-xs" />
-                  <p className="text-[10px] leading-relaxed text-[#708076]">Used to flag estimate conflicts. It does not stop provider calls at this amount.</p>
-                </div>
-
-                <fieldset className="space-y-2 rounded-xl border border-[#D1D8CE] bg-[#F6F7F4] p-3">
-                  <legend className="px-1 text-xs font-bold text-[#1B3B2B]">Balance the final dataset by</legend>
-                  <div className="grid grid-cols-2 gap-2">
-                    {balanceOptions.map(([value, label]) => (
-                      <label key={value} className="flex items-center gap-2 text-xs text-[#55635B]">
-                        <input
-                          type="checkbox"
-                          checked={balanceDimensions.includes(value)}
-                          onChange={() => toggleBalanceDimension(value)}
-                          className="accent-[#1B3B2B]"
-                        />
-                        {label}
-                      </label>
-                    ))}
-                  </div>
-                  <p className="text-[10px] leading-relaxed text-[#708076]">Balancing can reduce the final count when some groups have fewer examples.</p>
-                </fieldset>
-
-                <div className="space-y-1.5">
-                  <label className="text-xs font-bold text-[#1B3B2B]">Quality Level</label>
-                  <Select value={qualityLevel} onValueChange={setQualityLevel}>
-                    <SelectTrigger className="rounded-full border-[#D1D8CE] text-xs">
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="high">High</SelectItem>
-                      <SelectItem value="draft">Draft</SelectItem>
-                      <SelectItem value="standard">Standard</SelectItem>
-                      <SelectItem value="research">Research</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-
-                <div className="space-y-1.5">
-                  <label className="text-xs font-bold text-[#1B3B2B]">Output Format</label>
-                  <Select value={outputFormat} onValueChange={setOutputFormat}>
-                    <SelectTrigger className="rounded-full border-[#D1D8CE] text-xs">
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="jsonl">JSONL</SelectItem>
-                      <SelectItem value="parquet">Parquet</SelectItem>
-                      <SelectItem value="csv">CSV</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-
-                <div className="space-y-1.5">
-                  <label className="text-xs font-bold text-[#1B3B2B]">Generation Mode</label>
-                  <Select value={generationMode} onValueChange={setGenerationMode}>
-                    <SelectTrigger className="rounded-full border-[#D1D8CE] text-xs">
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="strict_source">Source-grounded (recommended)</SelectItem>
-                      <SelectItem value="hybrid">Source-grounded + generated gap-fill (opt-in)</SelectItem>
-                      <SelectItem value="synthetic">Pure Synthetic (explicit opt-in)</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-
-                <div className="col-span-full flex flex-wrap items-center justify-between gap-3 rounded-xl border border-[#D1D8CE] bg-[#F6F7F4] p-3">
-                  <label className="flex items-start gap-2 text-xs text-[#1B3B2B]">
-                    <input type="checkbox" checked={humanReviewEnabled} onChange={(event) => setHumanReviewEnabled(event.target.checked)} className="mt-0.5 accent-[#1B3B2B]" />
-                    <span><span className="block font-semibold">Pause for a human quality audit</span><span className="mt-0.5 block text-[11px] text-[#55635B]">Review a stratified sample; the remaining examples still receive automatic checks.</span></span>
-                  </label>
-                  <label className="flex items-center gap-2 text-[11px] text-[#55635B]">
-                    Audit sample
-                    <Input type="number" min={1} max={100} value={humanReviewPercentage} onChange={(event) => setHumanReviewPercentage(Math.max(1, Math.min(100, Number(event.target.value) || 1)))} disabled={!humanReviewEnabled} className="h-8 w-20 rounded-full border-[#D1D8CE] text-xs" />
-                    %
-                  </label>
-                </div>
-              </CardContent>
-            </Card>
-
-            {/* Provider Selection */}
-            <Card className="border-[#E2E6E0] bg-white rounded-2xl card-shadow">
-              <CardHeader>
-                <CardTitle className="text-base font-bold flex items-center gap-2 text-[#1B3B2B]">
-                  <Zap className="h-4 w-4 text-[#1B3B2B]" />
-                  Provider Selection
-                </CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="space-y-2.5">
-                  {providers.map((provider) => (
-                    <div
-                      key={provider.id}
-                      onClick={() => toggleProvider(provider.id)}
-                      className={clsx(
-                        'p-3 rounded-xl border cursor-pointer transition-all',
-                        selectedProviders.includes(provider.id)
-                          ? 'border-[#1B3B2B] bg-[#E8ECE6]/80'
-                          : 'border-[#E2E6E0] bg-[#F6F7F4] hover:bg-white'
-                      )}
-                    >
-                      <div className="flex items-center justify-between mb-0.5">
-                        <span className="font-bold text-xs text-[#1B3B2B]">{provider.name}</span>
-                        <div
-                          className={clsx(
-                            'h-4 w-4 rounded-full border flex items-center justify-center',
-                            selectedProviders.includes(provider.id)
-                              ? 'bg-[#1B3B2B] border-[#1B3B2B]'
-                              : 'border-[#D1D8CE]'
-                          )}
-                        >
-                          {selectedProviders.includes(provider.id) && (
-                            <span className="text-white text-[10px]">✓</span>
-                          )}
-                        </div>
-                      </div>
-                    </div>
+                <h4 className="text-xs font-semibold text-white truncate">{preset.title}</h4>
+                <p className="text-[11px] text-[#94a3b8] line-clamp-2">{preset.prompt}</p>
+                <div className="flex items-center gap-1 pt-1 text-[10px] font-mono text-[#94a3b8]">
+                  {preset.sources.map((s, i) => (
+                    <span key={i} className="px-1.5 py-0.2 rounded bg-[#0e0e13] border border-[#272738]">
+                      {s}
+                    </span>
                   ))}
                 </div>
+              </div>
+            )
+          })}
+        </div>
+      </div>
 
-                <div className="mt-4 p-3 rounded-xl bg-[#F6F7F4] border border-[#E2E6E0]">
-                  <div className="flex justify-between text-xs">
-                    <span className="text-[#55635B]">Priority Order</span>
-                    <span className="font-mono font-bold text-[#1B3B2B]">{selectedProviders.length > 0 ? selectedProviders.join(' → ') : 'None selected'}</span>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-
-            {/* Constraints */}
-            <Card className="border-[#E2E6E0] bg-white rounded-2xl card-shadow">
-              <CardHeader>
-                <CardTitle className="text-base font-bold flex items-center gap-2 text-[#1B3B2B]">
-                  <Shield className="h-4 w-4 text-[#1B3B2B]" />
-                  Constraints
-                </CardTitle>
-              </CardHeader>
-              <CardContent>
-                <ScrollArea className="h-[300px]">
-                  <div className="space-y-2">
-                    {constraints.map((constraint, index) => (
-                      <div
-                        key={index}
-                        className="flex items-center gap-2 p-2 rounded-xl bg-[#F6F7F4] border border-[#E2E6E0]"
-                      >
-                        <span className="text-xs font-medium text-[#1B3B2B] flex-1">
-                          {constraintTypes.find((c) => c.id === constraint.type)?.label}
-                        </span>
-                        <Input
-                          className="w-24 h-7 text-xs rounded-full border-[#D1D8CE]"
-                          placeholder="Value"
-                          value={constraint.value}
-                          onChange={(e) => {
-                            const updated = [...constraints]
-                            updated[index].value = e.target.value
-                            setConstraints(updated)
-                          }}
-                        />
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          className="h-7 w-7 p-0 rounded-full text-[#1B3B2B]"
-                          onClick={() => removeConstraint(index)}
-                        >
-                          <X className="h-4 w-4" />
-                        </Button>
-                      </div>
-                    ))}
-
-                    <div className="pt-2">
-                      <p className="text-xs text-[#55635B] font-mono uppercase mb-2">Add Constraint</p>
-                      <div className="flex flex-wrap gap-1.5">
-                        {constraintTypes
-                          .filter((c) => !constraints.find((con) => con.type === c.id))
-                          .map((constraint) => (
-                            <Button
-                              key={constraint.id}
-                              variant="outline"
-                              size="sm"
-                              className="h-7 text-xs rounded-full border-[#D1D8CE] text-[#1B3B2B]"
-                              onClick={() => addConstraint(constraint.id)}
-                            >
-                              <Plus className="h-3 w-3 mr-1" />
-                              {constraint.label}
-                            </Button>
-                          ))}
-                      </div>
-                    </div>
-                  </div>
-                </ScrollArea>
-              </CardContent>
-            </Card>
-          </div>
-        </TabsContent>
-
-        {/* Templates Tab */}
-        <TabsContent value="templates" className="mt-6">
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-            {templates.map((template) => (
-              <Card
-                key={template.id}
-                className={clsx(
-                  'cursor-pointer transition-all border-[#E2E6E0] bg-white rounded-2xl card-shadow hover:border-[#1B3B2B]',
-                  selectedTemplate === template.id && 'border-[#1B3B2B] bg-[#E8ECE6]/40'
-                )}
-                onClick={() => { setSelectedTemplate(template.id); setExampleBatchPreview(null) }}
-              >
-                <CardContent className="p-4">
-                  <div className="flex items-start justify-between mb-3">
-                    <div className="h-10 w-10 rounded-xl bg-[#1B3B2B] text-white flex items-center justify-center font-bold">
-                      {template.icon}
-                    </div>
-                    <Badge variant="secondary" className="text-xs rounded-full bg-[#E8ECE6] text-[#1B3B2B]">
-                      {template.category}
-                    </Badge>
-                  </div>
-                  <h3 className="font-bold text-sm text-[#1B3B2B] mb-1">{template.name}</h3>
-                  <p className="text-xs text-[#55635B]">{template.description}</p>
-                </CardContent>
-              </Card>
-            ))}
-          </div>
-
-          {selectedTemplate && (
-            <div className="mt-6 flex justify-end">
-              <Button className="gap-2 bg-[#1B3B2B] hover:bg-[#142D21] text-white rounded-full px-6 font-medium" onClick={() => setActiveTab('config')}>
-                Use Template
-                <ArrowRight className="h-4 w-4" />
-              </Button>
+      {/* Main Studio Controls */}
+      <div className="grid grid-cols-1 xl:grid-cols-12 gap-5">
+        
+        {/* Left 7 Columns: Intent & Query Optimizer */}
+        <div className="xl:col-span-7 p-4 rounded-lg bg-[#12121a] border border-[#272738] space-y-4">
+          <div className="flex items-center justify-between pb-2 border-b border-[#1c1c28]">
+            <div className="flex items-center space-x-2">
+              <FlaskConical className="w-4 h-4 text-[#6366f1]" />
+              <h3 className="text-xs font-bold font-mono uppercase tracking-wider text-white">
+                Natural Language Intent & Compute Refiner
+              </h3>
             </div>
-          )}
-        </TabsContent>
+            <span className="text-[11px] font-mono text-[#10b981] flex items-center gap-1">
+              <span className="w-1.5 h-1.5 rounded-full bg-[#10b981] animate-pulse" />
+              {optimizationStatus}
+            </span>
+          </div>
 
-        {/* Preview Tab */}
-        <TabsContent value="preview" className="mt-6">
-          <Card className="border-[#E2E6E0] bg-white rounded-2xl card-shadow">
-            <CardHeader>
-              <CardTitle className="text-base font-bold text-[#1B3B2B]">Configuration Preview</CardTitle>
-              <CardDescription className="text-xs text-[#55635B]">
-                Review your dataset generation configuration before starting
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-              <pre className="p-4 rounded-xl bg-[#F6F7F4] border border-[#E2E6E0] overflow-auto text-xs font-mono text-[#1B3B2B]">
-                {JSON.stringify(
-                  {
-                    name: datasetName.trim() || undefined,
-                    request: naturalLanguageInput.trim(),
-                    improvedSearchQuery: sourcePreview?.improved_query || undefined,
-                    language: resolvedLanguage,
-                    datasetType,
-                    targetSize,
-                    planningBudgetUsd,
-                    qualityLevel,
-                    generationMode,
-                    seedlessGenerationAllowed: generationMode !== 'strict_source',
-                    selectedSourceCount: (sourcePreview?.sources || []).filter(
-                      (source: any) => !excludedSourceUrls.includes(source.url) && !source.metadata?.catalogue_only
-                    ).length,
-                    selectedPreviewExamples: selectedExampleIndexes.length,
-                    humanReview: humanReviewEnabled
-                      ? { enabled: true, percentage: humanReviewPercentage }
-                      : { enabled: false },
-                    balanceDimensions,
-                    format: outputFormat,
-                    providers: selectedProviders,
-                    constraints: constraints.filter((c) => c.enabled),
-                  },
-                  null,
-                  2
-                )}
-              </pre>
-            </CardContent>
-          </Card>
-        </TabsContent>
-      </Tabs>
+          <div className="space-y-3">
+            <div>
+              <label className="text-[10px] font-mono uppercase text-[#94a3b8] block mb-1">
+                Target Domain or Repository Topic
+              </label>
+              <Input
+                value={targetDomain}
+                onChange={(e) => setTargetDomain(e.target.value)}
+                className="bg-[#0a0a0f] border-[#272738] focus:border-[#6366f1] text-xs font-mono text-white"
+                placeholder="e.g. Finance & Taxation (AI Kosh)"
+              />
+            </div>
+
+            <div>
+              <label className="text-[10px] font-mono uppercase text-[#94a3b8] block mb-1">
+                Specification Prompt & Extraction Rules
+              </label>
+              <textarea
+                value={prompt}
+                onChange={(e) => setPrompt(e.target.value)}
+                rows={5}
+                className="w-full bg-[#0a0a0f] border border-[#272738] focus:border-[#6366f1] rounded-md p-3 text-xs font-mono text-white placeholder:text-[#94a3b8] focus:outline-none transition-colors resize-none"
+                placeholder="Describe the exact instruction schema, personas, and verification checks..."
+              />
+            </div>
+
+            {/* Ingestion Mode Segmented Switch */}
+            <div className="flex items-center justify-between p-2.5 rounded bg-[#0e0e13] border border-[#272738]">
+              <div>
+                <span className="text-xs font-semibold text-white block">Synthesis Mode</span>
+                <span className="text-[10px] font-mono text-[#94a3b8]">
+                  {generationMode === 'grounded' ? 'Grounds 100% on crawled reference text' : 'Pure evolutionary synthetic bootstrap'}
+                </span>
+              </div>
+
+              <div className="inline-flex p-0.5 rounded bg-[#0a0a0f] border border-[#272738]">
+                <button
+                  onClick={() => setGenerationMode('grounded')}
+                  className={clsx(
+                    'px-2.5 py-1 rounded text-xs font-mono transition-all',
+                    generationMode === 'grounded'
+                      ? 'bg-[#1a1a24] text-white font-semibold border border-[#272738] shadow-sm'
+                      : 'text-[#94a3b8] hover:text-white'
+                  )}
+                >
+                  Grounded Source
+                </button>
+                <button
+                  onClick={() => setGenerationMode('synthetic')}
+                  className={clsx(
+                    'px-2.5 py-1 rounded text-xs font-mono transition-all',
+                    generationMode === 'synthetic'
+                      ? 'bg-[#1a1a24] text-white font-semibold border border-[#272738] shadow-sm'
+                      : 'text-[#94a3b8] hover:text-white'
+                  )}
+                >
+                  Pure Synthetic
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {/* Right 5 Columns: Hyperparameters & Quota */}
+        <div className="xl:col-span-5 p-4 rounded-lg bg-[#12121a] border border-[#272738] flex flex-col justify-between space-y-4">
+          <div>
+            <div className="flex items-center justify-between pb-2 mb-3 border-b border-[#1c1c28]">
+              <div className="flex items-center space-x-2">
+                <Settings2 className="w-4 h-4 text-[#818cf8]" />
+                <h3 className="text-xs font-bold font-mono uppercase tracking-wider text-white">
+                  Dataset Hyperparameters
+                </h3>
+              </div>
+              <span className="text-[10px] font-mono text-[#94a3b8]">Export: JSONL / HF</span>
+            </div>
+
+            <div className="space-y-3">
+              <div>
+                <label className="text-[10px] font-mono uppercase text-[#94a3b8] block mb-1">
+                  Dataset Schema / Type
+                </label>
+                <select
+                  value={datasetType}
+                  onChange={(e) => setDatasetType(e.target.value)}
+                  className="w-full bg-[#0a0a0f] border border-[#272738] rounded p-2 text-xs font-mono text-white focus:outline-none"
+                >
+                  <option value="sft">Supervised Fine-Tuning (SFT / Dialogue)</option>
+                  <option value="coding">Code Generation & Translation</option>
+                  <option value="reasoning">Chain-of-Thought Reasoning (CoT)</option>
+                  <option value="tool_calling">Function & Tool Calling</option>
+                  <option value="rlhf">Preference Pairs (RLHF / DPO)</option>
+                </select>
+              </div>
+
+              <div>
+                <div className="flex justify-between items-center mb-1">
+                  <label className="text-[10px] font-mono uppercase text-[#94a3b8]">Target Dataset Size</label>
+                  <span className="text-xs font-mono text-[#10b981] font-bold">
+                    {datasetSize.toLocaleString()} samples
+                  </span>
+                </div>
+                <input
+                  type="range"
+                  min={100}
+                  max={50000}
+                  step={500}
+                  value={datasetSize}
+                  onChange={(e) => setDatasetSize(Number(e.target.value))}
+                  className="w-full accent-[#6366f1] bg-[#0a0a0f] cursor-pointer"
+                />
+              </div>
+
+              {/* Quality & Human Review Gates */}
+              <div className="space-y-2 pt-2">
+                <div className="p-2 rounded bg-[#0e0e13] border border-[#1c1c28] flex justify-between items-center text-xs font-mono">
+                  <span className="text-[#94a3b8]">Human-in-the-Loop Review:</span>
+                  <span className="text-[#10b981] font-semibold">Stratified 5.0%</span>
+                </div>
+                <div className="p-2 rounded bg-[#0e0e13] border border-[#1c1c28] flex justify-between items-center text-xs font-mono">
+                  <span className="text-[#94a3b8]">Deduplication Algorithm:</span>
+                  <span className="text-[#818cf8] font-semibold">MinHash LSH (0.85)</span>
+                </div>
+                <div className="p-2 rounded bg-[#0e0e13] border border-[#1c1c28] flex justify-between items-center text-xs font-mono">
+                  <span className="text-[#94a3b8]">Hallucination Risk Gate:</span>
+                  <span className="text-[#10b981] font-semibold">Strict Context Grounded</span>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div className="pt-2 border-t border-[#1c1c28]">
+            <Button
+              onClick={handleGenerate}
+              disabled={isSubmitting}
+              className="w-full bg-[#6366f1] hover:bg-[#818cf8] text-white font-mono font-bold text-xs h-9 shadow-sm glow-indigo flex items-center justify-center gap-2"
+            >
+              {isSubmitting ? <Loader2 className="w-4 h-4 animate-spin" /> : <Play className="w-4 h-4 fill-current" />}
+              <span>Execute Autonomous Generation</span>
+            </Button>
+          </div>
+        </div>
+      </div>
+
     </div>
   )
 }

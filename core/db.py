@@ -503,6 +503,21 @@ class DatabaseManager:
         async with self.session_maker() as session:
             return await session.get(ReviewQueueItem, item_id)
 
+    async def get_review_item_for_job_sample(
+        self, job_id: str, dataset_id: str
+    ) -> Optional["ReviewQueueItem"]:
+        """Find an existing review item for a deterministic job/sample key."""
+        from sqlalchemy import select
+        async with self.session_maker() as session:
+            result = await session.execute(
+                select(ReviewQueueItem)
+                .where(ReviewQueueItem.job_id == job_id)
+                .where(ReviewQueueItem.dataset_id == dataset_id)
+                .order_by(ReviewQueueItem.created_at.asc())
+                .limit(1)
+            )
+            return result.scalar_one_or_none()
+
     async def update_review_item(self, item_id: str, **kwargs) -> Optional["ReviewQueueItem"]:
         async with self.session_maker() as session:
             item = await session.get(ReviewQueueItem, item_id)

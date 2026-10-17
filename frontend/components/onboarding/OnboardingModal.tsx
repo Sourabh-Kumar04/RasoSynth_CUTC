@@ -124,44 +124,44 @@ export function OnboardingModal({ open, onOpenChange }: { open?: boolean; onOpen
   const Icon = step.icon
 
   return (
-    <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/60 backdrop-blur-xs animate-fade-in">
-      <div className="w-full max-w-xl bg-white border border-[#E2E6E0] rounded-3xl shadow-2xl overflow-hidden flex flex-col">
+    <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/70 backdrop-blur-xs animate-fade-in">
+      <div className="w-full max-w-xl bg-[#12121a] border border-[#272738] rounded-3xl shadow-2xl overflow-hidden flex flex-col">
         {/* Top Header Banner */}
-        <div className="bg-[#1B3B2B] text-white p-6 relative">
+        <div className="bg-[#161622] text-white p-6 relative border-b border-[#272738]">
           <button
             onClick={handleClose}
-            className="absolute top-4 right-4 text-emerald-300 hover:text-white transition-colors"
+            className="absolute top-4 right-4 text-[#94a3b8] hover:text-white transition-colors"
           >
             <X className="h-5 w-5" />
           </button>
 
           <div className="flex items-center gap-3 mb-2">
-            <div className="h-10 w-10 rounded-2xl bg-white/10 flex items-center justify-center border border-white/20">
-              <Icon className="h-5 w-5 text-emerald-400" />
+            <div className="h-10 w-10 rounded-2xl bg-[#12121a] flex items-center justify-center border border-[#3b3b52]">
+              <Icon className="h-5 w-5 text-[#6366f1]" />
             </div>
             <div>
-              <span className="text-[10px] font-mono uppercase tracking-wider text-emerald-400 font-bold">
+              <span className="text-[10px] font-mono uppercase tracking-wider text-[#10b981] font-bold">
                 Platform Guide ({currentStep + 1} of {TOUR_STEPS.length})
               </span>
               <h2 className="text-xl font-bold text-white tracking-tight">{step.title}</h2>
             </div>
           </div>
-          <p className="text-xs text-emerald-100/90 font-mono mt-1">{step.subtitle}</p>
+          <p className="text-xs text-[#94a3b8] font-mono mt-1">{step.subtitle}</p>
         </div>
 
         {/* Step Body Content */}
-        <div className="p-6 space-y-5 flex-1">
-          <p className="text-xs text-[#55635B] leading-relaxed">{step.description}</p>
+        <div className="p-6 space-y-5 flex-1 bg-[#12121a]">
+          <p className="text-xs text-[#94a3b8] leading-relaxed">{step.description}</p>
 
           {/* Key Capabilities Bullet Points */}
-          <div className="p-4 rounded-2xl bg-[#F6F7F4] border border-[#E2E6E0] space-y-2.5">
-            <p className="text-[11px] font-mono font-bold uppercase tracking-wider text-[#1B3B2B]">
+          <div className="p-4 rounded-2xl bg-[#0a0a0f] border border-[#272738] space-y-2.5">
+            <p className="text-[11px] font-mono font-bold uppercase tracking-wider text-[#6366f1]">
               Key Highlights &amp; Capabilities
             </p>
             <div className="grid grid-cols-1 gap-2">
               {step.highlights.map((item, idx) => (
-                <div key={idx} className="flex items-start gap-2 text-xs text-[#1B3B2B]">
-                  <CheckCircle2 className="h-4 w-4 text-emerald-600 shrink-0 mt-0.5" />
+                <div key={idx} className="flex items-start gap-2 text-xs text-[#f8fafc]">
+                  <CheckCircle2 className="h-4 w-4 text-emerald-400 shrink-0 mt-0.5" />
                   <span>{item}</span>
                 </div>
               ))}
@@ -175,7 +175,7 @@ export function OnboardingModal({ open, onOpenChange }: { open?: boolean; onOpen
                 key={idx}
                 onClick={() => setCurrentStep(idx)}
                 className={`h-2 rounded-full transition-all ${
-                  idx === currentStep ? 'w-8 bg-[#1B3B2B]' : 'w-2 bg-[#D1D8CE] hover:bg-[#809085]'
+                  idx === currentStep ? 'w-8 bg-[#6366f1]' : 'w-2 bg-[#3b3b52] hover:bg-[#64748b]'
                 }`}
               />
             ))}
@@ -183,12 +183,12 @@ export function OnboardingModal({ open, onOpenChange }: { open?: boolean; onOpen
         </div>
 
         {/* Footer Actions */}
-        <div className="p-4 bg-[#F6F7F4] border-t border-[#E2E6E0] flex items-center justify-between gap-2">
+        <div className="p-4 bg-[#0a0a0f] border-t border-[#272738] flex items-center justify-between gap-2">
           <Button
             variant="ghost"
             size="sm"
             onClick={handleClose}
-            className="text-xs text-[#55635B] hover:text-[#1B3B2B] rounded-full"
+            className="text-xs text-[#94a3b8] hover:text-[#6366f1] rounded-full"
           >
             Skip Tour
           </Button>
@@ -199,7 +199,7 @@ export function OnboardingModal({ open, onOpenChange }: { open?: boolean; onOpen
                 variant="outline"
                 size="sm"
                 onClick={() => setCurrentStep(c => c - 1)}
-                className="text-xs border-[#D1D8CE] text-[#1B3B2B] rounded-full"
+                className="text-xs border-[#3b3b52] text-[#6366f1] rounded-full"
               >
                 Previous
               </Button>
@@ -209,14 +209,14 @@ export function OnboardingModal({ open, onOpenChange }: { open?: boolean; onOpen
               <Button
                 size="sm"
                 onClick={() => setCurrentStep(c => c + 1)}
-                className="gap-1.5 bg-[#1B3B2B] hover:bg-[#142D21] text-white text-xs rounded-full font-medium"
+                className="gap-1.5 bg-[#6366f1] hover:bg-[#4f46e5] text-white text-xs rounded-full font-medium"
               >
                 <span>Next Step</span>
                 <ArrowRight className="h-3.5 w-3.5" />
               </Button>
             ) : (
               <Link href={step.actionHref} onClick={handleClose}>
-                <Button size="sm" className="gap-1.5 bg-[#1B3B2B] hover:bg-[#142D21] text-white text-xs rounded-full font-medium">
+                <Button size="sm" className="gap-1.5 bg-[#6366f1] hover:bg-[#4f46e5] text-white text-xs rounded-full font-medium">
                   <span>Explore Workspace</span>
                   <Zap className="h-3.5 w-3.5 text-emerald-400 fill-current" />
                 </Button>
