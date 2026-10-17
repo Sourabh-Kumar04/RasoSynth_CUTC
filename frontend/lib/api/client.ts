@@ -281,12 +281,7 @@ class APIClient {
     } catch (err) {
       const isConnectionError = err instanceof TypeError || String(err).includes('fetch') || String(err).includes('Failed to fetch') || String(err).includes('HTTP 500') || String(err).includes('HTTP 503') || String(err).includes('HTTP 502')
       if (isConnectionError && typeof window !== 'undefined') {
-        console.warn(`[API Client] Connection to backend ${this.baseUrl} failed. Automatically falling back to Hackathon Demo Mode.`, err)
-        localStorage.setItem('mockMode', 'true')
-        window.dispatchEvent(new CustomEvent('backend-unreachable-fallback', { detail: { endpoint, error: String(err) } }))
-        window.dispatchEvent(new Event('storage'))
-        window.dispatchEvent(new Event('mockModeChanged'))
-        return this.handleMockRequest<T>(endpoint, options)
+        throw new Error('Live backend is unavailable. Restore the connection or explicitly enable Offline Demo from the top navigation.')
       }
       throw err
     }
