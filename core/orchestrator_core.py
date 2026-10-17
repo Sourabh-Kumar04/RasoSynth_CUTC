@@ -199,7 +199,13 @@ class ConstraintAnalyzer:
             config.get("dataset_size", 1000),
             analysis.estimated_sources * 10
         )
-        analysis.estimated_cost = self._estimate_cost(config, analysis.estimated_samples)
+        # Cost projection follows the requested output size. Estimated source
+        # availability is a separate planning signal and should not silently
+        # make large requested datasets look cheaper than they are.
+        analysis.estimated_cost = self._estimate_cost(
+            config,
+            int(config.get("dataset_size", analysis.estimated_samples) or analysis.estimated_samples),
+        )
         if analysis.estimated_cost > cost_budget:
             warnings.append(
                 f"Estimated generation cost (${analysis.estimated_cost:.2f}) exceeds the "

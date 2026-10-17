@@ -210,10 +210,15 @@ export default function StudioPage() {
   const [isPreviewingExamples, setIsPreviewingExamples] = useState(false)
   const [submitError, setSubmitError] = useState<string | null>(null)
   const [createdJob, setCreatedJob] = useState<any>(null)
+  const [jobEstimate, setJobEstimate] = useState<any>(null)
+  const [jobEstimateKey, setJobEstimateKey] = useState<string | null>(null)
   const inferredLanguages = inferDatasetLanguages(naturalLanguageInput)
   const resolvedLanguage = datasetLanguage === 'auto' ? inferredLanguages[0] : datasetLanguage
   const secondaryLanguages = datasetLanguage === 'auto' ? inferredLanguages.filter((language) => language !== resolvedLanguage) : []
   const regionRestrictions = indicLanguageCodes.has(resolvedLanguage) ? ['India'] : []
+  const currentEstimateKey = JSON.stringify([
+    naturalLanguageInput.trim(), targetSize, qualityLevel, resolvedLanguage, planningBudgetUsd,
+  ])
 
   const addConstraint = (type: string) => {
     setConstraints([...constraints, { type, value: '', enabled: true }])
@@ -349,6 +354,13 @@ export default function StudioPage() {
         human_review_percentage: humanReviewPercentage,
       }
 
+      if (jobEstimateKey !== currentEstimateKey) {
+        const estimate = await api.estimateJob(jobRequest)
+        setJobEstimate(estimate)
+        setJobEstimateKey(currentEstimateKey)
+        if (!estimate.within_budget) return
+      }
+
       const response = await api.createJob(jobRequest)
       setCreatedJob(response)
 
@@ -362,7 +374,7 @@ export default function StudioPage() {
     } finally {
       setIsSubmitting(false)
     }
-  }, [naturalLanguageInput, datasetName, selectedTemplate, targetSize, planningBudgetUsd, qualityLevel, outputFormat, selectedProviders, generationMode, datasetType, sourcePreview, exampleBatchPreview, selectedExampleIndexes, excludedSourceUrls, humanReviewEnabled, humanReviewPercentage, resolvedLanguage, secondaryLanguages.join(','), regionRestrictions.join(','), balanceDimensions.join(','), router])
+  }, [naturalLanguageInput, datasetName, selectedTemplate, targetSize, planningBudgetUsd, qualityLevel, outputFormat, selectedProviders, generationMode, datasetType, sourcePreview, exampleBatchPreview, selectedExampleIndexes, excludedSourceUrls, humanReviewEnabled, humanReviewPercentage, resolvedLanguage, secondaryLanguages.join(','), regionRestrictions.join(','), balanceDimensions.join(','), currentEstimateKey, jobEstimateKey, router])
 
   return (
     <div className="space-y-6 w-full pb-8">
@@ -651,9 +663,14 @@ export default function StudioPage() {
                         disabled={searchQueryDirty || isPreviewing || isSubmitting || isPreviewingExamples || !exampleBatchPreview?.example_count || !selectedExampleIndexes.length}
                       >
                         {isSubmitting ? <Loader2 className="h-4 w-4 animate-spin" /> : <ArrowRight className="h-4 w-4" />}
-                        {isSubmitting ? 'Starting dataset job...' : 'Continue with this search'}
+                        {isSubmitting ? 'Checking plan...' : jobEstimateKey === currentEstimateKey && jobEstimate?.within_budget === false ? 'Continue despite estimate' : 'Continue with this search'}
                       </Button>
                     </div>
+                    {jobEstimateKey === currentEstimateKey && jobEstimate?.within_budget === false && (
+                      <p role="status" className="rounded-xl border border-amber-300 bg-amber-50 px-3 py-2 text-[11px] leading-relaxed text-amber-950">
+                        Estimated cost is ${Number(jobEstimate.estimated_cost_usd).toFixed(2)} against your ${Number(jobEstimate.planning_budget_usd).toFixed(2)} planning budget. Adjust dataset size or budget, or select “Continue despite estimate” to start. This estimate is approximate and does not cap provider charges.
+                      </p>
+                    )}
                   </section>
                 )}
 

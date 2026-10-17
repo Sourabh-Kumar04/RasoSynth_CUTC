@@ -1410,6 +1410,23 @@ async def preview_job_example_batch(request: ExampleBatchPreviewRequest):
         "preview_only": True,
     }
 
+@app.post("/jobs/estimate", tags=["Jobs"])
+async def estimate_job(request: JobRequest):
+    """Estimate feasibility and flag a planning-budget mismatch before a job starts."""
+    from core.orchestrator_core import ConstraintAnalyzer
+
+    analysis = await ConstraintAnalyzer(settings.model_dump()).analyze(request.model_dump())
+    return {
+        "estimated_sources": analysis.estimated_sources,
+        "estimated_samples": analysis.estimated_samples,
+        "estimated_cost_usd": analysis.estimated_cost,
+        "planning_budget_usd": request.cost_budget_usd,
+        "within_budget": analysis.estimated_cost <= request.cost_budget_usd,
+        "warnings": analysis.warnings,
+        "suggested_adjustments": analysis.fallback_strategies,
+    }
+
+
 @app.post("/jobs", response_model=JobResponse, status_code=201, tags=["Jobs"])
 async def create_job(request: JobRequest, background_tasks: BackgroundTasks):
     """Create a new dataset generation job and kick off the pipeline.

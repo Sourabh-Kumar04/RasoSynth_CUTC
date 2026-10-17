@@ -326,6 +326,13 @@ class APIClient {
     })
   }
 
+  async estimateJob(data: any): Promise<any> {
+    return this.request<any>('/jobs/estimate', {
+      method: 'POST',
+      body: JSON.stringify(data),
+    })
+  }
+
   async previewJobSources(data: { query: string; optimize_query?: boolean; override_query?: string; query_plan?: Record<string, any>; language?: string; region_restrictions?: string[]; max_sources?: number }): Promise<any> {
     return this.request<any>('/jobs/preview', {
       method: 'POST',
@@ -1063,6 +1070,25 @@ dataset_samples_generated_total 4520`
           version: 1,
         },
       ]);
+    }
+
+    if (endpoint === '/jobs/estimate' && method === 'POST') {
+      const bodyObj = options.body ? JSON.parse(options.body as string) : {};
+      const requestedSamples = Number(bodyObj.dataset_size) || 1000;
+      const estimatedSamples = Math.min(requestedSamples, 1500);
+      const qualityMultiplier = bodyObj.quality_level === 'research' ? 3 : bodyObj.quality_level === 'high' ? 1.5 : 1;
+      const languageMultiplier = bodyObj.language && bodyObj.language !== 'en' ? 1.2 : 1;
+      const estimatedCost = requestedSamples * 0.001 * qualityMultiplier * languageMultiplier;
+      const budget = Number(bodyObj.cost_budget_usd) || 0;
+      return parse({
+        estimated_sources: 150,
+        estimated_samples: estimatedSamples,
+        estimated_cost_usd: estimatedCost,
+        planning_budget_usd: budget,
+        within_budget: estimatedCost <= budget,
+        warnings: estimatedCost > budget ? ['The rough estimate exceeds the planning budget.'] : [],
+        suggested_adjustments: [],
+      });
     }
 
     if (endpoint.startsWith('/jobs/')) {
