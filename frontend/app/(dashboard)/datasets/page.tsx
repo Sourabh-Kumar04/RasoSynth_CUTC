@@ -682,6 +682,37 @@ export default function DatasetsPage() {
                         This dataset has {datasetSummary.sample_count ?? 0} of {datasetSummary.balance_report?.requested_samples} requested samples. Fewer qualifying records remained after source filtering, human review, and balancing.
                       </p>
                     )}
+                    {datasetSummary.provenance && (
+                      <details className="rounded-xl border border-[#E2E6E0] p-3">
+                        <summary className="cursor-pointer text-xs font-bold text-[#1B3B2B]">Dataset provenance</summary>
+                        <div className="mt-3 space-y-2 text-xs text-[#55635B]">
+                          <p><span className="font-semibold text-[#1B3B2B]">Request:</span> {datasetSummary.provenance.user_query || 'Not recorded'}</p>
+                          {datasetSummary.provenance.improved_query && <p><span className="font-semibold text-[#1B3B2B]">Improved search query:</span> {datasetSummary.provenance.improved_query}</p>}
+                          <p>
+                            <span className="font-semibold text-[#1B3B2B]">Mode:</span> {datasetSummary.provenance.generation_mode} · {datasetSummary.provenance.language} · {datasetSummary.provenance.dataset_type}
+                            {datasetSummary.provenance.seedless_generation_allowed ? ' · seedless generation allowed' : ' · source-grounded only'}
+                          </p>
+                          {datasetSummary.provenance.search_queries?.length > 0 && (
+                            <div>
+                              <p className="font-semibold text-[#1B3B2B]">Search queries</p>
+                              <ul className="mt-1 list-disc space-y-1 pl-5">{datasetSummary.provenance.search_queries.map((query: string, index: number) => <li key={`${index}-${query}`}>{query}</li>)}</ul>
+                            </div>
+                          )}
+                          <p><span className="font-semibold text-[#1B3B2B]">Sources discovered:</span> {datasetSummary.provenance.discovered_source_count ?? 0}</p>
+                          {!!datasetSummary.provenance.sources?.length && (
+                            <ul className="space-y-1">
+                              {datasetSummary.provenance.sources.map((source: any, index: number) => (
+                                <li key={`${source.url}-${index}`} className="flex flex-wrap gap-x-2">
+                                  <span>{source.title || source.source_type || 'Source'}</span>
+                                  {/^https?:\/\//i.test(String(source.url || '')) && <a href={source.url} target="_blank" rel="noreferrer" className="break-all text-emerald-800 underline">{source.url}</a>}
+                                  {source.license && <span>License reported: {source.license}</span>}
+                                </li>
+                              ))}
+                            </ul>
+                          )}
+                        </div>
+                      </details>
+                    )}
                     <div className="grid grid-cols-1 md:grid-cols-3 gap-3 text-xs">
                       {(['sources', 'languages', 'topics'] as const).map((dimension) => {
                         const distribution = datasetSummary[dimension] || {}

@@ -1528,6 +1528,37 @@ class DatasetOrchestrator:
         # Persist dataset and samples to database
         if self.db and samples:
             try:
+                provenance_sources = []
+                for source in state.get("sources", [])[:25]:
+                    if not isinstance(source, dict):
+                        continue
+                    provenance_sources.append({
+                        "url": str(source.get("url", "")),
+                        "title": str(source.get("title", "")),
+                        "source_type": str(source.get("source_type", "")),
+                        "license": source.get("license"),
+                    })
+                provenance = {
+                    "user_query": str(job_config.get("target_domain", "")),
+                    "improved_query": job_config.get("optimized_query"),
+                    "search_queries": job_config.get("specialized_queries", []),
+                    "query_plan": {
+                        key: job_config.get("query_plan", {}).get(key)
+                        for key in ("primary_task", "domain", "modality", "key_entities", "constraints")
+                        if job_config.get("query_plan", {}).get(key) is not None
+                    } if isinstance(job_config.get("query_plan"), dict) else {},
+                    "generation_mode": job_config.get("generation_mode", "strict_source"),
+                    "seedless_generation_allowed": bool(job_config.get("allow_seedless_generation", False)),
+                    "language": job_config.get("language", "en"),
+                    "dataset_type": job_config.get("dataset_type", "sft"),
+                    "discovered_source_count": len(state.get("sources", [])),
+                    "sources": provenance_sources,
+                    "human_review": {
+                        "enabled": bool(job_config.get("human_review", False)),
+                        "requested_percentage": float(job_config.get("human_review_percentage", 10.0)),
+                    },
+                }
+
                 # Create dataset record
                 dataset_record = await self.db.create_dataset(
                     job_id=job_id,
@@ -1537,6 +1568,7 @@ class DatasetOrchestrator:
                     metadata={
                         "export_path": str(export_result.get("dataset", "")),
                         "balance_report": balance_report,
+                        "provenance": provenance,
                     },
                     output_path=str(export_result.get("dataset", ""))
                 )
