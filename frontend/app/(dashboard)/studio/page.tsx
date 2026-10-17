@@ -1119,11 +1119,24 @@ export default function StudioPage() {
               <pre className="p-4 rounded-xl bg-[#F6F7F4] border border-[#E2E6E0] overflow-auto text-xs font-mono text-[#1B3B2B]">
                 {JSON.stringify(
                   {
-                    name: 'my-dataset-v1',
-                    modality: 'text',
-                    targetSize: 1000,
-                    qualityLevel: 'high',
-                    format: 'jsonl',
+                    name: datasetName.trim() || undefined,
+                    request: naturalLanguageInput.trim(),
+                    improvedSearchQuery: sourcePreview?.improved_query || undefined,
+                    language: resolvedLanguage,
+                    datasetType,
+                    targetSize,
+                    qualityLevel,
+                    generationMode,
+                    seedlessGenerationAllowed: generationMode !== 'strict_source',
+                    selectedSourceCount: (sourcePreview?.sources || []).filter(
+                      (source: any) => !excludedSourceUrls.includes(source.url) && !source.metadata?.catalogue_only
+                    ).length,
+                    selectedPreviewExamples: selectedExampleIndexes.length,
+                    humanReview: humanReviewEnabled
+                      ? { enabled: true, percentage: humanReviewPercentage }
+                      : { enabled: false },
+                    balanceDimensions,
+                    format: outputFormat,
                     providers: selectedProviders,
                     constraints: constraints.filter((c) => c.enabled),
                   },
