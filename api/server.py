@@ -1680,6 +1680,34 @@ async def export_dataset(dataset_id: str, request: dict = None):
         raise HTTPException(status_code=404, detail=f"Dataset {dataset_id} not found")
 
     export_format = (request or {}).get("format", "jsonl")
+    if export_format == "json":
+        samples = await db.get_samples(dataset["id"], limit=100000)
+        if not samples:
+            raise HTTPException(status_code=404, detail="No samples found for this dataset")
+
+        async def json_array_stream():
+            yield "["
+            for index, sample in enumerate(samples):
+                if index:
+                    yield ","
+                item = {
+                    "instruction": sample.get("instruction", ""),
+                    "response": sample.get("response", ""),
+                    "input": sample.get("input", ""),
+                    "quality_score": sample.get("quality_score"),
+                    "difficulty_tier": sample.get("difficulty_tier"),
+                    "metadata": sample.get("metadata", {}),
+                }
+                yield json.dumps(item, ensure_ascii=False)
+            yield "]"
+
+        from fastapi.responses import StreamingResponse
+        return StreamingResponse(
+            json_array_stream(),
+            media_type="application/json",
+            headers={"Content-Disposition": f"attachment; filename={dataset.get('name', 'dataset')}.json"},
+        )
+
     output_path = dataset.get("output_path", "")
     output_dir = Path(output_path).parent if output_path else Path("outputs") / dataset.get("job_id", job_id)
 
