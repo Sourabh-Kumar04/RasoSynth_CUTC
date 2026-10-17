@@ -200,6 +200,13 @@ class ConstraintAnalyzer:
             analysis.estimated_sources * 10
         )
         analysis.estimated_cost = self._estimate_cost(config, analysis.estimated_samples)
+        if analysis.estimated_cost > cost_budget:
+            warnings.append(
+                f"Estimated generation cost (${analysis.estimated_cost:.2f}) exceeds the "
+                f"configured budget (${cost_budget:.2f})."
+            )
+            conflicts.append("estimated_cost_exceeds_budget")
+            strategies.append("Reduce the target dataset size or increase the budget")
 
         analysis.warnings = warnings
         analysis.fallback_strategies = strategies
@@ -272,7 +279,10 @@ class ConstraintAnalyzer:
         if config.get("language") != "en":
             base_cost *= 1.2
 
-        return min(base_cost, config.get("cost_budget_usd", 100.0))
+        # Keep the projected cost independent from the budget so an over-budget
+        # job is reported as a conflict instead of appearing to fit by being
+        # silently capped at the user's limit.
+        return base_cost
 
 
 class DatasetOrchestrator:
