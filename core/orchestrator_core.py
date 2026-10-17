@@ -32,6 +32,15 @@ def _sanitize_metadata(meta: dict) -> dict:
         return {}
 
 
+def _json_safe(value: Any) -> Any:
+    """Convert graph values to JSON-safe data for persistent checkpoints."""
+    try:
+        import json as _json
+        return _json.loads(_json.dumps(value, default=str))
+    except Exception:
+        return [] if isinstance(value, list) else {}
+
+
 class JobStatus(Enum):
     PENDING = "pending"
     RUNNING = "running"
@@ -127,6 +136,7 @@ class AgentState(TypedDict):
     coverage_matrix: dict | None
     balance_report: dict | None
     intent: UserIntent | None
+    resume_from_stage: str | None
 
 
 class ConstraintAnalyzer:
@@ -294,7 +304,7 @@ class ConstraintAnalyzer:
 class DatasetOrchestrator:
     """Enhanced orchestrator with constraint awareness and intelligent adaptation."""
 
-    def __init__(self, config: dict, router, db=None, observability=None, ws_manager=None, redis_client=None):
+    def __init__(self, config: dict, router, db=None, observability=None, ws_manager=None, redis_client=None, checkpoint_manager=None):
         self.config = config
         self.router = router
         self.db = db
@@ -314,6 +324,7 @@ class DatasetOrchestrator:
         self._cancellation_events: dict[str, asyncio.Event] = {}
         self.constraint_analyzer = ConstraintAnalyzer(config)
         self.redis_client = redis_client  # Redis client for intent caching (optional)
+        self.persistent_checkpoint_manager = checkpoint_manager
 
     def _is_source_relevant(self, source, intent: UserIntent | None) -> bool:
         """
@@ -385,6 +396,11 @@ class DatasetOrchestrator:
                 "proceed": "discover",
                 "proceed_synthetic": "plan",
                 "negotiate": "adapt_strategy",
+                "resume_extract": "extract",
+                "resume_filter": "filter",
+                "resume_construct": "construct",
+                "resume_review": "human_review",
+                "resume_export": "export",
                 "fail": END
             }
         )
@@ -440,6 +456,17 @@ class DatasetOrchestrator:
 
     def _feasibility_check(self, state: AgentState) -> str:
         """Check if constraints are feasible."""
+        resume_routes = {
+            "extraction": "resume_filter",
+            "filtering": "resume_construct",
+            "construction": "resume_review",
+            "export": "resume_export",
+        }
+        resume_stage = state.get("resume_from_stage")
+        if resume_stage in resume_routes:
+            logger.info("Resuming job %s after %s", state.get("job", {}).get("id"), resume_stage)
+            return resume_routes[resume_stage]
+
         job = state.get("job", {})
         config = job.get("config", {})
         mode = config.get("generation_mode", "strict_source")
@@ -2000,26 +2027,33 @@ class DatasetOrchestrator:
             return "rejected"
         return "approved"
 
-    async def run(self, job: Job) -> dict:
+    async def run(self, job: Job, resume_state: Optional[dict] = None) -> dict:
         """Run the pipeline for a job."""
         job_id = job.id
         self.active_jobs[job_id] = job
         self._cancellation_events[job_id] = asyncio.Event()
 
+        saved_stage = None
+        resume_metadata = {}
+        if resume_state:
+            saved_stage = resume_state.get("resume_from_stage")
+            saved_stage = getattr(saved_stage, "value", saved_stage)
+            resume_metadata = resume_state.get("metadata") or {}
+
         initial_state = {
             "job": job.to_dict(),
-            "sources": [],
-            "extracted_content": [],
-            "filtered_samples": [],
-            "constructed_samples": [],
+            "sources": list((resume_state or {}).get("sources", resume_metadata.get("sources", []))),
+            "extracted_content": list((resume_state or {}).get("extracted_content", [])),
+            "filtered_samples": list((resume_state or {}).get("filtered_samples", [])),
+            "constructed_samples": list((resume_state or {}).get("constructed_samples", [])),
             "errors": [],
             "warnings": [],
             "should_retry": False,
             "human_approval_needed": False,
             "human_approved": False,
-            "messages": [],
-            "current_stage": "pending",
-            "progress": 0.0,
+            "messages": ([f"Resuming from {saved_stage} checkpoint"] if saved_stage else []),
+            "current_stage": saved_stage or "pending",
+            "progress": float((resume_state or {}).get("progress", 0.0) or 0.0),
             "constraint_analysis": None,
             "low_resource_mode": False,
             "multilingual_mode": False,
@@ -2029,6 +2063,7 @@ class DatasetOrchestrator:
             "coverage_matrix": None,
             "balance_report": None,
             "intent": None,
+            "resume_from_stage": saved_stage,
         }
         # Intent extraction - the single source of truth for the request
         try:
@@ -2065,6 +2100,7 @@ class DatasetOrchestrator:
                     config={"configurable": {"thread_id": job_id}}
                 ):
                     final_state = state
+                    await self._save_persistent_checkpoint(job_id)
 
             try:
                 await asyncio.wait_for(iterate_graph(), timeout=timeout_seconds)
@@ -2163,6 +2199,46 @@ class DatasetOrchestrator:
         """Clean up all in-memory state for a completed/failed/cancelled job."""
         self.active_jobs.pop(job_id, None)
         self._cancellation_events.pop(job_id, None)
+
+    async def _save_persistent_checkpoint(self, job_id: str) -> None:
+        """Persist a graph snapshot after a recoverable pipeline boundary."""
+        if not self.persistent_checkpoint_manager:
+            return
+        try:
+            graph_state = await self.graph.aget_state(config={"configurable": {"thread_id": job_id}})
+            state = graph_state.values if graph_state else None
+            if not state:
+                return
+            stage_name = state.get("current_stage")
+            from core.orchestrator_pkg.checkpoints import CheckpointStage
+            stages = {
+                "discover": CheckpointStage.DISCOVERY,
+                "extract": CheckpointStage.EXTRACTION,
+                "filter": CheckpointStage.FILTERING,
+                "construct": CheckpointStage.CONSTRUCTION,
+                "export": CheckpointStage.EXPORT,
+            }
+            stage = stages.get(stage_name)
+            if not stage:
+                return
+            await self.persistent_checkpoint_manager.create_checkpoint(
+                job_id=job_id,
+                stage=stage,
+                progress=float(state.get("progress", 0.0) or 0.0),
+                sources_discovered=len(state.get("sources", [])),
+                sources_extracted=len(state.get("extracted_content", [])),
+                samples_filtered=len(state.get("filtered_samples", [])),
+                samples_generated=len(state.get("constructed_samples", [])),
+                extracted_content=_json_safe(state.get("extracted_content", [])),
+                filtered_samples=_json_safe(state.get("filtered_samples", [])),
+                constructed_samples=_json_safe(state.get("constructed_samples", [])),
+                metadata={
+                    "sources": _json_safe(state.get("sources", [])),
+                    "automatic": True,
+                },
+            )
+        except Exception as exc:
+            logger.warning("Could not persist checkpoint for job %s: %s", job_id, exc)
 
     async def cancel(self, job_id: str) -> bool:
         """Cancel a running job."""

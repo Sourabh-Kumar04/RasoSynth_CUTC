@@ -508,6 +508,7 @@ async def lifespan(app: FastAPI):
                 observability=observability,
                 ws_manager=ws_manager,
                 redis_client=cache.redis if cache is not None else None,
+                checkpoint_manager=checkpoint_manager,
             )
             logger.info("  ✓ DatasetOrchestrator initialized")
         except Exception as e:
@@ -2095,7 +2096,7 @@ async def get_checkpoint_history(job_id: str, limit: int = 10):
 
 @app.post("/checkpoints/{job_id}/restore", response_model=RestoreCheckpointResponse, tags=["Checkpoints"])
 async def restore_checkpoint(request: RestoreCheckpointRequest):
-    """Restore job from checkpoint."""
+    """Resume a non-completed job from persisted pipeline state."""
     if not checkpoint_manager:
         raise HTTPException(status_code=503, detail="Checkpoint manager not available")
 
@@ -2111,6 +2112,30 @@ async def restore_checkpoint(request: RestoreCheckpointRequest):
         )
 
     checkpoint = resume_state["checkpoint"]
+    if checkpoint.stage.value == "completed":
+        return RestoreCheckpointResponse(
+            success=False,
+            message="Completed checkpoints cannot be resumed.",
+        )
+    if not db or not orchestrator:
+        raise HTTPException(status_code=503, detail="Pipeline is not available for checkpoint recovery")
+    if request.job_id in orchestrator.active_jobs:
+        raise HTTPException(status_code=409, detail="Job is already running")
+
+    stored_job = await db.get_job_status(request.job_id)
+    if not stored_job:
+        raise HTTPException(status_code=404, detail=f"Job {request.job_id} not found")
+
+    requested_stage = request.resume_from_stage or resume_state["resume_from_stage"]
+    resume_state["resume_from_stage"] = requested_stage
+    await db.update_job(
+        request.job_id,
+        status="pending",
+        current_stage=f"resuming_{getattr(requested_stage, 'value', requested_stage)}",
+        progress=resume_state["progress"],
+        error=None,
+    )
+    asyncio.create_task(run_pipeline(request.job_id, stored_job["config"], resume_state=resume_state))
 
     return RestoreCheckpointResponse(
         success=True,
@@ -2139,7 +2164,7 @@ async def restore_checkpoint(request: RestoreCheckpointRequest):
         resume_from_stage=resume_state["resume_from_stage"].value,
         progress=resume_state["progress"],
         samples_generated=resume_state["samples_generated"],
-        message="Checkpoint state loaded. Automatic pipeline resumption is not wired yet.",
+        message="Checkpoint accepted. The job has been queued to resume from the saved stage.",
     )
 
 
@@ -2312,7 +2337,7 @@ async def root():
     }
 
 
-async def run_pipeline(job_id: str, request: JobRequest):
+async def run_pipeline(job_id: str, request: JobRequest | dict, resume_state: Optional[dict] = None):
     """Run the dataset generation pipeline.
 
     Production pipeline execution:
@@ -2365,11 +2390,11 @@ async def run_pipeline(job_id: str, request: JobRequest):
         samples_filtered=0,
         cost_usd=0.0,
         error=None,
-        config=request.model_dump()
+        config=request.model_dump() if hasattr(request, "model_dump") else dict(request)
     )
 
     try:
-        await orchestrator.run(job)
+        await orchestrator.run(job, resume_state=resume_state)
         
         # Phase 4: Enforce that pipeline completion requires generated samples > 0
         if getattr(job, "samples_generated", 0) == 0:
