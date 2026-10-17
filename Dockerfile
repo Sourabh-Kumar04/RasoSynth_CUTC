@@ -20,6 +20,9 @@ COPY README.md ./
 # Copy and install dependencies (layer caching)
 COPY pyproject.toml uv.lock ./
 RUN uv sync --frozen --no-dev
+# AIKosh is optional for local installs, but the production container should
+# support its authenticated dataset API when AIKOSH_API_KEY is configured.
+RUN uv pip install --python /app/.venv/bin/python "aikosh>=2.0.0,<3.0.0"
 
 # Production stage
 FROM python:3.11-slim
