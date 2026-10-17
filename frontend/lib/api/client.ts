@@ -584,12 +584,15 @@ class APIClient {
   // === Download API ===
   // Download a dataset with format selection - returns a Blob for file saving
   async downloadDataset(id: string, format: string = 'jsonl'): Promise<Blob> {
-    if (typeof window !== 'undefined' && (localStorage.getItem('mockMode') === 'true' || localStorage.getItem('mockMode') === null)) {
-      const sampleText = JSON.stringify({
+    if (typeof window !== 'undefined' && localStorage.getItem('mockMode') === 'true') {
+      const records = [{
         instruction: "Sample instruction for dataset " + id,
         response: "Sample synthesized response for dataset generation."
-      }, null, 2);
-      return new Blob([sampleText], { type: 'application/json' });
+      }];
+      if (format === 'json') {
+        return new Blob([JSON.stringify(records, null, 2)], { type: 'application/json' });
+      }
+      return new Blob([records.map((record) => JSON.stringify(record)).join('\n') + '\n'], { type: 'application/x-ndjson' });
     }
 
     try {
@@ -610,12 +613,8 @@ class APIClient {
 
       return response.blob()
     } catch (e) {
-      console.warn("Dataset download fetch failed, returning mock blob", e);
-      const sampleText = JSON.stringify({
-        instruction: "Sample synthesized instruction for " + id,
-        response: "Synthesized model response dataset export output."
-      }, null, 2);
-      return new Blob([sampleText], { type: 'application/json' });
+      console.error("Dataset download failed", e);
+      throw e;
     }
   }
 
