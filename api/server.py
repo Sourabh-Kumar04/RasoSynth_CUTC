@@ -1683,24 +1683,34 @@ async def export_dataset(dataset_id: str, request: dict = None):
     if export_format not in {"json", "jsonl", "csv", "parquet", "zip"}:
         raise HTTPException(status_code=400, detail=f"Unsupported export format: {export_format}")
     if export_format == "json":
-        samples = await db.get_samples(dataset["id"], limit=100000)
-        if not samples:
+        page_size = 1000
+        first_page = await db.get_samples(dataset["id"], limit=page_size, offset=0)
+        if not first_page:
             raise HTTPException(status_code=404, detail="No samples found for this dataset")
 
         async def json_array_stream():
             yield "["
-            for index, sample in enumerate(samples):
-                if index:
-                    yield ","
-                item = {
-                    "instruction": sample.get("instruction", ""),
-                    "response": sample.get("response", ""),
-                    "input": sample.get("input", ""),
-                    "quality_score": sample.get("quality_score"),
-                    "difficulty_tier": sample.get("difficulty_tier"),
-                    "metadata": sample.get("metadata", {}),
-                }
-                yield json.dumps(item, ensure_ascii=False)
+            offset = 0
+            page = first_page
+            first_item = True
+            while page:
+                for sample in page:
+                    if not first_item:
+                        yield ","
+                    first_item = False
+                    item = {
+                        "instruction": sample.get("instruction", ""),
+                        "response": sample.get("response", ""),
+                        "input": sample.get("input", ""),
+                        "quality_score": sample.get("quality_score"),
+                        "difficulty_tier": sample.get("difficulty_tier"),
+                        "metadata": sample.get("metadata", {}),
+                    }
+                    yield json.dumps(item, ensure_ascii=False)
+                offset += len(page)
+                if len(page) < page_size:
+                    break
+                page = await db.get_samples(dataset["id"], limit=page_size, offset=offset)
             yield "]"
 
         from fastapi.responses import StreamingResponse
@@ -1917,26 +1927,29 @@ async def download_job_dataset(job_id: str):
         )
 
     # Otherwise, generate from the DB samples dynamically
-    samples = await db.get_samples(dataset["id"], limit=100000)
-    if not samples:
-        raise HTTPException(status_code=404, detail="No samples found for this dataset")
-
-    # Otherwise, stream from the DB samples dynamically using StreamingResponse
-    samples = await db.get_samples(dataset["id"], limit=100000)
-    if not samples:
+    page_size = 1000
+    first_page = await db.get_samples(dataset["id"], limit=page_size, offset=0)
+    if not first_page:
         raise HTTPException(status_code=404, detail="No samples found for this dataset")
 
     async def sample_generator():
-        for sample in samples:
-            item = {
-                "instruction": sample.get("instruction", ""),
-                "response": sample.get("response", ""),
-                "input": sample.get("input", ""),
-                "quality_score": sample.get("quality_score"),
-                "difficulty_tier": sample.get("difficulty_tier"),
-                "metadata": sample.get("metadata", {}),
-            }
-            yield json.dumps(item) + "\n"
+        offset = 0
+        page = first_page
+        while page:
+            for sample in page:
+                item = {
+                    "instruction": sample.get("instruction", ""),
+                    "response": sample.get("response", ""),
+                    "input": sample.get("input", ""),
+                    "quality_score": sample.get("quality_score"),
+                    "difficulty_tier": sample.get("difficulty_tier"),
+                    "metadata": sample.get("metadata", {}),
+                }
+                yield json.dumps(item, ensure_ascii=False) + "\n"
+            offset += len(page)
+            if len(page) < page_size:
+                break
+            page = await db.get_samples(dataset["id"], limit=page_size, offset=offset)
 
     from fastapi.responses import StreamingResponse
     download_name = f"{dataset.get('name', 'dataset')}.jsonl"

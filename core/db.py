@@ -422,13 +422,15 @@ class DatabaseManager:
             _ = (sample.id, sample.dataset_id, sample.instruction, sample.response, sample.quality_score)
             return sample
 
-    async def get_samples(self, dataset_id: str, limit: int = 1000) -> list[Sample]:
+    async def get_samples(self, dataset_id: str, limit: int = 1000, offset: int = 0) -> list[Sample]:
         """Get samples for a dataset."""
         async with self.session_maker() as session:
             from sqlalchemy import select
             result = await session.execute(
                 select(Sample)
                 .filter(Sample.dataset_id == dataset_id)
+                .order_by(Sample.created_at, Sample.id)
+                .offset(max(0, offset))
                 .limit(limit)
             )
             samples = list(result.scalars().all())
@@ -778,9 +780,9 @@ class AsyncDB:
         sample = await self.db.create_sample(dataset_id, data)
         return {"id": sample.id, "dataset_id": sample.dataset_id}
 
-    async def get_samples(self, dataset_id: str, limit: int = 1000) -> list[dict]:
+    async def get_samples(self, dataset_id: str, limit: int = 1000, offset: int = 0) -> list[dict]:
         """Get samples for a dataset."""
-        samples = await self.db.get_samples(dataset_id, limit)
+        samples = await self.db.get_samples(dataset_id, limit, offset)
         return [
             {
                 "id": sample.id,
