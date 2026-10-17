@@ -187,6 +187,7 @@ export default function StudioPage() {
   const [datasetName, setDatasetName] = useState('')
   const [modality, setModality] = useState('text')
   const [targetSize, setTargetSize] = useState(1000)
+  const [planningBudgetUsd, setPlanningBudgetUsd] = useState(50)
   const [qualityLevel, setQualityLevel] = useState('high')
   const [outputFormat, setOutputFormat] = useState('jsonl')
   const [generationMode, setGenerationMode] = useState('strict_source')
@@ -332,7 +333,7 @@ export default function StudioPage() {
         balance_dimensions: balanceDimensions,
         export_format: formatMap[outputFormat] || 'jsonl',
         preferred_providers: selectedProviders,
-        cost_budget_usd: targetSize * 0.05, // Rough estimate
+        cost_budget_usd: planningBudgetUsd,
         enable_research_loop: true,
         generation_mode: generationMode,
         allow_seedless_generation: generationMode !== 'strict_source',
@@ -361,7 +362,7 @@ export default function StudioPage() {
     } finally {
       setIsSubmitting(false)
     }
-  }, [naturalLanguageInput, datasetName, selectedTemplate, targetSize, qualityLevel, outputFormat, selectedProviders, generationMode, datasetType, sourcePreview, exampleBatchPreview, selectedExampleIndexes, excludedSourceUrls, humanReviewEnabled, humanReviewPercentage, resolvedLanguage, secondaryLanguages.join(','), regionRestrictions.join(','), balanceDimensions.join(','), router])
+  }, [naturalLanguageInput, datasetName, selectedTemplate, targetSize, planningBudgetUsd, qualityLevel, outputFormat, selectedProviders, generationMode, datasetType, sourcePreview, exampleBatchPreview, selectedExampleIndexes, excludedSourceUrls, humanReviewEnabled, humanReviewPercentage, resolvedLanguage, secondaryLanguages.join(','), regionRestrictions.join(','), balanceDimensions.join(','), router])
 
   return (
     <div className="space-y-6 w-full pb-8">
@@ -777,11 +778,12 @@ export default function StudioPage() {
                       <span className="text-xs font-mono capitalize text-[#1B3B2B]">{modality}</span>
                     </div>
                     <div className="flex justify-between">
-                      <span className="text-xs text-[#55635B]">Estimated Cost</span>
+                      <span className="text-xs text-[#55635B]">Planning Budget</span>
                       <span className="text-xs font-mono text-amber-700 font-bold">
-                        ~${(targetSize * 0.05).toFixed(2)}
+                        ${planningBudgetUsd.toFixed(2)}
                       </span>
                     </div>
+                    <p className="text-[10px] leading-relaxed text-[#708076]">Used for feasibility planning; actual provider charges can vary and this is not a hard spending cap.</p>
                   </div>
 
                   <div className="space-y-2">
@@ -884,6 +886,12 @@ export default function StudioPage() {
                 <div className="space-y-1.5">
                   <label className="text-xs font-bold text-[#1B3B2B]">Target Size</label>
                   <Input type="number" min={1} max={100000} value={targetSize} onChange={(event) => setTargetSize(Math.max(1, Math.min(100000, Math.trunc(Number(event.target.value) || 1))))} className="rounded-full border-[#D1D8CE] text-xs" />
+                </div>
+
+                <div className="space-y-1.5">
+                  <label className="text-xs font-bold text-[#1B3B2B]" htmlFor="planning-budget">Planning Budget (USD)</label>
+                  <Input id="planning-budget" type="number" min={0} step={0.01} value={planningBudgetUsd} onChange={(event) => setPlanningBudgetUsd(Math.max(0, Number(event.target.value) || 0))} className="rounded-full border-[#D1D8CE] text-xs" />
+                  <p className="text-[10px] leading-relaxed text-[#708076]">Used to flag estimate conflicts. It does not stop provider calls at this amount.</p>
                 </div>
 
                 <fieldset className="space-y-2 rounded-xl border border-[#D1D8CE] bg-[#F6F7F4] p-3">
@@ -1133,6 +1141,7 @@ export default function StudioPage() {
                     language: resolvedLanguage,
                     datasetType,
                     targetSize,
+                    planningBudgetUsd,
                     qualityLevel,
                     generationMode,
                     seedlessGenerationAllowed: generationMode !== 'strict_source',
