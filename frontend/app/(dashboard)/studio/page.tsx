@@ -497,7 +497,15 @@ export default function StudioPage() {
                   <section className="rounded-2xl border border-[#C8D5C9] bg-[#F6F7F4] p-4 space-y-3" aria-live="polite">
                     <div className="flex items-start justify-between gap-4">
                       <div>
-                        <p className="text-xs font-mono font-bold uppercase tracking-wider text-[#1B3B2B]">First source batch · {sourcePreview.source_count} found</p>
+                        <p className="text-xs font-mono font-bold uppercase tracking-wider text-[#1B3B2B]">
+                          First source batch · {sourcePreview.source_count} results
+                          {sourcePreview.sources?.some((source: any) => source.metadata?.catalogue_only) && (
+                            <>
+                              {' '}· {sourcePreview.sources.filter((source: any) => !source.metadata?.catalogue_only).length} source candidates
+                              {' '}· {sourcePreview.sources.filter((source: any) => source.metadata?.catalogue_only).length} catalogue-only
+                            </>
+                          )}
+                        </p>
                         <p className="mt-1 text-xs text-[#55635B]">Review the direction, exclude weak matches, or edit your request above and preview again.</p>
                       </div>
                       <Badge className="bg-[#E8ECE6] text-[#1B3B2B]">Preview only</Badge>
