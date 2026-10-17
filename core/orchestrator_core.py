@@ -683,12 +683,13 @@ class DatasetOrchestrator:
         ]
 
         # Make India's national catalogue a preferred source for India- and
-        # Indic-focused requests while keeping global discovery available.
+        # Indic-focused requests, or when the user explicitly asks for AIKosh.
         configured_language = str(config.get("language", "en")).lower()
         india_focus = configured_language in {
             "hi", "bn", "ta", "te", "mr", "gu", "kn", "ml", "pa", "ur", "or", "as", "sa",
             "ks", "kok", "mni", "sd", "doi", "mai", "sat", "brx", "ne",
         } or any("india" in str(region).lower() for region in config.get("region_restrictions", [])) or any(term in target_domain for term in (
+            "aikosh", "ai kosh", "indiaai", "india ai",
             "india", "indian", "indic", "hindi", "tamil", "telugu",
             "bengali", "marathi", "kannada", "malayalam", "punjabi",
             "gujarati", "odia", "assamese", "urdu", "sanskrit", "manipuri",
