@@ -1654,7 +1654,7 @@ async def export_dataset(dataset_id: str, request: dict = None):
 
     Returns the dataset file directly.  Supports ``format`` in the JSON body:
 
-    - ``"jsonl"`` (default), ``"csv"``, ``"parquet"`` — returns the single file
+    - ``"json"``, ``"jsonl"`` (default), ``"csv"``, ``"parquet"`` — returns the requested format
     - ``"zip"`` — zips the entire output directory and returns the archive
 
     The ``dataset_id`` path parameter may be either a real dataset UUID
@@ -1680,6 +1680,8 @@ async def export_dataset(dataset_id: str, request: dict = None):
         raise HTTPException(status_code=404, detail=f"Dataset {dataset_id} not found")
 
     export_format = (request or {}).get("format", "jsonl")
+    if export_format not in {"json", "jsonl", "csv", "parquet", "zip"}:
+        raise HTTPException(status_code=400, detail=f"Unsupported export format: {export_format}")
     if export_format == "json":
         samples = await db.get_samples(dataset["id"], limit=100000)
         if not samples:
@@ -1726,7 +1728,11 @@ async def export_dataset(dataset_id: str, request: dict = None):
         candidate = output_dir / f"{output_dir.name}.{export_format}"
         if candidate.exists():
             file_path = candidate
-        elif output_path and Path(output_path).exists():
+        elif (
+            output_path
+            and Path(output_path).exists()
+            and Path(output_path).suffix.lstrip(".").casefold() == export_format
+        ):
             file_path = Path(output_path)
         else:
             raise HTTPException(
