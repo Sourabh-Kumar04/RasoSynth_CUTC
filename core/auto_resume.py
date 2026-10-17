@@ -4,11 +4,11 @@ Auto-Resume System for RasoSynthTune.
 On startup, detects incomplete jobs (running, pending) and resumes them.
 Uses checkpoints from CheckpointManager where available.
 
-Recovery guarantees:
-- At-most-once execution per pipeline stage
-- No duplicate sample generation
-- Checkpoint consistency validated before resume
-- Corrupted checkpoints detected and skipped
+Recovery behavior:
+- Resumes from the latest compatible persistent checkpoint when available
+- Restarts pending jobs that have no checkpoint
+- Validates checkpoint stage and version before resuming
+- Leaves distributed task recovery to Celery deployments
 """
 import asyncio
 import logging
@@ -37,11 +37,12 @@ class AutoResumeManager:
         # results contains per-job recovery status and summary
     """
 
-    def __init__(self, db, orchestrator, checkpoint_manager=None, event_store=None):
+    def __init__(self, db, orchestrator, checkpoint_manager=None, event_store=None, job_runner=None):
         self._db = db
         self._orchestrator = orchestrator
         self._checkpoint_manager = checkpoint_manager
         self._event_store = event_store
+        self._job_runner = job_runner
         self._recovery_results: dict[str, str] = {}
 
     async def recover_all(self) -> dict:
@@ -139,7 +140,7 @@ class AutoResumeManager:
         # Try checkpoint restore first
         if self._checkpoint_manager:
             try:
-                checkpoint = await self._checkpoint_manager.get_latest_checkpoint(job_id)
+                checkpoint = await self._checkpoint_manager.get_resume_checkpoint(job_id)
                 if checkpoint:
                     # Validate checkpoint integrity
                     is_valid, reason = self._validate_checkpoint(checkpoint)
@@ -220,8 +221,12 @@ class AutoResumeManager:
                 error=None,
             )
 
-            # Launch the pipeline in background
-            asyncio.create_task(self._orchestrator.run(job))
+            # Launch via the server runner when provided so admission control,
+            # completion checks, and observability stay consistent with new jobs.
+            if self._job_runner:
+                asyncio.create_task(self._job_runner(job_id, config))
+            else:
+                asyncio.create_task(self._orchestrator.run(job))
 
             logger.info("AutoResume: Job %s restarted from pending", job_id)
             return JobRecoveryState.RESUMED
@@ -229,7 +234,7 @@ class AutoResumeManager:
             logger.error("AutoResume: Failed to restart pending job %s: %s", job_id, e, exc_info=True)
             return JobRecoveryState.FAILED
 
-    async def _restore_from_checkpoint(self, job_id: str, checkpoint: dict) -> str:
+    async def _restore_from_checkpoint(self, job_id: str, checkpoint) -> str:
         """Restore a job from a validated checkpoint and resume execution.
 
         Uses CheckpointManager.resume_from_checkpoint to rebuild state
@@ -239,7 +244,7 @@ class AutoResumeManager:
             if not self._checkpoint_manager:
                 return await self._recover_pending_job(job_id)
 
-            cp_id = checkpoint.get("checkpoint_id")
+            cp_id = getattr(checkpoint, "checkpoint_id", None)
             if not cp_id:
                 return await self._recover_pending_job(job_id)
 
@@ -256,18 +261,36 @@ class AutoResumeManager:
 
             # Update DB status
             resume_stage = resume_state.get("resume_from_stage", "discover")
+            resume_stage_name = getattr(resume_stage, "value", resume_stage)
             resume_progress = resume_state.get("progress", 0.0)
 
             await self._db.update_job(
                 job_id,
                 status="running",
-                current_stage=resume_stage,
+                current_stage=f"resuming_{resume_stage_name}",
                 progress=resume_progress,
             )
 
+            job_detail = await self._db.get_job_status(job_id)
+            config = (job_detail or {}).get("config", {}) or {}
+            if self._job_runner:
+                asyncio.create_task(self._job_runner(job_id, config, resume_state=resume_state))
+            else:
+                from core.orchestrator_core import Job, JobStatus
+                job = Job(
+                    id=job_id,
+                    status=JobStatus.RUNNING,
+                    created_at=datetime.utcnow(),
+                    updated_at=datetime.utcnow(),
+                    current_stage=f"resuming_{resume_stage_name}",
+                    progress=resume_progress,
+                    config=config,
+                )
+                asyncio.create_task(self._orchestrator.run(job, resume_state=resume_state))
+
             logger.info(
                 "AutoResume: Job %s resumed from checkpoint %s at stage %s (progress=%.2f)",
-                job_id, cp_id, resume_stage, resume_progress
+                job_id, cp_id, resume_stage_name, resume_progress
             )
             return JobRecoveryState.RESUMED
         except Exception as e:
@@ -278,26 +301,24 @@ class AutoResumeManager:
             return await self._recover_pending_job(job_id)
 
     @staticmethod
-    def _validate_checkpoint(checkpoint: dict) -> tuple[bool, str]:
+    def _validate_checkpoint(checkpoint) -> tuple[bool, str]:
         """Validate checkpoint integrity before restoring.
 
         Checks:
         - checkpoint_id present
         - stage is a known value
-        - state is non-empty dict
-        - events list exists
         - version is positive int
         """
-        if not checkpoint.get("checkpoint_id"):
+        checkpoint_id = getattr(checkpoint, "checkpoint_id", None)
+        stage = getattr(checkpoint, "stage", None)
+        if not checkpoint_id:
             return False, "missing checkpoint_id"
-        if not checkpoint.get("stage"):
+        if not stage:
             return False, "missing stage"
-        state = checkpoint.get("state", {})
-        if not isinstance(state, dict):
-            return False, "state is not a dict"
-        if "event_ids" in checkpoint and not isinstance(checkpoint["event_ids"], list):
-            return False, "events is not a list"
-        version = checkpoint.get("version", 1)
+        stage_name = getattr(stage, "value", stage)
+        if stage_name not in {"discovery", "extraction", "filtering", "construction", "export"}:
+            return False, f"unknown stage: {stage_name}"
+        version = getattr(checkpoint, "version", 1)
         if not isinstance(version, int) or version < 1:
             return False, f"invalid version: {version}"
         return True, "valid"

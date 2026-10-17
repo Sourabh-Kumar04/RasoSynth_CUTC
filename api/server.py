@@ -556,6 +556,31 @@ async def lifespan(app: FastAPI):
     else:
         logger.warning("  ⚠ ReviewService skipped (no db)")
 
+    # Recover interrupted in-process jobs after every service they depend on is
+    # ready. Celery deployments keep task delivery in the broker, so this
+    # process-level recovery is only safe when the API owns execution.
+    app.state.auto_resume_manager = None
+    if db is not None and orchestrator is not None and not settings.enable_celery:
+        try:
+            from core.auto_resume import AutoResumeManager
+            auto_resume_manager = AutoResumeManager(
+                db,
+                orchestrator,
+                checkpoint_manager=checkpoint_manager,
+                job_runner=run_pipeline,
+            )
+            app.state.auto_resume_manager = auto_resume_manager
+            recovery = await auto_resume_manager.recover_all()
+            logger.info(
+                "  ✓ Startup recovery checked %d jobs (%d queued)",
+                recovery["total"],
+                recovery["recovered"],
+            )
+        except Exception as e:
+            logger.warning("  ⚠ Startup recovery unavailable: %s", e)
+    elif settings.enable_celery:
+        logger.info("  • Startup recovery delegated to Celery task delivery")
+
     # (11) FinetuneJobManager
     ft_manager = None
     if db is not None:
