@@ -1538,6 +1538,20 @@ class DatasetOrchestrator:
                         "source_type": str(source.get("source_type", "")),
                         "license": source.get("license"),
                     })
+                used_sources_by_url = {}
+                for sample in samples:
+                    sample_metadata = getattr(sample, "metadata", None) or {}
+                    if not isinstance(sample_metadata, dict):
+                        continue
+                    source_url = str(sample_metadata.get("source_url") or getattr(sample, "source_url", ""))
+                    if not source_url or source_url in used_sources_by_url:
+                        continue
+                    used_sources_by_url[source_url] = {
+                        "url": source_url,
+                        "title": str(sample_metadata.get("source_title") or ""),
+                        "source_type": str(sample_metadata.get("source_type") or ""),
+                        "license": sample_metadata.get("license"),
+                    }
                 provenance = {
                     "user_query": str(job_config.get("target_domain", "")),
                     "improved_query": job_config.get("optimized_query"),
@@ -1552,7 +1566,9 @@ class DatasetOrchestrator:
                     "language": job_config.get("language", "en"),
                     "dataset_type": job_config.get("dataset_type", "sft"),
                     "discovered_source_count": len(state.get("sources", [])),
-                    "sources": provenance_sources,
+                    "discovered_sources": provenance_sources,
+                    "used_source_count": len(used_sources_by_url),
+                    "used_sources": list(used_sources_by_url.values())[:25],
                     "human_review": {
                         "enabled": bool(job_config.get("human_review", False)),
                         "requested_percentage": float(job_config.get("human_review_percentage", 10.0)),

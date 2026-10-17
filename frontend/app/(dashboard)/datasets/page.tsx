@@ -698,10 +698,10 @@ export default function DatasetsPage() {
                               <ul className="mt-1 list-disc space-y-1 pl-5">{datasetSummary.provenance.search_queries.map((query: string, index: number) => <li key={`${index}-${query}`}>{query}</li>)}</ul>
                             </div>
                           )}
-                          <p><span className="font-semibold text-[#1B3B2B]">Sources discovered:</span> {datasetSummary.provenance.discovered_source_count ?? 0}</p>
-                          {!!datasetSummary.provenance.sources?.length && (
+                          <p><span className="font-semibold text-[#1B3B2B]">Sources represented in final records:</span> {datasetSummary.provenance.used_source_count ?? 0}</p>
+                          {!!datasetSummary.provenance.used_sources?.length && (
                             <ul className="space-y-1">
-                              {datasetSummary.provenance.sources.map((source: any, index: number) => (
+                              {datasetSummary.provenance.used_sources.map((source: any, index: number) => (
                                 <li key={`${source.url}-${index}`} className="flex flex-wrap gap-x-2">
                                   <span>{source.title || source.source_type || 'Source'}</span>
                                   {/^https?:\/\//i.test(String(source.url || '')) && <a href={source.url} target="_blank" rel="noreferrer" className="break-all text-emerald-800 underline">{source.url}</a>}
@@ -710,6 +710,17 @@ export default function DatasetsPage() {
                               ))}
                             </ul>
                           )}
+                          <details className="rounded-lg border border-[#E2E6E0] p-2">
+                            <summary className="cursor-pointer">Discovered sources ({datasetSummary.provenance.discovered_source_count ?? 0})</summary>
+                            <ul className="mt-2 space-y-1">
+                              {(datasetSummary.provenance.discovered_sources || []).map((source: any, index: number) => (
+                                <li key={`${source.url}-${index}`} className="flex flex-wrap gap-x-2">
+                                  <span>{source.title || source.source_type || 'Source'}</span>
+                                  {/^https?:\/\//i.test(String(source.url || '')) && <a href={source.url} target="_blank" rel="noreferrer" className="break-all text-emerald-800 underline">{source.url}</a>}
+                                </li>
+                              ))}
+                            </ul>
+                          </details>
                         </div>
                       </details>
                     )}
