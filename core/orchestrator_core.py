@@ -1589,14 +1589,43 @@ class DatasetOrchestrator:
                 for key in ordered_keys
             }
             target = min(len(samples), max(1, round(len(samples) * review_percentage / 100)))
-            while len(review_samples) < target:
-                added = False
-                for key in ordered_keys:
-                    if buckets[key] and len(review_samples) < target:
-                        review_samples.append(buckets[key].pop(0))
-                        added = True
-                if not added:
-                    break
+            # Allocate review slots roughly in proportion to stratum size. The
+            # previous round-robin gave every stratum the same number of slots,
+            # which heavily over-sampled rare topics when group sizes differed.
+            # When the requested audit is large enough, reserve one slot for
+            # each stratum before distributing the remaining slots by size.
+            allocations = {key: 0 for key in ordered_keys}
+            if target >= len(ordered_keys):
+                allocations.update({key: 1 for key in ordered_keys})
+                remaining = target - len(ordered_keys)
+                capacity = {key: len(buckets[key]) - 1 for key in ordered_keys}
+                total_capacity = sum(capacity.values())
+                if remaining and total_capacity:
+                    exact = {
+                        key: remaining * capacity[key] / total_capacity
+                        for key in ordered_keys
+                    }
+                    for key in ordered_keys:
+                        extra = min(capacity[key], int(exact[key]))
+                        allocations[key] += extra
+                    unassigned = target - sum(allocations.values())
+                    for key in sorted(
+                        ordered_keys,
+                        key=lambda item: (-(exact[item] - int(exact[item])), ordered_keys.index(item)),
+                    ):
+                        if unassigned <= 0:
+                            break
+                        if allocations[key] < len(buckets[key]):
+                            allocations[key] += 1
+                            unassigned -= 1
+            else:
+                # If there are more strata than review slots, choose strata
+                # deterministically and uniformly via their job-scoped hashes.
+                for key in ordered_keys[:target]:
+                    allocations[key] = 1
+
+            for key in ordered_keys:
+                review_samples.extend(buckets[key][:allocations[key]])
 
         submitted = 0
         review_service = None
