@@ -4,6 +4,7 @@ import httpx
 import logging
 import os
 import time
+import hashlib
 from dataclasses import dataclass, field
 from typing import AsyncGenerator, AsyncIterator, Optional
 from enum import Enum
@@ -333,14 +334,19 @@ class DiscoveryCache:
             pass
 
     @staticmethod
-    def _make_key(query: str, target_domain: str, source_type: str) -> str:
-        return f"disc:{query[:80]}:{target_domain[:80]}:{source_type}"
+    def _make_key(query: str, target_domain: str, source_type: str, context: dict | None = None) -> str:
+        key_data = json.dumps(
+            {"query": query, "target_domain": target_domain, "source_type": source_type, "context": context or {}},
+            sort_keys=True,
+            default=str,
+        )
+        return f"disc:{hashlib.sha256(key_data.encode()).hexdigest()}"
 
     async def get(
-        self, query: str, target_domain: str, source_type: str,
+        self, query: str, target_domain: str, source_type: str, context: dict | None = None,
     ) -> list["DiscoveredSource"] | None:
         from copy import deepcopy
-        key = self._make_key(query, target_domain, source_type)
+        key = self._make_key(query, target_domain, source_type, context)
 
         # Try Redis first
         if self._redis:
@@ -375,8 +381,9 @@ class DiscoveryCache:
         target_domain: str,
         source_type: str,
         sources: list["DiscoveredSource"],
+        context: dict | None = None,
     ):
-        key = self._make_key(query, target_domain, source_type)
+        key = self._make_key(query, target_domain, source_type, context)
         from dataclasses import asdict
         data = [asdict(s) for s in sources]
 
@@ -1246,12 +1253,27 @@ class DiscoveryPipeline:
             # full crawl. One focused query per selected repository is enough.
             queries = queries[:1]
 
+        cache_context = {
+            "allowed_domains": sorted(str(value) for value in (self.domain_allowlist or [])),
+            "blocked_domains": sorted(str(value) for value in (self.domain_blocklist or [])),
+            "language": self.config.get("language"),
+            "region_restrictions": sorted(str(value) for value in (self.config.get("region_restrictions") or [])),
+            "search_engines": sorted(str(value) for value in (self.search_engines or [])),
+            "max_results": self.max_results,
+            "max_per_source": self.max_per_source,
+            "quality_min_score": self._quality_filter_threshold,
+            "preview": preview,
+        }
+
         # ── Phase 1: Check cache first ──────────────────────────────────
+        cached_source_types = set()
+        yielded = 0
         for st in source_types:
             cached = await self._cache.get(
-                sanitised_query, target_domain, st.value,
+                sanitised_query, target_domain, st.value, cache_context,
             )
-            if cached:
+            if cached is not None:
+                cached_source_types.add(st)
                 self._LOG.debug(
                     "Cache HIT for %s/%s → %d sources",
                     sanitised_query[:40], st.value, len(cached),
@@ -1261,11 +1283,18 @@ class DiscoveryPipeline:
                         src.quality_score = score_source(src)
                         self._discovered_urls.add(src.url)
                         yield src
+                        yielded += 1
+                        if yielded >= self.max_results:
+                            return
+
+        uncached_source_types = [st for st in source_types if st not in cached_source_types]
+        if not uncached_source_types:
+            return
 
         # ── Phase 2: API discovery with rate-limited concurrency ────────
         tasks = []
         for q in queries[:8]:  # Limit queries to avoid explosion
-            for source_type in source_types:
+            for source_type in uncached_source_types:
                 tasks.append(self._discover_source_type(q, target_domain, source_type))
 
         # Execute with semaphore-bounded concurrency
@@ -1319,11 +1348,10 @@ class DiscoveryPipeline:
 
         for st_val, src_list in grouped.items():
             await self._cache.set(
-                sanitised_query, target_domain, st_val, src_list,
+                sanitised_query, target_domain, st_val, src_list, cache_context,
             )
 
         # Yield deduplicated, ranked results
-        yielded = 0
         for src in all_sources:
             if src.url not in self._discovered_urls:
                 self._discovered_urls.add(src.url)
