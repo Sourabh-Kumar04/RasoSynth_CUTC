@@ -1407,43 +1407,70 @@ class DatasetOrchestrator:
             "source": lambda sample: (sample.get("metadata", {}) or {}).get("source_type"),
             "difficulty": lambda sample: sample.get("difficulty_tier"),
         }
-        for dimension in dimensions:
-            value_for = aliases.get(dimension)
-            if value_for is None or not balanced:
-                continue
-            known_groups = {}
-            unknown = []
-            for index, sample in enumerate(balanced):
+        active_dimensions = [(dimension, aliases[dimension]) for dimension in dimensions if dimension in aliases]
+        initial_counts = {}
+
+        def _group_counts(items: list[dict], value_for) -> tuple[Counter, int]:
+            groups = Counter()
+            unknown_count = 0
+            for sample in items:
                 value = value_for(sample)
                 if value is None or str(value).strip().lower() in {"", "unknown", "unclassified"}:
-                    unknown.append((index, sample))
+                    unknown_count += 1
                 else:
-                    known_groups.setdefault(str(value), []).append((index, sample))
-            if len(known_groups) < 2:
-                continue
-            before = Counter({key: len(items) for key, items in known_groups.items()})
-            cap = (sum(before.values()) + len(known_groups) - 1) // len(known_groups)
-            kept = list(unknown)
-            after = {}
-            def _quality_rank(pair):
-                raw_score = pair[1].get("quality_score", (pair[1].get("metadata", {}) or {}).get("quality_score", 0.0))
-                try:
-                    return -float(raw_score or 0.0)
-                except (TypeError, ValueError):
-                    return 0.0
+                    groups[str(value)] += 1
+            return groups, unknown_count
 
-            for key in sorted(known_groups):
-                ranked = sorted(known_groups[key], key=_quality_rank)
-                selected = ranked[:cap]
-                after[key] = len(selected)
-                kept.extend(selected)
-            balanced = [sample for _, sample in sorted(kept, key=lambda pair: pair[0])]
+        def _quality_rank(sample: dict) -> float:
+            raw_score = sample.get("quality_score", (sample.get("metadata", {}) or {}).get("quality_score", 0.0))
+            try:
+                return -float(raw_score or 0.0)
+            except (TypeError, ValueError):
+                return 0.0
+
+        for dimension, value_for in active_dimensions:
+            counts, _ = _group_counts(balanced, value_for)
+            initial_counts[dimension] = counts
+
+        # Balancing one marginal can disturb a previous one (for example,
+        # trimming languages may make topic counts uneven again). Repeat the
+        # soft caps until a full pass removes no more records.
+        passes = 0
+        while balanced and active_dimensions:
+            count_before_pass = len(balanced)
+            for _, value_for in active_dimensions:
+                known_groups: dict[str, list[tuple[int, dict]]] = {}
+                unknown: list[tuple[int, dict]] = []
+                for index, sample in enumerate(balanced):
+                    value = value_for(sample)
+                    if value is None or str(value).strip().lower() in {"", "unknown", "unclassified"}:
+                        unknown.append((index, sample))
+                    else:
+                        known_groups.setdefault(str(value), []).append((index, sample))
+                if len(known_groups) < 2:
+                    continue
+
+                counts = Counter({key: len(items) for key, items in known_groups.items()})
+                cap = (sum(counts.values()) + len(known_groups) - 1) // len(known_groups)
+                kept = list(unknown)
+                for key in sorted(known_groups):
+                    selected = sorted(known_groups[key], key=lambda pair: _quality_rank(pair[1]))[:cap]
+                    kept.extend(selected)
+                balanced = [sample for _, sample in sorted(kept, key=lambda pair: pair[0])]
+            passes += 1
+            if len(balanced) == count_before_pass:
+                break
+
+        for dimension, value_for in active_dimensions:
+            before = initial_counts[dimension]
+            after, unknown_count = _group_counts(balanced, value_for)
             report[dimension] = {
                 "before": dict(before),
-                "after": after,
-                "unclassified_retained": len(unknown),
+                "after": dict(after),
+                "unclassified_retained": unknown_count,
                 "dropped": sum(before.values()) - sum(after.values()),
             }
+        report["balancing_passes"] = passes
         report["samples_before"] = len(samples)
         report["samples_after"] = len(balanced)
         report["samples_removed"] = len(samples) - len(balanced)
