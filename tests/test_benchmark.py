@@ -265,3 +265,27 @@ class TestQualityBenchmarkEdgeCases:
         report = benchmark.generate_report(results)
         assert "completed" in report  # Default status
         assert "10" in report
+
+    @pytest.mark.asyncio
+    async def test_compare_datasets(self, benchmark):
+        """Test comparing a raw dataset with a refined dataset."""
+        with tempfile.NamedTemporaryFile(mode='w', suffix='.jsonl', delete=False) as f_raw:
+            f_raw.write(json.dumps({"instruction": "repeat", "response": "dup"}) + "\n")
+            f_raw.write(json.dumps({"instruction": "repeat", "response": "dup"}) + "\n")
+            raw_path = f_raw.name
+
+        with tempfile.NamedTemporaryFile(mode='w', suffix='.jsonl', delete=False) as f_ref:
+            f_ref.write(json.dumps({"instruction": "unique task A", "response": "detailed output A"}) + "\n")
+            f_ref.write(json.dumps({"instruction": "unique task B", "response": "detailed output B"}) + "\n")
+            ref_path = f_ref.name
+
+        try:
+            comparison = await benchmark.compare_datasets(raw_path, ref_path)
+            assert "raw_dataset" in comparison
+            assert "refined_dataset" in comparison
+            assert "improvements" in comparison
+            assert comparison["improvements"]["uniqueness_improvement_pct"] > 0
+            assert "verdict" in comparison
+        finally:
+            Path(raw_path).unlink(missing_ok=True)
+            Path(ref_path).unlink(missing_ok=True)
