@@ -2103,8 +2103,8 @@ async def export_dataset(dataset_id: str, request: dict = None):
     if not dataset:
         raise HTTPException(status_code=404, detail=f"Dataset {dataset_id} not found")
 
-    export_format = (request or {}).get("format", "jsonl")
-    if export_format not in {"json", "jsonl", "csv", "parquet", "zip"}:
+    export_format = (request or {}).get("format", "jsonl").lower()
+    if export_format not in {"json", "jsonl", "csv", "parquet", "zip", "sql", "qdrant"}:
         raise HTTPException(status_code=400, detail=f"Unsupported export format: {export_format}")
     if export_format == "json":
         page_size = 1000
@@ -2160,14 +2160,33 @@ async def export_dataset(dataset_id: str, request: dict = None):
     else:
         # Try the exact exported file
         candidate = output_dir / f"{output_dir.name}.{export_format}"
+        if export_format == "qdrant":
+            q_candidate = output_dir / f"{output_dir.name}_qdrant.json"
+            if q_candidate.exists():
+                candidate = q_candidate
+
         if candidate.exists():
             file_path = candidate
         elif (
             output_path
             and Path(output_path).exists()
-            and Path(output_path).suffix.lstrip(".").casefold() == export_format
+            and (
+                Path(output_path).suffix.lstrip(".").casefold() == export_format
+                or (export_format == "qdrant" and "_qdrant" in Path(output_path).name)
+            )
         ):
             file_path = Path(output_path)
+        elif export_format in {"sql", "qdrant"}:
+            samples = await db.get_samples(dataset["id"], limit=50000)
+            if not samples:
+                raise HTTPException(status_code=404, detail="No samples found for this dataset")
+            from pipeline.export import ExportPipeline, ExportConfig
+            exp = ExportPipeline(ExportConfig(format=export_format), output_dir=output_dir.parent)
+            output_dir.mkdir(parents=True, exist_ok=True)
+            if export_format == "sql":
+                file_path = await exp._export_sql(samples, output_dir.name, output_dir)
+            else:
+                file_path = await exp._export_qdrant(samples, output_dir.name, output_dir)
         else:
             raise HTTPException(
                 status_code=404,
@@ -2178,9 +2197,15 @@ async def export_dataset(dataset_id: str, request: dict = None):
             "jsonl": "application/x-ndjson",
             "csv": "text/csv",
             "parquet": "application/octet-stream",
+            "sql": "application/sql",
+            "qdrant": "application/json",
         }
         media_type = media_types.get(export_format, "application/octet-stream")
-        download_name = f"{dataset.get('name', 'dataset')}.{export_format}"
+        download_name = (
+            f"{dataset.get('name', 'dataset')}.{export_format}"
+            if export_format != "qdrant"
+            else f"{dataset.get('name', 'dataset')}_qdrant.json"
+        )
 
     if not file_path.exists():
         raise HTTPException(status_code=404, detail="Exported file not found on disk")
