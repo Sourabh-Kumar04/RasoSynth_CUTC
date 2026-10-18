@@ -62,7 +62,8 @@ async def run_harness():
     print("   RASODATASET PIPELINE DETERMINISTIC HARNESS     ")
     print("==================================================\n")
     
-    settings = Settings()
+    import os
+    os.environ.setdefault("JWT_SECRET", "K7m9pQ2vX5zL8wR1tY4uN6bC3jF0gH2sD5vA8mK1pQ9xZ4")
     router = DummyRouter()
     pipeline = FilteringPipeline(router, {})
     
@@ -74,6 +75,20 @@ async def run_harness():
     print(f"{'Scenario Name':<30} | {'Score':<6} | {'Passed?':<7} | {'Reason / Issues'}")
     print("-" * 80)
     
+    from core.intent import UserIntent
+    intent = UserIntent(
+        raw_input="Generate distributed systems dataset",
+        primary_task="dataset_generation",
+        domain="distributed systems",
+        modality="text",
+        anti_domains=[],
+        key_entities=[],
+        specialized_queries=["distributed systems consensus"],
+        constraints=[],
+        output_format="jsonl",
+        confidence=0.9,
+    )
+
     for name, content_text in SCENARIOS.items():
         total += 1
         
@@ -83,7 +98,7 @@ async def run_harness():
             url = f"https://mock-source.org/{name.replace(' ', '_').lower()}"
             metadata = {}
             
-        result = await pipeline.filter(Content(), target_domain="distributed systems", return_all=True)
+        result = await pipeline.filter(Content(), intent=intent, return_all=True)
         
         score_str = f"{result.quality_score:.2f}" if result else "N/A"
         passed_str = "YES" if result and result.passed else "NO"
@@ -112,7 +127,8 @@ async def run_harness():
     
     # Assertions
     assert passed > 0, "No scenarios passed the filters. Investigation needed."
-    assert "garbled_text" not in [r.issues for r in [await pipeline.filter(type('C', (), {"content": SCENARIOS["Technical Markdown README"]})(), return_all=True)]][0], "Markdown links falsely triggered garbled text"
+    check_res = await pipeline.filter(type('C', (), {"content": SCENARIOS["Technical Markdown README"]})(), intent=intent, return_all=True)
+    assert "garbled_text" not in (check_res.issues if check_res else []), "Markdown links falsely triggered garbled text"
     print("\n✔ DETERMINISTIC HEURISTICS ASSERTIONS PASSED SUCCESSFULLY!")
 
 if __name__ == "__main__":
