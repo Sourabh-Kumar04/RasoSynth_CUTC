@@ -726,6 +726,89 @@ class APIClient {
       });
     }
 
+    if (endpoint.startsWith('/failover/history')) {
+      return parse({
+        migrations: [
+          {
+            migration_id: 'mig-101',
+            job_id: 'job-medical-sft',
+            from_provider: 'anthropic',
+            to_provider: 'google_gemini',
+            failure_type: 'rate_limit',
+            checkpoint_id: 'ckpt-101',
+            success: true,
+            timestamp: new Date(Date.now() - 3600000).toISOString(),
+          },
+          {
+            migration_id: 'mig-102',
+            job_id: 'job-python-async',
+            from_provider: 'openai',
+            to_provider: 'groq',
+            failure_type: 'latency_spike',
+            checkpoint_id: 'ckpt-102',
+            success: true,
+            timestamp: new Date(Date.now() - 7200000).toISOString(),
+          }
+        ],
+        total_count: 2,
+        failure_stats: {
+          openai: { latency_spike: 1 },
+          anthropic: { rate_limit: 1 }
+        }
+      });
+    }
+
+    if (endpoint.startsWith('/failover/stats')) {
+      return parse({
+        failure_stats: {
+          openai: { latency_spike: 1 },
+          anthropic: { rate_limit: 1 }
+        },
+        total_migrations: 2,
+        circuit_breakers: {
+          openai: { state: 'closed', failures: 0 },
+          anthropic: { state: 'closed', failures: 0 },
+          google_gemini: { state: 'closed', failures: 0 },
+          groq: { state: 'closed', failures: 0 }
+        }
+      });
+    }
+
+    if (endpoint.startsWith('/agents/stats')) {
+      return parse({
+        total_registered: 13,
+        active_instances: 5,
+        by_type: {
+          domain_analyzer: 1,
+          source_finder: 1,
+          quality_judge: 1,
+          difficulty_tierer: 1,
+          dataset_synthesizer: 1
+        }
+      });
+    }
+
+    if (endpoint.startsWith('/agents')) {
+      return parse({
+        agents: [
+          { type: 'domain_analyzer', name: 'Domain Analyzer', description: 'Analyzes target domain and constraints', capabilities: ['domain_classification', 'constraint_validation'], version: '1.0.0', author: 'RasoSynth Core' },
+          { type: 'source_finder', name: 'Source Discovery Agent', description: 'Finds verified sources from AI Kosh, arXiv, HF', capabilities: ['aikosh_search', 'repo_mining'], version: '1.0.0', author: 'RasoSynth Core' },
+          { type: 'content_extractor', name: 'Content Extractor', description: 'Extracts and parses code/text with AST verification', capabilities: ['ast_parsing', 'pdf_ocr'], version: '1.0.0', author: 'RasoSynth Core' },
+          { type: 'quality_judge', name: 'LLM Quality Judge', description: 'Assesses quality score, hallucination, and toxicity', capabilities: ['quality_scoring', 'hallucination_detection'], version: '1.0.0', author: 'RasoSynth Core' },
+          { type: 'prompt_mutator', name: 'Prompt Mutator', description: 'Diversifies prompts via evolutionary mutations', capabilities: ['constraint_deepening', 'instruction_evolution'], version: '1.0.0', author: 'RasoSynth Core' },
+          { type: 'dataset_synthesizer', name: 'Dataset Synthesizer', description: 'Generates grounded SFT/RAG instruction-response pairs', capabilities: ['grounded_synthesis', 'format_validation'], version: '1.0.0', author: 'RasoSynth Core' },
+          { type: 'cross_lingual_translator', name: 'Cross-Lingual Translator', description: 'Translates and aligns Indic datasets via Bhashini', capabilities: ['indic_translation', 'script_normalization'], version: '1.0.0', author: 'RasoSynth Core' },
+          { type: 'difficulty_tierer', name: 'Difficulty Tierer', description: 'Classifies examples into complexity tiers (1-5)', capabilities: ['complexity_assessment', 'taxonomy_mapping'], version: '1.0.0', author: 'RasoSynth Core' },
+          { type: 'dedup_sentinel', name: 'Dedup Sentinel', description: 'De-duplicates at scale via MinHash LSH', capabilities: ['minhash_dedup', 'semantic_dedup'], version: '1.0.0', author: 'RasoSynth Core' },
+          { type: 'hitl_sampler', name: 'HITL Stratified Sampler', description: 'Samples edge cases and outliers for human review', capabilities: ['stratified_sampling', 'outlier_detection'], version: '1.0.0', author: 'RasoSynth Core' },
+          { type: 'checkpoint_custodian', name: 'Checkpoint Custodian', description: 'Manages atomic checkpoints and rollback states', capabilities: ['atomic_save', 'state_recovery'], version: '1.0.0', author: 'RasoSynth Core' },
+          { type: 'failover_dispatcher', name: 'Failover Dispatcher', description: 'Handles automatic provider migration and failover', capabilities: ['health_monitoring', 'circuit_breaking'], version: '1.0.0', author: 'RasoSynth Core' },
+          { type: 'technique_integrator', name: 'Technique Integrator', description: 'Integrates active heuristics from the research loop', capabilities: ['heuristic_tuning', 'loop_optimization'], version: '1.0.0', author: 'RasoSynth Core' }
+        ],
+        total: 13
+      });
+    }
+
     if (endpoint.startsWith('/providers/switch') || endpoint.startsWith('/providers/failover')) {
       return parse({ success: true, message: 'Simulated action successful' });
     }
@@ -1360,6 +1443,15 @@ dataset_samples_generated_total 4520`
 
   async getHITLJobStatus(jobId: string) {
     return this.request<any>(`/api/review/jobs/${jobId}/status`)
+  }
+
+  // ── Multi-Agent Society API ────────────────────────────────────────────────
+  async getAgents(): Promise<{ agents: any[]; total: number }> {
+    return this.request<{ agents: any[]; total: number }>('/agents')
+  }
+
+  async getAgentStats(): Promise<{ total_registered: number; active_instances: number; by_type: Record<string, number> }> {
+    return this.request<any>('/agents/stats')
   }
 }
 

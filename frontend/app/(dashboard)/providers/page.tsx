@@ -4,6 +4,7 @@ import { useState, useEffect, useCallback } from 'react'
 import {
   Server, Activity, Zap, DollarSign, Clock, AlertTriangle,
   CheckCircle2, RefreshCw, Loader2, Play, XCircle, ShieldAlert,
+  ArrowRight, ArrowRightLeft, Shield, Sliders, History,
 } from 'lucide-react'
 import { clsx } from 'clsx'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
@@ -16,7 +17,7 @@ import {
 import {
   BarChart, Bar, ResponsiveContainer, Tooltip, CartesianGrid, XAxis, YAxis, Cell,
 } from 'recharts'
-import { api } from '@/lib/api/client'
+import { api, MigrationRecord, FailoverStats } from '@/lib/api/client'
 
 interface Provider {
   name: string
@@ -51,6 +52,15 @@ function statusVariant(s: string) {
 export default function ProvidersPage() {
   const [providers, setProviders] = useState<Provider[]>([])
   const [circuitBreakers, setCircuitBreakers] = useState<Record<string, string>>({})
+  const [failoverStats, setFailoverStats] = useState<FailoverStats | null>(null)
+  const [failoverHistory, setFailoverHistory] = useState<MigrationRecord[]>([])
+  const [switchJobId, setSwitchJobId] = useState('')
+  const [switchTargetProvider, setSwitchTargetProvider] = useState('google_gemini')
+  const [switchCheckpoint, setSwitchCheckpoint] = useState(true)
+  const [switching, setSwitching] = useState(false)
+  const [failoverJobId, setFailoverJobId] = useState('')
+  const [failoverReason, setFailoverReason] = useState('Manual latency spike mitigation')
+  const [triggeringFailover, setTriggeringFailover] = useState(false)
   const [loading, setLoading] = useState(true)
   const [testing, setTesting] = useState<string | null>(null)
   const [filter, setFilter] = useState('all')
@@ -58,12 +68,16 @@ export default function ProvidersPage() {
 
   const fetchAll = useCallback(async () => {
     try {
-      const [prov, cb] = await Promise.all([
+      const [prov, cb, foStats, foHist] = await Promise.all([
         api.getProviders().catch(() => [] as Provider[]),
         api.getCircuitBreakers().catch(() => ({} as Record<string, string>)),
+        api.getFailoverStats().catch(() => null),
+        api.getFailoverHistory().catch(() => ({ migrations: [], total_count: 0, failure_stats: {} })),
       ])
       setProviders(Array.isArray(prov) ? prov : [])
       setCircuitBreakers(cb || {})
+      setFailoverStats(foStats)
+      setFailoverHistory(foHist?.migrations || [])
     } finally {
       setLoading(false)
     }
@@ -74,6 +88,57 @@ export default function ProvidersPage() {
     const id = setInterval(fetchAll, 30000)
     return () => clearInterval(id)
   }, [fetchAll])
+
+  const handleSwitchProvider = async (e: React.FormEvent) => {
+    e.preventDefault()
+    if (!switchJobId.trim()) {
+      push('Please enter a Job ID to switch provider', false)
+      return
+    }
+    setSwitching(true)
+    try {
+      const res = await api.switchProvider({
+        job_id: switchJobId.trim(),
+        new_provider: switchTargetProvider,
+        create_checkpoint: switchCheckpoint,
+      })
+      if (res.success) {
+        push(res.message || `Switched to ${switchTargetProvider}`, true)
+        fetchAll()
+      } else {
+        push(res.message || 'Switch failed', false)
+      }
+    } catch (err: any) {
+      push(err?.message || 'Switch provider request failed', false)
+    } finally {
+      setSwitching(false)
+    }
+  }
+
+  const handleTriggerFailover = async (e: React.FormEvent) => {
+    e.preventDefault()
+    if (!failoverJobId.trim()) {
+      push('Please enter a Job ID for failover', false)
+      return
+    }
+    setTriggeringFailover(true)
+    try {
+      const res = await api.triggerFailover({
+        job_id: failoverJobId.trim(),
+        reason: failoverReason.trim(),
+      })
+      if (res.success) {
+        push(res.message || `Failover completed to ${res.to_provider}`, true)
+        fetchAll()
+      } else {
+        push(res.message || 'Failover failed', false)
+      }
+    } catch (err: any) {
+      push(err?.message || 'Failover request failed', false)
+    } finally {
+      setTriggeringFailover(false)
+    }
+  }
 
   const handleTest = async (name: string) => {
     setTesting(name)
@@ -174,6 +239,7 @@ export default function ProvidersPage() {
           <TabsTrigger value="providers" className="rounded-full">Providers</TabsTrigger>
           <TabsTrigger value="latency" className="rounded-full">Latency Profile</TabsTrigger>
           <TabsTrigger value="circuit-breakers" className="rounded-full">Circuit Breakers</TabsTrigger>
+          <TabsTrigger value="failover" className="rounded-full">Failover &amp; Hot-Switch</TabsTrigger>
         </TabsList>
 
         {/* Providers tab */}
@@ -322,6 +388,201 @@ export default function ProvidersPage() {
                       </span>
                     </div>
                   ))}
+                </div>
+              )}
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        {/* Failover & Hot-Switch tab */}
+        <TabsContent value="failover" className="mt-4 space-y-6">
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+
+            {/* Manual Provider Hot-Switcher */}
+            <Card className="bg-[#12121a] border-[#272738] rounded-2xl card-shadow">
+              <CardHeader className="pb-3 border-b border-[#272738]">
+                <div className="flex items-center gap-2">
+                  <ArrowRightLeft className="h-4 w-4 text-[#6366f1]" />
+                  <CardTitle className="text-sm font-bold text-white">Manual Provider Hot-Switcher (ADR-001)</CardTitle>
+                </div>
+                <p className="text-xs text-[#94a3b8] mt-1 font-mono">
+                  Migrate an in-flight synthesis job to a target model provider with an atomic state checkpoint.
+                </p>
+              </CardHeader>
+              <CardContent className="p-4">
+                <form onSubmit={handleSwitchProvider} className="space-y-4">
+                  <div>
+                    <label className="text-[11px] font-mono text-[#94a3b8] block mb-1">In-Flight Job ID</label>
+                    <input
+                      type="text"
+                      placeholder="e.g. medical-sft-v1-verified or UUID"
+                      value={switchJobId}
+                      onChange={e => setSwitchJobId(e.target.value)}
+                      className="w-full h-9 px-3 rounded-lg bg-[#0a0a0f] border border-[#272738] text-xs font-mono text-white placeholder-[#64748b] focus:outline-none focus:border-[#6366f1]"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="text-[11px] font-mono text-[#94a3b8] block mb-1">Target Provider</label>
+                    <Select value={switchTargetProvider} onValueChange={setSwitchTargetProvider}>
+                      <SelectTrigger className="w-full h-9 text-xs rounded-lg border-[#272738] bg-[#0a0a0f] text-white">
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="google_gemini">Google Gemini (Gemini 2.5 Flash / Pro)</SelectItem>
+                        <SelectItem value="openai">OpenAI (GPT-4o / GPT-4o-mini)</SelectItem>
+                        <SelectItem value="anthropic">Anthropic (Claude 3.5 Sonnet)</SelectItem>
+                        <SelectItem value="groq">Groq (Llama-3.3-70B Ultra-Fast)</SelectItem>
+                        <SelectItem value="deepseek">DeepSeek (V3 / R1 Reasoning)</SelectItem>
+                        <SelectItem value="nvidia_nim">NVIDIA NIM (Llama-3-70B)</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+
+                  <div className="flex items-center gap-2 text-xs font-mono text-[#94a3b8]">
+                    <input
+                      type="checkbox"
+                      id="ckpt-switch"
+                      checked={switchCheckpoint}
+                      onChange={e => setSwitchCheckpoint(e.target.checked)}
+                      className="rounded border-[#272738] text-[#6366f1] focus:ring-0"
+                    />
+                    <label htmlFor="ckpt-switch" className="cursor-pointer">
+                      Persist pipeline state checkpoint before switching
+                    </label>
+                  </div>
+
+                  <Button
+                    type="submit"
+                    disabled={switching}
+                    className="w-full rounded-xl bg-[#6366f1] hover:bg-[#4f46e5] text-white text-xs font-bold font-mono h-9"
+                  >
+                    {switching ? <Loader2 className="h-3.5 w-3.5 animate-spin mr-1.5" /> : <ArrowRightLeft className="h-3.5 w-3.5 mr-1.5" />}
+                    Hot-Switch Active Provider
+                  </Button>
+                </form>
+              </CardContent>
+            </Card>
+
+            {/* Trigger Manual Failover */}
+            <Card className="bg-[#12121a] border-[#272738] rounded-2xl card-shadow">
+              <CardHeader className="pb-3 border-b border-[#272738]">
+                <div className="flex items-center gap-2">
+                  <ShieldAlert className="h-4 w-4 text-amber-400" />
+                  <CardTitle className="text-sm font-bold text-white">Trigger Automatic Failover Migration</CardTitle>
+                </div>
+                <p className="text-xs text-[#94a3b8] mt-1 font-mono">
+                  Simulate or trigger AutomaticFailoverEngine to cascade to the next healthiest provider.
+                </p>
+              </CardHeader>
+              <CardContent className="p-4">
+                <form onSubmit={handleTriggerFailover} className="space-y-4">
+                  <div>
+                    <label className="text-[11px] font-mono text-[#94a3b8] block mb-1">Target Job ID</label>
+                    <input
+                      type="text"
+                      placeholder="e.g. medical-sft-v1-verified"
+                      value={failoverJobId}
+                      onChange={e => setFailoverJobId(e.target.value)}
+                      className="w-full h-9 px-3 rounded-lg bg-[#0a0a0f] border border-[#272738] text-xs font-mono text-white placeholder-[#64748b] focus:outline-none focus:border-amber-500"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="text-[11px] font-mono text-[#94a3b8] block mb-1">Failure Reason / Simulated Trigger</label>
+                    <input
+                      type="text"
+                      value={failoverReason}
+                      onChange={e => setFailoverReason(e.target.value)}
+                      className="w-full h-9 px-3 rounded-lg bg-[#0a0a0f] border border-[#272738] text-xs font-mono text-white focus:outline-none focus:border-amber-500"
+                    />
+                  </div>
+
+                  <div className="p-3 rounded-xl bg-[#0a0a0f] border border-[#272738] text-[11px] font-mono text-[#94a3b8] space-y-1">
+                    <p className="text-white font-bold">Failover Protocol Rules:</p>
+                    <p>• Circuit breaker updates automatically on repeated error triggers</p>
+                    <p>• Intermediate constructed samples are saved to checkpoint storage</p>
+                    <p>• Priority cascade selects next available healthy provider</p>
+                  </div>
+
+                  <Button
+                    type="submit"
+                    disabled={triggeringFailover}
+                    variant="outline"
+                    className="w-full rounded-xl border-amber-500/40 text-amber-400 hover:bg-amber-950/20 text-xs font-bold font-mono h-9"
+                  >
+                    {triggeringFailover ? <Loader2 className="h-3.5 w-3.5 animate-spin mr-1.5" /> : <ShieldAlert className="h-3.5 w-3.5 mr-1.5" />}
+                    Simulate / Trigger Failover
+                  </Button>
+                </form>
+              </CardContent>
+            </Card>
+
+          </div>
+
+          {/* Failover History Table */}
+          <Card className="bg-[#12121a] border-[#272738] rounded-2xl card-shadow">
+            <CardHeader className="pb-3 border-b border-[#272738] flex flex-row items-center justify-between">
+              <div>
+                <CardTitle className="text-sm font-bold text-white flex items-center gap-2">
+                  <History className="h-4 w-4 text-[#6366f1]" />
+                  Provider Migration &amp; Failover History
+                </CardTitle>
+                <p className="text-xs text-[#94a3b8] mt-0.5 font-mono">
+                  Recorded failovers and hot-switches with preserved checkpoint references
+                </p>
+              </div>
+              <Badge variant="outline" className="font-mono text-xs border-[#272738] text-[#10b981]">
+                {failoverHistory.length} Recorded Migrations
+              </Badge>
+            </CardHeader>
+            <CardContent className="p-4">
+              {failoverHistory.length === 0 ? (
+                <div className="flex flex-col items-center justify-center py-10 text-[#94a3b8] font-mono gap-2 bg-[#0a0a0f] rounded-xl border border-[#272738]">
+                  <CheckCircle2 className="h-7 w-7 text-emerald-400" />
+                  <p className="text-xs text-white">Zero failover migrations recorded — all providers operating stably.</p>
+                </div>
+              ) : (
+                <div className="overflow-x-auto">
+                  <table className="w-full text-left text-xs font-mono">
+                    <thead>
+                      <tr className="border-b border-[#272738] text-[#94a3b8] text-[10px] uppercase">
+                        <th className="pb-2">Migration ID</th>
+                        <th className="pb-2">Job ID</th>
+                        <th className="pb-2">Transition</th>
+                        <th className="pb-2">Reason / Failure</th>
+                        <th className="pb-2">Checkpoint ID</th>
+                        <th className="pb-2">Status</th>
+                        <th className="pb-2 text-right">Timestamp</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-[#272738]">
+                      {failoverHistory.map(m => (
+                        <tr key={m.migration_id} className="hover:bg-[#161622]/50">
+                          <td className="py-2.5 text-white font-bold">{m.migration_id.slice(0, 8)}...</td>
+                          <td className="py-2.5 text-[#94a3b8]">{m.job_id}</td>
+                          <td className="py-2.5">
+                            <span className="text-rose-400 font-semibold">{m.from_provider}</span>
+                            <span className="text-[#94a3b8] mx-1.5">→</span>
+                            <span className="text-emerald-400 font-semibold">{m.to_provider}</span>
+                          </td>
+                          <td className="py-2.5 text-[#94a3b8]">{m.failure_type || 'manual_switch'}</td>
+                          <td className="py-2.5 text-[#6366f1]">{m.checkpoint_id || 'ckpt-auto'}</td>
+                          <td className="py-2.5">
+                            <span className={clsx(
+                              'text-[10px] px-2 py-0.5 rounded-full font-bold uppercase border',
+                              m.success ? 'bg-emerald-950/40 text-emerald-400 border-emerald-500/30' : 'bg-rose-950/40 text-rose-400 border-rose-500/30'
+                            )}>
+                              {m.success ? 'Success' : 'Failed'}
+                            </span>
+                          </td>
+                          <td className="py-2.5 text-right text-[#94a3b8]">
+                            {new Date(m.timestamp).toLocaleTimeString()}
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
                 </div>
               )}
             </CardContent>

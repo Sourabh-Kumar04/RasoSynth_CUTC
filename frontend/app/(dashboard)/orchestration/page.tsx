@@ -20,6 +20,15 @@ import {
   RotateCcw,
   Layers,
   Terminal,
+  Users,
+  Bot,
+  Cpu,
+  Sparkles,
+  BookOpen,
+  Search,
+  ShieldCheck,
+  GitMerge,
+  FileCode2,
 } from 'lucide-react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { clsx } from 'clsx'
@@ -44,9 +53,14 @@ const PIPELINE_STAGES = [
 
 export default function OrchestrationPage() {
   const [jobs, setJobs] = useState<any[]>([])
+  const [agents, setAgents] = useState<any[]>([])
+  const [agentStats, setAgentStats] = useState<any | null>(null)
+  const [researchStatus, setResearchStatus] = useState<any | null>(null)
+  const [triggeringResearch, setTriggeringResearch] = useState(false)
+  const [researchToast, setResearchToast] = useState<string | null>(null)
   const [loading, setLoading] = useState(true)
   const [selectedJob, setSelectedJob] = useState<any | null>(null)
-  const [activeTab, setActiveTab] = useState<'dag' | 'jobs'>('dag')
+  const [activeTab, setActiveTab] = useState<'dag' | 'agents' | 'research'>('dag')
 
   const fetchJobs = useCallback(async () => {
     try {
@@ -63,11 +77,42 @@ export default function OrchestrationPage() {
     }
   }, [selectedJob])
 
-  useEffect(() => {
+  const fetchAll = useCallback(async () => {
     fetchJobs()
-    const interval = setInterval(fetchJobs, 4000)
-    return () => clearInterval(interval)
+    try {
+      const [agentsRes, statsRes, resStatus] = await Promise.all([
+        api.getAgents().catch(() => ({ agents: [], total: 0 })),
+        api.getAgentStats().catch(() => null),
+        api.getResearchStatus().catch(() => null),
+      ])
+      setAgents(agentsRes?.agents || [])
+      setAgentStats(statsRes)
+      setResearchStatus(resStatus)
+    } catch {
+      console.debug('Failed to load agents or research data')
+    }
   }, [fetchJobs])
+
+  useEffect(() => {
+    fetchAll()
+    const interval = setInterval(fetchAll, 6000)
+    return () => clearInterval(interval)
+  }, [fetchAll])
+
+  const handleTriggerResearch = async () => {
+    setTriggeringResearch(true)
+    try {
+      const res = await api.triggerResearch({ query: 'autonomous sft dataset synthesis' })
+      setResearchToast(res?.message || 'Research loop activated')
+      fetchAll()
+      setTimeout(() => setResearchToast(null), 4000)
+    } catch (err: any) {
+      setResearchToast('Research loop trigger failed')
+      setTimeout(() => setResearchToast(null), 4000)
+    } finally {
+      setTriggeringResearch(false)
+    }
+  }
 
   const runningJobs = jobs.filter((j) => j.status === 'running')
   const completedJobs = jobs.filter((j) => j.status === 'completed')
@@ -113,182 +158,430 @@ export default function OrchestrationPage() {
         </div>
       </div>
 
-      {/* Main DAG Visualizer Card */}
-      <div className="p-5 rounded-lg bg-[#12121a] border border-[#272738] space-y-4 relative overflow-hidden">
-        <div className="flex flex-wrap items-center justify-between pb-3 border-b border-[#1c1c28] gap-2">
-          <div className="flex items-center space-x-2">
-            <Workflow className="w-4 h-4 text-[#818cf8]" />
-            <h3 className="text-xs font-bold font-mono uppercase tracking-wider text-white">
-              Active Pipeline Execution DAG
-            </h3>
+      {/* Research Loop Toast */}
+      {researchToast && (
+        <div className="fixed bottom-4 right-4 z-50 flex items-center gap-2 px-4 py-2.5 rounded-full border border-emerald-500/30 bg-emerald-950/80 text-emerald-400 text-xs font-mono font-semibold shadow-xl animate-fade-in">
+          <CheckCircle2 className="w-4 h-4 shrink-0" />
+          {researchToast}
+        </div>
+      )}
+
+      {/* Tabs Navigation */}
+      <Tabs value={activeTab} onValueChange={(v) => setActiveTab(v as any)} className="w-full space-y-6">
+        <TabsList className="bg-[#161622] rounded-full border border-[#3b3b52] p-1">
+          <TabsTrigger value="dag" className="rounded-full text-xs font-mono flex items-center gap-1.5">
+            <Workflow className="w-3.5 h-3.5 text-[#818cf8]" />
+            Pipeline DAG Execution
+          </TabsTrigger>
+          <TabsTrigger value="agents" className="rounded-full text-xs font-mono flex items-center gap-1.5">
+            <Users className="w-3.5 h-3.5 text-[#10b981]" />
+            Multi-Agent Society ({agents.length || 13})
+          </TabsTrigger>
+          <TabsTrigger value="research" className="rounded-full text-xs font-mono flex items-center gap-1.5">
+            <FlaskConical className="w-3.5 h-3.5 text-amber-400" />
+            Autonomous Research Loop
+          </TabsTrigger>
+        </TabsList>
+
+        {/* Tab 1: Pipeline DAG View */}
+        <TabsContent value="dag" className="space-y-6 mt-0">
+          {/* Main DAG Visualizer Card */}
+          <div className="p-5 rounded-lg bg-[#12121a] border border-[#272738] space-y-4 relative overflow-hidden">
+            <div className="flex flex-wrap items-center justify-between pb-3 border-b border-[#1c1c28] gap-2">
+              <div className="flex items-center space-x-2">
+                <Workflow className="w-4 h-4 text-[#818cf8]" />
+                <h3 className="text-xs font-bold font-mono uppercase tracking-wider text-white">
+                  Active Pipeline Execution DAG
+                </h3>
+                {selectedJob && (
+                  <span className="font-mono text-xs text-[#94a3b8]">
+                    [Job: <strong className="text-white">{selectedJob.id.slice(0, 8)}...</strong>]
+                  </span>
+                )}
+              </div>
+
+              <div className="flex items-center space-x-3 text-[11px] font-mono">
+                <span className="text-[#94a3b8]">DAG LATENCY: <strong className="text-white">38ms</strong></span>
+                <span className="text-[#94a3b8]">CHECKPOINT: <strong className="text-[#10b981]">ckpt-latest</strong></span>
+                <span className="text-[#10b981] flex items-center gap-1">
+                  <span className="w-1.5 h-1.5 rounded-full bg-[#10b981] animate-pulse" />
+                  SYNAPSE ACTIVE
+                </span>
+              </div>
+            </div>
+
+            {/* Horizontal Visual Graph Viewport */}
+            <div className="overflow-x-auto py-4">
+              <div className="min-w-[960px] flex items-center justify-between relative px-4">
+                {/* Connecting Track Line */}
+                <div className="absolute left-10 right-10 top-1/2 -translate-y-1/2 h-[2px] bg-[#1c1c28] -z-0" />
+
+                {PIPELINE_STAGES.map((stage, i, arr) => {
+                  const currentStage = selectedJob?.current_stage || 'constructing_dataset'
+                  const isCurrent = currentStage.includes(stage.id.split('_')[0])
+                  const isPast = selectedJob?.progress ? selectedJob.progress * arr.length > i : i < 3
+
+                  return (
+                    <div key={stage.id} className="flex items-center relative z-10">
+                      <motion.div
+                        whileHover={{ scale: 1.03 }}
+                        className={clsx(
+                          'w-36 p-3 rounded-lg border transition-all',
+                          isCurrent
+                            ? 'bg-[#161622] border-[#6366f1] shadow-sm glow-indigo'
+                            : isPast
+                            ? 'bg-[#12121a] border-[#10b981]/50'
+                            : 'bg-[#0e0e13] border-[#272738] opacity-60'
+                        )}
+                      >
+                        <div className="flex items-center justify-between mb-1.5">
+                          <span className="text-[10px] font-mono font-bold text-[#818cf8]">
+                            NODE 0{i + 1}
+                          </span>
+                          <span className={clsx(
+                            'w-2 h-2 rounded-full',
+                            isCurrent ? 'bg-[#10b981] animate-pulse' : isPast ? 'bg-[#10b981]' : 'bg-[#94a3b8]'
+                          )} />
+                        </div>
+                        <h4 className="text-xs font-semibold text-white truncate">{stage.label}</h4>
+                        <p className="text-[10px] font-mono text-[#94a3b8] truncate">{stage.desc}</p>
+                        <div className="mt-2 pt-1 border-t border-[#1c1c28] flex justify-between text-[10px] font-mono">
+                          <span className="text-[#94a3b8]">Status:</span>
+                          <span className={isCurrent ? 'text-[#10b981] font-semibold' : 'text-[#94a3b8]'}>
+                            {isCurrent ? 'Executing' : isPast ? 'Passed' : 'Pending'}
+                          </span>
+                        </div>
+                      </motion.div>
+
+                      {i < arr.length - 1 && (
+                        <div className="mx-2 text-[#94a3b8]">
+                          <ChevronRight className="w-4 h-4 text-[#272738]" />
+                        </div>
+                      )}
+                    </div>
+                  )
+                })}
+              </div>
+            </div>
+
+            {/* Selected Job Telemetry Bar */}
             {selectedJob && (
-              <span className="font-mono text-xs text-[#94a3b8]">
-                [Job: <strong className="text-white">{selectedJob.id.slice(0, 8)}...</strong>]
-              </span>
+              <div className="pt-3 border-t border-[#1c1c28] grid grid-cols-2 sm:grid-cols-4 gap-3 text-xs font-mono">
+                <div className="p-2 rounded bg-[#0a0a0f] border border-[#272738]">
+                  <span className="text-[#94a3b8] text-[10px] block">Current Stage</span>
+                  <span className="text-white font-bold">{selectedJob.current_stage || 'constructing_dataset'}</span>
+                </div>
+                <div className="p-2 rounded bg-[#0a0a0f] border border-[#272738]">
+                  <span className="text-[#94a3b8] text-[10px] block">Samples Generated</span>
+                  <span className="text-[#10b981] font-bold">{selectedJob.samples_generated || 0}</span>
+                </div>
+                <div className="p-2 rounded bg-[#0a0a0f] border border-[#272738]">
+                  <span className="text-[#94a3b8] text-[10px] block">Total Cost Accrued</span>
+                  <span className="text-[#818cf8] font-bold">${(selectedJob.cost_usd || 0.041).toFixed(3)}</span>
+                </div>
+                <div className="p-2 rounded bg-[#0a0a0f] border border-[#272738]">
+                  <span className="text-[#94a3b8] text-[10px] block">Pipeline Progress</span>
+                  <span className="text-white font-bold">{Math.round((selectedJob.progress || 0.7) * 100)}%</span>
+                </div>
+              </div>
             )}
           </div>
 
-          <div className="flex items-center space-x-3 text-[11px] font-mono">
-            <span className="text-[#94a3b8]">DAG LATENCY: <strong className="text-white">38ms</strong></span>
-            <span className="text-[#94a3b8]">CHECKPOINT: <strong className="text-[#10b981]">ckpt-latest</strong></span>
-            <span className="text-[#10b981] flex items-center gap-1">
-              <span className="w-1.5 h-1.5 rounded-full bg-[#10b981] animate-pulse" />
-              SYNAPSE ACTIVE
-            </span>
-          </div>
-        </div>
-
-        {/* Horizontal Visual Graph Viewport */}
-        <div className="overflow-x-auto py-4">
-          <div className="min-w-[960px] flex items-center justify-between relative px-4">
-            {/* Connecting Track Line */}
-            <div className="absolute left-10 right-10 top-1/2 -translate-y-1/2 h-[2px] bg-[#1c1c28] -z-0" />
-
-            {PIPELINE_STAGES.map((stage, i, arr) => {
-              const currentStage = selectedJob?.current_stage || 'constructing_dataset'
-              const isCurrent = currentStage.includes(stage.id.split('_')[0])
-              const isPast = selectedJob?.progress ? selectedJob.progress * arr.length > i : i < 3
-
-              return (
-                <div key={stage.id} className="flex items-center relative z-10">
-                  <motion.div
-                    whileHover={{ scale: 1.03 }}
-                    className={clsx(
-                      'w-36 p-3 rounded-lg border transition-all',
-                      isCurrent
-                        ? 'bg-[#161622] border-[#6366f1] shadow-sm glow-indigo'
-                        : isPast
-                        ? 'bg-[#12121a] border-[#10b981]/50'
-                        : 'bg-[#0e0e13] border-[#272738] opacity-60'
-                    )}
-                  >
-                    <div className="flex items-center justify-between mb-1.5">
-                      <span className="text-[10px] font-mono font-bold text-[#818cf8]">
-                        NODE 0{i + 1}
-                      </span>
-                      <span className={clsx(
-                        'w-2 h-2 rounded-full',
-                        isCurrent ? 'bg-[#10b981] animate-pulse' : isPast ? 'bg-[#10b981]' : 'bg-[#94a3b8]'
-                      )} />
-                    </div>
-                    <h4 className="text-xs font-semibold text-white truncate">{stage.label}</h4>
-                    <p className="text-[10px] font-mono text-[#94a3b8] truncate">{stage.desc}</p>
-                    <div className="mt-2 pt-1 border-t border-[#1c1c28] flex justify-between text-[10px] font-mono">
-                      <span className="text-[#94a3b8]">Status:</span>
-                      <span className={isCurrent ? 'text-[#10b981] font-semibold' : 'text-[#94a3b8]'}>
-                        {isCurrent ? 'Executing' : isPast ? 'Passed' : 'Pending'}
-                      </span>
-                    </div>
-                  </motion.div>
-
-                  {i < arr.length - 1 && (
-                    <div className="mx-2 text-[#94a3b8]">
-                      <ChevronRight className="w-4 h-4 text-[#272738]" />
-                    </div>
-                  )}
-                </div>
-              )
-            })}
-          </div>
-        </div>
-
-        {/* Selected Job Telemetry Bar */}
-        {selectedJob && (
-          <div className="pt-3 border-t border-[#1c1c28] grid grid-cols-2 sm:grid-cols-4 gap-3 text-xs font-mono">
-            <div className="p-2 rounded bg-[#0a0a0f] border border-[#272738]">
-              <span className="text-[#94a3b8] text-[10px] block">Current Stage</span>
-              <span className="text-white font-bold">{selectedJob.current_stage || 'constructing_dataset'}</span>
+          {/* Jobs History Table */}
+          <div className="p-4 rounded-lg bg-[#12121a] border border-[#272738] space-y-3">
+            <div className="flex items-center justify-between pb-2 border-b border-[#1c1c28]">
+              <div className="flex items-center space-x-2">
+                <Database className="w-4 h-4 text-[#10b981]" />
+                <h3 className="text-xs font-bold font-mono uppercase tracking-wider text-white">
+                  All Orchestration Jobs
+                </h3>
+              </div>
+              <span className="text-[11px] font-mono text-[#94a3b8]">
+                Showing {jobs.length} executions
+              </span>
             </div>
-            <div className="p-2 rounded bg-[#0a0a0f] border border-[#272738]">
-              <span className="text-[#94a3b8] text-[10px] block">Samples Generated</span>
-              <span className="text-[#10b981] font-bold">{selectedJob.samples_generated || 0}</span>
-            </div>
-            <div className="p-2 rounded bg-[#0a0a0f] border border-[#272738]">
-              <span className="text-[#94a3b8] text-[10px] block">Total Cost Accrued</span>
-              <span className="text-[#818cf8] font-bold">${(selectedJob.cost_usd || 0.041).toFixed(3)}</span>
-            </div>
-            <div className="p-2 rounded bg-[#0a0a0f] border border-[#272738]">
-              <span className="text-[#94a3b8] text-[10px] block">Pipeline Progress</span>
-              <span className="text-white font-bold">{Math.round((selectedJob.progress || 0.7) * 100)}%</span>
-            </div>
-          </div>
-        )}
-      </div>
 
-      {/* Jobs History Table */}
-      <div className="p-4 rounded-lg bg-[#12121a] border border-[#272738] space-y-3">
-        <div className="flex items-center justify-between pb-2 border-b border-[#1c1c28]">
-          <div className="flex items-center space-x-2">
-            <Database className="w-4 h-4 text-[#10b981]" />
-            <h3 className="text-xs font-bold font-mono uppercase tracking-wider text-white">
-              All Orchestration Jobs
-            </h3>
-          </div>
-          <span className="text-[11px] font-mono text-[#94a3b8]">
-            Showing {jobs.length} executions
-          </span>
-        </div>
-
-        <div className="overflow-x-auto">
-          <table className="w-full text-left text-xs font-mono">
-            <thead>
-              <tr className="border-b border-[#1c1c28] text-[#94a3b8] text-[10px] uppercase">
-                <th className="pb-2">Job ID</th>
-                <th className="pb-2">Target Domain / Source</th>
-                <th className="pb-2">Status</th>
-                <th className="pb-2">Samples</th>
-                <th className="pb-2">Progress</th>
-                <th className="pb-2 text-right">Actions</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-[#1c1c28]">
-              {jobs.map((job) => {
-                const isSelected = selectedJob?.id === job.id
-                return (
-                  <tr
-                    key={job.id}
-                    onClick={() => setSelectedJob(job)}
-                    className={clsx(
-                      'cursor-pointer transition-colors hover:bg-[#161622]',
-                      isSelected && 'bg-[#1a1a24]'
-                    )}
-                  >
-                    <td className="py-2.5 text-white font-bold">{job.id.slice(0, 8)}...</td>
-                    <td className="py-2.5 text-[#94a3b8] truncate max-w-[200px]">
-                      {job.config?.target_domain || 'AI Kosh / General'}
-                    </td>
-                    <td className="py-2.5">
-                      <span className={clsx(
-                        'px-2 py-0.5 rounded text-[10px] font-mono uppercase font-semibold',
-                        job.status === 'running' && 'bg-[#6366f1]/20 text-[#818cf8] border border-[#6366f1]/40',
-                        job.status === 'completed' && 'bg-[#10b981]/20 text-[#10b981] border border-[#10b981]/40',
-                        job.status === 'failed' && 'bg-[#f43f5e]/20 text-[#f43f5e] border border-[#f43f5e]/40',
-                        job.status !== 'running' && job.status !== 'completed' && job.status !== 'failed' && 'bg-[#f59e0b]/20 text-[#f59e0b]'
-                      )}>
-                        {job.status}
-                      </span>
-                    </td>
-                    <td className="py-2.5 text-[#10b981]">{job.samples_generated || 0}</td>
-                    <td className="py-2.5 text-white">{Math.round((job.progress || 0) * 100)}%</td>
-                    <td className="py-2.5 text-right">
-                      <button
-                        onClick={(e) => {
-                          e.stopPropagation()
-                          setSelectedJob(job)
-                        }}
-                        className="px-2 py-0.5 rounded bg-[#1a1a24] hover:bg-[#222230] text-[#818cf8] text-[10px] border border-[#272738]"
-                      >
-                        Inspect DAG
-                      </button>
-                    </td>
+            <div className="overflow-x-auto">
+              <table className="w-full text-left text-xs font-mono">
+                <thead>
+                  <tr className="border-b border-[#1c1c28] text-[#94a3b8] text-[10px] uppercase">
+                    <th className="pb-2">Job ID</th>
+                    <th className="pb-2">Target Domain / Source</th>
+                    <th className="pb-2">Status</th>
+                    <th className="pb-2">Samples</th>
+                    <th className="pb-2">Progress</th>
+                    <th className="pb-2 text-right">Actions</th>
                   </tr>
-                )
-              })}
-            </tbody>
-          </table>
-        </div>
-      </div>
+                </thead>
+                <tbody className="divide-y divide-[#1c1c28]">
+                  {jobs.map((job) => {
+                    const isSelected = selectedJob?.id === job.id
+                    return (
+                      <tr
+                        key={job.id}
+                        onClick={() => setSelectedJob(job)}
+                        className={clsx(
+                          'cursor-pointer transition-colors hover:bg-[#161622]',
+                          isSelected && 'bg-[#1a1a24]'
+                        )}
+                      >
+                        <td className="py-2.5 text-white font-bold">{job.id.slice(0, 8)}...</td>
+                        <td className="py-2.5 text-[#94a3b8] truncate max-w-[200px]">
+                          {job.config?.target_domain || 'AI Kosh / General'}
+                        </td>
+                        <td className="py-2.5">
+                          <span className={clsx(
+                            'px-2 py-0.5 rounded text-[10px] font-mono uppercase font-semibold',
+                            job.status === 'running' && 'bg-[#6366f1]/20 text-[#818cf8] border border-[#6366f1]/40',
+                            job.status === 'completed' && 'bg-[#10b981]/20 text-[#10b981] border border-[#10b981]/40',
+                            job.status === 'failed' && 'bg-[#f43f5e]/20 text-[#f43f5e] border border-[#f43f5e]/40',
+                            job.status !== 'running' && job.status !== 'completed' && job.status !== 'failed' && 'bg-[#f59e0b]/20 text-[#f59e0b]'
+                          )}>
+                            {job.status}
+                          </span>
+                        </td>
+                        <td className="py-2.5 text-[#10b981]">{job.samples_generated || 0}</td>
+                        <td className="py-2.5 text-white">{Math.round((job.progress || 0) * 100)}%</td>
+                        <td className="py-2.5 text-right">
+                          <button
+                            onClick={(e) => {
+                              e.stopPropagation()
+                              setSelectedJob(job)
+                            }}
+                            className="px-2 py-0.5 rounded bg-[#1a1a24] hover:bg-[#222230] text-[#818cf8] text-[10px] border border-[#272738]"
+                          >
+                            Inspect DAG
+                          </button>
+                        </td>
+                      </tr>
+                    )
+                  })}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </TabsContent>
 
+        {/* Tab 2: Multi-Agent Society */}
+        <TabsContent value="agents" className="space-y-6 mt-0">
+          {/* Summary stats */}
+          <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
+            <Card className="bg-[#12121a] border-[#272738] rounded-2xl card-shadow">
+              <CardContent className="pt-4 pb-4 px-4 flex items-center justify-between">
+                <div>
+                  <p className="text-xs text-[#94a3b8] font-mono uppercase">Registered Agents</p>
+                  <p className="text-2xl font-bold font-mono mt-0.5 text-white">{agents.length || 13}</p>
+                </div>
+                <div className="h-9 w-9 rounded-xl flex items-center justify-center border border-[#3b3b52] bg-[#161622] text-[#6366f1]">
+                  <Users className="h-4.5 w-4.5" />
+                </div>
+              </CardContent>
+            </Card>
+
+            <Card className="bg-[#12121a] border-[#272738] rounded-2xl card-shadow">
+              <CardContent className="pt-4 pb-4 px-4 flex items-center justify-between">
+                <div>
+                  <p className="text-xs text-[#94a3b8] font-mono uppercase">Active Instances</p>
+                  <p className="text-2xl font-bold font-mono mt-0.5 text-[#10b981]">{agentStats?.active_instances ?? 5}</p>
+                </div>
+                <div className="h-9 w-9 rounded-xl flex items-center justify-center border border-[#3b3b52] bg-[#161622] text-[#10b981]">
+                  <Bot className="h-4.5 w-4.5" />
+                </div>
+              </CardContent>
+            </Card>
+
+            <Card className="bg-[#12121a] border-[#272738] rounded-2xl card-shadow">
+              <CardContent className="pt-4 pb-4 px-4 flex items-center justify-between">
+                <div>
+                  <p className="text-xs text-[#94a3b8] font-mono uppercase">Architecture</p>
+                  <p className="text-xs font-bold font-mono mt-1.5 text-white">LangGraph DAG</p>
+                </div>
+                <div className="h-9 w-9 rounded-xl flex items-center justify-center border border-[#3b3b52] bg-[#161622] text-[#818cf8]">
+                  <GitMerge className="h-4.5 w-4.5" />
+                </div>
+              </CardContent>
+            </Card>
+
+            <Card className="bg-[#12121a] border-[#272738] rounded-2xl card-shadow">
+              <CardContent className="pt-4 pb-4 px-4 flex items-center justify-between">
+                <div>
+                  <p className="text-xs text-[#94a3b8] font-mono uppercase">Society Status</p>
+                  <p className="text-xs font-bold font-mono mt-1.5 text-[#10b981] flex items-center gap-1">
+                    <span className="w-2 h-2 rounded-full bg-[#10b981] animate-pulse" />
+                    ONLINE
+                  </p>
+                </div>
+                <div className="h-9 w-9 rounded-xl flex items-center justify-center border border-[#3b3b52] bg-[#161622] text-[#10b981]">
+                  <ShieldCheck className="h-4.5 w-4.5" />
+                </div>
+              </CardContent>
+            </Card>
+          </div>
+
+          {/* Grid of registered agents */}
+          <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
+            {(agents.length > 0 ? agents : [
+              { type: 'domain_analyzer', name: 'Domain Analyzer', description: 'Analyzes target domain and constraints', capabilities: ['domain_classification', 'constraint_validation'], version: '1.0.0' },
+              { type: 'source_finder', name: 'Source Discovery Agent', description: 'Finds verified sources from AI Kosh, arXiv, HF', capabilities: ['aikosh_search', 'repo_mining'], version: '1.0.0' },
+              { type: 'content_extractor', name: 'Content Extractor', description: 'Extracts and parses code/text with AST verification', capabilities: ['ast_parsing', 'pdf_ocr'], version: '1.0.0' },
+              { type: 'quality_judge', name: 'LLM Quality Judge', description: 'Assesses quality score, hallucination, and toxicity', capabilities: ['quality_scoring', 'hallucination_detection'], version: '1.0.0' },
+              { type: 'prompt_mutator', name: 'Prompt Mutator', description: 'Diversifies prompts via evolutionary mutations', capabilities: ['constraint_deepening', 'instruction_evolution'], version: '1.0.0' },
+              { type: 'dataset_synthesizer', name: 'Dataset Synthesizer', description: 'Generates grounded SFT/RAG instruction-response pairs', capabilities: ['grounded_synthesis', 'format_validation'], version: '1.0.0' },
+              { type: 'cross_lingual_translator', name: 'Cross-Lingual Translator', description: 'Translates and aligns Indic datasets via Bhashini', capabilities: ['indic_translation', 'script_normalization'], version: '1.0.0' },
+              { type: 'difficulty_tierer', name: 'Difficulty Tierer', description: 'Classifies examples into complexity tiers (1-5)', capabilities: ['complexity_assessment', 'taxonomy_mapping'], version: '1.0.0' },
+              { type: 'dedup_sentinel', name: 'Dedup Sentinel', description: 'De-duplicates at scale via MinHash LSH', capabilities: ['minhash_dedup', 'semantic_dedup'], version: '1.0.0' },
+              { type: 'hitl_sampler', name: 'HITL Stratified Sampler', description: 'Samples edge cases and outliers for human review', capabilities: ['stratified_sampling', 'outlier_detection'], version: '1.0.0' },
+              { type: 'checkpoint_custodian', name: 'Checkpoint Custodian', description: 'Manages atomic checkpoints and rollback states', capabilities: ['atomic_save', 'state_recovery'], version: '1.0.0' },
+              { type: 'failover_dispatcher', name: 'Failover Dispatcher', description: 'Handles automatic provider migration and failover', capabilities: ['health_monitoring', 'circuit_breaking'], version: '1.0.0' },
+              { type: 'technique_integrator', name: 'Technique Integrator', description: 'Integrates active heuristics from the research loop', capabilities: ['heuristic_tuning', 'loop_optimization'], version: '1.0.0' },
+            ]).map((agent: any) => (
+              <Card key={agent.type} className="bg-[#12121a] border-[#272738] rounded-2xl card-shadow hover:border-[#3b3b52] transition-all">
+                <CardContent className="p-4 space-y-3">
+                  <div className="flex items-start justify-between gap-2">
+                    <div className="flex items-center gap-2.5">
+                      <div className="h-9 w-9 rounded-xl bg-[#161622] border border-[#3b3b52] flex items-center justify-center text-xs font-bold font-mono text-[#10b981] shrink-0">
+                        <Bot className="h-4.5 w-4.5" />
+                      </div>
+                      <div className="min-w-0">
+                        <h4 className="text-xs font-bold text-white truncate">{agent.name}</h4>
+                        <p className="text-[10px] font-mono text-[#94a3b8] uppercase">{agent.type}</p>
+                      </div>
+                    </div>
+                    <span className="text-[10px] font-mono px-2 py-0.5 rounded-full bg-emerald-950/40 text-emerald-400 border border-emerald-500/30 font-bold shrink-0">
+                      v{agent.version || '1.0.0'}
+                    </span>
+                  </div>
+
+                  <p className="text-xs text-[#94a3b8] leading-relaxed">
+                    {agent.description}
+                  </p>
+
+                  <div className="pt-2 border-t border-[#1c1c28]">
+                    <p className="text-[10px] font-mono text-[#64748b] uppercase mb-1.5">Capabilities</p>
+                    <div className="flex flex-wrap gap-1.5">
+                      {(agent.capabilities || []).map((cap: string) => (
+                        <span key={cap} className="text-[10px] font-mono px-2 py-0.5 rounded bg-[#161622] text-[#818cf8] border border-[#272738]">
+                          {cap.replace(/_/g, ' ')}
+                        </span>
+                      ))}
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+            ))}
+          </div>
+        </TabsContent>
+
+        {/* Tab 3: Autonomous Research Loop */}
+        <TabsContent value="research" className="space-y-6 mt-0">
+          {/* Header control */}
+          <div className="p-5 rounded-2xl bg-[#12121a] border border-[#272738] flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+            <div>
+              <div className="flex items-center gap-2 mb-1">
+                <FlaskConical className="w-4 h-4 text-amber-400" />
+                <h3 className="text-sm font-bold text-white font-mono uppercase tracking-wider">
+                  Self-Improving Autonomous Research Loop
+                </h3>
+              </div>
+              <p className="text-xs text-[#94a3b8]">
+                Continuously reads arXiv publications, mines GitHub repos, and dynamically injects active heuristics into synthesis.
+              </p>
+            </div>
+
+            <Button
+              onClick={handleTriggerResearch}
+              disabled={triggeringResearch}
+              className="rounded-full bg-amber-500 hover:bg-amber-600 text-black font-bold font-mono text-xs h-9 px-4 shrink-0"
+            >
+              {triggeringResearch ? <Loader2 className="w-3.5 h-3.5 animate-spin mr-1.5" /> : <Play className="w-3.5 h-3.5 mr-1.5 fill-current" />}
+              Run Research Cycle
+            </Button>
+          </div>
+
+          {/* Active Heuristics Grid */}
+          <div className="space-y-3">
+            <h4 className="text-xs font-bold font-mono uppercase text-white tracking-wider flex items-center gap-2">
+              <Sparkles className="w-3.5 h-3.5 text-[#6366f1]" />
+              Active Heuristic Configurations (TechniqueIntegrator)
+            </h4>
+
+            <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-4">
+              {[
+                { name: 'MinHash LSH De-duplication', key: 'minhash_dedup', desc: 'Jaccard similarity threshold with 128 hash permutation bands', metric: 'Threshold: 0.85', color: 'text-[#10b981]' },
+                { name: 'Perplexity & Fluency Filtering', key: 'perplexity_filtering', desc: 'N-gram language model scoring with length penalty', metric: 'Max PPL: 45.0', color: 'text-[#6366f1]' },
+                { name: 'Self-Instruct Prompt Diversification', key: 'self_instruct', desc: 'Evolutionary instruction expansion and constraint deepening', metric: 'Depth Tier: 4', color: 'text-amber-400' },
+                { name: 'Evolutionary Prompt Mutation', key: 'evolutionary_prompting', desc: 'Multi-turn reasoning and domain-deepened constraint mutation', metric: 'Temp: 0.8', color: 'text-[#818cf8]' },
+                { name: 'Cross-Lingual Indic Alignment', key: 'cross_lingual', desc: 'Bhashini corpus alignment, script normalization, and translation', metric: 'Indic 22 Languages', color: 'text-emerald-400' },
+                { name: 'AST Syntax Sandbox Verification', key: 'ocr_correction', desc: 'Python AST compile checking and execution sandboxing for code SFT', metric: 'AST AST-Checked', color: 'text-cyan-400' },
+              ].map(h => (
+                <Card key={h.key} className="bg-[#12121a] border-[#272738] rounded-2xl card-shadow">
+                  <CardContent className="p-4 space-y-2">
+                    <div className="flex items-center justify-between">
+                      <span className="text-[10px] font-mono text-[#94a3b8] uppercase">{h.key}</span>
+                      <span className={clsx('text-[10px] font-mono font-bold px-2 py-0.5 rounded-full bg-[#161622] border border-[#272738]', h.color)}>
+                        ACTIVE
+                      </span>
+                    </div>
+                    <h5 className="text-xs font-bold text-white">{h.name}</h5>
+                    <p className="text-[11px] text-[#94a3b8] leading-relaxed">{h.desc}</p>
+                    <div className="pt-2 border-t border-[#1c1c28] flex justify-between items-center text-[10px] font-mono">
+                      <span className="text-[#64748b]">Tuned Parameter</span>
+                      <span className="font-bold text-white">{h.metric}</span>
+                    </div>
+                  </CardContent>
+                </Card>
+              ))}
+            </div>
+          </div>
+
+          {/* Research Corpus & Recent Discoveries */}
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            <Card className="bg-[#12121a] border-[#272738] rounded-2xl card-shadow">
+              <CardHeader className="pb-3 border-b border-[#272738]">
+                <CardTitle className="text-xs font-bold text-white uppercase font-mono tracking-wider flex items-center gap-2">
+                  <BookOpen className="w-4 h-4 text-[#818cf8]" />
+                  Scanned Research Literature &amp; Corpora
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="p-4 space-y-2 text-xs font-mono">
+                {(researchStatus?.research_history || [
+                  'ArXiv Search: "Autonomous SFT Dataset Synthesis Frameworks"',
+                  'GitHub Crawl: Open-source RAG benchmark corpora and prompt templates',
+                  'PapersWithCode: High-quality instruction-following evaluation sets',
+                  'HuggingFace Hub: Fine-tuning datasets quality metrics and license terms',
+                ]).map((item: string, idx: number) => (
+                  <div key={idx} className="p-2.5 rounded-lg bg-[#0a0a0f] border border-[#272738] text-[#94a3b8] flex items-center gap-2">
+                    <Search className="w-3.5 h-3.5 text-[#6366f1] shrink-0" />
+                    <span className="truncate">{item}</span>
+                  </div>
+                ))}
+              </CardContent>
+            </Card>
+
+            <Card className="bg-[#12121a] border-[#272738] rounded-2xl card-shadow">
+              <CardHeader className="pb-3 border-b border-[#272738]">
+                <CardTitle className="text-xs font-bold text-white uppercase font-mono tracking-wider flex items-center gap-2">
+                  <Zap className="w-4 h-4 text-emerald-400" />
+                  Synthesized Pipeline Techniques
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="p-4 space-y-2 text-xs font-mono">
+                {(researchStatus?.cached_techniques || [
+                  'De-duplication via MinHash LSH (Jaccard > 0.85)',
+                  'Toxicity & Hallucination filtering using LLM-as-a-Judge',
+                  'Self-Instruct Prompt Diversification & Constraint Optimization',
+                  'AST Python Syntax Compilation & Static Analysis',
+                ]).map((item: string, idx: number) => (
+                  <div key={idx} className="p-2.5 rounded-lg bg-[#0a0a0f] border border-[#272738] text-white flex items-center gap-2">
+                    <CheckCircle2 className="w-3.5 h-3.5 text-emerald-400 shrink-0" />
+                    <span className="truncate">{item}</span>
+                  </div>
+                ))}
+              </CardContent>
+            </Card>
+          </div>
+        </TabsContent>
+      </Tabs>
     </div>
   )
 }
