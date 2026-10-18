@@ -1454,6 +1454,10 @@ dataset_samples_generated_total 4520`
     return this.request<any>(`/api/review/jobs/${jobId}/status`)
   }
 
+  async getPausedReviewJobs(): Promise<{ paused_jobs: string[]; count: number }> {
+    return this.request<{ paused_jobs: string[]; count: number }>('/api/review/paused')
+  }
+
   // ── Multi-Agent Society API ────────────────────────────────────────────────
   async getAgents(): Promise<{ agents: any[]; total: number }> {
     return this.request<{ agents: any[]; total: number }>('/agents')

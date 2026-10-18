@@ -64,7 +64,7 @@ function useToast() {
 
 const STATUS_PILL: Record<ReviewItem['review_status'], string> = {
   pending:   'bg-amber-950/30 text-amber-400 border-amber-500/40',
-  in_review: 'bg-[#161622] text-[#10b981] border-[#3b3b52]',
+  in_review: 'bg-emerald-950/40 text-[#10b981] border-emerald-500/40',
   approved:  'bg-emerald-950/30 text-emerald-400 border-emerald-500/40',
   rejected:  'bg-rose-950/30 text-rose-400 border-rose-500/40',
   flagged:   'bg-amber-950/30 text-amber-300 border-amber-500/40',
@@ -176,11 +176,8 @@ export default function ReviewPage() {
 
   const fetchPaused = useCallback(async () => {
     try {
-      const res = await fetch(`${API_BASE}/api/review/paused`)
-      if (res.ok) {
-        const data = await res.json()
-        setPausedJobs(Array.isArray(data?.paused_jobs) ? data.paused_jobs : [])
-      }
+      const data = await api.getPausedReviewJobs()
+      setPausedJobs(Array.isArray(data?.paused_jobs) ? data.paused_jobs : [])
     } catch {}
   }, [])
 
@@ -298,21 +295,18 @@ export default function ReviewPage() {
     ? Math.round((stats.approved / Math.max(stats.approved + stats.pending, 1)) * 100)
     : 0
 
-  // ── Render ────────────────────────────────────────────────────────────────
-
   return (
     <div className="space-y-6 w-full pb-8 animate-fade-in">
-
       {/* Toasts */}
       <div className="fixed bottom-4 right-4 z-50 space-y-2 pointer-events-none">
         {toasts.map(t => (
           <div key={t.id} className={clsx(
             'pointer-events-auto flex items-center gap-2 px-4 py-2.5 rounded-full border shadow-lg text-xs font-semibold animate-slide-in',
-            t.variant === 'success' && 'bg-emerald-900 text-[#f8fafc] border-emerald-700',
-            t.variant === 'error'   && 'bg-rose-900 text-[#f8fafc] border-rose-700',
-            t.variant === 'info'    && 'bg-[#12121a] text-[#10b981] border-[#3b3b52]',
+            t.variant === 'success' && 'bg-emerald-950/80 text-white border-emerald-500/40',
+            t.variant === 'error'   && 'bg-rose-950/80 text-white border-rose-500/40',
+            t.variant === 'info'    && 'bg-[#12121a] text-white border-[#272738]',
           )}>
-            {t.variant === 'success' && <CheckCircle2 className="h-3.5 w-3.5 shrink-0 text-emerald-400" />}
+            {t.variant === 'success' && <CheckCircle2 className="h-3.5 w-3.5 shrink-0 text-[#10b981]" />}
             {t.variant === 'error'   && <AlertCircle className="h-3.5 w-3.5 shrink-0 text-rose-400" />}
             {t.message}
           </div>
@@ -327,22 +321,22 @@ export default function ReviewPage() {
         <div className="flex items-center justify-between px-4 py-3 border-b border-[#272738] sticky top-0 bg-[#12121a] z-10">
           <div className="flex items-center gap-2">
             {currentIdx > 0 && (
-              <Button variant="ghost" size="icon" className="h-7 w-7 rounded-full text-[#10b981]"
+              <Button variant="ghost" size="icon" className="h-7 w-7 rounded-full text-[#94a3b8] hover:text-white"
                 onClick={() => navigateTo(currentIdx - 1)}>
                 <ChevronLeft className="h-4 w-4" />
               </Button>
             )}
-            <span className="text-xs font-mono font-bold text-[#10b981]">
+            <span className="text-xs font-mono font-bold text-white">
               {currentIdx + 1}/{queueItems.length}
             </span>
             {currentIdx < queueItems.length - 1 && (
-              <Button variant="ghost" size="icon" className="h-7 w-7 rounded-full text-[#10b981]"
+              <Button variant="ghost" size="icon" className="h-7 w-7 rounded-full text-[#94a3b8] hover:text-white"
                 onClick={() => navigateTo(currentIdx + 1)}>
                 <ChevronRight className="h-4 w-4" />
               </Button>
             )}
           </div>
-          <Button variant="ghost" size="icon" className="h-7 w-7 rounded-full text-[#10b981]"
+          <Button variant="ghost" size="icon" className="h-7 w-7 rounded-full text-[#94a3b8] hover:text-white"
             onClick={() => { setSheet(false); setEditing(false) }}>
             <X className="h-4 w-4" />
           </Button>
@@ -364,17 +358,17 @@ export default function ReviewPage() {
 
       {/* Bulk action bar */}
       {selected2.size > 0 && (
-        <div className="fixed bottom-4 left-1/2 -translate-x-1/2 z-50 flex items-center gap-3 bg-[#12121a] border border-[#3b3b52] rounded-full px-5 py-2.5 shadow-xl animate-slide-in">
-          <span className="text-xs font-mono font-bold text-[#10b981]">{selected2.size} selected</span>
-          <Button size="sm" className="bg-emerald-700 hover:bg-emerald-800 text-[#f8fafc] h-7 text-xs rounded-full font-medium"
+        <div className="fixed bottom-4 left-1/2 -translate-x-1/2 z-50 flex items-center gap-3 bg-[#12121a] border border-[#272738] rounded-full px-5 py-2.5 shadow-xl animate-slide-in">
+          <span className="text-xs font-mono font-bold text-white">{selected2.size} selected</span>
+          <Button size="sm" className="bg-[#10b981] hover:bg-emerald-600 text-white h-7 text-xs rounded-full font-mono font-semibold"
             onClick={() => bulkAct('approve')} disabled={actionLoading}>
-            <CheckCircle2 className="h-3 w-3 mr-1 text-emerald-300" />Approve all
+            <CheckCircle2 className="h-3 w-3 mr-1" />Approve all
           </Button>
-          <Button size="sm" variant="destructive" className="h-7 text-xs rounded-full"
+          <Button size="sm" variant="destructive" className="h-7 text-xs rounded-full font-mono"
             onClick={() => bulkAct('reject')} disabled={actionLoading}>
             <XCircle className="h-3 w-3 mr-1" />Reject all
           </Button>
-          <Button size="sm" variant="ghost" className="h-7 w-7 p-0 rounded-full text-[#10b981]"
+          <Button size="sm" variant="ghost" className="h-7 w-7 p-0 rounded-full text-[#94a3b8] hover:text-white"
             onClick={() => setSelected2(new Set())}>
             <X className="h-3.5 w-3.5" />
           </Button>
@@ -385,30 +379,30 @@ export default function ReviewPage() {
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-[#272738] pb-4">
         <div>
           <div className="flex items-center gap-2.5 mb-1">
-            <span className="text-[10px] font-mono px-2.5 py-0.5 rounded-full bg-[#161622] border border-[#3b3b52] text-[#10b981] font-bold uppercase tracking-wider">
+            <span className="text-[10px] font-mono px-2.5 py-0.5 rounded-full bg-[#161622] border border-[#272738] text-[#10b981] font-bold uppercase tracking-wider">
               Quality Inspection Queue
             </span>
-            <h1 className="text-2xl font-bold tracking-tight text-[#10b981]">
+            <h1 className="text-2xl font-bold tracking-tight text-white font-display">
               HITL Review Studio
             </h1>
           </div>
           <p className="text-xs text-[#94a3b8]">
-            Review samples — <kbd className="text-[10px] bg-[#161622] border border-[#3b3b52] px-1.5 py-0.5 rounded font-mono text-[#10b981]">a</kbd> approve&nbsp;
-            <kbd className="text-[10px] bg-[#161622] border border-[#3b3b52] px-1.5 py-0.5 rounded font-mono text-[#10b981]">r</kbd> reject&nbsp;
-            <kbd className="text-[10px] bg-[#161622] border border-[#3b3b52] px-1.5 py-0.5 rounded font-mono text-[#10b981]">e</kbd> edit&nbsp;
-            <kbd className="text-[10px] bg-[#161622] border border-[#3b3b52] px-1.5 py-0.5 rounded font-mono text-[#10b981]">f</kbd> flag
+            Review samples — <kbd className="text-[10px] bg-[#161622] border border-[#272738] px-1.5 py-0.5 rounded font-mono text-white">a</kbd> approve&nbsp;
+            <kbd className="text-[10px] bg-[#161622] border border-[#272738] px-1.5 py-0.5 rounded font-mono text-white">r</kbd> reject&nbsp;
+            <kbd className="text-[10px] bg-[#161622] border border-[#272738] px-1.5 py-0.5 rounded font-mono text-white">e</kbd> edit&nbsp;
+            <kbd className="text-[10px] bg-[#161622] border border-[#272738] px-1.5 py-0.5 rounded font-mono text-white">f</kbd> flag
           </p>
         </div>
         <div className="flex gap-2 flex-wrap">
-          <Button variant="outline" size="sm" className="rounded-full border-[#3b3b52] text-[#10b981] hover:bg-[#161622]" onClick={exportApproved}>
-            <Download className="h-3.5 w-3.5 mr-1" />Export JSONL
+          <Button variant="outline" size="sm" className="rounded-full border-[#272738] text-white hover:bg-[#161622] font-mono text-xs" onClick={exportApproved}>
+            <Download className="h-3.5 w-3.5 mr-1 text-[#10b981]" />Export Approved JSONL
           </Button>
-          <Button variant="outline" size="sm" className="rounded-full border-[#3b3b52] text-[#10b981] hover:bg-[#161622]" onClick={async () => {
+          <Button variant="outline" size="sm" className="rounded-full border-[#272738] text-white hover:bg-[#161622] font-mono text-xs" onClick={async () => {
             setLoading(true)
-            await Promise.all([fetchStats(), fetchQueue()])
+            await Promise.all([fetchStats(), fetchQueue(), fetchPaused()])
             setLoading(false)
           }} disabled={loading}>
-            <RefreshCw className={clsx('h-3.5 w-3.5 mr-1', loading && 'animate-spin')} />
+            <RefreshCw className={clsx('h-3.5 w-3.5 mr-1 text-[#6366f1]', loading && 'animate-spin')} />
             Refresh
           </Button>
         </div>
@@ -416,26 +410,26 @@ export default function ReviewPage() {
 
       {/* HITL paused jobs banner */}
       {pausedJobs.length > 0 && (
-        <div className="rounded-2xl border border-amber-500/40 bg-amber-50/80 px-4 py-3">
+        <div className="rounded-2xl border border-amber-500/30 bg-amber-950/20 px-4 py-3">
           <div className="flex items-start gap-3">
-            <AlertCircle className="h-4 w-4 text-amber-700 mt-0.5 shrink-0" />
+            <AlertCircle className="h-4 w-4 text-amber-400 mt-0.5 shrink-0" />
             <div className="flex-1 min-w-0">
-              <p className="text-sm font-bold text-amber-950">
-                {pausedJobs.length} dataset job{pausedJobs.length > 1 ? 's' : ''} paused at review gate
+              <p className="text-sm font-bold text-white">
+                {pausedJobs.length} dataset job{pausedJobs.length > 1 ? 's' : ''} awaiting human review gate
               </p>
-              <p className="text-xs text-amber-400 mt-0.5">
-                Approvals are applied automatically. Resume can also wake a job immediately when the API and worker share a process.
+              <p className="text-xs text-[#94a3b8] mt-0.5">
+                Approvals are applied automatically. Resuming wakes the job immediately to continue pipeline execution.
               </p>
               <div className="flex flex-wrap gap-2 mt-2">
                 {pausedJobs.map(jid => (
-                  <div key={jid} className="flex items-center gap-1.5 bg-[#12121a] border border-amber-500/40 rounded-full px-3 py-1">
-                    <span className="text-xs font-mono font-bold text-[#10b981]">{jid.slice(0, 8)}…</span>
+                  <div key={jid} className="flex items-center gap-1.5 bg-[#0a0a0f] border border-amber-500/30 rounded-full px-3 py-1">
+                    <span className="text-xs font-mono font-bold text-amber-300">{jid.slice(0, 8)}…</span>
                     <Button
                       variant="ghost" size="sm"
-                      className="h-5 text-xs px-2 text-[#10b981] hover:bg-[#161622] rounded-full font-bold"
+                      className="h-5 text-xs px-2 text-[#10b981] hover:bg-[#161622] rounded-full font-bold font-mono"
                       onClick={() => resumeJob(jid)}
                     >
-                      <Play className="h-2.5 w-2.5 mr-1 fill-current text-emerald-600" />Resume
+                      <Play className="h-2.5 w-2.5 mr-1 fill-current text-[#10b981]" />Resume
                     </Button>
                   </div>
                 ))}
@@ -478,16 +472,16 @@ export default function ReviewPage() {
         : stats && (
           <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-7 gap-3">
             {[
-              { label: 'Total',     val: stats.total,     color: 'text-[#6366f1]', stripe: 'border-l-indigo-500' },
+              { label: 'Total',     val: stats.total,     color: 'text-white', stripe: 'border-l-indigo-500' },
               { label: 'Pending',   val: stats.pending,   color: 'text-amber-400', stripe: 'border-l-amber-500' },
               { label: 'In Review', val: stats.in_review, color: 'text-cyan-400',  stripe: 'border-l-cyan-500'   },
-              { label: 'Approved',  val: stats.approved,  color: 'text-emerald-400', stripe: 'border-l-emerald-500'  },
+              { label: 'Approved',  val: stats.approved,  color: 'text-[#10b981]', stripe: 'border-l-emerald-500'  },
               { label: 'Rejected',  val: stats.rejected,  color: 'text-rose-400', stripe: 'border-l-rose-500'    },
               { label: 'Flagged',   val: stats.flagged,   color: 'text-amber-400', stripe: 'border-l-amber-600' },
             ].map(({ label, val, color, stripe }) => (
               <Card key={label} className={clsx('border-l-4 bg-[#12121a] border-[#272738] rounded-2xl card-shadow animate-fade-in', stripe)}>
                 <CardContent className="pt-3 pb-2 px-4">
-                  <p className="text-xs text-[#94a3b8] font-mono uppercase">{label}</p>
+                  <p className="text-[10px] text-[#94a3b8] font-mono uppercase">{label}</p>
                   <p className={clsx('text-xl font-bold font-mono mt-0.5', color)}>{val}</p>
                 </CardContent>
               </Card>
@@ -496,8 +490,8 @@ export default function ReviewPage() {
               <CardContent className="pt-2 pb-2 px-3 flex items-center gap-3">
                 <ApprovalRing pct={stats.approval_rate} />
                 <div>
-                  <p className="text-xs text-[#94a3b8] font-mono uppercase">Approval</p>
-                  <p className="text-sm font-bold font-mono text-emerald-400">{stats.approval_rate}%</p>
+                  <p className="text-[10px] text-[#94a3b8] font-mono uppercase">Approval</p>
+                  <p className="text-sm font-bold font-mono text-[#10b981]">{stats.approval_rate}%</p>
                 </div>
               </CardContent>
             </Card>
@@ -508,10 +502,10 @@ export default function ReviewPage() {
       {/* Filters */}
       <div className="flex flex-wrap gap-3 items-center">
         <Select value={statusFilter} onValueChange={v => { setStatus(v); setPage(1) }}>
-          <SelectTrigger className="w-36 h-8 text-xs rounded-full border-[#3b3b52] bg-[#12121a] text-[#10b981]">
+          <SelectTrigger className="w-36 h-8 text-xs rounded-full border-[#272738] bg-[#0a0a0f] text-white font-mono">
             <SelectValue placeholder="Status" />
           </SelectTrigger>
-          <SelectContent>
+          <SelectContent className="bg-[#12121a] border-[#272738] text-white text-xs font-mono">
             <SelectItem value="all">All statuses</SelectItem>
             <SelectItem value="pending">Pending</SelectItem>
             <SelectItem value="in_review">In Review</SelectItem>
@@ -520,16 +514,16 @@ export default function ReviewPage() {
             <SelectItem value="flagged">Flagged</SelectItem>
           </SelectContent>
         </Select>
-        <Input placeholder="Filter by Job ID" className="w-52 h-8 text-xs rounded-full border-[#3b3b52] bg-[#12121a] text-[#10b981]"
+        <Input placeholder="Filter by Job ID" className="w-52 h-8 text-xs rounded-full border-[#272738] bg-[#0a0a0f] text-white font-mono focus:border-[#6366f1]"
           value={jobFilter} onChange={e => { setJobFilter(e.target.value); setPage(1) }} />
         {jobFilter && (
-          <Button variant="outline" size="sm" className="h-8 rounded-full border-[#3b3b52] text-[#10b981] hover:bg-[#161622]"
+          <Button variant="outline" size="sm" className="h-8 rounded-full border-[#272738] text-white hover:bg-[#161622] font-mono text-xs"
             onClick={() => resumeJob(jobFilter)}>
-            <Play className="h-3.5 w-3.5 mr-1 fill-current text-emerald-600" />Resume Job
+            <Play className="h-3.5 w-3.5 mr-1 fill-current text-[#10b981]" />Resume Job
           </Button>
         )}
         {selected2.size > 0 && (
-          <span className="text-xs font-mono font-bold text-[#10b981] ml-auto">
+          <span className="text-xs font-mono font-bold text-white ml-auto">
             {selected2.size} selected
           </span>
         )}
@@ -569,14 +563,14 @@ export default function ReviewPage() {
                           'border-l-4 rounded-xl p-3.5 cursor-pointer transition-all group',
                           'bg-[#12121a] border border-[#272738] card-shadow hover:border-[#3b3b52] hover:bg-[#0a0a0f]',
                           STATUS_STRIPE[item.review_status],
-                          selected?.id === item.id && 'border-[#10b981] bg-[#161622]/40',
+                          selected?.id === item.id && 'border-[#6366f1] bg-[#161622]/60',
                         )}
                         onClick={() => selectItem(item)}
                       >
                         <div className="flex items-start gap-2.5">
                           {/* Bulk checkbox */}
                           <button
-                            className="mt-0.5 shrink-0 opacity-0 group-hover:opacity-100 transition-opacity text-[#10b981]"
+                            className="mt-0.5 shrink-0 opacity-0 group-hover:opacity-100 transition-opacity text-[#94a3b8] hover:text-white"
                             onClick={e => { e.stopPropagation(); toggleBulk(item.id) }}
                           >
                             {isChecked
@@ -585,7 +579,7 @@ export default function ReviewPage() {
                           </button>
                           <div className="min-w-0 flex-1">
                             <div className="flex items-start justify-between gap-1">
-                              <p className="text-xs font-bold text-[#10b981] line-clamp-2 flex-1 leading-4">
+                              <p className="text-xs font-semibold text-white group-hover:text-indigo-300 transition-colors line-clamp-2 flex-1 leading-4">
                                 {item.instruction}
                               </p>
                               <span className={clsx('shrink-0 text-[10px] px-2 py-0.5 rounded-full border font-mono ml-1', STATUS_PILL[item.review_status])}>
@@ -605,7 +599,7 @@ export default function ReviewPage() {
                               <span className={clsx('text-[10px] font-bold font-mono', diff.color)}>{diff.label}</span>
                             </div>
                             <p className="text-[10px] font-mono text-[#64748b] mt-1 truncate">
-                              {item.job_id.slice(0, 8)}
+                              Job: {item.job_id.slice(0, 8)}
                             </p>
                           </div>
                         </div>
@@ -615,14 +609,14 @@ export default function ReviewPage() {
 
                   {/* Pagination */}
                   <div className="flex items-center justify-between pt-1">
-                    <Button variant="ghost" size="sm" className="rounded-full text-[#10b981]" disabled={page <= 1}
+                    <Button variant="ghost" size="sm" className="rounded-full text-[#94a3b8] hover:text-white" disabled={page <= 1}
                       onClick={() => setPage(p => p - 1)}>
                       <ChevronLeft className="h-4 w-4" />
                     </Button>
                     <span className="text-xs font-mono text-[#94a3b8]">
                       {page} / {queue.total_pages} ({queue.total})
                     </span>
-                    <Button variant="ghost" size="sm" className="rounded-full text-[#10b981]" disabled={page >= queue.total_pages}
+                    <Button variant="ghost" size="sm" className="rounded-full text-[#94a3b8] hover:text-white" disabled={page >= queue.total_pages}
                       onClick={() => setPage(p => p + 1)}>
                       <ChevronRight className="h-4 w-4" />
                     </Button>
@@ -639,7 +633,7 @@ export default function ReviewPage() {
               <div className="space-y-1">
                 {/* Prev/Next navigation */}
                 <div className="flex items-center justify-between mb-2">
-                  <Button variant="ghost" size="sm" className="h-7 text-xs rounded-full text-[#10b981]"
+                  <Button variant="ghost" size="sm" className="h-7 text-xs rounded-full text-[#94a3b8] hover:text-white font-mono"
                     disabled={currentIdx <= 0}
                     onClick={() => navigateTo(currentIdx - 1)}>
                     <ChevronLeft className="h-3.5 w-3.5 mr-1" />Prev
@@ -647,7 +641,7 @@ export default function ReviewPage() {
                   <span className="text-xs font-mono text-[#94a3b8]">
                     {currentIdx + 1} / {queueItems.length}
                   </span>
-                  <Button variant="ghost" size="sm" className="h-7 text-xs rounded-full text-[#10b981]"
+                  <Button variant="ghost" size="sm" className="h-7 text-xs rounded-full text-[#94a3b8] hover:text-white font-mono"
                     disabled={currentIdx >= queueItems.length - 1}
                     onClick={() => navigateTo(currentIdx + 1)}>
                     Next<ChevronRight className="h-3.5 w-3.5 ml-1" />
@@ -665,10 +659,10 @@ export default function ReviewPage() {
               </div>
             )
             : (
-              <div className="flex flex-col items-center justify-center h-full min-h-[380px] border border-dashed border-[#3b3b52] bg-[#12121a] rounded-2xl gap-3">
+              <div className="flex flex-col items-center justify-center h-full min-h-[380px] border border-dashed border-[#272738] bg-[#12121a] rounded-2xl gap-3">
                 <ClipboardCheck className="h-10 w-10 text-[#64748b]" />
-                <p className="text-xs text-[#94a3b8] font-mono font-bold">Select a sample to review</p>
-                <p className="text-[11px] text-[#64748b] font-mono">
+                <p className="text-xs text-white font-mono font-bold">Select a sample to review</p>
+                <p className="text-[11px] text-[#94a3b8] font-mono">
                   Keyboard: a approve · r reject · e edit · f flag
                 </p>
               </div>
@@ -701,7 +695,7 @@ function DetailPane({
     <Card className="bg-[#12121a] border-[#272738] rounded-2xl card-shadow">
       <CardHeader className="pb-2 border-b border-[#272738]">
         <div className="flex items-center justify-between flex-wrap gap-2">
-          <CardTitle className="text-sm font-bold text-[#10b981]">Sample Review</CardTitle>
+          <CardTitle className="text-sm font-bold text-white">Sample Quality Audit</CardTitle>
           <span className={clsx('text-[10px] font-mono px-2.5 py-0.5 rounded-full border', STATUS_PILL[item.review_status])}>
             {item.review_status}
           </span>
@@ -720,19 +714,19 @@ function DetailPane({
               <span className="text-[#94a3b8] font-mono text-[11px] shrink-0">{label}</span>
               <div className="flex items-center gap-1.5">
                 <ScoreBar value={val} inverted={inv} />
-                <span className="font-mono w-7 text-right font-bold text-[#10b981]">{(val * 100).toFixed(0)}%</span>
+                <span className="font-mono w-7 text-right font-bold text-white">{(val * 100).toFixed(0)}%</span>
               </div>
             </div>
           ))}
           <div className="col-span-2 text-[#94a3b8] font-mono text-[11px] truncate">
-            Job: <code className="text-xs font-bold text-[#10b981]">{item.job_id}</code>
+            Job Reference: <code className="text-xs font-bold text-indigo-300">{item.job_id}</code>
           </div>
         </div>
 
         {/* Instruction */}
         <div>
           <div className="flex items-center justify-between mb-1">
-            <label className="text-xs font-bold text-[#10b981]">Instruction</label>
+            <label className="text-[10px] font-mono font-bold uppercase tracking-wider text-indigo-400">Instruction / Prompt</label>
             {editing && (
               <span className="text-xs font-mono text-[#94a3b8]">
                 {editInstruction.length} chars
@@ -741,11 +735,11 @@ function DetailPane({
           </div>
           {editing
             ? <textarea
-                className="w-full bg-[#0a0a0f] border border-[#3b3b52] rounded-xl p-2.5 text-xs text-[#10b981] min-h-[72px] resize-y focus:outline-none focus:ring-1 focus:ring-[#10b981]"
+                className="w-full bg-[#0a0a0f] border border-[#272738] rounded-xl p-3 text-xs text-white min-h-[72px] resize-y focus:outline-none focus:border-[#6366f1] font-mono"
                 value={editInstruction}
                 onChange={e => onEditInst(e.target.value)}
               />
-            : <div className="bg-[#0a0a0f] rounded-xl p-3 text-xs text-[#10b981] border border-[#272738] whitespace-pre-wrap leading-relaxed max-h-28 overflow-y-auto font-sans">
+            : <div className="bg-[#0a0a0f] rounded-xl p-3 text-xs text-white border border-[#272738] whitespace-pre-wrap leading-relaxed max-h-28 overflow-y-auto font-sans">
                 {item.instruction}
               </div>
           }
@@ -754,7 +748,7 @@ function DetailPane({
         {/* Response */}
         <div>
           <div className="flex items-center justify-between mb-1">
-            <label className="text-xs font-bold text-[#10b981]">Response</label>
+            <label className="text-[10px] font-mono font-bold uppercase tracking-wider text-[#10b981]">Synthesized Response</label>
             {editing && (
               <span className="text-xs font-mono text-[#94a3b8]">
                 {editResponse.length} chars
@@ -763,12 +757,12 @@ function DetailPane({
           </div>
           {editing
             ? <textarea
-                className="w-full bg-[#0a0a0f] border border-[#3b3b52] rounded-xl p-2.5 text-xs text-[#10b981] min-h-[100px] resize-y focus:outline-none focus:ring-1 focus:ring-[#10b981]"
+                className="w-full bg-[#0a0a0f] border border-[#272738] rounded-xl p-3 text-xs text-white min-h-[100px] resize-y focus:outline-none focus:border-[#6366f1] font-mono"
                 value={editResponse}
                 onChange={e => onEditResp(e.target.value)}
               />
             : <ScrollArea className="max-h-44">
-                <div className="bg-[#0a0a0f] rounded-xl p-3 text-xs text-[#10b981] border border-[#272738] whitespace-pre-wrap leading-relaxed font-sans">
+                <div className="bg-[#0a0a0f] rounded-xl p-3 text-xs text-[#f1f5f9] border border-[#272738] whitespace-pre-wrap leading-relaxed font-sans">
                   {item.response}
                 </div>
               </ScrollArea>
@@ -776,8 +770,8 @@ function DetailPane({
         </div>
 
         {item.source_url && (
-          <p className="text-xs text-[#94a3b8] truncate">
-            Source:{' '}
+          <p className="text-xs text-[#94a3b8] truncate font-mono">
+            Grounding Source:{' '}
             <a href={item.source_url} target="_blank" rel="noopener noreferrer"
               className="text-[#10b981] font-bold hover:underline">{item.source_url}</a>
           </p>
@@ -785,8 +779,10 @@ function DetailPane({
 
         {item.source_text && (
           <details className="rounded-xl border border-[#272738] bg-[#0a0a0f] p-3">
-            <summary className="cursor-pointer text-xs font-bold text-[#10b981]">View source context</summary>
-            <div className="mt-2 max-h-40 overflow-y-auto whitespace-pre-wrap text-xs leading-relaxed text-[#94a3b8]">
+            <summary className="cursor-pointer text-xs font-bold text-white hover:text-indigo-300 transition-colors">
+              Inspect Grounded Reference Context
+            </summary>
+            <div className="mt-2 max-h-40 overflow-y-auto whitespace-pre-wrap text-xs leading-relaxed text-[#94a3b8] font-mono">
               {item.source_text}
             </div>
           </details>
@@ -795,14 +791,14 @@ function DetailPane({
         {/* Notes + reviewer */}
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
           <div>
-            <label className="text-xs mb-1 block font-bold text-[#10b981]">Reviewer name</label>
+            <label className="text-[10px] font-mono uppercase mb-1 block font-bold text-[#94a3b8]">Reviewer name</label>
             <Input value={reviewer} onChange={e => onReviewer(e.target.value)}
-              className="h-8 text-xs rounded-full border-[#3b3b52]" placeholder="your-name" />
+              className="h-8 text-xs rounded-full border-[#272738] bg-[#0a0a0f] text-white font-mono" placeholder="your-name" />
           </div>
           <div>
-            <label className="text-xs mb-1 block font-bold text-[#10b981]">Notes (optional)</label>
+            <label className="text-[10px] font-mono uppercase mb-1 block font-bold text-[#94a3b8]">Review notes</label>
             <Input value={notes} onChange={e => onNotes(e.target.value)}
-              className="h-8 text-xs rounded-full border-[#3b3b52]" placeholder="Add a note…" />
+              className="h-8 text-xs rounded-full border-[#272738] bg-[#0a0a0f] text-white font-mono" placeholder="Optional audit note…" />
           </div>
         </div>
 
@@ -810,17 +806,17 @@ function DetailPane({
         <div className="flex flex-wrap gap-2 pt-2 border-t border-[#272738]">
           <Button
             size="sm"
-            className="bg-[#10b981] hover:bg-[#4f46e5] text-[#f8fafc] font-medium text-xs rounded-full flex-1"
+            className="bg-[#10b981] hover:bg-emerald-600 text-white font-mono text-xs rounded-full flex-1"
             disabled={actionLoading}
             onClick={() => editing ? onAct('edit', item) : onAct('approve', item)}
           >
-            <CheckCircle2 className="h-3.5 w-3.5 mr-1 text-emerald-400" />
+            <CheckCircle2 className="h-3.5 w-3.5 mr-1" />
             {editing ? 'Save & Approve' : 'Approve (a)'}
           </Button>
           <Button
             size="sm"
             variant="destructive"
-            className="text-xs rounded-full flex-1"
+            className="text-xs rounded-full font-mono flex-1"
             disabled={actionLoading}
             onClick={() => onAct('reject', item)}
           >
@@ -830,17 +826,17 @@ function DetailPane({
           <Button
             size="sm"
             variant="outline"
-            className="text-xs rounded-full border-[#3b3b52] text-[#10b981]"
+            className="text-xs rounded-full border-[#272738] text-white hover:bg-[#161622] font-mono"
             disabled={actionLoading}
             onClick={() => onSetEditing(!editing)}
           >
-            <Pencil className="h-3.5 w-3.5 mr-1" />
+            <Pencil className="h-3.5 w-3.5 mr-1 text-indigo-400" />
             {editing ? 'Cancel edit' : 'Edit (e)'}
           </Button>
           <Button
             size="sm"
             variant="outline"
-            className="text-xs rounded-full border-[#3b3b52] text-amber-400"
+            className="text-xs rounded-full border-[#272738] text-amber-400 hover:bg-[#161622] font-mono"
             disabled={actionLoading}
             onClick={() => onAct('flag', item)}
           >

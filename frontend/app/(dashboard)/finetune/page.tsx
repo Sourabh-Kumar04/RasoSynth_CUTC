@@ -1,10 +1,10 @@
 'use client'
 
-import { useState, useEffect, useRef, useCallback, useMemo } from 'react'
+import { useState, useEffect, useRef, useCallback, useMemo, Suspense } from 'react'
 import {
   Cpu, Play, Square, RefreshCw, ExternalLink,
   List, Plus, ChevronDown, ChevronUp, Copy,
-  CheckCircle2, AlertCircle, Loader2, X,
+  CheckCircle2, AlertCircle, Loader2, X, Zap,
 } from 'lucide-react'
 import { clsx } from 'clsx'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
@@ -17,6 +17,7 @@ import { ScrollArea } from '@/components/ui/scroll-area'
 import {
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
 } from '@/components/ui/select'
+import { useSearchParams } from 'next/navigation'
 import { api } from '@/lib/api/client'
 
 const API_BASE = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000'
@@ -82,10 +83,10 @@ function LossSparkline({ data }: { data: number[] }) {
 
 const STATUS_PILL: Record<FTJob['status'], string> = {
   pending:   'bg-amber-950/30 text-amber-400 border-amber-500/40',
-  running:   'bg-[#161622] text-[#10b981] border-[#3b3b52]',
+  running:   'bg-emerald-950/40 text-[#10b981] border-emerald-500/40',
   completed: 'bg-emerald-950/30 text-emerald-400 border-emerald-500/40',
   failed:    'bg-rose-950/30 text-rose-400 border-rose-500/40',
-  cancelled: 'bg-[#161622] text-[#94a3b8] border-[#3b3b52]',
+  cancelled: 'bg-[#161622] text-[#94a3b8] border-[#272738]',
 }
 
 const STATUS_STRIPE: Record<FTJob['status'], string> = {
@@ -125,7 +126,7 @@ function Section({
         onClick={() => setOpen(o => !o)}
         className="w-full flex items-center justify-between px-4 py-2.5 bg-[#0a0a0f] hover:bg-[#161622]/60 transition-colors text-left"
       >
-        <span className="text-xs font-bold text-[#10b981] font-mono uppercase">{title}</span>
+        <span className="text-xs font-bold text-white font-mono uppercase">{title}</span>
         {open
           ? <ChevronUp className="h-3.5 w-3.5 text-[#94a3b8]" />
           : <ChevronDown className="h-3.5 w-3.5 text-[#94a3b8]" />}
@@ -201,13 +202,13 @@ function DetailPane({ job, logs, lossHistory, onCancel, onCopy, onReconnect, log
       <Card className="bg-[#12121a] border-[#272738] rounded-2xl card-shadow">
         <CardHeader className="pb-2 border-b border-[#272738]">
           <div className="flex flex-wrap items-start justify-between gap-2">
-            <CardTitle className="text-sm font-bold text-[#10b981] truncate max-w-[200px]">
+            <CardTitle className="text-sm font-bold text-white truncate max-w-[200px]">
               {job.output_model_name || job.id.slice(0, 16)}
             </CardTitle>
             <div className="flex items-center gap-2">
               <StatusPill status={job.status} />
               {(job.status === 'running' || job.status === 'pending') && (
-                <Button variant="destructive" size="sm" className="rounded-full h-7 text-xs" onClick={() => onCancel(job.id)}>
+                <Button variant="destructive" size="sm" className="rounded-full h-7 text-xs font-mono" onClick={() => onCancel(job.id)}>
                   <Square className="h-3 w-3 mr-1" />Cancel
                 </Button>
               )}
@@ -215,7 +216,7 @@ function DetailPane({ job, logs, lossHistory, onCancel, onCopy, onReconnect, log
           </div>
         </CardHeader>
         <CardContent className="space-y-3 p-4">
-          {job.status === 'running' && <Progress value={job.progress} className="h-2 bg-[#161622]" />}
+          {job.status === 'running' && <Progress value={job.progress} className="h-2 bg-[#0a0a0f]" />}
 
           {lossHistory.length > 1 && (
             <div className="flex items-center gap-3 bg-[#0a0a0f] rounded-xl px-3 py-2 border border-[#272738]">
@@ -228,23 +229,23 @@ function DetailPane({ job, logs, lossHistory, onCancel, onCopy, onReconnect, log
           )}
 
           <div className="grid grid-cols-2 gap-x-4 gap-y-1.5 text-xs">
-            <div><span className="text-[#94a3b8]">Model </span><span className="font-bold text-[#10b981]">{job.base_model}</span></div>
+            <div><span className="text-[#94a3b8]">Model </span><span className="font-bold text-white font-mono">{job.base_model}</span></div>
             <div><span className="text-[#94a3b8]">Epochs </span>
               <span className="font-mono font-bold text-[#10b981]">{job.current_epoch}/{job.total_epochs}</span>
             </div>
             <div><span className="text-[#94a3b8]">Train loss </span>
-              <span className="font-mono text-[#10b981]">{job.train_loss?.toFixed(4) ?? '—'}</span>
+              <span className="font-mono text-white">{job.train_loss?.toFixed(4) ?? '—'}</span>
             </div>
             <div><span className="text-[#94a3b8]">Eval loss </span>
-              <span className="font-mono text-[#10b981]">{job.eval_loss?.toFixed(4) ?? '—'}</span>
+              <span className="font-mono text-white">{job.eval_loss?.toFixed(4) ?? '—'}</span>
             </div>
-            <div><span className="text-[#94a3b8]">Started </span><span className="text-[#10b981]">{fmtDate(job.started_at)}</span></div>
-            <div><span className="text-[#94a3b8]">Done </span><span className="text-[#10b981]">{fmtDate(job.completed_at)}</span></div>
+            <div><span className="text-[#94a3b8]">Started </span><span className="text-white font-mono">{fmtDate(job.started_at)}</span></div>
+            <div><span className="text-[#94a3b8]">Done </span><span className="text-white font-mono">{fmtDate(job.completed_at)}</span></div>
           </div>
 
           {job.error && (
-            <div className="flex items-start gap-2 text-xs text-rose-700 bg-rose-50 border border-rose-200 rounded-xl px-3 py-2">
-              <AlertCircle className="h-3.5 w-3.5 mt-0.5 shrink-0" />
+            <div className="flex items-start gap-2 text-xs text-rose-300 bg-rose-950/20 border border-rose-500/30 rounded-xl px-3 py-2 font-mono">
+              <AlertCircle className="h-3.5 w-3.5 mt-0.5 shrink-0 text-rose-400" />
               {job.error}
             </div>
           )}
@@ -258,10 +259,10 @@ function DetailPane({ job, logs, lossHistory, onCancel, onCopy, onReconnect, log
 
           {job.output_path && (
             <div className="flex items-center gap-2">
-              <code className="text-xs font-mono bg-[#0a0a0f] text-[#10b981] px-2 py-0.5 rounded-lg border border-[#272738] truncate max-w-[260px]">
+              <code className="text-xs font-mono bg-[#0a0a0f] text-indigo-300 px-2 py-0.5 rounded-lg border border-[#272738] truncate max-w-[260px]">
                 {job.output_path}
               </code>
-              <Button variant="ghost" size="icon" className="h-6 w-6 shrink-0 rounded-full text-[#10b981]"
+              <Button variant="ghost" size="icon" className="h-6 w-6 shrink-0 rounded-full text-[#94a3b8] hover:text-white"
                 onClick={() => onCopy(job.output_path!)}>
                 <Copy className="h-3 w-3" />
               </Button>
@@ -273,9 +274,9 @@ function DetailPane({ job, logs, lossHistory, onCancel, onCopy, onReconnect, log
       <Card className="bg-[#12121a] border-[#272738] rounded-2xl card-shadow">
         <CardHeader className="pb-2 border-b border-[#272738]">
           <div className="flex items-center justify-between">
-            <CardTitle className="text-sm font-bold text-[#10b981]">Training Log</CardTitle>
+            <CardTitle className="text-sm font-bold text-white">Training Execution Log</CardTitle>
             {job.status === 'running' && (
-              <Button variant="ghost" size="sm" className="h-7 text-xs rounded-full text-[#10b981] hover:bg-[#161622]"
+              <Button variant="ghost" size="sm" className="h-7 text-xs rounded-full text-[#6366f1] hover:bg-[#161622]"
                 onClick={() => onReconnect(job.id)}>
                 <RefreshCw className="h-3 w-3 mr-1" />Reconnect
               </Button>
@@ -287,7 +288,7 @@ function DetailPane({ job, logs, lossHistory, onCancel, onCopy, onReconnect, log
             <div className="p-3 space-y-0.5">
               {logs.length === 0
                 ? <p className="text-xs text-[#94a3b8] font-mono">
-                    {job.status === 'running' ? 'Waiting for events…' : 'No log available.'}
+                    {job.status === 'running' ? 'Waiting for events…' : 'No log stream recorded.'}
                   </p>
                 : logs.map((line, i) => <LogRow key={i} line={line} />)
               }
@@ -300,16 +301,19 @@ function DetailPane({ job, logs, lossHistory, onCancel, onCopy, onReconnect, log
   )
 }
 
-// ── Main page ─────────────────────────────────────────────────────────────────
+// ── Main Content ──────────────────────────────────────────────────────────────
 
-export default function FineTunePage() {
+function FineTuneContent() {
+  const searchParams = useSearchParams()
+  const datasetParam = searchParams.get('dataset') || ''
+
   const [models, setModels] = useState<SupportedModel[]>([])
   const [jobs, setJobs] = useState<FTJob[]>([])
   const [selectedJob, setSelectedJob] = useState<FTJob | null>(null)
   const [logs, setLogs] = useState<LogLine[]>([])
   const [loading, setLoading] = useState(true)
   const [submitting, setSubmitting] = useState(false)
-  const [tab, setTab] = useState<'jobs' | 'new'>('jobs')
+  const [tab, setTab] = useState<'jobs' | 'new'>(datasetParam ? 'new' : 'jobs')
   const [mobileSheet, setMobileSheet] = useState(false)
   const [formError, setFormError] = useState('')
   const { toasts, push: toast } = useToast()
@@ -317,15 +321,29 @@ export default function FineTunePage() {
   const logsEndRef = useRef<HTMLDivElement>(null)
 
   const [form, setForm] = useState({
-    dataset_path: '', dataset_id: '',
+    dataset_path: '',
+    dataset_id: datasetParam,
     base_model: 'HuggingFaceTB/SmolLM2-1.7B-Instruct',
-    output_model_name: '', lora_r: 16, lora_alpha: 32,
+    output_model_name: datasetParam ? `finetune-${datasetParam.slice(0, 8)}` : '',
+    lora_r: 16, lora_alpha: 32,
     num_train_epochs: 3, per_device_train_batch_size: 4,
     gradient_accumulation_steps: 4, learning_rate: 0.0002,
     load_in_4bit: true, bf16: true,
     push_to_hub: false, hf_token: '', hf_org: '',
     chat_template: 'alpaca', output_dir: 'outputs/finetune',
   })
+
+  // Synchronize search param if changes
+  useEffect(() => {
+    if (datasetParam) {
+      setForm(prev => ({
+        ...prev,
+        dataset_id: datasetParam,
+        output_model_name: prev.output_model_name || `finetune-${datasetParam.slice(0, 8)}`,
+      }))
+      setTab('new')
+    }
+  }, [datasetParam])
 
   const lossHistory = useMemo(() =>
     logs.filter(l => l.type === 'progress' && l.loss != null).slice(-40).map(l => l.loss as number),
@@ -457,21 +475,18 @@ export default function FineTunePage() {
   const f = (key: keyof typeof form, val: unknown) =>
     setForm(p => ({ ...p, [key]: val }))
 
-  // ── Render ────────────────────────────────────────────────────────────────
-
   return (
     <div className="space-y-6 w-full pb-8 animate-fade-in">
-
       {/* Toast stack */}
       <div className="fixed bottom-4 right-4 z-50 space-y-2 pointer-events-none">
         {toasts.map(t => (
           <div key={t.id} className={clsx(
             'pointer-events-auto flex items-center gap-2 px-4 py-2.5 rounded-full border shadow-lg text-xs font-semibold animate-slide-in',
-            t.variant === 'success' && 'bg-emerald-900 text-[#f8fafc] border-emerald-700',
-            t.variant === 'error'   && 'bg-rose-900 text-[#f8fafc] border-rose-700',
-            t.variant === 'info'    && 'bg-[#12121a] text-[#10b981] border-[#3b3b52]',
+            t.variant === 'success' && 'bg-emerald-950/80 text-white border-emerald-500/40',
+            t.variant === 'error'   && 'bg-rose-950/80 text-white border-rose-500/40',
+            t.variant === 'info'    && 'bg-[#12121a] text-white border-[#272738]',
           )}>
-            {t.variant === 'success' && <CheckCircle2 className="h-3.5 w-3.5 shrink-0 text-emerald-400" />}
+            {t.variant === 'success' && <CheckCircle2 className="h-3.5 w-3.5 shrink-0 text-[#10b981]" />}
             {t.variant === 'error'   && <AlertCircle className="h-3.5 w-3.5 shrink-0 text-rose-400" />}
             {t.message}
           </div>
@@ -484,10 +499,10 @@ export default function FineTunePage() {
         mobileSheet && selectedJob ? 'translate-y-0' : 'translate-y-full',
       )} style={{ maxHeight: '88vh' }}>
         <div className="flex items-center justify-between px-4 py-3 border-b border-[#272738] sticky top-0 bg-[#12121a] z-10">
-          <span className="font-bold text-sm text-[#10b981] truncate">
+          <span className="font-bold text-sm text-white truncate">
             {selectedJob?.output_model_name || selectedJob?.id.slice(0, 12)}
           </span>
-          <Button variant="ghost" size="icon" className="h-7 w-7 rounded-full text-[#10b981]"
+          <Button variant="ghost" size="icon" className="h-7 w-7 rounded-full text-[#94a3b8] hover:text-white"
             onClick={() => setMobileSheet(false)}>
             <X className="h-4 w-4" />
           </Button>
@@ -507,24 +522,32 @@ export default function FineTunePage() {
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-[#272738] pb-4">
         <div>
           <div className="flex items-center gap-2.5 mb-1">
-            <span className="text-[10px] font-mono px-2.5 py-0.5 rounded-full bg-[#161622] border border-[#3b3b52] text-[#10b981] font-bold uppercase tracking-wider">
+            <span className="text-[10px] font-mono px-2.5 py-0.5 rounded-full bg-[#161622] border border-[#272738] text-[#10b981] font-bold uppercase tracking-wider">
               PEFT / LoRA Fine-Tuning
             </span>
-            <h1 className="text-2xl font-bold tracking-tight text-[#10b981]">
+            <h1 className="text-2xl font-bold tracking-tight text-white font-display">
               Fine-Tune Studio
             </h1>
           </div>
-          <p className="text-xs text-[#94a3b8]" title="PEFT/LoRA (Parameter-Efficient Fine-Tuning & Low-Rank Adaptation): Freezes base model weights and trains lightweight parameter adapters, reducing GPU memory by 95%.">
+          <p className="text-xs text-[#94a3b8]">
             Parameter-Efficient Fine-Tuning (PEFT/LoRA) &amp; adapter optimization on synthetic datasets
           </p>
         </div>
         <div className="flex gap-2 self-start sm:self-auto">
-          <Button variant={tab === 'jobs' ? 'default' : 'outline'} size="sm" className="rounded-full text-xs"
-            onClick={() => setTab('jobs')}>
-            <List className="h-3.5 w-3.5 mr-1" />Jobs
+          <Button
+            variant={tab === 'jobs' ? 'default' : 'outline'}
+            size="sm"
+            className={clsx('rounded-full text-xs font-mono', tab === 'jobs' ? 'bg-[#6366f1] text-white hover:bg-[#818cf8]' : 'border-[#272738] text-[#94a3b8] hover:text-white hover:bg-[#161622]')}
+            onClick={() => setTab('jobs')}
+          >
+            <List className="h-3.5 w-3.5 mr-1" />Jobs ({jobs.length})
           </Button>
-          <Button variant={tab === 'new' ? 'default' : 'outline'} size="sm" className="rounded-full text-xs"
-            onClick={() => setTab('new')}>
+          <Button
+            variant={tab === 'new' ? 'default' : 'outline'}
+            size="sm"
+            className={clsx('rounded-full text-xs font-mono', tab === 'new' ? 'bg-[#6366f1] text-white hover:bg-[#818cf8]' : 'border-[#272738] text-[#94a3b8] hover:text-white hover:bg-[#161622]')}
+            onClick={() => setTab('new')}
+          >
             <Plus className="h-3.5 w-3.5 mr-1" />New Job
           </Button>
         </div>
@@ -534,16 +557,16 @@ export default function FineTunePage() {
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
         {(
           [
-            { key: 'pending',   label: 'Pending',   stripe: 'border-l-amber-500' },
-            { key: 'running',   label: 'Running',   stripe: 'border-l-[#10b981]'   },
-            { key: 'completed', label: 'Completed', stripe: 'border-l-emerald-500'  },
-            { key: 'failed',    label: 'Failed',    stripe: 'border-l-rose-500'    },
+            { key: 'pending',   label: 'Pending',   stripe: 'border-l-amber-500', color: 'text-amber-400' },
+            { key: 'running',   label: 'Running',   stripe: 'border-l-[#10b981]',   color: 'text-[#10b981]' },
+            { key: 'completed', label: 'Completed', stripe: 'border-l-emerald-500', color: 'text-emerald-400' },
+            { key: 'failed',    label: 'Failed',    stripe: 'border-l-rose-500',    color: 'text-rose-400' },
           ] as const
-        ).map(({ key, label, stripe }) => (
+        ).map(({ key, label, stripe, color }) => (
           <Card key={key} className={clsx('border-l-4 bg-[#12121a] border-[#272738] rounded-2xl card-shadow', stripe)}>
             <CardContent className="pt-4 pb-4 px-4">
-              <p className="text-xs text-[#94a3b8] font-mono uppercase tracking-wider">{label}</p>
-              <p className="text-2xl font-bold font-mono text-[#10b981] mt-0.5">{counts[key]}</p>
+              <p className="text-[10px] text-[#94a3b8] font-mono uppercase tracking-wider">{label}</p>
+              <p className={clsx('text-2xl font-bold font-mono mt-0.5', color)}>{counts[key]}</p>
             </CardContent>
           </Card>
         ))}
@@ -553,13 +576,13 @@ export default function FineTunePage() {
       {tab === 'new' && (
         <Card className="bg-[#12121a] border-[#272738] rounded-2xl card-shadow">
           <CardHeader className="pb-3 border-b border-[#272738]">
-            <CardTitle className="text-base font-bold text-[#10b981]">Configure Fine-Tuning Job</CardTitle>
+            <CardTitle className="text-sm font-bold text-white">Configure Fine-Tuning Job</CardTitle>
           </CardHeader>
           <CardContent className="p-6">
             <form onSubmit={handleSubmit} className="space-y-4">
               {formError && (
-                <div className="flex items-center gap-2 text-xs text-rose-700 bg-rose-50 border border-rose-200 rounded-xl px-3 py-2">
-                  <AlertCircle className="h-4 w-4 shrink-0" />
+                <div className="flex items-center gap-2 text-xs text-rose-300 bg-rose-950/20 border border-rose-500/30 rounded-xl px-3 py-2">
+                  <AlertCircle className="h-4 w-4 shrink-0 text-rose-400" />
                   {formError}
                 </div>
               )}
@@ -567,14 +590,14 @@ export default function FineTunePage() {
               <Section title="Dataset Source">
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                   <div>
-                    <label className="text-xs mb-1 block font-bold text-[#10b981]">JSONL file path</label>
-                    <Input placeholder="outputs/my-dataset.jsonl" className="rounded-full border-[#3b3b52] text-xs"
+                    <label className="text-[10px] mb-1 block font-bold font-mono uppercase text-[#94a3b8]">JSONL file path</label>
+                    <Input placeholder="outputs/my-dataset.jsonl" className="rounded-full border-[#272738] bg-[#0a0a0f] text-white focus:border-[#6366f1] text-xs font-mono"
                       value={form.dataset_path}
                       onChange={e => f('dataset_path', e.target.value)} />
                   </div>
                   <div>
-                    <label className="text-xs mb-1 block font-bold text-[#10b981]">Or Dataset ID (from DB)</label>
-                    <Input placeholder="17487774-1b8e-..." className="rounded-full border-[#3b3b52] text-xs"
+                    <label className="text-[10px] mb-1 block font-bold font-mono uppercase text-[#94a3b8]">Or Dataset ID (from DB)</label>
+                    <Input placeholder="17487774-1b8e-..." className="rounded-full border-[#272738] bg-[#0a0a0f] text-white focus:border-[#6366f1] text-xs font-mono"
                       value={form.dataset_id}
                       onChange={e => f('dataset_id', e.target.value)} />
                   </div>
@@ -584,11 +607,11 @@ export default function FineTunePage() {
               <Section title="Base Model">
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                   <div>
-                    <label className="text-xs mb-1 block font-bold text-[#10b981]">Model</label>
+                    <label className="text-[10px] mb-1 block font-bold font-mono uppercase text-[#94a3b8]">Model Architecture</label>
                     <Select value={form.base_model}
                       onValueChange={v => f('base_model', v)}>
-                      <SelectTrigger className="rounded-full border-[#3b3b52] text-xs"><SelectValue /></SelectTrigger>
-                      <SelectContent>
+                      <SelectTrigger className="rounded-full border-[#272738] bg-[#0a0a0f] text-white text-xs font-mono"><SelectValue /></SelectTrigger>
+                      <SelectContent className="bg-[#12121a] border-[#272738] text-white text-xs font-mono">
                         {models.map(m => (
                           <SelectItem key={m.id} value={m.id}>
                             {m.name} ({m.params}) {m.requires_gpu ? '🖥' : '💻'}
@@ -598,17 +621,17 @@ export default function FineTunePage() {
                     </Select>
                   </div>
                   <div>
-                    <label className="text-xs mb-1 block font-bold text-[#10b981]">Output model name</label>
-                    <Input placeholder="my-finetuned-model" className="rounded-full border-[#3b3b52] text-xs"
+                    <label className="text-[10px] mb-1 block font-bold font-mono uppercase text-[#94a3b8]">Output model tag</label>
+                    <Input placeholder="my-finetuned-model" className="rounded-full border-[#272738] bg-[#0a0a0f] text-white focus:border-[#6366f1] text-xs font-mono"
                       value={form.output_model_name}
                       onChange={e => f('output_model_name', e.target.value)} />
                   </div>
                   <div>
-                    <label className="text-xs mb-1 block font-bold text-[#10b981]">Chat template</label>
+                    <label className="text-[10px] mb-1 block font-bold font-mono uppercase text-[#94a3b8]">Chat template</label>
                     <Select value={form.chat_template}
                       onValueChange={v => f('chat_template', v)}>
-                      <SelectTrigger className="rounded-full border-[#3b3b52] text-xs"><SelectValue /></SelectTrigger>
-                      <SelectContent>
+                      <SelectTrigger className="rounded-full border-[#272738] bg-[#0a0a0f] text-white text-xs font-mono"><SelectValue /></SelectTrigger>
+                      <SelectContent className="bg-[#12121a] border-[#272738] text-white text-xs font-mono">
                         <SelectItem value="alpaca">Alpaca</SelectItem>
                         <SelectItem value="chatml">ChatML</SelectItem>
                         <SelectItem value="llama3">Llama 3</SelectItem>
@@ -629,12 +652,12 @@ export default function FineTunePage() {
                     { key: 'lora_alpha',                  label: 'LoRA alpha',    tip: 'LoRA scaling (usually 2× rank)',    int: true  },
                   ] as const).map(({ key, label, tip, int: isInt }) => (
                     <div key={key}>
-                      <label className="text-xs mb-1 block font-bold text-[#10b981]" title={tip}>
+                      <label className="text-[10px] mb-1 block font-bold font-mono uppercase text-[#94a3b8]" title={tip}>
                         {label}
                       </label>
                       <Input
                         type="number"
-                        className="rounded-full border-[#3b3b52] text-xs"
+                        className="rounded-full border-[#272738] bg-[#0a0a0f] text-white focus:border-[#6366f1] text-xs font-mono"
                         step={isInt ? 1 : 0.00001}
                         value={(form as Record<string, unknown>)[key] as number}
                         onChange={e => f(
@@ -647,7 +670,7 @@ export default function FineTunePage() {
                 </div>
                 <div className="flex flex-wrap gap-6 pt-2">
                   {([
-                    { key: 'load_in_4bit', label: '4-bit quantisation' },
+                    { key: 'load_in_4bit', label: '4-bit quantization (QLoRA)' },
                     { key: 'bf16',         label: 'BF16 mixed precision' },
                   ] as const).map(({ key, label }) => (
                     <div key={key} className="flex items-center gap-2">
@@ -664,25 +687,25 @@ export default function FineTunePage() {
                 </div>
               </Section>
 
-              <Section title="HuggingFace Hub" defaultOpen={false}>
+              <Section title="HuggingFace Hub (ADR-002)" defaultOpen={false}>
                 <div className="flex items-center gap-2 mb-2">
                   <Switch id="push_hub" checked={form.push_to_hub}
                     onCheckedChange={v => f('push_to_hub', v)} />
                   <label htmlFor="push_hub" className="text-xs text-[#94a3b8] cursor-pointer">
-                    Push to Hub after training
+                    Push adapter weights to Hugging Face Hub after training
                   </label>
                 </div>
                 {form.push_to_hub && (
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                     <div>
-                      <label className="text-xs mb-1 block font-bold text-[#10b981]">HF Token</label>
-                      <Input type="password" placeholder="hf_..." className="rounded-full border-[#3b3b52] text-xs"
+                      <label className="text-[10px] mb-1 block font-bold font-mono uppercase text-[#94a3b8]">HF Token</label>
+                      <Input type="password" placeholder="hf_..." className="rounded-full border-[#272738] bg-[#0a0a0f] text-white focus:border-[#6366f1] text-xs font-mono"
                         value={form.hf_token}
                         onChange={e => f('hf_token', e.target.value)} />
                     </div>
                     <div>
-                      <label className="text-xs mb-1 block font-bold text-[#10b981]">Org (optional)</label>
-                      <Input placeholder="my-org" className="rounded-full border-[#3b3b52] text-xs"
+                      <label className="text-[10px] mb-1 block font-bold font-mono uppercase text-[#94a3b8]">Org / Namespace (optional)</label>
+                      <Input placeholder="my-org" className="rounded-full border-[#272738] bg-[#0a0a0f] text-white focus:border-[#6366f1] text-xs font-mono"
                         value={form.hf_org}
                         onChange={e => f('hf_org', e.target.value)} />
                     </div>
@@ -690,11 +713,16 @@ export default function FineTunePage() {
                 )}
               </Section>
 
-              <Button type="submit" disabled={submitting}
-                className="w-full bg-[#10b981] hover:bg-[#4f46e5] text-[#f8fafc] rounded-full font-medium">
-                {submitting
-                  ? <><Loader2 className="h-4 w-4 animate-spin mr-2 text-emerald-400" />Starting…</>
-                  : <><Play className="h-4 w-4 mr-2 text-emerald-400" />Start Fine-Tuning</>}
+              <Button
+                type="submit"
+                disabled={submitting}
+                className="w-full bg-[#6366f1] hover:bg-[#818cf8] text-white rounded-full font-mono text-xs font-semibold h-9 shadow-sm glow-indigo flex items-center justify-center gap-2"
+              >
+                {submitting ? (
+                  <><Loader2 className="h-4 w-4 animate-spin text-white mr-2" />Starting Session…</>
+                ) : (
+                  <><Play className="h-4 w-4 fill-current mr-2 text-[#10b981]" />Execute PEFT / LoRA Training Session</>
+                )}
               </Button>
             </form>
           </CardContent>
@@ -711,12 +739,12 @@ export default function FineTunePage() {
               : jobs.length === 0
                 ? (
                   <div className="flex flex-col items-center justify-center py-16 space-y-4 bg-[#12121a] rounded-2xl border border-[#272738]">
-                    <div className="w-14 h-14 rounded-2xl bg-[#161622] border border-[#3b3b52] flex items-center justify-center">
-                      <Cpu className="h-7 w-7 text-[#10b981]" />
+                    <div className="w-14 h-14 rounded-2xl bg-[#161622] border border-[#272738] flex items-center justify-center">
+                      <Cpu className="h-7 w-7 text-[#6366f1]" />
                     </div>
-                    <p className="text-xs text-[#94a3b8] font-mono">No fine-tuning jobs yet</p>
-                    <Button size="sm" className="bg-[#10b981] hover:bg-[#4f46e5] text-[#f8fafc] rounded-full" onClick={() => setTab('new')}>
-                      <Plus className="h-3.5 w-3.5 mr-1 text-emerald-400" />Create first job
+                    <p className="text-xs text-[#94a3b8] font-mono">No fine-tuning sessions recorded</p>
+                    <Button size="sm" className="bg-[#6366f1] hover:bg-[#818cf8] text-white rounded-full font-mono text-xs" onClick={() => setTab('new')}>
+                      <Plus className="h-3.5 w-3.5 mr-1 text-[#10b981]" />Create first job
                     </Button>
                   </div>
                 )
@@ -729,12 +757,12 @@ export default function FineTunePage() {
                       'bg-[#12121a] border border-[#272738] card-shadow',
                       'hover:border-[#3b3b52] hover:bg-[#0a0a0f]',
                       STATUS_STRIPE[job.status],
-                      selectedJob?.id === job.id && 'border-[#10b981] bg-[#161622]/40',
+                      selectedJob?.id === job.id && 'border-[#6366f1] bg-[#161622]/60',
                     )}
                   >
                     <div className="flex items-start justify-between gap-2">
                       <div className="min-w-0">
-                        <p className="text-xs font-bold text-[#10b981] truncate">
+                        <p className="text-xs font-bold text-white truncate">
                           {job.output_model_name || job.id.slice(0, 8)}
                         </p>
                         <p className="text-[11px] text-[#94a3b8] font-mono truncate mt-0.5">
@@ -745,7 +773,7 @@ export default function FineTunePage() {
                     </div>
                     {job.status === 'running' && (
                       <div className="mt-2 space-y-1">
-                        <Progress value={job.progress ?? 0} className="h-1.5 bg-[#161622]" />
+                        <Progress value={job.progress ?? 0} className="h-1.5 bg-[#0a0a0f]" />
                         <p className="text-[11px] font-mono text-[#94a3b8]">
                           {(job.progress ?? 0).toFixed(0)}% · epoch {job.current_epoch}/{job.total_epochs}
                         </p>
@@ -770,10 +798,10 @@ export default function FineTunePage() {
                 />
               )
               : (
-                <div className="flex flex-col items-center justify-center h-full min-h-[420px] border border-dashed border-[#3b3b52] bg-[#12121a] rounded-2xl gap-3">
+                <div className="flex flex-col items-center justify-center h-full min-h-[420px] border border-dashed border-[#272738] bg-[#12121a] rounded-2xl gap-3">
                   <Cpu className="h-10 w-10 text-[#64748b]" />
                   <p className="text-xs text-[#94a3b8] font-mono">
-                    Select a job to view details &amp; live logs
+                    Select a job to view details &amp; live training telemetry
                   </p>
                 </div>
               )}
@@ -781,5 +809,19 @@ export default function FineTunePage() {
         </div>
       )}
     </div>
+  )
+}
+
+export default function FineTunePage() {
+  return (
+    <Suspense
+      fallback={
+        <div className="flex items-center justify-center min-h-[60vh]">
+          <Loader2 className="h-8 w-8 animate-spin text-[#6366f1]" />
+        </div>
+      }
+    >
+      <FineTuneContent />
+    </Suspense>
   )
 }
