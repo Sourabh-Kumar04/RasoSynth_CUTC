@@ -64,14 +64,17 @@ export default function OverviewDashboardPage() {
         ])
 
         if (healthRes.status === 'fulfilled') setHealth(healthRes.value)
-        if (datasetsRes.status === 'fulfilled' && datasetsRes.value?.data) {
-          setDatasetJobs(datasetsRes.value.data.slice(0, 6))
+        if (datasetsRes.status === 'fulfilled') {
+          const raw = datasetsRes.value?.data || (Array.isArray(datasetsRes.value) ? datasetsRes.value : [])
+          if (Array.isArray(raw)) setDatasetJobs(raw.slice(0, 6))
         }
-        if (finetuneRes.status === 'fulfilled' && finetuneRes.value?.jobs) {
-          setFinetuneJobs(finetuneRes.value.jobs.slice(0, 5))
+        if (finetuneRes.status === 'fulfilled') {
+          const raw = finetuneRes.value?.jobs || (Array.isArray(finetuneRes.value) ? finetuneRes.value : [])
+          if (Array.isArray(raw)) setFinetuneJobs(raw.slice(0, 5))
         }
-        if (reviewRes.status === 'fulfilled' && Array.isArray(reviewRes.value)) {
-          setReviewCount(reviewRes.value.filter((r: any) => r.status === 'pending').length)
+        if (reviewRes.status === 'fulfilled' && reviewRes.value) {
+          const total = reviewRes.value.total ?? (Array.isArray(reviewRes.value.items) ? reviewRes.value.items.length : Array.isArray(reviewRes.value) ? reviewRes.value.length : 0)
+          setReviewCount(total)
         }
       } catch (err: any) {
         console.error('Failed to load dashboard data:', err)
@@ -490,9 +493,9 @@ export default function OverviewDashboardPage() {
                       <span className="text-[#10b981]">Fidelity: 0.988</span>
                     </div>
 
-                    <div className="text-xs text-white bg-[#0a0a0f] p-2 rounded border border-[#1c1c28] font-mono">
-                      <span className="text-[#94a3b8] block mb-1">Q: How does Section 16(4) of the CGST Act intersect with annual return filing reconciliation?</span>
-                      <span className="text-[#10b981]">A: Under Section 16(4), registered persons cannot claim input tax credit after 30th November following the end of financial year...</span>
+                    <div className="text-xs bg-[#0a0a0f] p-3 rounded-lg border border-[#272738] font-mono space-y-1.5">
+                      <p className="text-[#94a3b8] leading-relaxed"><span className="text-indigo-400 font-bold">Q:</span> How does Section 16(4) of the CGST Act intersect with annual return filing reconciliation?</p>
+                      <p className="text-[#f1f5f9] leading-relaxed"><span className="text-[#10b981] font-bold">A:</span> Under Section 16(4), registered persons cannot claim input tax credit after 30th November following the end of financial year...</p>
                     </div>
 
                     {/* Keyboard Shortcuts Linear Badges */}
@@ -564,9 +567,9 @@ export default function OverviewDashboardPage() {
 
                 <div className="pt-2 border-t border-[#1c1c28]">
                   <Link href="/finetune">
-                    <Button className="w-full bg-[#10b981] hover:bg-[#34d399] text-black font-mono font-bold text-xs h-8 shadow-sm glow-emerald flex items-center justify-center gap-1.5">
-                      <Play className="w-3.5 h-3.5 fill-current" />
-                      <span>Start LoRA Training Run</span>
+                    <Button className="w-full bg-[#6366f1] hover:bg-[#818cf8] text-white font-mono font-bold text-xs h-8 shadow-sm glow-indigo flex items-center justify-center gap-1.5 rounded-md">
+                      <Play className="w-3.5 h-3.5 fill-current text-[#10b981]" />
+                      <span>Configure LoRA Training Session</span>
                     </Button>
                   </Link>
                 </div>
