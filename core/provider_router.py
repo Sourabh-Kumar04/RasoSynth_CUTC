@@ -159,12 +159,16 @@ class ProviderRouter:
             "google_api_key": "google_gemini",
             "nvidia_api_key": "nvidia_nim",
             "anthropic_api_key": "anthropic",
+            "anthropic_claude_api_key": "anthropic_claude",
             "openai_api_key": "openai",
             "hf_token": "huggingface",
             "ollama_base_url": "ollama",
             "vllm_base_url": "vllm",
             "xai_api_key": "xai",
             "groq_api_key": "groq",
+            "deepseek_api_key": "deepseek",
+            "openrouter_api_key": "openrouter",
+            "together_api_key": "together",
             "featherless_api_key": "featherless",
         }
 

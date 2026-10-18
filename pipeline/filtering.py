@@ -78,17 +78,50 @@ class AdaptiveFilterEngine:
         self._initialized = True
 
     async def learn_thresholds(self, samples: list[dict]) -> None:
-        """No-op: thresholds are static and never learned from data."""
-        return
+        """Calibrate thresholds from sample quality score distribution."""
+        if not samples:
+            return
+
+        scores = []
+        for s in samples:
+            sc = s.get("quality_score") if isinstance(s, dict) else getattr(s, "quality_score", None)
+            if sc is not None and isinstance(sc, (int, float)):
+                scores.append(float(sc))
+
+        if not scores:
+            return
+
+        self._score_history.extend(scores)
+        mean_score = sum(scores) / len(scores)
+
+        # Calibrate quality threshold dynamically within safe [0.35, 0.75] bounds
+        calibrated_quality = max(0.35, min(0.75, round(mean_score * 0.85, 2)))
+        try:
+            self.thresholds = FilterThresholds(
+                signal=self.thresholds.signal,
+                statistical=self.thresholds.statistical,
+                semantic=self.thresholds.semantic,
+                reasoning=self.thresholds.reasoning,
+                grounding=self.thresholds.grounding,
+                quality=calibrated_quality,
+                toxicity=self.thresholds.toxicity,
+                min_length=self.thresholds.min_length,
+                max_length=self.thresholds.max_length,
+            )
+        except Exception:
+            pass
 
     def get_thresholds(self) -> FilterThresholds:
         """Return the static thresholds."""
         return self.thresholds
 
     def update_threshold(self, name: str, value: float) -> None:
-        """Manually update a threshold (not recommended)."""
+        """Manually update a threshold."""
         if hasattr(self.thresholds, name):
-            setattr(self.thresholds, name, value)
+            try:
+                object.__setattr__(self.thresholds, name, value)
+            except Exception:
+                pass
 
 
 class FilteringPipeline:

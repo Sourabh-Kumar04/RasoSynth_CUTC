@@ -52,6 +52,11 @@ import providers.nvidia_nim  # noqa: F401, E402
 import providers.huggingface_provider  # noqa: F401, E402
 import providers.ollama_provider  # noqa: F401, E402
 import providers.xai_provider  # noqa: F401, E402
+
+# Ensure canonical alias anthropic_claude is registered as well
+from providers.anthropic_claude import AnthropicClaudeProvider
+PluginRegistry.register("anthropic_claude")(AnthropicClaudeProvider)
+
 logger.info("Provider plugins imported and registered via @PluginRegistry.register")
 
 __all__ = [

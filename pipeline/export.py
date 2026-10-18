@@ -118,6 +118,10 @@ class ExportPipeline:
             output_path = await self._export_csv(samples, job_id, job_output_dir)
         elif export_format == "parquet":
             output_path = await self._export_parquet(samples, job_id, job_output_dir)
+        elif export_format == "sql":
+            output_path = await self._export_sql(samples, job_id, job_output_dir)
+        elif export_format == "qdrant":
+            output_path = await self._export_qdrant(samples, job_id, job_output_dir)
         elif export_format == "huggingface":
             output_path = await self._export_huggingface(samples, job_id, job_output_dir)
         elif export_format == "s3":
@@ -277,6 +281,74 @@ class ExportPipeline:
                     self._sample_to_record(s) for s in split_samples
                 ], f, ensure_ascii=False, indent=2)
 
+        return output_path
+
+    async def _export_sql(
+        self,
+        samples: list,
+        job_id: str,
+        output_dir: Path
+    ) -> Path:
+        """Export samples as an ANSI SQL dump file."""
+        output_path = output_dir / f"{job_id}.sql"
+        table_name = f"dataset_{job_id.replace('-', '_')}"
+
+        with open(output_path, 'w', encoding='utf-8') as f:
+            f.write(f"-- RasoSynthTune SQL Export\n")
+            f.write(f"-- Job ID: {job_id}\n")
+            f.write(f"-- Exported at: {datetime.now(timezone.utc).isoformat()}\n\n")
+            f.write(f"CREATE TABLE IF NOT EXISTS {table_name} (\n")
+            f.write("    id VARCHAR(64) PRIMARY KEY,\n")
+            f.write("    instruction TEXT,\n")
+            f.write("    response TEXT,\n")
+            f.write("    input TEXT,\n")
+            f.write("    difficulty_tier INT,\n")
+            f.write("    metadata_json TEXT\n")
+            f.write(");\n\n")
+
+            for idx, sample in enumerate(samples):
+                record = self._sample_to_dict(sample)
+                s_id = str(record.get("id") or f"{job_id}_{idx}")
+                inst = (record.get("instruction") or "").replace("'", "''")
+                resp = (record.get("response") or "").replace("'", "''")
+                inp = (record.get("input") or "").replace("'", "''")
+                tier = int(record.get("difficulty_tier") or 1)
+                meta_str = json.dumps(record.get("metadata") or {}, ensure_ascii=False).replace("'", "''")
+                f.write(f"INSERT INTO {table_name} (id, instruction, response, input, difficulty_tier, metadata_json) VALUES ('{s_id}', '{inst}', '{resp}', '{inp}', {tier}, '{meta_str}');\n")
+
+        self._stats["total_exported"] += len(samples)
+        self._update_difficulty_stats(samples)
+        return output_path
+
+    async def _export_qdrant(
+        self,
+        samples: list,
+        job_id: str,
+        output_dir: Path
+    ) -> Path:
+        """Export samples formatted as a Qdrant point payload collection."""
+        output_path = output_dir / f"{job_id}_qdrant.json"
+        points = []
+
+        for idx, sample in enumerate(samples):
+            record = self._sample_to_dict(sample)
+            points.append({
+                "id": idx + 1,
+                "payload": record,
+            })
+
+        payload_wrapper = {
+            "collection_name": f"dataset_{job_id}",
+            "points_count": len(points),
+            "points": points,
+            "exported_at": datetime.now(timezone.utc).isoformat()
+        }
+
+        with open(output_path, 'w', encoding='utf-8') as f:
+            json.dump(payload_wrapper, f, ensure_ascii=False, indent=2)
+
+        self._stats["total_exported"] += len(samples)
+        self._update_difficulty_stats(samples)
         return output_path
 
     async def _export_s3(

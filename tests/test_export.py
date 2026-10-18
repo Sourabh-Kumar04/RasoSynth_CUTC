@@ -116,3 +116,25 @@ class TestExportPipeline:
         result = await pipeline.export([], "job-empty")
         assert "dataset" in result
         assert result["dataset"].exists()
+
+    async def test_export_sql(self, samples, tmp_path):
+        config = ExportConfig(format="sql", output_dir=tmp_path)
+        pipeline = ExportPipeline(config)
+        result = await pipeline.export(samples, "job-sql", format="sql")
+        assert "dataset" in result
+        assert result["dataset"].exists()
+        content = result["dataset"].read_text(encoding="utf-8")
+        assert "CREATE TABLE IF NOT EXISTS dataset_job_sql" in content
+        assert "INSERT INTO dataset_job_sql" in content
+
+    async def test_export_qdrant(self, samples, tmp_path):
+        config = ExportConfig(format="qdrant", output_dir=tmp_path)
+        pipeline = ExportPipeline(config)
+        result = await pipeline.export(samples, "job-qdrant", format="qdrant")
+        assert "dataset" in result
+        assert result["dataset"].exists()
+        import json
+        payload = json.loads(result["dataset"].read_text(encoding="utf-8"))
+        assert payload["collection_name"] == "dataset_job-qdrant"
+        assert len(payload["points"]) == len(samples)
+        assert "payload" in payload["points"][0]

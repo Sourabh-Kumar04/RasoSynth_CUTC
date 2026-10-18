@@ -114,18 +114,34 @@ class CheckpointStore:
         self._redis: Optional[redis.Redis] = None
 
     async def connect(self) -> None:
-        """Initialize connections."""
-        self._pool = await asyncpg.create_pool(
-            self.postgres_url,
-            min_size=2,
-            max_size=10,
-        )
-        self._redis = redis.from_url(self.redis_url, decode_responses=True)
-        await self._ensure_tables()
-        logger.info("Checkpoint store connected")
+        """Initialize connections with graceful in-memory fallback."""
+        if self.postgres_url.startswith("postgresql://"):
+            try:
+                self._pool = await asyncpg.create_pool(
+                    self.postgres_url,
+                    min_size=2,
+                    max_size=10,
+                )
+                await self._ensure_tables()
+                logger.info("Checkpoint store connected to PostgreSQL")
+            except Exception as e:
+                logger.warning(f"Could not connect to PostgreSQL pool ({e}); using memory fallback")
+                self._pool = None
+                self._in_memory_store = {}
+        else:
+            self._pool = None
+            self._in_memory_store = {}
+            logger.info("Checkpoint store using in-memory mode (non-PostgreSQL URL)")
+
+        try:
+            self._redis = redis.from_url(self.redis_url, decode_responses=True)
+        except Exception:
+            self._redis = None
 
     async def _ensure_tables(self) -> None:
         """Create tables if they don't exist."""
+        if not self._pool:
+            return
         async with self._pool.acquire() as conn:
             await conn.execute("""
                 CREATE TABLE IF NOT EXISTS orchestration_checkpoints (
@@ -154,9 +170,10 @@ class CheckpointStore:
 
     async def save(self, checkpoint: Checkpoint) -> str:
         """Save checkpoint to both PostgreSQL and Redis."""
-        # Save to PostgreSQL for persistence
-        async with self._pool.acquire() as conn:
-            await conn.execute("""
+        # Save to PostgreSQL for persistence if connected
+        if self._pool:
+            async with self._pool.acquire() as conn:
+                await conn.execute("""
                 INSERT INTO orchestration_checkpoints (
                     checkpoint_id, job_id, stage, progress,
                     sources_discovered, sources_extracted, samples_filtered, samples_generated,
@@ -192,14 +209,22 @@ class CheckpointStore:
                 checkpoint.created_at,
                 checkpoint.version,
             )
+        else:
+            if not hasattr(self, "_in_memory_store"):
+                self._in_memory_store = {}
+            self._in_memory_store[str(checkpoint.checkpoint_id)] = checkpoint
+            self._in_memory_store[f"{checkpoint.job_id}:latest"] = checkpoint
+            h_list = self._in_memory_store.setdefault(f"{checkpoint.job_id}:history", [])
+            h_list.insert(0, checkpoint)
 
         # Save to Redis for fast access. PostgreSQL remains authoritative.
         redis_key = f"checkpoint:{checkpoint.job_id}:latest"
         try:
             payload = json.dumps(checkpoint.to_dict())
-            await self._redis.setex(redis_key, self.checkpoint_ttl, payload)
-            history_key = f"checkpoint:{checkpoint.job_id}:{checkpoint.checkpoint_id}"
-            await self._redis.setex(history_key, self.checkpoint_ttl, payload)
+            if self._redis:
+                await self._redis.setex(redis_key, self.checkpoint_ttl, payload)
+                history_key = f"checkpoint:{checkpoint.job_id}:{checkpoint.checkpoint_id}"
+                await self._redis.setex(history_key, self.checkpoint_ttl, payload)
         except Exception as exc:
             logger.warning("Checkpoint cached only in PostgreSQL: %s", exc)
 
@@ -207,45 +232,59 @@ class CheckpointStore:
         return checkpoint.checkpoint_id
 
     async def get_latest(self, job_id: str) -> Optional[Checkpoint]:
-        """Get latest checkpoint for a job from Redis (fast path)."""
+        """Get latest checkpoint for a job from Redis (fast path) or persistent store."""
         redis_key = f"checkpoint:{job_id}:latest"
         try:
-            data = await self._redis.get(redis_key)
-            if data:
-                return Checkpoint.from_dict(json.loads(data))
+            if self._redis:
+                data = await self._redis.get(redis_key)
+                if data:
+                    return Checkpoint.from_dict(json.loads(data))
         except Exception as exc:
-            logger.warning("Checkpoint Redis lookup failed; reading PostgreSQL: %s", exc)
-        async with self._pool.acquire() as conn:
-            row = await conn.fetchrow(
-                "SELECT * FROM orchestration_checkpoints WHERE job_id = $1 ORDER BY created_at DESC LIMIT 1",
-                job_id,
-            )
-        return self._row_to_checkpoint(row) if row else None
+            logger.warning("Checkpoint Redis lookup failed; reading storage: %s", exc)
+
+        if self._pool:
+            async with self._pool.acquire() as conn:
+                row = await conn.fetchrow(
+                    "SELECT * FROM orchestration_checkpoints WHERE job_id = $1 ORDER BY created_at DESC LIMIT 1",
+                    job_id,
+                )
+            return self._row_to_checkpoint(row) if row else None
+        else:
+            return getattr(self, "_in_memory_store", {}).get(f"{job_id}:latest")
 
     async def get_by_id(self, checkpoint_id: str) -> Optional[Checkpoint]:
         """Get specific checkpoint by ID."""
-        async with self._pool.acquire() as conn:
-            row = await conn.fetchrow("""
-                SELECT * FROM orchestration_checkpoints
-                WHERE checkpoint_id = $1
-            """, checkpoint_id)
-        if row:
-            return self._row_to_checkpoint(row)
-        return None
+        if self._pool:
+            async with self._pool.acquire() as conn:
+                row = await conn.fetchrow("""
+                    SELECT * FROM orchestration_checkpoints
+                    WHERE checkpoint_id = $1
+                """, checkpoint_id)
+            if row:
+                return self._row_to_checkpoint(row)
+            return None
+        else:
+            return getattr(self, "_in_memory_store", {}).get(str(checkpoint_id))
 
     async def get_history(self, job_id: str, limit: int = 10) -> List[Checkpoint]:
         """Get checkpoint history for a job."""
-        async with self._pool.acquire() as conn:
-            rows = await conn.fetch("""
-                SELECT * FROM orchestration_checkpoints
-                WHERE job_id = $1
-                ORDER BY created_at DESC
-                LIMIT $2
-            """, job_id, limit)
-        return [self._row_to_checkpoint(row) for row in rows]
+        if self._pool:
+            async with self._pool.acquire() as conn:
+                rows = await conn.fetch("""
+                    SELECT * FROM orchestration_checkpoints
+                    WHERE job_id = $1
+                    ORDER BY created_at DESC
+                    LIMIT $2
+                """, job_id, limit)
+            return [self._row_to_checkpoint(row) for row in rows]
+        else:
+            h_list = getattr(self, "_in_memory_store", {}).get(f"{job_id}:history", [])
+            return h_list[:limit]
 
     async def delete_old_checkpoints(self, job_id: str, keep_count: int = 5) -> int:
         """Delete old checkpoints, keeping latest N."""
+        if not self._pool:
+            return 0
         async with self._pool.acquire() as conn:
             # Get IDs to delete
             to_delete = await conn.fetch("""

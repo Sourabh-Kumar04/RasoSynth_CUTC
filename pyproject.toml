@@ -1,10 +1,10 @@
 [project]
 name = "rasosynthtune"
-version = "1.0.0"
+version = "2.0.0"
 description = "Production-ready autonomous AI dataset generation system"
 readme = "README.md"
 requires-python = ">=3.11"
-license = {text = "MIT"}
+license = {text = "PolyForm Noncommercial 1.0.0 (CC BY-NC 4.0)"}
 authors = [
     {name = "RasoSynthTune Team"}
 ]
