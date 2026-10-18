@@ -289,6 +289,8 @@ class AutomaticFailoverEngine:
         constructed_samples: List = None,
     ) -> Optional[str]:
         """Create checkpoint before provider migration."""
+        if not self.checkpoint_manager:
+            return None
         try:
             try:
                 from core.orchestrator_pkg.checkpoints import CheckpointStage, ProviderContext  # type: ignore
@@ -303,9 +305,15 @@ class AutomaticFailoverEngine:
                 capabilities=[],
             )
 
+            stage_val = stage.value if hasattr(stage, "value") else str(stage).lower()
+            try:
+                stage_enum = CheckpointStage(stage_val)
+            except ValueError:
+                stage_enum = CheckpointStage.DISCOVERY
+
             checkpoint = await self.checkpoint_manager.create_checkpoint(
                 job_id=job_id,
-                stage=CheckpointStage(stage),
+                stage=stage_enum,
                 progress=progress,
                 provider_context=provider_context,
                 extracted_content=extracted_content or [],

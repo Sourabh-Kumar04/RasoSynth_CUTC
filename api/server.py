@@ -385,15 +385,16 @@ async def lifespan(app: FastAPI):
         7. ProviderValidator(router-aware config validation)
         8. DatasetOrchestrator(config, router, db, observability, ws_manager)
         9. ResearchLoop + TechniqueIntegrator  (router-driven research)
+        10. AutomaticFailoverEngine + ProviderHotSwitcher (runtime failover & hot-switching)
 
-    Checkpoint CRUD uses its persistent PostgreSQL store. Provider switching
-    and failover remain unavailable because the current router selects providers
-    per task and has no safe job-scoped switching interface.
+    Checkpoint CRUD uses its persistent store. Provider switching and failover
+    are managed via AutomaticFailoverEngine and ProviderHotSwitcher.
     """
     global router, orchestrator, db, cache, observability
     global ws_manager, provider_validator
     global research_loop, technique_integrator, admission_controller
     global checkpoint_store, checkpoint_manager
+    global failover_engine, provider_hot_switcher
 
     settings = get_settings()
 
@@ -533,6 +534,30 @@ async def lifespan(app: FastAPI):
         research_loop = None
         technique_integrator = None
 
+    # (9.5) AutomaticFailoverEngine & ProviderHotSwitcher
+    if router is not None:
+        try:
+            from providers.failover import AutomaticFailoverEngine, ProviderHotSwitcher
+            failover_engine = AutomaticFailoverEngine(
+                provider_registry=router,
+                checkpoint_manager=checkpoint_manager,
+                config=config,
+            )
+            provider_hot_switcher = ProviderHotSwitcher(
+                failover_engine=failover_engine,
+                provider_router=router,
+            )
+            app.state.failover_engine = failover_engine
+            app.state.provider_hot_switcher = provider_hot_switcher
+            logger.info("  ✓ AutomaticFailoverEngine & ProviderHotSwitcher initialized")
+        except Exception as e:
+            failover_engine = None
+            provider_hot_switcher = None
+            logger.warning(f"  ⚠ Failover engine init failed: {e}")
+    else:
+        failover_engine = None
+        provider_hot_switcher = None
+
     logger.info("=" * 72)
     logger.info(f"Startup complete — orchestrator={'ready' if orchestrator else 'NOT READY'}, "
                 f"db={'ready' if db else 'NOT READY'}, "
@@ -597,6 +622,32 @@ async def lifespan(app: FastAPI):
     # Also expose db on app.state for route dependencies
     app.state.db = db
 
+    # (12) ADR-003 Centralized Dependency Injection Container
+    app.state.container = None
+    try:
+        from core.di.container import ServiceContainer
+        container = ServiceContainer(settings)
+        if db is not None:
+            container.register_instance(type(db), db)
+        if router is not None:
+            container.register_instance(type(router), router)
+        if orchestrator is not None:
+            container.register_instance(type(orchestrator), orchestrator)
+        if checkpoint_manager is not None:
+            container.register_instance(type(checkpoint_manager), checkpoint_manager)
+        if failover_engine is not None:
+            container.register_instance(type(failover_engine), failover_engine)
+        if provider_hot_switcher is not None:
+            container.register_instance(type(provider_hot_switcher), provider_hot_switcher)
+        if review_service is not None:
+            container.register_instance(type(review_service), review_service)
+        if ft_manager is not None:
+            container.register_instance(type(ft_manager), ft_manager)
+        app.state.container = container
+        logger.info("  ✓ ServiceContainer (ADR-003) initialized and attached to app.state.container")
+    except Exception as e:
+        logger.warning(f"  ⚠ ServiceContainer initialization skipped: {e}")
+
     logger.info("=" * 72)
     logger.info(
         f"Startup complete — orchestrator={'ready' if orchestrator else 'NOT READY'}, "
@@ -610,6 +661,13 @@ async def lifespan(app: FastAPI):
 
     # ---- Shutdown ----
     logger.info("RasoSynthTune: shutting down")
+
+    if getattr(app.state, "container", None) is not None:
+        try:
+            await app.state.container.shutdown()
+            logger.info("  ✓ ServiceContainer shut down")
+        except Exception as e:
+            logger.warning(f"  ⚠ ServiceContainer shutdown failed: {e}")
 
     if admission_controller is not None:
         try:
