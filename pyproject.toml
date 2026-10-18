@@ -92,7 +92,7 @@ packages = ["."]
 [tool.pytest.ini_options]
 asyncio_mode = "auto"
 testpaths = ["tests"]
-addopts = "--ignore=tests/test_migration_safety.py"
+addopts = "-v"
 
 [tool.ruff]
 line-length = 120
