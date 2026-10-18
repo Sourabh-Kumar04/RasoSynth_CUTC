@@ -54,5 +54,9 @@ def test_model_dump():
 
     assert "google_api_key" in dump
     assert "nvidia_api_key" in dump
+    assert "deepseek_api_key" in dump
+    assert "openrouter_api_key" in dump
+    assert "together_api_key" in dump
+    assert "featherless_api_key" in dump
     assert "provider_priority" in dump
     assert "rate_limits" in dump

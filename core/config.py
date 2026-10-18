@@ -54,6 +54,18 @@ class Settings(BaseSettings):
     # Groq
     groq_api_key: Optional[str] = Field(default=None)
 
+    # DeepSeek
+    deepseek_api_key: Optional[str] = Field(default=None)
+
+    # OpenRouter
+    openrouter_api_key: Optional[str] = Field(default=None)
+
+    # Together AI
+    together_api_key: Optional[str] = Field(default=None)
+
+    # Featherless
+    featherless_api_key: Optional[str] = Field(default=None)
+
     # Local Ollama
     ollama_base_url: str = Field(default="http://localhost:11434")
 
@@ -194,43 +206,7 @@ class Settings(BaseSettings):
 
     def model_dump(self, **kwargs) -> dict:
         """Dump settings as dictionary for provider initialization."""
-        return {
-            "environment": self.environment,
-            "google_api_key": self.google_api_key,
-            "nvidia_api_key": self.nvidia_api_key,
-            "nvidia_nim_base_url": self.nvidia_nim_base_url,
-            "anthropic_api_key": self.anthropic_api_key,
-            "openai_api_key": self.openai_api_key,
-            "hf_token": self.hf_token,
-            "xai_api_key": self.xai_api_key,
-            "groq_api_key": self.groq_api_key,
-            "ollama_base_url": self.ollama_base_url,
-            "redis_url": self.redis_url,
-            "postgres_url": self.postgres_url,
-            "qdrant_url": self.qdrant_url,
-            "github_token": self.github_token,
-            "enable_celery": self.enable_celery,
-            "enable_ray": self.enable_ray,
-            "enable_hitl": self.enable_hitl,
-            "max_concurrent_jobs": self.max_concurrent_jobs,
-            "max_job_queue_size": self.max_job_queue_size,
-            "token_budget_usd": self.token_budget_usd,
-            "provider_priority": self.provider_priority,
-            "rate_limits": self.rate_limits,
-            "cost_per_token": self.cost_per_token,
-            "cache_ttl": self.cache_ttl,
-            "max_retries": self.max_retries,
-            "retry_base_delay": self.retry_base_delay,
-            "retry_max_delay": self.retry_max_delay,
-            "quality_threshold": self.quality_threshold,
-            "toxicity_threshold": self.toxicity_threshold,
-            "dedup_threshold": self.dedup_threshold,
-            "output_dir": self.output_dir,
-            "s3_bucket": self.s3_bucket,
-            "s3_region": self.s3_region,
-            "hf_dataset_org": self.hf_dataset_org,
-            "kaggle_username": self.kaggle_username,
-        }
+        return super().model_dump(**kwargs)
 
 
 @lru_cache
