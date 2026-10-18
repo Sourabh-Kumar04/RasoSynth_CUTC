@@ -133,12 +133,26 @@ class ServiceContainer:
         # Resolve dependencies first
         self._initializing.add(service_type)
         try:
-            dependencies = {}
+            resolved_deps = []
             for dep_type in descriptor.depends_on:
-                dependencies[dep_type.__name__] = await self.resolve(dep_type)
+                resolved_deps.append(await self.resolve(dep_type))
 
-            # Create instance
-            instance = descriptor.factory(**dependencies)
+            # Create instance: support positional, keyword, or zero-arg factories
+            instance = None
+            if resolved_deps:
+                try:
+                    instance = descriptor.factory(*resolved_deps)
+                except TypeError:
+                    dependencies = {dep_type.__name__: val for dep_type, val in zip(descriptor.depends_on, resolved_deps)}
+                    try:
+                        instance = descriptor.factory(**dependencies)
+                    except TypeError:
+                        instance = descriptor.factory()
+            else:
+                instance = descriptor.factory()
+
+            if asyncio.iscoroutine(instance):
+                instance = await instance
 
             # Store singleton instances
             if descriptor.lifetime == ServiceLifetime.SINGLETON:
