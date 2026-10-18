@@ -218,14 +218,14 @@ export default function ObservabilityPage() {
         <TabsContent value="overview" className="mt-6">
           <Card className="border-[#272738] bg-[#12121a] rounded-2xl card-shadow">
             <CardHeader className="pb-3 border-b border-[#272738]">
-              <CardTitle className="text-sm font-bold text-[#6366f1]">System Health Summary</CardTitle>
+              <CardTitle className="text-sm font-bold text-white">System Health Summary</CardTitle>
             </CardHeader>
             <CardContent className="p-4">
               <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
                 <div className="flex items-center justify-between p-3.5 rounded-xl bg-[#0a0a0f] border border-[#272738]">
                   <div className="flex items-center gap-3">
-                    <Database className="h-4 w-4 text-[#6366f1]" />
-                    <span className="text-xs font-bold text-[#6366f1]">PostgreSQL Database</span>
+                    <Database className="h-4 w-4 text-[#818cf8]" />
+                    <span className="text-xs font-bold text-white">PostgreSQL Database</span>
                   </div>
                   <span className="text-[10px] font-mono font-bold px-2.5 py-0.5 rounded-full bg-emerald-950/40 text-emerald-400 border border-emerald-500/30">
                     Healthy
@@ -233,8 +233,8 @@ export default function ObservabilityPage() {
                 </div>
                 <div className="flex items-center justify-between p-3.5 rounded-xl bg-[#0a0a0f] border border-[#272738]">
                   <div className="flex items-center gap-3">
-                    <Server className="h-4 w-4 text-[#6366f1]" />
-                    <span className="text-xs font-bold text-[#6366f1]">Redis In-Memory Cache</span>
+                    <Server className="h-4 w-4 text-[#818cf8]" />
+                    <span className="text-xs font-bold text-white">Redis In-Memory Cache</span>
                   </div>
                   <span className="text-[10px] font-mono font-bold px-2.5 py-0.5 rounded-full bg-emerald-950/40 text-emerald-400 border border-emerald-500/30">
                     Healthy
@@ -242,8 +242,8 @@ export default function ObservabilityPage() {
                 </div>
                 <div className="flex items-center justify-between p-3.5 rounded-xl bg-[#0a0a0f] border border-[#272738]">
                   <div className="flex items-center gap-3">
-                    <Activity className="h-4 w-4 text-[#6366f1]" />
-                    <span className="text-xs font-bold text-[#6366f1]">Synthetics API Backend</span>
+                    <Activity className="h-4 w-4 text-[#10b981]" />
+                    <span className="text-xs font-bold text-white">Synthetics API Backend</span>
                   </div>
                   <span className="text-[10px] font-mono font-bold px-2.5 py-0.5 rounded-full bg-emerald-950/40 text-emerald-400 border border-emerald-500/30">
                     Healthy (99.9%)
@@ -316,37 +316,37 @@ export default function ObservabilityPage() {
             <ValidationFeedback />
             <Card className="border-[#272738] bg-[#12121a] rounded-2xl card-shadow">
               <CardHeader className="pb-3 border-b border-[#272738]">
-                <CardTitle className="flex items-center gap-2 text-sm font-bold text-[#6366f1]">
+                <CardTitle className="flex items-center gap-2 text-sm font-bold text-white">
                   <Shield className="h-4 w-4 text-[#6366f1]" />
                   Security Features
                 </CardTitle>
               </CardHeader>
               <CardContent className="p-4">
                 <div className="space-y-3">
-                  <div className="flex items-start gap-3 p-3 bg-emerald-950/30 border border-emerald-200 rounded-xl">
-                    <CheckCircle2 className="h-4 w-4 text-emerald-600 mt-0.5 shrink-0" />
+                  <div className="flex items-start gap-3 p-3 bg-[#0a0a0f] border border-[#272738] rounded-xl">
+                    <CheckCircle2 className="h-4 w-4 text-[#10b981] mt-0.5 shrink-0" />
                     <div>
-                      <h4 className="font-bold text-xs text-emerald-950">Input Validation &amp; Sanitization</h4>
-                      <p className="text-[11px] text-emerald-800">
-                        All API inputs are strictly validated against JSON schema models.
+                      <h4 className="font-bold text-xs text-white">Input Validation &amp; Sanitization</h4>
+                      <p className="text-[11px] text-[#94a3b8]">
+                        All API inputs are strictly validated against JSON schema models and rate-limited.
                       </p>
                     </div>
                   </div>
-                  <div className="flex items-start gap-3 p-3 bg-emerald-950/30 border border-emerald-200 rounded-xl">
-                    <CheckCircle2 className="h-4 w-4 text-emerald-600 mt-0.5 shrink-0" />
+                  <div className="flex items-start gap-3 p-3 bg-[#0a0a0f] border border-[#272738] rounded-xl">
+                    <CheckCircle2 className="h-4 w-4 text-[#10b981] mt-0.5 shrink-0" />
                     <div>
-                      <h4 className="font-bold text-xs text-emerald-950">JWT Token Authentication</h4>
-                      <p className="text-[11px] text-emerald-800">
-                        Secure token-based authorization across synthetic data pipeline calls.
+                      <h4 className="font-bold text-xs text-white">JWT Token &amp; CSRF Protection</h4>
+                      <p className="text-[11px] text-[#94a3b8]">
+                        Secure token-based authorization with stateless HMAC CSRF protection across requests.
                       </p>
                     </div>
                   </div>
-                  <div className="flex items-start gap-3 p-3 bg-emerald-950/30 border border-emerald-200 rounded-xl">
-                    <CheckCircle2 className="h-4 w-4 text-emerald-600 mt-0.5 shrink-0" />
+                  <div className="flex items-start gap-3 p-3 bg-[#0a0a0f] border border-[#272738] rounded-xl">
+                    <CheckCircle2 className="h-4 w-4 text-[#10b981] mt-0.5 shrink-0" />
                     <div>
-                      <h4 className="font-bold text-xs text-emerald-950">CORS Security Policies</h4>
-                      <p className="text-[11px] text-emerald-800">
-                        Environment-controlled origins for enterprise security compliance.
+                      <h4 className="font-bold text-xs text-white">CORS &amp; Admission Control</h4>
+                      <p className="text-[11px] text-[#94a3b8]">
+                        Environment-controlled origins with backpressure admission limiting concurrent jobs.
                       </p>
                     </div>
                   </div>
