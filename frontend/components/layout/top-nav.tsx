@@ -281,7 +281,7 @@ export function TopNav() {
       </header>
 
       {/* Command Palette Modal */}
-      <CommandPalette isOpen={showSearch} onClose={() => setShowSearch(false)} />
+      <CommandPalette open={showSearch} onOpenChange={setShowSearch} />
       {showTour && <SpotlightProductTour />}
     </>
   )

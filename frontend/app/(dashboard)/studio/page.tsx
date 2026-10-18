@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useCallback, useEffect } from 'react'
+import { useState, useCallback, useEffect, Suspense } from 'react'
 import {
   FlaskConical,
   Sparkles,
@@ -80,7 +80,7 @@ const INDUSTRY_PRESETS = [
   },
 ]
 
-export default function StudioPage() {
+function StudioContent() {
   const router = useRouter()
   const searchParams = useSearchParams()
 
@@ -369,5 +369,19 @@ export default function StudioPage() {
       </div>
 
     </div>
+  )
+}
+
+export default function StudioPage() {
+  return (
+    <Suspense
+      fallback={
+        <div className="flex items-center justify-center min-h-[60vh]">
+          <Loader2 className="h-8 w-8 animate-spin text-[#6366f1]" />
+        </div>
+      }
+    >
+      <StudioContent />
+    </Suspense>
   )
 }
