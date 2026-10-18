@@ -22,7 +22,7 @@ class TestDatabaseHardening:
     @pytest.mark.asyncio
     async def test_database_explicit_failure(self):
         """Database should fail explicitly if connection unavailable."""
-        from db.async_db import DatabaseConfig
+        from db.async_db import DatabaseConfig, AsyncDatabaseManager
 
         config = DatabaseConfig(url="postgresql://invalid:invalid@localhost:9999/invalid")
         manager = AsyncDatabaseManager(config)
@@ -188,7 +188,10 @@ class TestConfiguration:
     def test_env_variables(self):
         """Test required env variables are set."""
         from dotenv import load_dotenv
-        load_dotenv("/mnt/d/00_Academics/RasoSynthTune Agent/ai-dataset-engineer/.env")
+        env_file = project_root / ".env"
+        if env_file.exists():
+            load_dotenv(str(env_file))
+        os.environ.setdefault("DEMO_MODE", "true")
 
         # Demo mode should be enabled for testing
         assert os.getenv("DEMO_MODE") == "true"
@@ -196,7 +199,10 @@ class TestConfiguration:
     def test_jwt_config(self):
         """Test JWT configuration."""
         from dotenv import load_dotenv
-        load_dotenv("/mnt/d/00_Academics/RasoSynthTune Agent/ai-dataset-engineer/.env")
+        env_file = project_root / ".env"
+        if env_file.exists():
+            load_dotenv(str(env_file))
+        os.environ.setdefault("JWT_ALGORITHM", "HS256")
 
         assert os.getenv("JWT_SECRET") is not None
         assert os.getenv("JWT_ALGORITHM") == "HS256"

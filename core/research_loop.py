@@ -61,7 +61,7 @@ class ResearchLoop:
         self.router = router
         self.config = config or {}
         self.last_research_time: datetime | None = None
-        self.research_interval_hours = config.get("research_interval_hours", 24)
+        self.research_interval_hours = self.config.get("research_interval_hours", 24)
         self._techniques_cache: dict[str, list[str]] = {}
         self._research_history: list[dict] = []
         self._discovered_techniques: List[Technique] = []

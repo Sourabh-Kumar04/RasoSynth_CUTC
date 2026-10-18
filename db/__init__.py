@@ -8,6 +8,7 @@ from db.migration_safety import (
     create_table,
     BUILTIN_MIGRATIONS,
 )
+from db.async_db import AsyncDatabaseManager, DatabaseConfig
 
 __all__ = [
     "SafeMigrationManager",
@@ -17,4 +18,6 @@ __all__ = [
     "create_index",
     "create_table",
     "BUILTIN_MIGRATIONS",
+    "AsyncDatabaseManager",
+    "DatabaseConfig",
 ]

@@ -12,7 +12,7 @@ sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 # Security: ensure JWT_SECRET is set for all tests
 os.environ.setdefault(
     "JWT_SECRET",
-    os.getenv("JWT_SECRET") or "test-jwt-secret-for-testing-only-min32chars"
+    os.getenv("JWT_SECRET") or "K7m9pQ2vX5zL8wR1tY4uN6bC3jF0gH2sD5vA8mK1pQ9xZ4"
 )
 os.environ.setdefault("AUTH_DISABLED", "true")
 os.environ.setdefault("AI_DATASET_ENVIRONMENT", "development")
