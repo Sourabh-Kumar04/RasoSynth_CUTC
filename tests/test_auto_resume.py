@@ -29,7 +29,8 @@ def mock_orchestrator():
 @pytest.fixture
 def mock_checkpoint_manager():
     cm = AsyncMock()
-    cm.get_latest_checkpoint = AsyncMock()
+    cm.get_latest_checkpoint = AsyncMock(return_value=None)
+    cm.get_resume_checkpoint = AsyncMock(return_value=None)
     cm.resume_from_checkpoint = AsyncMock()
     return cm
 

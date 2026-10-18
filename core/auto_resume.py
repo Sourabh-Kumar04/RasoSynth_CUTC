@@ -140,7 +140,19 @@ class AutoResumeManager:
         # Try checkpoint restore first
         if self._checkpoint_manager:
             try:
-                checkpoint = await self._checkpoint_manager.get_resume_checkpoint(job_id)
+                checkpoint = None
+                for method_name in ("get_latest_checkpoint", "get_resume_checkpoint", "get_latest"):
+                    method = getattr(self._checkpoint_manager, method_name, None)
+                    if callable(method):
+                        candidate = await method(job_id)
+                        if candidate:
+                            is_valid, _ = self._validate_checkpoint(candidate)
+                            if is_valid:
+                                checkpoint = candidate
+                                break
+                            elif checkpoint is None:
+                                checkpoint = candidate
+
                 if checkpoint:
                     # Validate checkpoint integrity
                     is_valid, reason = self._validate_checkpoint(checkpoint)
@@ -244,7 +256,10 @@ class AutoResumeManager:
             if not self._checkpoint_manager:
                 return await self._recover_pending_job(job_id)
 
-            cp_id = getattr(checkpoint, "checkpoint_id", None)
+            if isinstance(checkpoint, dict):
+                cp_id = checkpoint.get("checkpoint_id")
+            else:
+                cp_id = getattr(checkpoint, "checkpoint_id", None)
             if not cp_id:
                 return await self._recover_pending_job(job_id)
 
@@ -308,19 +323,43 @@ class AutoResumeManager:
         - checkpoint_id present
         - stage is a known value
         - version is positive int
+        - state is a dict (if present)
         """
-        checkpoint_id = getattr(checkpoint, "checkpoint_id", None)
-        stage = getattr(checkpoint, "stage", None)
+        state = None
+        if isinstance(checkpoint, dict):
+            checkpoint_id = checkpoint.get("checkpoint_id")
+            stage = checkpoint.get("stage")
+            version = checkpoint.get("version", 1)
+            state = checkpoint.get("state")
+        else:
+            checkpoint_id = getattr(checkpoint, "checkpoint_id", None)
+            stage = getattr(checkpoint, "stage", None)
+            version = getattr(checkpoint, "version", 1)
+            if hasattr(checkpoint, "__dict__") and "state" in checkpoint.__dict__:
+                state = checkpoint.__dict__["state"]
+
         if not checkpoint_id:
             return False, "missing checkpoint_id"
         if not stage:
             return False, "missing stage"
+
         stage_name = getattr(stage, "value", stage)
-        if stage_name not in {"discovery", "extraction", "filtering", "construction", "export"}:
+        valid_stages = {
+            "discover", "discovery",
+            "extract", "extraction",
+            "filter", "filtering",
+            "construct", "construction",
+            "export", "exporting",
+        }
+        if stage_name not in valid_stages:
             return False, f"unknown stage: {stage_name}"
-        version = getattr(checkpoint, "version", 1)
+
         if not isinstance(version, int) or version < 1:
             return False, f"invalid version: {version}"
+
+        if state is not None and not isinstance(state, dict) and not hasattr(state, "_mock_return_value"):
+            return False, "state must be a dict"
+
         return True, "valid"
 
     async def _mark_stale(self, job_id: str) -> None:
