@@ -643,6 +643,13 @@ async def lifespan(app: FastAPI):
             container.register_instance(type(review_service), review_service)
         if ft_manager is not None:
             container.register_instance(type(ft_manager), ft_manager)
+        try:
+            from core.storage.delivery import DeliveryManager
+            delivery_manager = DeliveryManager()
+            container.register_instance(DeliveryManager, delivery_manager)
+            app.state.delivery_manager = delivery_manager
+        except Exception as dm_err:
+            logger.debug(f"DeliveryManager registration skipped: {dm_err}")
         app.state.container = container
         logger.info("  ✓ ServiceContainer (ADR-003) initialized and attached to app.state.container")
     except Exception as e:
