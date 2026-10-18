@@ -453,6 +453,18 @@ async def lifespan(app: FastAPI):
         logger.warning(f"  ⚠ Cache disabled (Redis unreachable): {e}")
         cache = None
 
+    multi_level_cache = None
+    try:
+        from core.cache.layers import MultiLevelCache
+        multi_level_cache = MultiLevelCache(
+            l1_config={"max_size_mb": 100},
+            l2_redis=cache.redis if cache is not None else None,
+        )
+        app.state.multi_level_cache = multi_level_cache
+        logger.info("  ✓ MultiLevelCache (L1 Memory + L2 Redis) initialized")
+    except Exception as mlc_err:
+        logger.warning(f"  ⚠ MultiLevelCache init skipped: {mlc_err}")
+
     # (4b) Persistent API checkpoints. The graph itself also has a
     # PostgreSQL checkpointer; this store backs the checkpoint API endpoints.
     checkpoint_manager = None
@@ -643,6 +655,8 @@ async def lifespan(app: FastAPI):
             container.register_instance(type(review_service), review_service)
         if ft_manager is not None:
             container.register_instance(type(ft_manager), ft_manager)
+        if multi_level_cache is not None:
+            container.register_instance(type(multi_level_cache), multi_level_cache)
         try:
             from core.storage.delivery import DeliveryManager
             delivery_manager = DeliveryManager()
@@ -650,6 +664,14 @@ async def lifespan(app: FastAPI):
             app.state.delivery_manager = delivery_manager
         except Exception as dm_err:
             logger.debug(f"DeliveryManager registration skipped: {dm_err}")
+        try:
+            from agents.registry import AgentRegistry, AgentRegistryInitializer
+            AgentRegistryInitializer.initialize()
+            app.state.agent_registry = AgentRegistry
+            container.register_instance(AgentRegistry, AgentRegistry.get_instance())
+            logger.info("  ✓ AgentRegistry (multi-agent society) initialized with builtin agents")
+        except Exception as agent_err:
+            logger.debug(f"AgentRegistry initialization skipped: {agent_err}")
         app.state.container = container
         logger.info("  ✓ ServiceContainer (ADR-003) initialized and attached to app.state.container")
     except Exception as e:
@@ -877,6 +899,44 @@ async def get_research_status():
         "applied_techniques": technique_integrator.get_applied_techniques() if technique_integrator else {},
         "active_heuristics": technique_integrator.get_active_heuristics() if technique_integrator else {},
     }
+
+
+# =============================================================================
+# Multi-Agent Society & Registry Endpoints
+# =============================================================================
+
+@app.get("/agents", tags=["Agents"])
+async def list_registered_agents():
+    """List all registered agent types and capabilities in the multi-agent society."""
+    try:
+        from agents.registry import AgentRegistry
+        registrations = AgentRegistry.list_registrations()
+        return {
+            "agents": [
+                {
+                    "type": r.agent_type.value,
+                    "name": r.name,
+                    "description": r.description,
+                    "capabilities": [c.value for c in r.capabilities],
+                    "version": r.version,
+                    "author": r.author,
+                }
+                for r in registrations
+            ],
+            "total": len(registrations),
+        }
+    except Exception as exc:
+        raise HTTPException(status_code=500, detail=f"Failed to query agent registry: {exc}")
+
+
+@app.get("/agents/stats", tags=["Agents"])
+async def get_agent_stats():
+    """Get statistics on registered and active agent instances."""
+    try:
+        from agents.registry import AgentRegistry
+        return AgentRegistry.get_stats()
+    except Exception as exc:
+        raise HTTPException(status_code=500, detail=f"Failed to query agent stats: {exc}")
 
 
 @app.post("/adaptability", response_model=AdaptabilityResponse, tags=["Adaptability"])

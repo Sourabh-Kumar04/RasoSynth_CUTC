@@ -587,7 +587,9 @@ class MultiLevelCache:
         self.l3 = PersistentCache(**(l3_config or {})) if l3_config else None
         self.l4 = SemanticCache() if l4_config else None
 
-        self.layer_stats: Dict[CacheLayer, LayerStats] = {}
+        self.layer_stats: Dict[CacheLayer, LayerStats] = {
+            layer: LayerStats(layer=layer) for layer in CacheLayer
+        }
         self._hit_chain = 0
         self._miss_chain = 0
 
