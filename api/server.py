@@ -9,6 +9,7 @@ import os
 import secrets
 import hashlib
 import hmac
+import time
 from contextlib import asynccontextmanager
 from datetime import datetime
 from pathlib import Path
@@ -77,7 +78,7 @@ from core.provider_router import ProviderRouter, TaskType
 from core.orchestrator_core import DatasetOrchestrator, Job, JobStatus
 from core.db import AsyncDB
 from core.cache import SimpleRedisCache as CacheManager
-from core.observability import ObservabilityManager
+from core.observability import ObservabilityManager, correlation_id_var, trace_id_var
 from core.research_loop import ResearchLoop, TechniqueIntegrator
 from api.websocket_manager import ConnectionManager, get_ws_manager, MessageType
 from api.provider_validator import ProviderValidator
@@ -368,6 +369,58 @@ class SecurityHeadersMiddleware(BaseHTTPMiddleware):
         return response
 
 
+class TracingMiddleware(BaseHTTPMiddleware):
+    """Distributed tracing and request context propagation middleware."""
+
+    async def dispatch(self, request: Request, call_next):
+        start_time = time.time()
+
+        # Extract or generate correlation and trace IDs
+        correlation_id = (
+            request.headers.get("x-correlation-id")
+            or request.headers.get("X-Correlation-ID")
+            or f"corr-{uuid.uuid4().hex[:12]}"
+        )
+        trace_id = (
+            request.headers.get("x-trace-id")
+            or request.headers.get("X-Trace-ID")
+            or f"tr-{uuid.uuid4().hex[:16]}"
+        )
+
+        # Propagate to contextvars
+        correlation_id_var.set(correlation_id)
+        trace_id_var.set(trace_id)
+
+        status = "ok"
+        status_code = 500
+        try:
+            response = await call_next(request)
+            status_code = response.status_code
+            if status_code >= 400:
+                status = "error"
+            response.headers["x-trace-id"] = trace_id
+            response.headers["x-correlation-id"] = correlation_id
+            return response
+        except Exception:
+            status = "error"
+            raise
+        finally:
+            elapsed_ms = (time.time() - start_time) * 1000.0
+            if observability is not None:
+                try:
+                    observability.record_trace(
+                        operation=f"{request.method} {request.url.path}",
+                        duration_ms=elapsed_ms,
+                        status=status,
+                        service="api",
+                        trace_id=trace_id,
+                        correlation_id=correlation_id,
+                        details={"status_code": status_code},
+                    )
+                except Exception as trace_err:
+                    logger.debug("Failed to record trace in middleware: %s", trace_err)
+
+
 # ---- Lifespan: initialize global services on startup, clean up on shutdown ----
 @asynccontextmanager
 async def lifespan(app: FastAPI):
@@ -559,6 +612,7 @@ async def lifespan(app: FastAPI):
                 failover_engine=failover_engine,
                 provider_router=router,
             )
+            router.set_failover_engine(failover_engine)
             app.state.failover_engine = failover_engine
             app.state.provider_hot_switcher = provider_hot_switcher
             logger.info("  ✓ AutomaticFailoverEngine & ProviderHotSwitcher initialized")
@@ -741,7 +795,8 @@ app.include_router(review_router)
 app.include_router(quality_router)
 app.include_router(finetune_router)
 
-# Security: Add custom middleware
+# Observability & Security: Add custom middleware
+app.add_middleware(TracingMiddleware)
 app.add_middleware(SecurityHeadersMiddleware)
 app.add_middleware(CSRFMiddleware)
 
@@ -752,6 +807,7 @@ app.add_middleware(
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
+    expose_headers=["x-trace-id", "x-correlation-id", "X-Trace-ID", "X-Correlation-ID"],
 )
 
 # Security: Validate JWT_SECRET at startup (fail-fast production requirements)
@@ -1053,6 +1109,34 @@ async def langsmith_status():
     if not observability or not hasattr(observability, "langsmith"):
         return {"status": "disabled", "available": False, "enabled": False}
     return observability.langsmith.get_status()
+
+
+# ── Observability & Tracing Endpoints ──────────────────────────────────────────
+
+@app.get("/traces", tags=["Observability"])
+async def get_traces(service: Optional[str] = None, limit: int = 50):
+    """Retrieve recent traces from the observability ring buffer."""
+    traces = observability.get_traces(service=service, limit=limit) if observability else []
+    return {"traces": traces}
+
+
+@app.get("/traces/correlation", tags=["Observability"])
+async def get_traces_by_correlation(correlation_id: str):
+    """Retrieve traces matching a specific correlation ID."""
+    traces = observability.get_traces(correlation_id=correlation_id) if observability else []
+    return {"traces": traces}
+
+
+@app.get("/traces/{trace_id}", tags=["Observability"])
+async def get_trace(trace_id: str):
+    """Retrieve a specific trace or span by trace_id or span id."""
+    if not observability:
+        raise HTTPException(status_code=404, detail="Observability not initialized")
+    trace = observability.get_trace_by_id(trace_id)
+    if not trace:
+        raise HTTPException(status_code=404, detail=f"Trace {trace_id} not found")
+    return trace
+
 
 
 @app.get("/health", response_model=HealthResponse, tags=["Health"])

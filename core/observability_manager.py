@@ -5,7 +5,7 @@ import logging
 import os
 from contextvars import ContextVar
 from typing import Optional, Any, Dict, Callable
-from datetime import datetime
+from datetime import datetime, timezone
 from functools import wraps
 from enum import Enum
 
@@ -80,6 +80,10 @@ class ObservabilityManager:
 
         # Prometheus metrics
         self._metrics: Dict[str, Any] = {}
+
+        # Queryable in-memory trace ring buffer (for UI trace panels & distributed spans)
+        self._trace_buffer: list[dict] = []
+        self._max_trace_buffer_size: int = 500
 
         # LangSmith Tracer
         from core.langsmith_tracer import LangSmithTracer
@@ -367,14 +371,77 @@ class ObservabilityManager:
         """Get metrics dictionary."""
         return self._metrics
 
+    def record_trace(
+        self,
+        operation: str,
+        duration_ms: float,
+        status: str = "ok",
+        service: str = "api",
+        trace_id: Optional[str] = None,
+        correlation_id: Optional[str] = None,
+        details: Optional[dict] = None,
+    ) -> dict:
+        """Record a completed operation into the queryable trace buffer."""
+        t_id = trace_id or trace_id_var.get() or f"tr-{uuid.uuid4().hex[:16]}"
+        c_id = correlation_id or correlation_id_var.get() or f"corr-{uuid.uuid4().hex[:12]}"
+
+        trace_entry = {
+            "id": f"sp-{uuid.uuid4().hex[:12]}",
+            "operation": operation,
+            "duration_ms": round(duration_ms, 2),
+            "duration": f"{round(duration_ms, 1)}ms",
+            "status": status,
+            "service": service,
+            "timestamp": datetime.now(timezone.utc).strftime("%H:%M:%S"),
+            "iso_timestamp": datetime.now(timezone.utc).isoformat(),
+            "trace_id": t_id,
+            "correlation_id": c_id,
+            "details": details or {},
+        }
+
+        self._trace_buffer.insert(0, trace_entry)
+        if len(self._trace_buffer) > self._max_trace_buffer_size:
+            self._trace_buffer.pop()
+
+        return trace_entry
+
+    def get_traces(
+        self,
+        service: Optional[str] = None,
+        correlation_id: Optional[str] = None,
+        limit: int = 50,
+    ) -> list[dict]:
+        """Query traces from the in-memory ring buffer."""
+        filtered = self._trace_buffer
+        if service:
+            filtered = [t for t in filtered if t.get("service") == service]
+        if correlation_id:
+            filtered = [t for t in filtered if t.get("correlation_id") == correlation_id]
+        return filtered[:limit]
+
+    def get_trace_by_id(self, trace_id: str) -> Optional[dict]:
+        """Find a single trace by trace_id or span_id."""
+        for t in self._trace_buffer:
+            if t.get("trace_id") == trace_id or t.get("id") == trace_id:
+                return t
+        return None
+
     def log_event(self, event_type: str, message: str, metadata: Dict[str, Any] = None) -> None:
         """Log an event with correlation context."""
         extra = {"event_type": event_type, "metadata": metadata or {}}
         logger.info(message, extra=extra)
 
     def log_job_event(self, job_id: str, event: str, data: Dict[str, Any] = None) -> None:
-        """Log a job event."""
+        """Log a job event and record a queryable trace."""
         self.log_event(f"job_{event}", f"Job {job_id}: {event}", data)
+        self.record_trace(
+            operation=f"job_{event}",
+            duration_ms=float((data or {}).get("duration_ms", 120.0)),
+            status="error" if "fail" in event else "ok",
+            service="orchestrator",
+            correlation_id=job_id,
+            details=data or {},
+        )
         if event in ["pipeline_started", "pipeline_completed", "pipeline_failed"]:
             status_tag = event.replace("pipeline_", "")
             self.record_pipeline_run(status_tag)

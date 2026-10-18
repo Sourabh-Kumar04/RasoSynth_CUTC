@@ -12,6 +12,7 @@ from __future__ import annotations
 
 import hashlib
 import logging
+import os
 import re
 import unicodedata
 from dataclasses import dataclass, field
@@ -114,6 +115,18 @@ class DeduplicationEngine:
         #   Each entry: (sample_id, embedding_vector, text_hash)
         self._embedding_buffer: list[tuple[str, list[float], str]] = []
         self._embedding_buffer_max = config.get("embedding_buffer_max", 1000)
+
+        # Level 3b: Optional remote Qdrant vector database client
+        self._qdrant_url = config.get("qdrant_url") or os.environ.get("QDRANT_URL")
+        self._qdrant_collection = config.get("qdrant_collection", "rasosynth_dedup")
+        self._qdrant_client = None
+        if self._qdrant_url:
+            try:
+                from qdrant_client import QdrantClient
+                self._qdrant_client = QdrantClient(url=self._qdrant_url)
+                logger.info("Connected to remote Qdrant cluster for deduplication at %s", self._qdrant_url)
+            except Exception as q_err:
+                logger.warning("Could not connect to Qdrant (%s); using in-memory vector buffer", q_err)
 
         # Level 4: Online cluster centroids
         #   cluster_id -> {"centroid": list[float], "count": int}
@@ -223,7 +236,7 @@ class DeduplicationEngine:
         ).hexdigest()
         self._minhash_cache[sig_hash] = (frozenset(sig), sample_id)
 
-        # Level 3: Embedding buffer
+        # Level 3: Embedding buffer & optional Qdrant index
         if self.router is not None:
             try:
                 embedding = await self.router.embed(text[:1000])
@@ -231,6 +244,19 @@ class DeduplicationEngine:
                     self._embedding_buffer.append((sample_id, embedding, text_hash))
                     if len(self._embedding_buffer) > self._embedding_buffer_max:
                         self._embedding_buffer.pop(0)
+
+                    if self._qdrant_client:
+                        try:
+                            self._qdrant_client.upsert(
+                                collection_name=self._qdrant_collection,
+                                points=[{
+                                    "id": sample_id or text_hash,
+                                    "vector": embedding,
+                                    "payload": {"text_hash": text_hash}
+                                }]
+                            )
+                        except Exception as q_err:
+                            logger.debug("Qdrant upsert error: %s", q_err)
             except Exception:
                 logger.debug("Embedding generation failed during add()", exc_info=True)
 
@@ -366,7 +392,7 @@ class DeduplicationEngine:
         Returns a 4-tuple
         ``(is_duplicate, duplicate_score, matched_id, similarity)``.
         """
-        if self.router is None or not self._embedding_buffer:
+        if self.router is None or (not self._embedding_buffer and not self._qdrant_client):
             return False, 0.0, None, 0.0
 
         try:
@@ -376,6 +402,21 @@ class DeduplicationEngine:
         except Exception:
             logger.debug("Embedding generation failed during check", exc_info=True)
             return False, 0.0, None, 0.0
+
+        # Query Qdrant if connected
+        if self._qdrant_client:
+            try:
+                hits = self._qdrant_client.search(
+                    collection_name=self._qdrant_collection,
+                    query_vector=emb,
+                    limit=1,
+                    score_threshold=self.embedding_threshold,
+                )
+                if hits:
+                    best = hits[0]
+                    return True, float(best.score), str(best.id), float(best.score)
+            except Exception as q_err:
+                logger.debug("Qdrant vector query error, checking local buffer: %s", q_err)
 
         for sample_id, cached_emb, _ in self._embedding_buffer:
             sim = self._cosine_similarity(emb, cached_emb)

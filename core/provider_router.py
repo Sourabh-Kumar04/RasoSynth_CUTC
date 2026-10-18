@@ -145,6 +145,7 @@ class ProviderRouter:
         self._providers: dict[str, AbstractProviderPlugin] = {}
         self._provider_configs: dict[str, dict] = {}
         self._success_rates: dict[str, list[bool]] = {}
+        self.failover_engine = None
         # Synchronously register providers without awaiting initialize().
         # Call await router.initialize() from the async lifespan handler.
         self._provider_last_failure: dict[str, float] = {}
@@ -250,6 +251,10 @@ class ProviderRouter:
                 self.cache.popitem(last=False)  # Remove oldest (LRU)
             self.cache[cache_key] = (time.time(), response)
 
+    def set_failover_engine(self, engine: Any) -> None:
+        """Attach an AutomaticFailoverEngine to observe and record failures."""
+        self.failover_engine = engine
+
     async def route(
         self,
         task: TaskType,
@@ -343,6 +348,19 @@ class ProviderRouter:
                     logger.warning("Provider %s failed with exception: %s", provider_name, e, exc_info=True)
                     last_error = e
                     self._record_success(provider_name, False)
+
+                    if self.failover_engine:
+                        try:
+                            await self.failover_engine.handle_failure(
+                                job_id=kwargs.get("job_id", "orchestrator_job"),
+                                current_provider=provider_name,
+                                error=e,
+                                stage=kwargs.get("stage", "synthesis"),
+                                progress=kwargs.get("progress", 0.5),
+                                latency_ms=(time.time() - start_time) * 1000,
+                            )
+                        except Exception as fe_err:
+                            logger.debug("Failover notification error: %s", fe_err)
 
                     if attempt < self.config.max_retries - 1:
                         delay = min(

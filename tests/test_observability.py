@@ -90,3 +90,86 @@ class TestMetricsCollector:
         """Test creating a MetricsCollector."""
         from core.observability import MetricsCollector
         assert MetricsCollector is not None
+
+
+class TestObservabilityTraces:
+    """Test trace recording, ring buffer, and query capabilities."""
+
+    def test_record_and_retrieve_traces(self) -> None:
+        settings = Settings()
+        obs = ObservabilityManager(settings)
+
+        entry = obs.record_trace(
+            operation="test_op",
+            duration_ms=45.2,
+            status="ok",
+            service="test_svc",
+            correlation_id="corr-12345",
+        )
+        assert entry["operation"] == "test_op"
+        assert entry["status"] == "ok"
+        assert entry["service"] == "test_svc"
+        assert entry["correlation_id"] == "corr-12345"
+
+        traces = obs.get_traces(service="test_svc")
+        assert len(traces) >= 1
+        assert traces[0]["operation"] == "test_op"
+
+        by_corr = obs.get_traces(correlation_id="corr-12345")
+        assert len(by_corr) >= 1
+
+        fetched = obs.get_trace_by_id(entry["trace_id"])
+        assert fetched is not None
+        assert fetched["trace_id"] == entry["trace_id"]
+
+    def test_trace_ring_buffer_limit(self) -> None:
+        settings = Settings()
+        obs = ObservabilityManager(settings)
+        obs._max_trace_buffer_size = 5
+
+        for i in range(10):
+            obs.record_trace(operation=f"op_{i}", duration_ms=10.0)
+
+        assert len(obs._trace_buffer) == 5
+        # The most recent should be at the head
+        assert obs._trace_buffer[0]["operation"] == "op_9"
+
+
+class TestTraceEndpointsAndMiddleware:
+    """Test /traces API endpoints and TracingMiddleware header propagation."""
+
+    def test_tracing_endpoints_and_headers(self) -> None:
+        import os
+        from fastapi.testclient import TestClient
+        os.environ.setdefault("JWT_SECRET", "a1b2c3d4e5f6g7h8i9j0k1l2m3n4o5p6q7r8s9t0u1v2w3x4y5z6A")
+        import api.server as server_mod
+
+        # Ensure server_mod.observability is instantiated for test
+        server_mod.observability = ObservabilityManager(Settings())
+
+        client = TestClient(server_mod.app)
+
+        # Make a request with custom correlation ID
+        custom_corr = "corr-test-custom-999"
+        resp = client.get("/health", headers={"x-correlation-id": custom_corr})
+        assert "x-trace-id" in resp.headers
+        assert resp.headers.get("x-correlation-id") == custom_corr
+
+        # Verify /traces endpoint returns recorded traces
+        traces_resp = client.get("/traces?limit=10")
+        assert traces_resp.status_code == 200
+        data = traces_resp.json()
+        assert "traces" in data
+        assert len(data["traces"]) > 0
+
+        # Query by correlation ID
+        corr_resp = client.get(f"/traces/correlation?correlation_id={custom_corr}")
+        assert corr_resp.status_code == 200
+        corr_data = corr_resp.json()
+        assert any(t["correlation_id"] == custom_corr for t in corr_data["traces"])
+
+        # Query single trace by ID
+        target_trace = data["traces"][0]
+        single_resp = client.get(f"/traces/{target_trace['trace_id']}")
+        assert single_resp.status_code == 200
+        assert single_resp.json()["trace_id"] == target_trace["trace_id"]

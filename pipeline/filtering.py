@@ -168,20 +168,28 @@ class FilteringPipeline:
         self._accumulated_samples: list[str] = []
         self._diversity_batch_size = config.get("diversity_batch_size", 100)
 
-        # Expanded toxicity detection patterns
+        # Expanded multilingual toxicity detection patterns
         self._toxic_patterns = [
-            # Hate speech
+            # English hate speech & violence
             r'\b(hate|kill|attack|terrorist|murder|torture|execut)\b',
-            # Slurs
+            # English slurs & abusive terms
             r'(?:nigger|faggot|retard|kike|spic|chink|gook|wetback|raghead|tranny)',
-            # Harassment
+            # Harassment & profanity
             r'\b(stupid|idiot|dumbass|worthless|pathetic|loser|trash)\b',
             # Threats
             r'\b(threaten|blackmail|extort|hostage|bomb|shoot|stab|kill)\b',
             # NSFW
             r'\b(porn|sex|nude|explicit|nsfw)\b',
-            # Script injection
+            # Multilingual: Indic / Hindi abusive & violent patterns
+            r'(?:आतंकवादी|हत्या|मार\s*डाल|बलात्कार|कमीने|दंगा|जिहादी|हरामी)',
+            # Multilingual: Spanish abusive & violent patterns
+            r'\b(?:asesinar|matar|terrorista|violador|mierda|maricón)\b',
+            # Multilingual: French & German abusive patterns
+            r'\b(?:connard|bâtard|terroriste|assassiner|arschloch|hurensohn|vergasen)\b',
+            # Script injection & XSS
             r'<script|<iframe|onclick\s*=|onload\s*=|javascript:',
+            # Unicode obfuscation / BiDi Trojan characters
+            r'[\u200B-\u200D\uFEFF\u202A-\u202E]',
         ]
 
         # Deduplication cache (kept for backward compat)
