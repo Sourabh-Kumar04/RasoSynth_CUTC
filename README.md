@@ -54,7 +54,7 @@ Uses **SQLite** by default — zero PostgreSQL setup required.
 
 ```bash
 git clone https://github.com/Sourabh-Kumar04/RasoSynth_CUTC.git
-cd RasoSynth_CUTC/ai-dataset-engineer
+cd RasoSynth_CUTC
 
 cp .env.example .env
 # Set POSTGRES_PASSWORD in .env; API keys are optional for demo mode.
