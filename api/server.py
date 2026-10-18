@@ -867,6 +867,8 @@ async def get_research_status():
         "last_research": research_loop.last_research_time.isoformat() if research_loop.last_research_time else None,
         "research_history": research_loop.get_research_history(),
         "cached_techniques": research_loop.get_cached_techniques(),
+        "applied_techniques": technique_integrator.get_applied_techniques() if technique_integrator else {},
+        "active_heuristics": technique_integrator.get_active_heuristics() if technique_integrator else {},
     }
 
 

@@ -311,6 +311,7 @@ class TechniqueIntegrator:
     def __init__(self, router=None):
         self.router = router
         self.applied_techniques: dict[str, datetime] = {}
+        self.active_heuristics: dict[str, dict] = {}
 
     async def integrate_technique(
         self,
@@ -339,39 +340,72 @@ class TechniqueIntegrator:
             return True
 
         except Exception as e:
-            print(f"Technique integration failed: {e}")
+            logger.warning(f"Technique integration failed: {e}")
             return False
 
     async def _integrate_minhash_dedup(self):
         """Integrate MinHash deduplication."""
-        # Would update filtering pipeline
-        pass
+        self.active_heuristics["minhash_dedup"] = {
+            "enabled": True,
+            "threshold": 0.85,
+            "num_perm": 128,
+            "updated_at": datetime.utcnow().isoformat(),
+        }
+        logger.info("MinHash LSH deduplication heuristic activated")
 
     async def _integrate_perplexity_filtering(self):
         """Integrate perplexity-based quality filtering."""
-        # Would update quality scoring
-        pass
+        self.active_heuristics["perplexity_filtering"] = {
+            "enabled": True,
+            "max_perplexity": 50.0,
+            "updated_at": datetime.utcnow().isoformat(),
+        }
+        logger.info("Perplexity-based quality filtering heuristic activated")
 
     async def _integrate_self_instruct(self):
         """Integrate self-instruct for synthetic data."""
-        # Would update construction pipeline
-        pass
+        self.active_heuristics["self_instruct"] = {
+            "enabled": True,
+            "num_instructions_per_seed": 3,
+            "temperature": 0.7,
+            "updated_at": datetime.utcnow().isoformat(),
+        }
+        logger.info("Self-instruct generation template heuristic activated")
 
     async def _integrate_evolutionary_prompting(self):
         """Integrate evolutionary prompting for diversity."""
-        # Would update augmentation
-        pass
+        self.active_heuristics["evolutionary_prompting"] = {
+            "enabled": True,
+            "mutation_rate": 0.15,
+            "population_size": 10,
+            "updated_at": datetime.utcnow().isoformat(),
+        }
+        logger.info("Evolutionary prompt optimization heuristic activated")
 
     async def _integrate_cross_lingual(self):
         """Integrate cross-lingual techniques."""
-        # Would update multilingual handling
-        pass
+        self.active_heuristics["cross_lingual"] = {
+            "enabled": True,
+            "unicode_normalization": "NFC",
+            "indic_script_detection": True,
+            "updated_at": datetime.utcnow().isoformat(),
+        }
+        logger.info("Cross-lingual Indic script alignment heuristic activated")
 
     async def _integrate_ocr_correction(self):
         """Integrate OCR correction."""
-        # Would update extraction pipeline
-        pass
+        self.active_heuristics["ocr_correction"] = {
+            "enabled": True,
+            "whitespace_cleanup": True,
+            "ligature_unification": True,
+            "updated_at": datetime.utcnow().isoformat(),
+        }
+        logger.info("OCR textual normalization heuristic activated")
 
     def get_applied_techniques(self) -> dict:
         """Get all applied techniques with timestamps."""
         return self.applied_techniques.copy()
+
+    def get_active_heuristics(self) -> dict:
+        """Get all currently active pipeline heuristics configured by research."""
+        return self.active_heuristics.copy()
