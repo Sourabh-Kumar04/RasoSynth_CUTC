@@ -56,11 +56,11 @@ class TestAdmissionController:
             await controller.acquire(f"job-fill-{i}")
 
         # Queue one
-        queued_task = asyncio.create_task(controller.acquire("job-queued"))
+        queued_task = asyncio.create_task(controller.acquire("job-queued", timeout=2.0))
         await asyncio.sleep(0.1)
 
         # This should be rejected (queue full)
-        rejected = await controller.acquire("job-rejected")
+        rejected = await controller.acquire("job-rejected", timeout=2.0)
         assert rejected is False
         assert controller.get_rejected_count() >= 0
 

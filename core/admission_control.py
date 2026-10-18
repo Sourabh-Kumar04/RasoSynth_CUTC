@@ -191,6 +191,12 @@ class AdmissionController:
         self._total_completed += 1
         self._semaphore.release()
         self._update_metrics()
+        if self._queue:
+            try:
+                loop = asyncio.get_running_loop()
+                loop.create_task(self._try_admit_from_queue())
+            except RuntimeError:
+                pass
 
     async def get_queue_depth(self) -> int:
         """Return the current number of jobs waiting in the queue."""
