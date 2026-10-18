@@ -129,18 +129,52 @@ characters in the password used by `POSTGRES_URL` for local app runs. Existing r
 to PostgreSQL. If the SQLite database contains data you need, migrate it before
 changing the deployment's database URL.
 
-## Dataset Generation
+## Dataset Generation & Grounded Pipeline
+
+RasoSynthTune prioritizes **grounded, real-world context** over purely synthetic generation by default (`synthetic_ratio = 0.0`):
+
+```
+User Query ──▶ Query Optimizer (AST/LLM) ──▶ Source Crawl (AI Kosh / HF / ArXiv)
+                       │                                   │
+              Saves Compute & Noise               Quality Filters
+                       │                                   │
+                       ▼                                   ▼
+             Batched AI API Call ────────────▶ Stratified Random HITL Gate
+             (Context-Grounded Q&A)              (Configured % by User)
+                       │                                   │
+                       ▼                                   ▼
+             Pre-Final Approved ─────────────▶ Multi-Dimensional Balancing
+                                                  (Topic, Difficulty, Lang)
+                                                           │
+                                                           ▼
+                                               Export & Streaming Download
+```
+
+### IndiaAI / AI Kosh & Bhashini Prioritization
+Integrated with the IndiaAI / Bhashini AI Kosh platform for Indic languages, government statutes, tax rulings, and public governance data. Set `AIKOSH_API_KEY` to automatically prioritize IndiaAI repositories when Indic queries or financial/legal domains are specified.
 
 ```bash
-# Generate a dataset
+# Preview optimized query plan & discovered sources (saves compute)
+curl -X POST http://localhost:8000/jobs/preview \
+  -H "Content-Type: application/json" \
+  -d '{
+    "query": "Indian GST input tax credit legal disputes",
+    "optimize_query": true,
+    "max_sources": 5
+  }'
+
+# Generate a grounded dataset
 curl -X POST http://localhost:8000/jobs \
   -H "Content-Type: application/json" \
   -d '{
-    "target_domain": "machine learning",
+    "target_domain": "Finance & Taxation (AI Kosh)",
     "dataset_type": "sft",
-    "dataset_size": 1000,
-    "quality_level": "standard",
-    "export_format": "huggingface"
+    "dataset_size": 5000,
+    "quality_level": "high",
+    "generation_mode": "grounded",
+    "human_review": true,
+    "human_review_percentage": 10.0,
+    "export_format": "jsonl"
   }'
 
 # Check status
