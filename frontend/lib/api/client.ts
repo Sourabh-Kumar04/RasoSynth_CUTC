@@ -1453,6 +1453,27 @@ dataset_samples_generated_total 4520`
   async getAgentStats(): Promise<{ total_registered: number; active_instances: number; by_type: Record<string, number> }> {
     return this.request<any>('/agents/stats')
   }
+
+  // ── Quality API ────────────────────────────────────────────────────────────
+  async getQualityOverview() {
+    return this.request<any>('/api/quality/overview')
+  }
+
+  async getQualityTrends(days = 7) {
+    return this.request<any>('/api/quality/trends', { params: { days } })
+  }
+
+  async getQualityDistributions() {
+    return this.request<any>('/api/quality/distributions')
+  }
+
+  async getQualitySources() {
+    return this.request<any>('/api/quality/sources')
+  }
+
+  async getQualitySegmented() {
+    return this.request<any>('/api/quality/segmented')
+  }
 }
 
 class MockWebSocket {
