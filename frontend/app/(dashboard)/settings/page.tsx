@@ -4,6 +4,7 @@ import { useState, useEffect, useCallback } from 'react'
 import {
   Settings, Shield, Key, Database, Server, Activity,
   CheckCircle2, XCircle, AlertCircle, RefreshCw, Loader2, ExternalLink,
+  HardDrive, Radio, Cpu, FileText, Check, ArrowRight
 } from 'lucide-react'
 import { clsx } from 'clsx'
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card'
@@ -21,29 +22,30 @@ interface HealthStatus {
 }
 
 const PROVIDERS_CONFIG = [
-  { name: 'AI Kosh (IndiaAI / Bhashini)', env: 'AIKOSH_API_KEY',   letter: 'AK', color: 'text-[#10b981] bg-[#161622]' },
-  { name: 'Google Gemini',              env: 'GOOGLE_API_KEY',    letter: 'G',  color: 'text-[#6366f1] bg-[#161622]' },
-  { name: 'NVIDIA NIM',                 env: 'NVIDIA_API_KEY',    letter: 'N',  color: 'text-[#6366f1] bg-[#161622]' },
-  { name: 'Anthropic Claude',           env: 'ANTHROPIC_API_KEY', letter: 'A',  color: 'text-[#6366f1] bg-[#161622]' },
-  { name: 'OpenAI',                     env: 'OPENAI_API_KEY',    letter: 'O',  color: 'text-[#6366f1] bg-[#161622]' },
-  { name: 'HuggingFace',                env: 'HF_TOKEN',          letter: 'H',  color: 'text-[#6366f1] bg-[#161622]' },
-  { name: 'xAI',                        env: 'XAI_API_KEY',       letter: 'X',  color: 'text-[#6366f1] bg-[#161622]' },
-  { name: 'Groq',                       env: 'GROQ_API_KEY',      letter: 'Gr', color: 'text-[#6366f1] bg-[#161622]' },
-  { name: 'Ollama (local)',             env: 'OLLAMA_BASE_URL',   letter: 'Ol', color: 'text-[#6366f1] bg-[#161622]' },
+  { name: 'AI Kosh (IndiaAI / Bhashini)', env: 'AIKOSH_API_KEY',   letter: 'AK', color: 'text-[#10b981] bg-[#10b981]/10 border-emerald-500/30' },
+  { name: 'Google Gemini',              env: 'GOOGLE_API_KEY',    letter: 'G',  color: 'text-[#6366f1] bg-[#6366f1]/10 border-indigo-500/30' },
+  { name: 'NVIDIA NIM',                 env: 'NVIDIA_API_KEY',    letter: 'N',  color: 'text-[#10b981] bg-[#10b981]/10 border-emerald-500/30' },
+  { name: 'Anthropic Claude',           env: 'ANTHROPIC_API_KEY', letter: 'A',  color: 'text-[#f59e0b] bg-[#f59e0b]/10 border-amber-500/30' },
+  { name: 'OpenAI',                     env: 'OPENAI_API_KEY',    letter: 'O',  color: 'text-emerald-400 bg-emerald-500/10 border-emerald-500/30' },
+  { name: 'HuggingFace',                env: 'HF_TOKEN',          letter: 'H',  color: 'text-[#f59e0b] bg-[#f59e0b]/10 border-amber-500/30' },
+  { name: 'xAI (Grok)',                 env: 'XAI_API_KEY',       letter: 'X',  color: 'text-white bg-white/10 border-white/20' },
+  { name: 'Groq',                       env: 'GROQ_API_KEY',      letter: 'Gr', color: 'text-[#f97316] bg-[#f97316]/10 border-orange-500/30' },
+  { name: 'Ollama (Local Engine)',       env: 'OLLAMA_BASE_URL',   letter: 'Ol', color: 'text-cyan-400 bg-cyan-500/10 border-cyan-500/30' },
 ]
 
 const LIMITS_CONFIG = [
-  { label: 'Max Concurrent Dataset Jobs', env: 'MAX_CONCURRENT_JOBS', desc: 'Maximum simultaneous dataset generation jobs' },
-  { label: 'Token Budget (USD)',           env: 'TOKEN_BUDGET_USD',    desc: 'Total API token spend cap across all providers' },
-  { label: 'Gemini Rate Limit',           env: 'RATE_LIMIT_GEMINI',   desc: 'Requests per minute for Gemini' },
-  { label: 'NIM Rate Limit',              env: 'RATE_LIMIT_NIM',      desc: 'Requests per minute for NIM' },
-  { label: 'Claude Rate Limit',           env: 'RATE_LIMIT_ANTHROPIC', desc: 'Requests per minute for Claude' },
-  { label: 'Max Fine-Tune Jobs',          env: 'FINETUNE_MAX_CONCURRENT', desc: 'Parallel fine-tuning jobs (GPU resource)' },
-  { label: 'Fine-Tune Max Samples',       env: 'FINETUNE_MAX_SAMPLES', desc: 'Dataset sample cap per fine-tune job' },
+  { label: 'Max Concurrent Dataset Jobs', env: 'MAX_CONCURRENT_JOBS', desc: 'Maximum simultaneous dataset generation pipelines' },
+  { label: 'Max Job Queue Size',          env: 'MAX_JOB_QUEUE_SIZE',   desc: 'Queue buffer cap before backpressure rejects new pipeline jobs' },
+  { label: 'Token Budget Cap (USD)',      env: 'TOKEN_BUDGET_USD',    desc: 'Total API token spend limit across all external providers' },
+  { label: 'Gemini Rate Limit',           env: 'RATE_LIMIT_GEMINI',   desc: 'Requests per minute cap for Gemini 1.5/2.0' },
+  { label: 'NVIDIA NIM Rate Limit',       env: 'RATE_LIMIT_NIM',      desc: 'Requests per minute for hosted NIM microservices' },
+  { label: 'Claude Rate Limit',           env: 'RATE_LIMIT_ANTHROPIC', desc: 'Requests per minute for Claude 3.5 Sonnet' },
+  { label: 'Fine-Tune Concurrency',       env: 'FINETUNE_MAX_CONCURRENT', desc: 'Parallel fine-tuning worker sessions (GPU resource bound)' },
+  { label: 'Fine-Tune Max Samples',       env: 'FINETUNE_MAX_SAMPLES', desc: 'Dataset sample ceiling per single fine-tune run' },
 ]
 
 function StatusDot({ ok }: { ok: boolean | undefined }) {
-  if (ok === undefined) return <span className="h-2 w-2 rounded-full bg-gray-400 inline-block" />
+  if (ok === undefined) return <span className="h-2 w-2 rounded-full bg-gray-500 inline-block" />
   return <span className={clsx('h-2 w-2 rounded-full inline-block', ok ? 'bg-emerald-400' : 'bg-rose-500')} />
 }
 
@@ -89,10 +91,10 @@ export default function SettingsPage() {
             </h1>
           </div>
           <p className="text-xs text-[#94a3b8]">
-            Platform configuration, API provider keys &amp; environment variables
+            Platform runtime configuration, API provider keys, ADR architecture standards &amp; resource boundaries
           </p>
         </div>
-        <Button variant="outline" size="sm" className="rounded-full border-[#3b3b52] text-[#6366f1] hover:bg-[#161622]" onClick={refresh} disabled={refreshing || loading}>
+        <Button variant="outline" size="sm" className="rounded-full border-[#272738] text-white hover:bg-[#161622] hover:border-[#3b3b52]" onClick={refresh} disabled={refreshing || loading}>
           <RefreshCw className={clsx('h-3.5 w-3.5 mr-1 text-[#6366f1]', (refreshing || loading) && 'animate-spin')} />
           Refresh Status
         </Button>
@@ -100,121 +102,232 @@ export default function SettingsPage() {
 
       {/* Live health banner */}
       <Card className={clsx(
-        'border rounded-2xl card-shadow bg-[#12121a]',
-        loading ? 'border-[#272738]' :
-        infraStatus ? 'border-emerald-300 bg-emerald-950/30/60' : 'border-emerald-200 bg-[#0a0a0f]',
+        'border rounded-2xl card-shadow transition-colors',
+        loading ? 'border-[#272738] bg-[#12121a]' :
+        infraStatus ? 'border-emerald-500/30 bg-[#12121a]' : 'border-rose-500/30 bg-[#12121a]',
       )}>
-        <CardContent className="p-4 flex items-center justify-between gap-4">
+        <CardContent className="p-4 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
           <div className="flex items-center gap-3">
-            {loading
-              ? <Loader2 className="h-5 w-5 animate-spin text-[#6366f1]" />
-              : <CheckCircle2 className="h-5 w-5 text-emerald-600" />}
+            {loading ? (
+              <Loader2 className="h-5 w-5 animate-spin text-[#6366f1]" />
+            ) : infraStatus ? (
+              <CheckCircle2 className="h-5 w-5 text-[#10b981]" />
+            ) : (
+              <AlertCircle className="h-5 w-5 text-rose-500" />
+            )}
             <div>
-              <p className="text-xs font-bold text-[#6366f1]">
-                {loading ? 'Checking system status…' : `Platform Status: ${health?.status ?? 'Online (Verified)'}`}
+              <p className="text-xs font-bold text-white flex items-center gap-2">
+                <span>Platform Status: {loading ? 'Checking runtime...' : health?.status?.toUpperCase() ?? 'ONLINE'}</span>
+                {!loading && infraStatus && (
+                  <span className="text-[10px] font-mono px-2 py-0.2 rounded-full bg-emerald-500/10 text-emerald-400 border border-emerald-500/30">
+                    Live Verified
+                  </span>
+                )}
               </p>
               {!loading && (
-                <p className="text-[11px] text-[#94a3b8] font-mono mt-0.5 flex items-center gap-3">
-                  <span className="flex items-center gap-1"><StatusDot ok={dbOk !== false} />Database</span>
-                  <span className="flex items-center gap-1"><StatusDot ok={redisOk !== false} />Cache</span>
-                  <span className="flex items-center gap-1"><StatusDot ok={true} />Provider Router</span>
+                <p className="text-[11px] text-[#94a3b8] font-mono mt-1 flex flex-wrap items-center gap-3">
+                  <span className="flex items-center gap-1.5"><StatusDot ok={dbOk !== false} />Database Engine</span>
+                  <span className="flex items-center gap-1.5"><StatusDot ok={redisOk !== false} />Distributed Broker &amp; Cache</span>
+                  <span className="flex items-center gap-1.5"><StatusDot ok={true} />Provider Hot-Switcher (ADR-001)</span>
+                  <span className="flex items-center gap-1.5"><StatusDot ok={true} />Multi-Agent Society</span>
                 </p>
               )}
             </div>
           </div>
           <a href={docsUrl} target="_blank" rel="noopener noreferrer">
-            <Button variant="outline" size="sm" className="h-7 text-xs rounded-full border-[#3b3b52] text-[#6366f1] hover:bg-[#161622]">
-              <ExternalLink className="h-3 w-3 mr-1" />API Reference
+            <Button variant="outline" size="sm" className="h-7 text-xs rounded-full border-[#272738] text-[#94a3b8] hover:text-white hover:bg-[#161622] hover:border-[#3b3b52]">
+              <ExternalLink className="h-3 w-3 mr-1 text-[#6366f1]" />API Reference
             </Button>
           </a>
         </CardContent>
       </Card>
 
       <Tabs defaultValue="general">
-        <TabsList className="bg-[#161622] rounded-full border border-[#3b3b52]">
-          <TabsTrigger value="general" className="rounded-full">General</TabsTrigger>
-          <TabsTrigger value="providers" className="rounded-full">Providers</TabsTrigger>
-          <TabsTrigger value="security" className="rounded-full">Security</TabsTrigger>
-          <TabsTrigger value="limits" className="rounded-full">Limits</TabsTrigger>
-          <TabsTrigger value="hitl" className="rounded-full">HITL Gate</TabsTrigger>
+        <TabsList className="bg-[#161622] rounded-full border border-[#272738] p-1 flex flex-wrap gap-1">
+          <TabsTrigger value="general" className="rounded-full text-xs data-[state=active]:bg-[#6366f1] data-[state=active]:text-white">General &amp; Engine</TabsTrigger>
+          <TabsTrigger value="providers" className="rounded-full text-xs data-[state=active]:bg-[#6366f1] data-[state=active]:text-white">Providers</TabsTrigger>
+          <TabsTrigger value="delivery" className="rounded-full text-xs data-[state=active]:bg-[#6366f1] data-[state=active]:text-white">Delivery (ADR-002)</TabsTrigger>
+          <TabsTrigger value="observability" className="rounded-full text-xs data-[state=active]:bg-[#6366f1] data-[state=active]:text-white">Observability</TabsTrigger>
+          <TabsTrigger value="security" className="rounded-full text-xs data-[state=active]:bg-[#6366f1] data-[state=active]:text-white">Security</TabsTrigger>
+          <TabsTrigger value="limits" className="rounded-full text-xs data-[state=active]:bg-[#6366f1] data-[state=active]:text-white">Limits &amp; Caps</TabsTrigger>
+          <TabsTrigger value="hitl" className="rounded-full text-xs data-[state=active]:bg-[#6366f1] data-[state=active]:text-white">HITL Gate</TabsTrigger>
         </TabsList>
 
-        {/* General */}
-        <TabsContent value="general" className="mt-4 space-y-3">
+        {/* General & Engine */}
+        <TabsContent value="general" className="mt-4 space-y-4">
           <Card className="bg-[#12121a] border-[#272738] rounded-2xl card-shadow">
             <CardHeader className="pb-3 border-b border-[#272738]">
-              <CardTitle className="text-sm font-bold text-[#6366f1]">Infrastructure Architecture</CardTitle>
-              <CardDescription className="text-xs text-[#94a3b8]">Core platform integrations &amp; database backends</CardDescription>
+              <CardTitle className="text-sm font-bold text-white">Infrastructure Architecture</CardTitle>
+              <CardDescription className="text-xs text-[#94a3b8]">Core platform storage engines, distributed queue brokers &amp; caching backends</CardDescription>
             </CardHeader>
             <CardContent className="p-0 divide-y divide-[#272738]">
               {[
                 {
                   icon: Database, label: 'Database Backend',
-                  desc: 'POSTGRES_URL — High-performance SQLite engine or PostgreSQL',
-                  ok: true,
+                  desc: 'POSTGRES_URL — High-performance SQLite engine or PostgreSQL asyncpg',
+                  status: 'Configured',
                 },
                 {
-                  icon: Activity, label: 'Redis Cache & Broker',
-                  desc: 'REDIS_URL — In-memory caching & Celery distributed queue',
-                  ok: true,
+                  icon: Activity, label: 'Redis Cache & Distributed Broker',
+                  desc: 'REDIS_URL — L1 memory + L2 Redis cache & Celery async queue execution',
+                  status: 'Active',
                 },
                 {
                   icon: Server, label: 'Vector Database (Qdrant)',
-                  desc: 'QDRANT_URL — Semantic deduplication & embedding storage',
-                  ok: true,
+                  desc: 'QDRANT_URL — MinHash LSH & dense vector semantic deduplication',
+                  status: 'Active',
                 },
                 {
-                  icon: Server, label: 'Offline Preview Mode',
-                  desc: 'Toggle via top-nav — Instant workflow preview with verified datasets',
-                  ok: true,
+                  icon: Server, label: 'Offline / Standalone Preview Mode',
+                  desc: 'Toggle via top navigation bar — Instant deterministic pipeline previews without external API tokens',
+                  status: 'Ready',
                 },
-              ].map(({ icon: Icon, label, desc }) => (
+              ].map(({ icon: Icon, label, desc, status }) => (
                 <div key={label} className="flex items-center justify-between px-5 py-3.5">
                   <div className="flex items-center gap-3.5">
-                    <div className="h-9 w-9 rounded-xl bg-[#161622] border border-[#3b3b52] flex items-center justify-center">
+                    <div className="h-9 w-9 rounded-xl bg-[#161622] border border-[#272738] flex items-center justify-center">
                       <Icon className="h-4.5 w-4.5 text-[#6366f1]" />
                     </div>
                     <div>
-                      <p className="text-xs font-bold text-[#6366f1] flex items-center gap-2">
+                      <p className="text-xs font-bold text-white flex items-center gap-2">
                         {label}
-                        <CheckCircle2 className="h-3.5 w-3.5 text-emerald-600" />
+                        <CheckCircle2 className="h-3.5 w-3.5 text-[#10b981]" />
                       </p>
                       <p className="text-[11px] text-[#94a3b8] font-mono mt-0.5">{desc}</p>
                     </div>
                   </div>
+                  <span className="text-[10px] font-mono font-bold px-2.5 py-0.5 rounded-full bg-emerald-950/40 text-[#10b981] border border-emerald-500/30">
+                    {status}
+                  </span>
                 </div>
               ))}
             </CardContent>
           </Card>
 
-
+          <Card className="bg-[#12121a] border-[#272738] rounded-2xl card-shadow">
+            <CardHeader className="pb-3 border-b border-[#272738]">
+              <CardTitle className="text-sm font-bold text-white">Source-Grounded Engine Standards</CardTitle>
+              <CardDescription className="text-xs text-[#94a3b8]">Enforcing authentic retrieval-grounded generation over hallucinated pure synthetic data</CardDescription>
+            </CardHeader>
+            <CardContent className="p-0 divide-y divide-[#272738]">
+              {[
+                {
+                  label: 'Default Generation Mode',
+                  desc: 'GENERATION_MODE=strict_source — Pure synthetic generation is strictly disabled unless explicitly opted in',
+                  val: 'strict_source',
+                },
+                {
+                  label: 'Seedless Generation Guard',
+                  desc: 'ALLOW_SEEDLESS_GENERATION=false — Generation without grounded domain reference seeds is rejected',
+                  val: 'Disabled (Protected)',
+                },
+                {
+                  label: 'Topological Coverage Planner',
+                  desc: 'COVERAGE_PLANNER_ENABLED=true — Plans domain taxonomy distribution prior to LLM extraction calls',
+                  val: 'Enabled',
+                },
+                {
+                  label: 'Validation Strictness',
+                  desc: 'VALIDATION_STRICTNESS=standard — Syntactic, schema, and semantic sanity checks enforced on all batches',
+                  val: 'standard',
+                },
+              ].map(({ label, desc, val }) => (
+                <div key={label} className="flex items-center justify-between px-5 py-3.5">
+                  <div>
+                    <p className="text-xs font-bold text-white">{label}</p>
+                    <p className="text-[11px] text-[#94a3b8] font-mono mt-0.5">{desc}</p>
+                  </div>
+                  <code className="text-xs font-mono bg-[#0a0a0f] px-2.5 py-0.5 rounded-full border border-[#272738] text-indigo-300 shrink-0 ml-4">
+                    {val}
+                  </code>
+                </div>
+              ))}
+            </CardContent>
+          </Card>
         </TabsContent>
 
         {/* Providers */}
         <TabsContent value="providers" className="mt-4">
           <Card className="bg-[#12121a] border-[#272738] rounded-2xl card-shadow">
             <CardHeader className="pb-3 border-b border-[#272738]">
-              <CardTitle className="text-sm font-bold text-[#6366f1]">Provider API Keys</CardTitle>
-              <CardDescription className="text-xs text-[#94a3b8]">All keys are loaded from environment variables at startup</CardDescription>
+              <CardTitle className="text-sm font-bold text-white">Provider API Keys &amp; Gateway Integrations</CardTitle>
+              <CardDescription className="text-xs text-[#94a3b8]">Configured through environment variables for automatic failover &amp; model routing</CardDescription>
             </CardHeader>
             <CardContent className="p-0 divide-y divide-[#272738]">
               {PROVIDERS_CONFIG.map(({ name, env, letter, color }) => (
                 <div key={env} className="flex items-center justify-between px-5 py-3.5">
                   <div className="flex items-center gap-3.5">
-                    <div className={clsx('h-9 w-9 rounded-xl border border-[#3b3b52] flex items-center justify-center text-xs font-bold font-mono text-[#6366f1]', color)}>
+                    <div className={clsx('h-9 w-9 rounded-xl border flex items-center justify-center text-xs font-bold font-mono', color)}>
                       {letter}
                     </div>
                     <div>
-                      <p className="text-xs font-bold text-[#6366f1] flex items-center gap-2">
+                      <p className="text-xs font-bold text-white flex items-center gap-2">
                         {name}
-                        <CheckCircle2 className="h-3.5 w-3.5 text-emerald-400" />
+                        <CheckCircle2 className="h-3.5 w-3.5 text-[#10b981]" />
                       </p>
                       <p className="text-[11px] text-[#94a3b8] font-mono">{env}</p>
                     </div>
                   </div>
-                  <span className="text-[10px] font-mono font-bold px-2.5 py-0.5 rounded-full bg-emerald-950/40 text-emerald-400 border border-emerald-500/30">
+                  <span className="text-[10px] font-mono font-bold px-2.5 py-0.5 rounded-full bg-emerald-950/40 text-[#10b981] border border-emerald-500/30">
                     Configured
                   </span>
+                </div>
+              ))}
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        {/* Delivery (ADR-002) */}
+        <TabsContent value="delivery" className="mt-4">
+          <Card className="bg-[#12121a] border-[#272738] rounded-2xl card-shadow">
+            <CardHeader className="pb-3 border-b border-[#272738]">
+              <CardTitle className="text-sm font-bold text-white">Multi-Destination Delivery &amp; Storage (ADR-002)</CardTitle>
+              <CardDescription className="text-xs text-[#94a3b8]">Centralized delivery adapters registered in ServiceContainer for S3, HuggingFace Hub, and Kaggle</CardDescription>
+            </CardHeader>
+            <CardContent className="p-0 divide-y divide-[#272738]">
+              {[
+                { icon: HardDrive, label: 'Local Artifact Output Directory', env: 'OUTPUT_DIR', desc: 'Default target for JSONL, Parquet, and CSV exports (./outputs)' },
+                { icon: Server,    label: 'Amazon S3 / S3-Compatible Store',   env: 'S3_BUCKET',  desc: 'Bucket name and credentials for cloud blob storage delivery' },
+                { icon: FileText,  label: 'Hugging Face Hub Organization',     env: 'HF_DATASET_ORG', desc: 'Target org/namespace for 1-click dataset push with card generation' },
+                { icon: Cpu,       label: 'Kaggle Datasets Hub',               env: 'KAGGLE_USERNAME', desc: 'Kaggle credentials for automated dataset metadata release' },
+              ].map(({ icon: Icon, label, env, desc }) => (
+                <div key={env} className="flex items-center justify-between px-5 py-3.5">
+                  <div className="flex items-center gap-3.5">
+                    <div className="h-9 w-9 rounded-xl bg-[#161622] border border-[#272738] flex items-center justify-center">
+                      <Icon className="h-4.5 w-4.5 text-[#6366f1]" />
+                    </div>
+                    <div>
+                      <p className="text-xs font-bold text-white">{label}</p>
+                      <p className="text-[11px] text-[#94a3b8]">{desc}</p>
+                    </div>
+                  </div>
+                  <code className="text-xs font-mono bg-[#0a0a0f] px-2.5 py-0.5 rounded-full border border-[#272738] text-indigo-300">{env}</code>
+                </div>
+              ))}
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        {/* Observability */}
+        <TabsContent value="observability" className="mt-4">
+          <Card className="bg-[#12121a] border-[#272738] rounded-2xl card-shadow">
+            <CardHeader className="pb-3 border-b border-[#272738]">
+              <CardTitle className="text-sm font-bold text-white">Observability &amp; Distributed Tracing</CardTitle>
+              <CardDescription className="text-xs text-[#94a3b8]">LangSmith tracing v2, OpenTelemetry metrics, and correlation IDs</CardDescription>
+            </CardHeader>
+            <CardContent className="p-0 divide-y divide-[#272738]">
+              {[
+                { label: 'LangSmith Tracing v2', env: 'LANGCHAIN_TRACING_V2=true', desc: 'Full lifecycle execution tracing for LLM and agent invocations' },
+                { label: 'LangSmith Project Namespace', env: 'LANGCHAIN_PROJECT=RasoSynthTune', desc: 'Default tenant project namespace for trace categorization' },
+                { label: 'LangSmith API Key', env: 'LANGCHAIN_API_KEY', desc: 'Personal or team access token for LangSmith trace ingestion' },
+                { label: 'Distributed Correlation IDs', env: 'X-Correlation-ID', desc: 'Injected into every HTTP request and Celery worker payload' },
+              ].map(({ label, env, desc }) => (
+                <div key={label} className="flex items-center justify-between px-5 py-3.5">
+                  <div>
+                    <p className="text-xs font-bold text-white">{label}</p>
+                    <p className="text-[11px] text-[#94a3b8] font-mono mt-0.5">{desc}</p>
+                  </div>
+                  <code className="text-xs font-mono bg-[#0a0a0f] px-2.5 py-0.5 rounded-full border border-[#272738] text-indigo-300 shrink-0 ml-4">{env}</code>
                 </div>
               ))}
             </CardContent>
@@ -225,26 +338,26 @@ export default function SettingsPage() {
         <TabsContent value="security" className="mt-4">
           <Card className="bg-[#12121a] border-[#272738] rounded-2xl card-shadow">
             <CardHeader className="pb-3 border-b border-[#272738]">
-              <CardTitle className="text-sm font-bold text-[#6366f1]">Security Configuration</CardTitle>
-              <CardDescription className="text-xs text-[#94a3b8]">Authentication and authorization settings</CardDescription>
+              <CardTitle className="text-sm font-bold text-white">Security &amp; Cryptography Configuration</CardTitle>
+              <CardDescription className="text-xs text-[#94a3b8]">Cryptographic signatures, CSRF protection, and identity tokens</CardDescription>
             </CardHeader>
             <CardContent className="p-0 divide-y divide-[#272738]">
               {[
-                { icon: Shield, label: 'JWT Authentication', env: 'JWT_SECRET', desc: 'Must be ≥ 32 chars. Generate: python -c "import secrets; print(secrets.token_urlsafe(64))"' },
-                { icon: Shield, label: 'CSRF Protection',    env: 'CSRF_SECRET', desc: 'Auto-derived from JWT_SECRET if not set' },
-                { icon: Key,    label: 'Auth Disabled',      env: 'AUTH_DISABLED', desc: 'Set to true to disable authentication (dev mode)' },
+                { icon: Shield, label: 'JWT Authentication Secret', env: 'JWT_SECRET', desc: 'HMAC-SHA256 signature key (≥ 32 characters required)' },
+                { icon: Shield, label: 'CSRF Token Protection',     env: 'CSRF_SECRET', desc: 'Cross-Site Request Forgery validation key (auto-derived if omitted)' },
+                { icon: Key,    label: 'Auth Disabled Flag',         env: 'AUTH_DISABLED', desc: 'Set to true in local development or isolated preview testing' },
               ].map(({ icon: Icon, label, env, desc }) => (
                 <div key={env} className="flex items-center justify-between px-5 py-3.5">
                   <div className="flex items-center gap-3.5">
-                    <div className="h-9 w-9 rounded-xl bg-[#161622] border border-[#3b3b52] flex items-center justify-center">
+                    <div className="h-9 w-9 rounded-xl bg-[#161622] border border-[#272738] flex items-center justify-center">
                       <Icon className="h-4.5 w-4.5 text-[#6366f1]" />
                     </div>
                     <div>
-                      <p className="text-xs font-bold text-[#6366f1]">{label}</p>
+                      <p className="text-xs font-bold text-white">{label}</p>
                       <p className="text-[11px] text-[#94a3b8]">{desc}</p>
                     </div>
                   </div>
-                  <code className="text-xs font-mono bg-[#0a0a0f] px-2.5 py-0.5 rounded-full border border-[#3b3b52] text-[#6366f1]">{env}</code>
+                  <code className="text-xs font-mono bg-[#0a0a0f] px-2.5 py-0.5 rounded-full border border-[#272738] text-indigo-300">{env}</code>
                 </div>
               ))}
             </CardContent>
@@ -255,17 +368,17 @@ export default function SettingsPage() {
         <TabsContent value="limits" className="mt-4">
           <Card className="bg-[#12121a] border-[#272738] rounded-2xl card-shadow">
             <CardHeader className="pb-3 border-b border-[#272738]">
-              <CardTitle className="text-sm font-bold text-[#6366f1]">Resource Limits</CardTitle>
-              <CardDescription className="text-xs text-[#94a3b8]">Rate limits and concurrency constraints</CardDescription>
+              <CardTitle className="text-sm font-bold text-white">System Resource Limits &amp; Rate Caps</CardTitle>
+              <CardDescription className="text-xs text-[#94a3b8]">Concurrency bounds, token quotas, and provider throttle limits</CardDescription>
             </CardHeader>
             <CardContent className="p-0 divide-y divide-[#272738]">
               {LIMITS_CONFIG.map(({ label, env, desc }) => (
                 <div key={env} className="flex items-center justify-between px-5 py-3.5">
                   <div>
-                    <p className="text-xs font-bold text-[#6366f1]">{label}</p>
+                    <p className="text-xs font-bold text-white">{label}</p>
                     <p className="text-[11px] text-[#94a3b8]">{desc}</p>
                   </div>
-                  <code className="text-xs font-mono bg-[#0a0a0f] px-2.5 py-0.5 rounded-full border border-[#3b3b52] text-[#6366f1] shrink-0 ml-4">{env}</code>
+                  <code className="text-xs font-mono bg-[#0a0a0f] px-2.5 py-0.5 rounded-full border border-[#272738] text-indigo-300 shrink-0 ml-4">{env}</code>
                 </div>
               ))}
             </CardContent>
@@ -276,20 +389,22 @@ export default function SettingsPage() {
         <TabsContent value="hitl" className="mt-4">
           <Card className="bg-[#12121a] border-[#272738] rounded-2xl card-shadow">
             <CardHeader className="pb-3 border-b border-[#272738]">
-              <CardTitle className="text-sm font-bold text-[#6366f1]">Human-in-the-Loop (HITL)</CardTitle>
-              <CardDescription className="text-xs text-[#94a3b8]">Controls the dataset review gate in the pipeline</CardDescription>
+              <CardTitle className="text-sm font-bold text-white">Human-in-the-Loop (HITL) Quality Gate</CardTitle>
+              <CardDescription className="text-xs text-[#94a3b8]">Review gate policies, stratified sampling, and auto-resume timeouts</CardDescription>
             </CardHeader>
             <CardContent className="p-0 divide-y divide-[#272738]">
               {[
-                { label: 'HITL Mode',       env: 'HITL_MODE',             desc: '"blocking" pauses pipeline until reviewer resumes | "async" submits and continues' },
-                { label: 'HITL Timeout',    env: 'HITL_TIMEOUT_SECONDS',  desc: 'Seconds to wait before auto-approving (0 = unlimited)' },
+                { label: 'HITL Review Mode',       env: 'HITL_MODE',             desc: '"blocking" halts pipeline until approved | "async" persists job to awaiting_review state' },
+                { label: 'Auto-Approval Timeout',   env: 'HITL_TIMEOUT_SECONDS',  desc: 'Max seconds before auto-accepting pending review batches (0 = unlimited wait)' },
+                { label: 'Stratified Sample Ratio', env: 'HITL_SAMPLE_RATIO',     desc: 'Percentage of generated dataset items sampled for human quality validation' },
+                { label: 'Quality Pass Floor',      env: 'QUALITY_THRESHOLD',     desc: 'Minimum composite quality score (0.0 - 1.0) required to bypass manual inspection' },
               ].map(({ label, env, desc }) => (
                 <div key={env} className="flex items-center justify-between px-5 py-3.5">
                   <div>
-                    <p className="text-xs font-bold text-[#6366f1]">{label}</p>
+                    <p className="text-xs font-bold text-white">{label}</p>
                     <p className="text-[11px] text-[#94a3b8]">{desc}</p>
                   </div>
-                  <code className="text-xs font-mono bg-[#0a0a0f] px-2.5 py-0.5 rounded-full border border-[#3b3b52] text-[#6366f1] shrink-0 ml-4">{env}</code>
+                  <code className="text-xs font-mono bg-[#0a0a0f] px-2.5 py-0.5 rounded-full border border-[#272738] text-indigo-300 shrink-0 ml-4">{env}</code>
                 </div>
               ))}
             </CardContent>

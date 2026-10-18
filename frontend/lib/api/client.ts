@@ -587,6 +587,15 @@ class APIClient {
       if (format === 'json') {
         return new Blob([JSON.stringify(records, null, 2)], { type: 'application/json' });
       }
+      if (format === 'csv') {
+        return new Blob(['instruction,response\n"Sample instruction for dataset ' + id + '","Sample synthesized response"\n'], { type: 'text/csv' });
+      }
+      if (format === 'parquet') {
+        return new Blob(['PAR1_MOCK_PARQUET_BINARY_STREAM'], { type: 'application/octet-stream' });
+      }
+      if (format === 'zip') {
+        return new Blob(['PK_MOCK_ZIP_ARCHIVE_STREAM'], { type: 'application/zip' });
+      }
       return new Blob([records.map((record) => JSON.stringify(record)).join('\n') + '\n'], { type: 'application/x-ndjson' });
     }
 
