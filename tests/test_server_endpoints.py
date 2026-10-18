@@ -187,6 +187,16 @@ def test_provider_endpoints():
         assert dag_resp.status_code == 200
         assert "nodes" in dag_resp.json()
 
+        # GET /agents
+        agents_resp = client.get("/agents")
+        assert agents_resp.status_code == 200
+        assert "agents" in agents_resp.json()
+
+        # GET /agents/stats
+        stats_resp = client.get("/agents/stats")
+        assert stats_resp.status_code == 200
+        assert "total_registrations" in stats_resp.json()
+
 
 if __name__ == "__main__":
     try:

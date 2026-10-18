@@ -275,6 +275,16 @@ curl "http://localhost:8000/api/review/queue/export?job_id=<job_id>" -o approved
 6. **xAI / Groq / DeepSeek** — reasoning augmentation, fast inference
 7. **Ollama** — local fallback
 
+## Multi-Agent Architecture
+
+RasoSynthTune incorporates a modular agent society (`agents/registry.py`, `agents/base.py`) enabling autonomous data discovery, synthesis, and verification:
+
+- **Specialized Roles**: Domain research, document extraction, curriculum design, hallucination auditing, and quality grading.
+- **Dynamic Registration**: Agent types register capabilities via the `AgentFactory` and execute tasks coordinated by the pipeline orchestrator.
+- **REST Endpoints**:
+  - `GET /agents` — List registered agent plugins and capabilities.
+  - `GET /agents/stats` — Real-time execution stats and active task metrics.
+
 ## Frontend
 
 ```bash
