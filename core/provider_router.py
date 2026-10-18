@@ -21,7 +21,7 @@ from providers.core_lib.plugin import PluginRegistry, AbstractProviderPlugin
 class RouterConfig:
     """Router configuration with self-improvement settings."""
     provider_priority: list[str] = field(default_factory=lambda: [
-        "huggingface", "google_gemini", "anthropic", "groq", "nvidia_nim", "ollama", "vllm"
+        "google_gemini", "nvidia_nim", "anthropic", "openai", "huggingface", "groq", "xai", "ollama", "vllm"
     ])
     max_retries: int = 3
     retry_base_delay: float = 2.0
@@ -116,22 +116,22 @@ class ProviderRouter:
 
     # Enhanced task-provider mapping with optimal routing
     TASK_PROVIDER_MAPPING = {
-        TaskType.TEXT_GENERATION: ["huggingface", "nvidia_nim", "google_gemini", "ollama"],
-        TaskType.EMBEDDING: ["huggingface", "nvidia_nim", "ollama"],
-        TaskType.QUALITY_CHECK: ["huggingface", "google_gemini"],
-        TaskType.HALLUCINATION_DETECTION: ["huggingface", "google_gemini"],
-        TaskType.TOXICITY_CHECK: ["huggingface", "google_gemini"],
-        TaskType.SUMMARIZATION: ["huggingface", "google_gemini"],
-        TaskType.PARAPHRASING: ["huggingface", "google_gemini"],
-        TaskType.CODE_GENERATION: ["huggingface", "google_gemini"],
-        TaskType.REASONING: ["huggingface", "google_gemini"],
-        TaskType.MULTIMODAL: ["google_gemini", "huggingface"],
-        TaskType.OCR_CORRECTION: ["huggingface", "google_gemini"],
-        TaskType.TRANSLATION: ["huggingface", "google_gemini"],
-        TaskType.SCHEMA_INFERENCE: ["huggingface", "google_gemini"],
-        TaskType.SYNTHETIC_GENERATION: ["huggingface", "google_gemini"],
-        TaskType.NORMALIZATION: ["huggingface", "google_gemini"],
-        TaskType.ENTITY_EXTRACTION: ["huggingface", "google_gemini"],
+        TaskType.TEXT_GENERATION: ["google_gemini", "nvidia_nim", "anthropic", "openai", "huggingface", "groq", "ollama"],
+        TaskType.EMBEDDING: ["nvidia_nim", "google_gemini", "huggingface", "openai", "ollama"],
+        TaskType.QUALITY_CHECK: ["google_gemini", "anthropic", "openai", "huggingface"],
+        TaskType.HALLUCINATION_DETECTION: ["google_gemini", "anthropic", "openai", "huggingface"],
+        TaskType.TOXICITY_CHECK: ["google_gemini", "anthropic", "openai", "huggingface"],
+        TaskType.SUMMARIZATION: ["google_gemini", "anthropic", "openai", "huggingface", "groq"],
+        TaskType.PARAPHRASING: ["google_gemini", "anthropic", "openai", "huggingface", "groq"],
+        TaskType.CODE_GENERATION: ["google_gemini", "anthropic", "openai", "huggingface", "groq", "ollama"],
+        TaskType.REASONING: ["google_gemini", "anthropic", "openai", "groq", "huggingface", "ollama"],
+        TaskType.MULTIMODAL: ["google_gemini", "openai", "anthropic", "huggingface"],
+        TaskType.OCR_CORRECTION: ["google_gemini", "anthropic", "openai", "huggingface"],
+        TaskType.TRANSLATION: ["google_gemini", "anthropic", "openai", "huggingface"],
+        TaskType.SCHEMA_INFERENCE: ["google_gemini", "anthropic", "openai", "huggingface"],
+        TaskType.SYNTHETIC_GENERATION: ["google_gemini", "anthropic", "openai", "huggingface", "ollama"],
+        TaskType.NORMALIZATION: ["google_gemini", "anthropic", "openai", "huggingface"],
+        TaskType.ENTITY_EXTRACTION: ["google_gemini", "anthropic", "openai", "huggingface"],
     }
 
     def __init__(self, config: dict[str, Any]):

@@ -50,7 +50,7 @@ RasoSynthTune is a production-ready system that autonomously discovers, extracts
 
 ### Docker Compose (Recommended)
 
-Uses **SQLite** by default — zero PostgreSQL setup required.
+Docker Compose orchestrates PostgreSQL, Redis, and Qdrant out-of-the-box (local standalone runs default to zero-setup **SQLite**).
 
 ```bash
 git clone https://github.com/Sourabh-Kumar04/RasoSynth_CUTC.git
