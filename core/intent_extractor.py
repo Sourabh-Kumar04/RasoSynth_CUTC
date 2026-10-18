@@ -160,6 +160,10 @@ async def extract_intent(
         if repaired_data and isinstance(repaired_data, dict):
             data = repaired_data
         else:
+            if not _FALLBACK_ON_ERROR:
+                raise IntentExtractionError(
+                    f"LLM returned non-JSON response: {parse_err}"
+                )
             logger.warning(
                 f"LLM returned non-JSON response for intent extraction: {parse_err}. "
                 f"Applying robust fallback intent for prompt."
