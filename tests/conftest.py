@@ -50,7 +50,10 @@ async def db():
     from core.config import Settings
 
     settings = Settings()
-    db = await AsyncDB.create(settings.postgres_url)
+    try:
+        db = await AsyncDB.create(settings.postgres_url)
+    except Exception as e:
+        pytest.skip(f"Database not available: {e}")
 
     # Clear any existing data
     try:

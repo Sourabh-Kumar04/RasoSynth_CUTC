@@ -135,6 +135,8 @@ class TestAPIEndpoints:
     def test_datasets_endpoint_returns_list(self, test_client):
         """Test GET /datasets returns a dict with data key."""
         resp = test_client.get("/datasets?limit=10")
+        if resp.status_code == 503:
+            pytest.skip("Database service unavailable")
         assert resp.status_code == 200
         data = resp.json()
         assert "data" in data
@@ -161,11 +163,15 @@ class TestAPIEndpoints:
     def test_datasets_nonexistent_returns_404(self, test_client):
         """Test GET /datasets/{invalid_id} returns 404."""
         resp = test_client.get("/datasets/nonexistent-id-123")
+        if resp.status_code == 503:
+            pytest.skip("Database service unavailable")
         assert resp.status_code == 404
 
     def test_jobs_endpoint(self, test_client):
         """Test GET /jobs returns job list."""
         resp = test_client.get("/jobs?limit=10")
+        if resp.status_code == 503:
+            pytest.skip("Database service unavailable")
         assert resp.status_code == 200
         data = resp.json()
         assert "data" in data
