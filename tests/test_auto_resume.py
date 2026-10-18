@@ -134,6 +134,36 @@ class TestAutoResumeManager:
         assert result["recovered"] == 1
         assert mock_checkpoint_manager.resume_from_checkpoint.called
 
+    @pytest.mark.asyncio
+    async def test_recover_awaiting_review_job_with_checkpoint(self, resume_manager, mock_db, mock_orchestrator, mock_checkpoint_manager):
+        """Job awaiting human review should recover from its construction checkpoint."""
+        mock_db.list_jobs.side_effect = lambda status=None, limit=None, **kw: (
+            [{"id": "job-hitl", "job_id": "job-hitl", "status": "awaiting_review", "config": {}}]
+            if status == "awaiting_review" else []
+        )
+        mock_db.get_job_status.return_value = {
+            "id": "job-hitl",
+            "status": "awaiting_review",
+            "config": {},
+            "created_at": datetime.utcnow().isoformat(),
+        }
+        mock_checkpoint_manager.get_resume_checkpoint.return_value = MagicMock(
+            checkpoint_id="cp-construct",
+            stage="construction",
+            version=1,
+        )
+        mock_checkpoint_manager.resume_from_checkpoint.return_value = {
+            "resume_from_stage": "construction",
+            "progress": 0.85,
+            "samples_generated": 100,
+            "checkpoint": {"checkpoint_id": "cp-construct"},
+        }
+
+        result = await resume_manager.recover_all()
+
+        assert result["recovered"] == 1
+        assert mock_checkpoint_manager.resume_from_checkpoint.called
+
     # ── Edge Cases ───────────────────────────────────────────────────────
 
     @pytest.mark.asyncio

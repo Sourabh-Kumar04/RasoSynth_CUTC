@@ -21,6 +21,8 @@ celery_app.conf.update(
     task_soft_time_limit=3300,
     worker_prefetch_multiplier=1,
     worker_max_tasks_per_child=100,
+    task_acks_late=True,
+    task_reject_on_worker_lost=True,
     task_routes={
         "workers.tasks.discovery": {"queue": "high"},
         "workers.tasks.extraction": {"queue": "high"},

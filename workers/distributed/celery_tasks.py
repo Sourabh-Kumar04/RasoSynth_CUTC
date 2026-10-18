@@ -36,6 +36,8 @@ app.config_from_object({
     'task_track_started': True,
     'task_time_limit': 3600,
     'task_soft_time_limit': 3300,
+    'task_acks_late': True,
+    'task_reject_on_worker_lost': True,
 })
 
 

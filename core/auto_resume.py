@@ -64,7 +64,7 @@ class AutoResumeManager:
             return {"total": 0, "recovered": 0, "skipped": 0, "failed": 0,
                     "recovery_state": {}, "message": "DB not available"}
 
-        incomplete_statuses = ("running", "pending")
+        incomplete_statuses = ("running", "pending", "awaiting_review")
         all_recovered = 0
         all_skipped = 0
         all_failed = 0
@@ -102,7 +102,7 @@ class AutoResumeManager:
         """Attempt recovery of a single job.
 
         Recovery logic:
-        1. Running jobs -> try checkpoint restore first, fall back to full restart
+        1. Running or awaiting-review jobs -> try checkpoint restore first, fall back to full restart
         2. Pending jobs -> full restart (no checkpoint expected)
         3. Jobs > 24h old -> mark as failed (stale)
         """
@@ -121,7 +121,7 @@ class AutoResumeManager:
                     except (ValueError, TypeError):
                         pass
 
-            if current_status == "running":
+            if current_status in ("running", "awaiting_review"):
                 return await self._recover_running_job(job_id)
             elif current_status == "pending":
                 return await self._recover_pending_job(job_id)

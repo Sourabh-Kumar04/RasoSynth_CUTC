@@ -54,6 +54,12 @@ class _FakeDB:
     async def get_review_item(self, item_id: str):
         return self._store.get(item_id)
 
+    async def get_review_item_for_job_sample(self, job_id: str, dataset_id: str):
+        for item in self._store.values():
+            if item.job_id == job_id and item.dataset_id == dataset_id:
+                return item
+        return None
+
     async def update_review_item(self, item_id: str, **kwargs):
         item = self._store.get(item_id)
         if not item:
@@ -221,3 +227,28 @@ async def test_hitl_pause_resume(svc):
 async def test_resume_nonexistent(svc):
     result = await svc.resume_job("nonexistent-job")
     assert result is False
+
+
+@pytest.mark.asyncio
+async def test_submit_idempotent(svc):
+    # First submission
+    item1 = await svc.submit(
+        instruction="Calculate 2+2",
+        response="4",
+        job_id="job_idem",
+        dataset_id="sample-hash-123",
+    )
+    assert item1["instruction"] == "Calculate 2+2"
+
+    # Second submission with same job_id and dataset_id
+    item2 = await svc.submit(
+        instruction="Calculate 2+2",
+        response="4",
+        job_id="job_idem",
+        dataset_id="sample-hash-123",
+    )
+    assert item2["id"] == item1["id"]
+
+    # Verify queue count for job_idem is still 1
+    queue = await svc.get_queue(job_id="job_idem")
+    assert queue["total"] == 1

@@ -78,6 +78,11 @@ class ReviewService:
         duplicate_score: float = 0.0,
         diversity_score: float = 0.0,
     ) -> dict:
+        if dataset_id and hasattr(self.db, "get_review_item_for_job_sample"):
+            existing = await self.db.get_review_item_for_job_sample(job_id, dataset_id)
+            if existing is not None:
+                return existing.to_dict()
+
         item = await self.db.create_review_item(dict(
             job_id=job_id,
             dataset_id=dataset_id,
