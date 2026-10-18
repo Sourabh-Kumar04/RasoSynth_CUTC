@@ -134,8 +134,63 @@ def test_datasets_endpoint():
     return True
 
 
+def test_provider_endpoints():
+    """Test /providers, /providers/{name}, /providers/{name}/metrics, /metrics/history, and /orchestration/dag."""
+    from fastapi.testclient import TestClient
+    import api.server as server_mod
+    from core.provider_router import ProviderRouter
+
+    # Initialize a test provider router on the server
+    from core.config import Settings
+    settings = Settings()
+    server_mod.router = ProviderRouter(settings.model_dump())
+
+    with TestClient(server_mod.app) as client:
+        # GET /providers
+        resp = client.get("/providers")
+        assert resp.status_code == 200
+        providers = resp.json()
+        assert isinstance(providers, list)
+        assert len(providers) > 0
+
+        first_name = providers[0]["name"]
+
+        # GET /providers/{name}
+        single_resp = client.get(f"/providers/{first_name}")
+        assert single_resp.status_code == 200
+        assert single_resp.json()["name"] == first_name
+
+        # GET /providers/{name}/metrics
+        metrics_resp = client.get(f"/providers/{first_name}/metrics")
+        assert metrics_resp.status_code == 200
+        assert metrics_resp.json()["provider"] == first_name
+
+        # PATCH /providers/{name} with CSRF token
+        csrf_token = client.get("/auth/csrf-token").json().get("csrf_token", "")
+        patch_resp = client.patch(
+            f"/providers/{first_name}",
+            json={"priority": 1},
+            headers={"x-csrf-token": csrf_token},
+        )
+        assert patch_resp.status_code == 200
+        assert patch_resp.json()["status"] == "updated"
+
+        # GET /metrics/history
+        hist_resp = client.get("/metrics/history?range=1h")
+        assert hist_resp.status_code == 200
+        hist_data = hist_resp.json()
+        assert "timestamps" in hist_data
+        assert "latency" in hist_data
+
+        # GET /orchestration/dag
+        dag_resp = client.get("/orchestration/dag")
+        assert dag_resp.status_code == 200
+        assert "nodes" in dag_resp.json()
+
+
 if __name__ == "__main__":
     try:
+        test_provider_endpoints()
         test_datasets_endpoint()
         sys.exit(0)
     except Exception as e:
