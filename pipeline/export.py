@@ -32,6 +32,7 @@ def _get_field(sample, field, default=""):
 class ExportConfig:
     """Configuration for dataset export with scale support."""
     format: str = "jsonl"
+    instruction_format: str = "alpaca"
     output_dir: Path = Path("outputs")
     dataset_name: str = "dataset"
     include_metadata: bool = True
@@ -487,26 +488,96 @@ class ExportPipeline:
         return f"https://www.kaggle.com/datasets/{self.config.kaggle_username}/{self.config.dataset_name}"
 
     def _sample_to_record(self, sample) -> dict:
-        """Convert sample to export record."""
+        """Convert sample to export record formatted by instruction_format."""
         is_dict = isinstance(sample, dict)
+        instruction = (sample.get("instruction") if is_dict else getattr(sample, "instruction", "")) or ""
+        response = (sample.get("response") if is_dict else getattr(sample, "response", "")) or (sample.get("output") if is_dict else getattr(sample, "output", "")) or ""
+        input_val = (sample.get("input") if is_dict else getattr(sample, "input", None)) or ""
         conversation = sample.get("conversation") if is_dict else getattr(sample, "conversation", None)
-        if conversation:
-            record = {
-                "conversation": conversation
-            }
-        else:
-            record = {
-                "instruction": sample.get("instruction") if is_dict else sample.instruction,
-                "response": sample.get("response") if is_dict else sample.response,
-            }
-            input_val = sample.get("input") if is_dict else sample.input
-            if input_val:
-                record["input"] = input_val
+        fmt = (getattr(self.config, "instruction_format", "alpaca") or "alpaca").lower()
+
+        if fmt == "sharegpt":
+            if conversation and isinstance(conversation, list):
+                turns = []
+                for turn in conversation:
+                    role = turn.get("role") or turn.get("from") or "human"
+                    content = turn.get("content") or turn.get("value") or ""
+                    mapped_from = "human" if role in ("user", "human") else ("gpt" if role in ("assistant", "gpt", "model") else "system")
+                    turns.append({"from": mapped_from, "value": content})
+                record = {"conversations": turns}
+            else:
+                user_val = f"{instruction}\n\n{input_val}".strip() if input_val else instruction
+                record = {
+                    "conversations": [
+                        {"from": "human", "value": user_val},
+                        {"from": "gpt", "value": response}
+                    ]
+                }
+        elif fmt in ("openai_jsonl", "openai"):
+            if conversation and isinstance(conversation, list):
+                messages = []
+                for turn in conversation:
+                    role = turn.get("role") or ("user" if turn.get("from") == "human" else "assistant")
+                    content = turn.get("content") or turn.get("value") or ""
+                    messages.append({"role": role, "content": content})
+                record = {"messages": messages}
+            else:
+                user_val = f"{instruction}\n\n{input_val}".strip() if input_val else instruction
+                record = {
+                    "messages": [
+                        {"role": "system", "content": "You are a helpful assistant."},
+                        {"role": "user", "content": user_val},
+                        {"role": "assistant", "content": response}
+                    ]
+                }
+        elif fmt == "chatml":
+            if conversation and isinstance(conversation, list):
+                messages = []
+                chatml_lines = []
+                for turn in conversation:
+                    role = turn.get("role") or ("user" if turn.get("from") == "human" else "assistant")
+                    content = turn.get("content") or turn.get("value") or ""
+                    messages.append({"role": role, "content": content})
+                    chatml_lines.append(f"<|im_start|>{role}\n{content}<|im_end|>")
+                record = {
+                    "messages": messages,
+                    "text": "\n".join(chatml_lines)
+                }
+            else:
+                user_val = f"{instruction}\n\n{input_val}".strip() if input_val else instruction
+                record = {
+                    "messages": [
+                        {"role": "system", "content": "You are a helpful assistant."},
+                        {"role": "user", "content": user_val},
+                        {"role": "assistant", "content": response}
+                    ],
+                    "text": f"<|im_start|>system\nYou are a helpful assistant.<|im_end|>\n<|im_start|>user\n{user_val}<|im_end|>\n<|im_start|>assistant\n{response}<|im_end|>"
+                }
+        else:  # default "alpaca"
+            if conversation:
+                record = {
+                    "conversation": conversation,
+                    "instruction": instruction,
+                    "response": response,
+                }
+            else:
+                record = {
+                    "instruction": instruction,
+                    "response": response,
+                }
+                if input_val:
+                    record["input"] = input_val
 
         if self.config.include_metadata:
-            record["metadata"] = sample.get("metadata") if is_dict else sample.metadata
-            record["difficulty_tier"] = sample.get("difficulty_tier") if is_dict else sample.difficulty_tier
-            record["curriculum_order"] = sample.get("curriculum_order") if is_dict else sample.curriculum_order
+            meta = sample.get("metadata") if is_dict else getattr(sample, "metadata", {})
+            diff = sample.get("difficulty_tier") if is_dict else getattr(sample, "difficulty_tier", 3)
+            curr = sample.get("curriculum_order") if is_dict else getattr(sample, "curriculum_order", 0)
+            if meta is not None:
+                record["metadata"] = meta
+            if diff is not None:
+                record["difficulty_tier"] = diff
+            if curr is not None:
+                record["curriculum_order"] = curr
 
         return record
 

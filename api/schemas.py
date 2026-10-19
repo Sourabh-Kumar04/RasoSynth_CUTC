@@ -104,6 +104,10 @@ class JobRequest(BaseModel):
     speed_vs_quality: float = Field(default=0.5, ge=0.0, le=1.0)
     synthetic_ratio: float = Field(default=0.0, ge=0.0, le=1.0)
     export_format: ExportFormat = Field(default=ExportFormat.JSONL)
+    instruction_format: Literal["alpaca", "sharegpt", "chatml", "openai_jsonl"] = Field(
+        default="alpaca",
+        description="Instruction/chat format: alpaca | sharegpt | chatml | openai_jsonl"
+    )
     metadata_fields: list[str] = Field(default_factory=list)
     time_period: Optional[str] = Field(default=None, description="Historical time period (e.g., '2000-2020')")
     enable_research_loop: bool = Field(default=True, description="Enable autonomous research")

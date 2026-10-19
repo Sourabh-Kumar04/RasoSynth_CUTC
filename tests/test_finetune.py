@@ -121,3 +121,58 @@ async def test_finetune_job_manager_lifecycle():
     assert len(logs) == 1
     assert logs[0]["loss"] == 0.45
 
+
+def test_format_sample_templates():
+    """Test format_sample with standard instruction/response across templates."""
+    from finetuning.trainer import format_sample
+
+    sample = {"instruction": "Calculate 2+2", "input": "", "response": "4"}
+
+    alpaca_out = format_sample(sample, "alpaca")
+    assert "### Instruction:\nCalculate 2+2" in alpaca_out
+    assert "### Response:\n4" in alpaca_out
+
+    chatml_out = format_sample(sample, "chatml")
+    assert "<|im_start|>user\nCalculate 2+2<|im_end|>" in chatml_out
+    assert "<|im_start|>assistant\n4<|im_end|>" in chatml_out
+
+    sharegpt_out = format_sample(sample, "sharegpt")
+    assert "### Human:\nCalculate 2+2" in sharegpt_out
+    assert "### Assistant:\n4" in sharegpt_out
+
+    openai_out = format_sample(sample, "openai_jsonl")
+    assert "User: Calculate 2+2" in openai_out
+    assert "Assistant: 4" in openai_out
+
+
+def test_format_sample_cross_format():
+    """Test format_sample parsing ShareGPT and OpenAI formats."""
+    from finetuning.trainer import format_sample
+
+    # ShareGPT sample with conversations list
+    sharegpt_sample = {
+        "conversations": [
+            {"from": "human", "value": "Hello"},
+            {"from": "gpt", "value": "Hi there!"}
+        ]
+    }
+    out = format_sample(sharegpt_sample, "chatml")
+    assert "<|im_start|>user\nHello<|im_end|>" in out
+    assert "<|im_start|>assistant\nHi there!<|im_end|>" in out
+
+    out_alpaca = format_sample(sharegpt_sample, "alpaca")
+    assert "### Instruction:\nHello" in out_alpaca
+    assert "### Response:\nHi there!" in out_alpaca
+
+    # OpenAI sample with messages list
+    openai_sample = {
+        "messages": [
+            {"role": "user", "content": "What is AI?"},
+            {"role": "assistant", "content": "Machine intelligence."}
+        ]
+    }
+    out_sg = format_sample(openai_sample, "sharegpt")
+    assert "### Human:\nWhat is AI?" in out_sg
+    assert "### Assistant:\nMachine intelligence." in out_sg
+
+

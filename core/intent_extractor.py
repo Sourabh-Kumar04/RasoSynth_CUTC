@@ -129,6 +129,7 @@ async def extract_intent(
             output_format="unknown",
             confidence=_MIN_CONFIDENCE,
             raw_input=raw_input,
+            instruction_format="alpaca",
         )
 
     response_text = response_obj.content
@@ -250,6 +251,7 @@ async def extract_intent(
         confidence=float(data["confidence"]),
         raw_input=raw_input,
         ideal_samples=data.get("ideal_samples", []),
+        instruction_format=data.get("instruction_format", "alpaca"),
     )
 
     logger.info(

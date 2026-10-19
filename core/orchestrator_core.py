@@ -1563,6 +1563,7 @@ class DatasetOrchestrator:
         ]
         export_config = ExportConfig(
             format=job_config.get("export_format", "jsonl"),
+            instruction_format=job_config.get("instruction_format", "alpaca"),
             output_dir=self.config.get("output_dir", "outputs"),
             dataset_name=job_config.get("dataset_name") or f"dataset_{job_id}",
             # Cloud export settings from global config

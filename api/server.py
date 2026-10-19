@@ -2106,6 +2106,13 @@ async def export_dataset(dataset_id: str, request: dict = None):
     export_format = (request or {}).get("format", "jsonl").lower()
     if export_format not in {"json", "jsonl", "csv", "parquet", "zip", "sql", "qdrant"}:
         raise HTTPException(status_code=400, detail=f"Unsupported export format: {export_format}")
+
+    instruction_format = (request or {}).get("instruction_format")
+    if not instruction_format:
+        ds_config = dataset.get("config", {}) if isinstance(dataset.get("config"), dict) else {}
+        instruction_format = ds_config.get("instruction_format", "alpaca")
+    instruction_format = (instruction_format or "alpaca").lower()
+
     if export_format == "json":
         page_size = 1000
         first_page = await db.get_samples(dataset["id"], limit=page_size, offset=0)
@@ -2122,14 +2129,53 @@ async def export_dataset(dataset_id: str, request: dict = None):
                     if not first_item:
                         yield ","
                     first_item = False
-                    item = {
-                        "instruction": sample.get("instruction", ""),
-                        "response": sample.get("response", ""),
-                        "input": sample.get("input", ""),
-                        "quality_score": sample.get("quality_score"),
-                        "difficulty_tier": sample.get("difficulty_tier"),
-                        "metadata": sample.get("metadata", {}),
-                    }
+                    inst = sample.get("instruction", "")
+                    resp = sample.get("response", "")
+                    inp = sample.get("input", "") or ""
+                    conv = sample.get("conversation")
+
+                    if instruction_format == "sharegpt":
+                        if conv and isinstance(conv, list):
+                            turns = []
+                            for turn in conv:
+                                r = turn.get("role") or turn.get("from") or "human"
+                                c = turn.get("content") or turn.get("value") or ""
+                                turns.append({"from": "human" if r in ("user", "human") else "gpt", "value": c})
+                            item = {"conversations": turns}
+                        else:
+                            u_val = f"{inst}\n\n{inp}".strip() if inp else inst
+                            item = {"conversations": [{"from": "human", "value": u_val}, {"from": "gpt", "value": resp}]}
+                    elif instruction_format in ("openai_jsonl", "openai"):
+                        if conv and isinstance(conv, list):
+                            msgs = [{"role": t.get("role") or ("user" if t.get("from") == "human" else "assistant"), "content": t.get("content") or t.get("value") or ""} for t in conv]
+                            item = {"messages": msgs}
+                        else:
+                            u_val = f"{inst}\n\n{inp}".strip() if inp else inst
+                            item = {"messages": [
+                                {"role": "system", "content": "You are a helpful assistant."},
+                                {"role": "user", "content": u_val},
+                                {"role": "assistant", "content": resp}
+                            ]}
+                    elif instruction_format == "chatml":
+                        u_val = f"{inst}\n\n{inp}".strip() if inp else inst
+                        item = {
+                            "messages": [
+                                {"role": "system", "content": "You are a helpful assistant."},
+                                {"role": "user", "content": u_val},
+                                {"role": "assistant", "content": resp}
+                            ],
+                            "text": f"<|im_start|>system\nYou are a helpful assistant.<|im_end|>\n<|im_start|>user\n{u_val}<|im_end|>\n<|im_start|>assistant\n{resp}<|im_end|>"
+                        }
+                    else:
+                        item = {
+                            "instruction": inst,
+                            "response": resp,
+                            "input": inp,
+                        }
+
+                    item["quality_score"] = sample.get("quality_score")
+                    item["difficulty_tier"] = sample.get("difficulty_tier")
+                    item["metadata"] = sample.get("metadata", {})
                     yield json.dumps(item, ensure_ascii=False)
                 offset += len(page)
                 if len(page) < page_size:
@@ -2165,11 +2211,13 @@ async def export_dataset(dataset_id: str, request: dict = None):
             if q_candidate.exists():
                 candidate = q_candidate
 
-        if candidate.exists():
+        req_instruction_format = (request or {}).get("instruction_format")
+        if candidate.exists() and not req_instruction_format:
             file_path = candidate
         elif (
             output_path
             and Path(output_path).exists()
+            and not req_instruction_format
             and (
                 Path(output_path).suffix.lstrip(".").casefold() == export_format
                 or (export_format == "qdrant" and "_qdrant" in Path(output_path).name)
@@ -2181,7 +2229,11 @@ async def export_dataset(dataset_id: str, request: dict = None):
             if not samples:
                 raise HTTPException(status_code=404, detail="No samples found for this dataset")
             from pipeline.export import ExportPipeline, ExportConfig
-            exp = ExportPipeline(ExportConfig(format=export_format, output_dir=str(output_dir.parent)))
+            exp = ExportPipeline(ExportConfig(
+                format=export_format,
+                instruction_format=instruction_format,
+                output_dir=str(output_dir.parent),
+            ))
             output_dir.mkdir(parents=True, exist_ok=True)
             if export_format == "sql":
                 file_path = await exp._export_sql(samples, output_dir.name, output_dir)

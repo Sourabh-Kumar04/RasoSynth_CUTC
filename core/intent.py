@@ -40,6 +40,9 @@ class UserIntent:
     """Optional few-shot ideal examples provided by the user to anchor crawling and generation."""
     ideal_samples: List[dict] = field(default_factory=list)
 
+    """Instruction/chat schema format: alpaca | sharegpt | chatml | openai_jsonl."""
+    instruction_format: str = "alpaca"
+
 
 class IntentExtractionError(Exception):
     """Raised when the LLM cannot produce a valid, confident intent."""

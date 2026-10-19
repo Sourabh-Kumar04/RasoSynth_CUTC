@@ -138,3 +138,54 @@ class TestExportPipeline:
         assert payload["collection_name"] == "dataset_job-qdrant"
         assert len(payload["points"]) == len(samples)
         assert "payload" in payload["points"][0]
+
+    async def test_export_alpaca_format(self, samples, tmp_path):
+        import json
+        config = ExportConfig(format="jsonl", instruction_format="alpaca", output_dir=tmp_path)
+        pipeline = ExportPipeline(config)
+        result = await pipeline.export(samples, "job-alpaca")
+        lines = result["dataset"].read_text(encoding="utf-8").strip().splitlines()
+        first = json.loads(lines[0])
+        assert "instruction" in first
+        assert "response" in first
+        assert first["instruction"] == "What is Python?"
+
+    async def test_export_sharegpt_format(self, samples, tmp_path):
+        import json
+        config = ExportConfig(format="jsonl", instruction_format="sharegpt", output_dir=tmp_path)
+        pipeline = ExportPipeline(config)
+        result = await pipeline.export(samples, "job-sharegpt")
+        lines = result["dataset"].read_text(encoding="utf-8").strip().splitlines()
+        first = json.loads(lines[0])
+        assert "conversations" in first
+        assert len(first["conversations"]) == 2
+        assert first["conversations"][0]["from"] == "human"
+        assert first["conversations"][0]["value"] == "What is Python?"
+        assert first["conversations"][1]["from"] == "gpt"
+        assert first["conversations"][1]["value"] == "A programming language."
+
+    async def test_export_chatml_format(self, samples, tmp_path):
+        import json
+        config = ExportConfig(format="jsonl", instruction_format="chatml", output_dir=tmp_path)
+        pipeline = ExportPipeline(config)
+        result = await pipeline.export(samples, "job-chatml")
+        lines = result["dataset"].read_text(encoding="utf-8").strip().splitlines()
+        first = json.loads(lines[0])
+        assert "messages" in first
+        assert "text" in first
+        assert "<|im_start|>user" in first["text"]
+        assert "<|im_start|>assistant" in first["text"]
+
+    async def test_export_openai_jsonl_format(self, samples, tmp_path):
+        import json
+        config = ExportConfig(format="jsonl", instruction_format="openai_jsonl", output_dir=tmp_path)
+        pipeline = ExportPipeline(config)
+        result = await pipeline.export(samples, "job-openai")
+        lines = result["dataset"].read_text(encoding="utf-8").strip().splitlines()
+        first = json.loads(lines[0])
+        assert "messages" in first
+        roles = [m["role"] for m in first["messages"]]
+        assert "system" in roles
+        assert "user" in roles
+        assert "assistant" in roles
+

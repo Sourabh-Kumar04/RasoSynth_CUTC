@@ -137,11 +137,87 @@ LLAMA3_TEMPLATE = (
     "<|start_header_id|>assistant<|end_header_id|>\n\n{response}<|eot_id|>"
 )
 
-TEMPLATES = {"alpaca": ALPACA_TEMPLATE, "chatml": CHATML_TEMPLATE, "llama3": LLAMA3_TEMPLATE}
+SHAREGPT_TEMPLATE = (
+    "### Human:\n{instruction}\n\n### Assistant:\n{response}"
+)
+
+OPENAI_TEMPLATE = (
+    "System: You are a helpful assistant.\n"
+    "User: {instruction}\n"
+    "Assistant: {response}"
+)
+
+TEMPLATES = {
+    "alpaca": ALPACA_TEMPLATE,
+    "chatml": CHATML_TEMPLATE,
+    "llama3": LLAMA3_TEMPLATE,
+    "sharegpt": SHAREGPT_TEMPLATE,
+    "openai_jsonl": OPENAI_TEMPLATE,
+    "openai": OPENAI_TEMPLATE,
+}
 
 
 def format_sample(sample: dict, template: str = "alpaca") -> str:
+    template = (template or "alpaca").lower()
     tmpl = TEMPLATES.get(template, ALPACA_TEMPLATE)
+
+    # 1. ShareGPT format in sample: {"conversations": [{"from": ..., "value": ...}]}
+    if "conversations" in sample and isinstance(sample["conversations"], list):
+        turns = sample["conversations"]
+        if template == "chatml":
+            return "".join(
+                f"<|im_start|>{'user' if t.get('from') in ('human', 'user') else ('assistant' if t.get('from') in ('gpt', 'assistant') else 'system')}\n{t.get('value', '')}<|im_end|>\n"
+                for t in turns
+            ).strip()
+        elif template == "llama3":
+            return "<|begin_of_text|>" + "".join(
+                f"<|start_header_id|>{'user' if t.get('from') in ('human', 'user') else ('assistant' if t.get('from') in ('gpt', 'assistant') else 'system')}<|end_header_id|>\n\n{t.get('value', '')}<|eot_id|>"
+                for t in turns
+            )
+        elif template in ("openai_jsonl", "openai"):
+            return "\n".join(
+                f"{'User' if t.get('from') in ('human', 'user') else ('Assistant' if t.get('from') in ('gpt', 'assistant') else 'System')}: {t.get('value', '')}"
+                for t in turns
+            )
+        elif template == "sharegpt":
+            return "\n\n".join(
+                f"### {'Human' if t.get('from') in ('human', 'user') else ('Assistant' if t.get('from') in ('gpt', 'assistant') else 'System')}:\n{t.get('value', '')}"
+                for t in turns
+            )
+        else:
+            human_val = next((t.get("value", "") for t in turns if t.get("from") in ("human", "user")), "")
+            gpt_val = next((t.get("value", "") for t in turns if t.get("from") in ("gpt", "assistant")), "")
+            return tmpl.format(instruction=human_val, input="", response=gpt_val)
+
+    # 2. OpenAI / ChatML messages format in sample: {"messages": [{"role": ..., "content": ...}]}
+    if "messages" in sample and isinstance(sample["messages"], list):
+        msgs = sample["messages"]
+        if template == "chatml":
+            return "".join(
+                f"<|im_start|>{m.get('role', 'user')}\n{m.get('content', '')}<|im_end|>\n"
+                for m in msgs
+            ).strip()
+        elif template == "llama3":
+            return "<|begin_of_text|>" + "".join(
+                f"<|start_header_id|>{m.get('role', 'user')}<|end_header_id|>\n\n{m.get('content', '')}<|eot_id|>"
+                for m in msgs
+            )
+        elif template == "sharegpt":
+            return "\n\n".join(
+                f"### {'Human' if m.get('role') == 'user' else ('Assistant' if m.get('role') == 'assistant' else 'System')}:\n{m.get('content', '')}"
+                for m in msgs
+            )
+        elif template in ("openai_jsonl", "openai"):
+            return "\n".join(
+                f"{m.get('role', 'user').capitalize()}: {m.get('content', '')}"
+                for m in msgs
+            )
+        else:
+            user_msg = next((m.get("content", "") for m in msgs if m.get("role") == "user"), "")
+            asst_msg = next((m.get("content", "") for m in msgs if m.get("role") == "assistant"), "")
+            return tmpl.format(instruction=user_msg, input="", response=asst_msg)
+
+    # 3. Standard instruction/response format in sample
     return tmpl.format(
         instruction=sample.get("instruction", ""),
         input=sample.get("input", ""),

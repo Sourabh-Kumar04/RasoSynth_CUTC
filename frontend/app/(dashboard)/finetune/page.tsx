@@ -633,7 +633,9 @@ function FineTuneContent() {
                       <SelectTrigger className="rounded-full border-[#272738] bg-[#0a0a0f] text-white text-xs font-mono"><SelectValue /></SelectTrigger>
                       <SelectContent className="bg-[#12121a] border-[#272738] text-white text-xs font-mono">
                         <SelectItem value="alpaca">Alpaca</SelectItem>
+                        <SelectItem value="sharegpt">ShareGPT</SelectItem>
                         <SelectItem value="chatml">ChatML</SelectItem>
+                        <SelectItem value="openai_jsonl">OpenAI JSONL</SelectItem>
                         <SelectItem value="llama3">Llama 3</SelectItem>
                       </SelectContent>
                     </Select>

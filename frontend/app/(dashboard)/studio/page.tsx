@@ -92,6 +92,7 @@ function StudioContent() {
     searchParams.get('domain') || 'Finance & Taxation (AI Kosh)'
   )
   const [datasetType, setDatasetType] = useState('sft')
+  const [instructionFormat, setInstructionFormat] = useState('alpaca')
   const [datasetSize, setDatasetSize] = useState(10000)
   const [generationMode, setGenerationMode] = useState<'grounded' | 'synthetic'>('grounded')
   const [isSubmitting, setIsSubmitting] = useState(false)
@@ -114,6 +115,7 @@ function StudioContent() {
         target_domain: prompt.trim() || targetDomain,
         dataset_name: targetDomain,
         dataset_type: datasetType,
+        instruction_format: instructionFormat,
         dataset_size: datasetSize,
         quality_level: 'standard',
         generation_mode: generationMode === 'grounded' ? 'strict_source' : 'synthetic',
@@ -395,6 +397,22 @@ function StudioContent() {
                   <option value="reasoning">Chain-of-Thought Reasoning (CoT)</option>
                   <option value="tool_calling">Function & Tool Calling</option>
                   <option value="rlhf">Preference Pairs (RLHF / DPO)</option>
+                </select>
+              </div>
+
+              <div>
+                <label className="text-[10px] font-mono uppercase text-[#94a3b8] block mb-1">
+                  Instruction / Chat Format
+                </label>
+                <select
+                  value={instructionFormat}
+                  onChange={(e) => setInstructionFormat(e.target.value)}
+                  className="w-full bg-[#0a0a0f] border border-[#272738] rounded p-2 text-xs font-mono text-white focus:outline-none"
+                >
+                  <option value="alpaca">Alpaca (instruction, input, response)</option>
+                  <option value="sharegpt">ShareGPT (conversations: [&#123;from, value&#125;])</option>
+                  <option value="chatml">ChatML (&lt;|im_start|&gt;system/user/assistant)</option>
+                  <option value="openai_jsonl">OpenAI JSONL (messages: [&#123;role, content&#125;])</option>
                 </select>
               </div>
 

@@ -1219,10 +1219,12 @@ dataset_samples_generated_total 4520`
           updated_at: new Date().toISOString(),
           target_domain: targetDomain,
           dataset_type: datasetType,
+          instruction_format: bodyObj.instruction_format || 'alpaca',
           dataset_size: datasetSize,
           config: {
             target_domain: targetDomain,
             dataset_type: datasetType,
+            instruction_format: bodyObj.instruction_format || 'alpaca',
             dataset_size: datasetSize,
             prompt: bodyObj.prompt || 'Synthesized Dataset'
           }

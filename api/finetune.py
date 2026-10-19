@@ -53,7 +53,7 @@ class CreateFineTuneJobRequest(BaseModel):
     push_to_hub: bool = False
     hf_token: str = ""
     hf_org: str = ""
-    chat_template: str = Field("alpaca", pattern="^(alpaca|chatml|llama3)$")
+    chat_template: str = Field("alpaca", pattern="^(alpaca|chatml|llama3|sharegpt|openai_jsonl)$")
 
     @model_validator(mode="after")
     def check_dataset_source(self) -> "CreateFineTuneJobRequest":
