@@ -4,7 +4,7 @@ import time
 import logging
 from typing import Dict, List, Optional, Any
 from dataclasses import dataclass, field
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from enum import Enum
 from abc import ABC, abstractmethod
 import uuid
@@ -29,7 +29,7 @@ class ProviderHealthCheckResult:
     status: HealthStatus
     latency_ms: Optional[float] = None
     error: Optional[str] = None
-    timestamp: datetime = field(default_factory=datetime.utcnow)
+    timestamp: datetime = field(default_factory=lambda: datetime.now(timezone.utc))
     capabilities: Dict[str, bool] = field(default_factory=dict)
     quota_remaining: Optional[int] = None
     consecutive_failures: int = 0
@@ -165,7 +165,7 @@ class ProviderHealthMonitor:
     ) -> None:
         """Update health status and handle circuit breaker."""
         self._health_status[provider] = result
-        self._last_check[provider] = datetime.utcnow()
+        self._last_check[provider] = datetime.now(timezone.utc)
 
         # Update circuit breaker based on result
         if result.status == HealthStatus.UNHEALTHY:
@@ -182,7 +182,7 @@ class ProviderHealthMonitor:
             # Check if we can transition from open to half-open
             if self._circuit_breaker_state.get(provider) == "open":
                 last_failure = self._last_check.get(provider)
-                if last_failure and (datetime.utcnow() - last_failure).seconds > self._recovery_timeout:
+                if last_failure and (datetime.now(timezone.utc) - last_failure).total_seconds() > self._recovery_timeout:
                     self._circuit_breaker_state[provider] = "half-open"
 
     def get_health_status(self, provider: Optional[str] = None) -> Dict[str, ProviderHealthCheckResult]:
@@ -229,7 +229,7 @@ class ProviderHealthMonitor:
         metrics.min_latency_ms = min(metrics.min_latency_ms, latency_ms)
         metrics.max_latency_ms = max(metrics.max_latency_ms, latency_ms)
         metrics.total_cost_usd += cost_usd
-        metrics.last_request_at = datetime.utcnow()
+        metrics.last_request_at = datetime.now(timezone.utc)
 
     def record_fallback(self, from_provider: str, to_provider: str) -> None:
         """Record a fallback event."""
