@@ -8,7 +8,7 @@ from abc import ABC, abstractmethod
 from dataclasses import dataclass, field
 from enum import Enum
 from typing import Any, AsyncIterator, Optional
-from datetime import datetime
+from datetime import datetime, timezone
 import hashlib
 import json
 
@@ -181,8 +181,8 @@ class ProgressTracker:
             estimated_time_remaining_seconds=0.0,
             current_chunk=0,
             total_chunks=0,
-            started_at=datetime.utcnow(),
-            updated_at=datetime.utcnow(),
+            started_at=datetime.now(timezone.utc),
+            updated_at=datetime.now(timezone.utc),
         )
         self._tracking[delivery_id] = progress
         return progress
@@ -201,7 +201,7 @@ class ProgressTracker:
             progress.current_chunk = current_chunk
             progress.upload_speed_mbps = speed_mbps
             progress.progress_percent = (bytes_uploaded / max(progress.total_bytes, 1)) * 100
-            progress.updated_at = datetime.utcnow()
+            progress.updated_at = datetime.now(timezone.utc)
 
             remaining = progress.total_bytes - bytes_uploaded
             if speed_mbps > 0:
@@ -214,7 +214,7 @@ class ProgressTracker:
         if delivery_id in self._tracking:
             self._tracking[delivery_id].status = "completed"
             self._tracking[delivery_id].progress_percent = 100.0
-            self._tracking[delivery_id].updated_at = datetime.utcnow()
+            self._tracking[delivery_id].updated_at = datetime.now(timezone.utc)
         return self._tracking.get(delivery_id)
 
     def fail(self, delivery_id: str, error: str) -> DeliveryProgress:
@@ -222,7 +222,7 @@ class ProgressTracker:
         if delivery_id in self._tracking:
             self._tracking[delivery_id].status = "failed"
             self._tracking[delivery_id].errors.append(error)
-            self._tracking[delivery_id].updated_at = datetime.utcnow()
+            self._tracking[delivery_id].updated_at = datetime.now(timezone.utc)
         return self._tracking.get(delivery_id)
 
     def get(self, delivery_id: str) -> Optional[DeliveryProgress]:

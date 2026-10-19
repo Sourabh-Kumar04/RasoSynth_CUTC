@@ -8,7 +8,7 @@ import asyncio
 import io
 import hashlib
 from typing import Optional, AsyncIterator
-from datetime import datetime
+from datetime import datetime, timezone
 
 from core.storage.base import (
     StorageProvider,
@@ -50,7 +50,7 @@ class GoogleDriveProvider(StorageProvider):
         metadata: Optional[dict] = None
     ) -> StorageResult:
         """Upload to Google Drive."""
-        start = datetime.utcnow()
+        start = datetime.now(timezone.utc)
 
         try:
             if self._service is None:
@@ -79,7 +79,7 @@ class GoogleDriveProvider(StorageProvider):
                 fields='id, name, size'
             ).execute()
 
-            duration = (datetime.utcnow() - start).total_seconds() * 1000
+            duration = (datetime.now(timezone.utc) - start).total_seconds() * 1000
 
             return StorageResult(
                 success=True,
@@ -93,7 +93,7 @@ class GoogleDriveProvider(StorageProvider):
 
     async def download(self, source: str, destination_path: Optional[str] = None) -> StorageResult:
         """Download from Google Drive."""
-        start = datetime.utcnow()
+        start = datetime.now(timezone.utc)
 
         try:
             if self._service is None:
@@ -115,7 +115,7 @@ class GoogleDriveProvider(StorageProvider):
                 with open(destination_path, 'wb') as f:
                     f.write(data)
 
-            duration = (datetime.utcnow() - start).total_seconds() * 1000
+            duration = (datetime.now(timezone.utc) - start).total_seconds() * 1000
 
             return StorageResult(
                 success=True,
@@ -206,7 +206,7 @@ class DropboxProvider(StorageProvider):
         metadata: Optional[dict] = None
     ) -> StorageResult:
         """Upload to Dropbox."""
-        start = datetime.utcnow()
+        start = datetime.now(timezone.utc)
 
         try:
             if self._client is None:
@@ -224,7 +224,7 @@ class DropboxProvider(StorageProvider):
                 mode=dropbox.files.WriteMode.overwrite
             )
 
-            duration = (datetime.utcnow() - start).total_seconds() * 1000
+            duration = (datetime.now(timezone.utc) - start).total_seconds() * 1000
 
             return StorageResult(
                 success=True,
@@ -238,7 +238,7 @@ class DropboxProvider(StorageProvider):
 
     async def download(self, source: str, destination_path: Optional[str] = None) -> StorageResult:
         """Download from Dropbox."""
-        start = datetime.utcnow()
+        start = datetime.now(timezone.utc)
 
         try:
             if self._client is None:
@@ -253,7 +253,7 @@ class DropboxProvider(StorageProvider):
                 with open(destination_path, 'wb') as f:
                     f.write(data)
 
-            duration = (datetime.utcnow() - start).total_seconds() * 1000
+            duration = (datetime.now(timezone.utc) - start).total_seconds() * 1000
 
             return StorageResult(
                 success=True,
@@ -337,7 +337,7 @@ class OneDriveProvider(StorageProvider):
         metadata: Optional[dict] = None
     ) -> StorageResult:
         """Upload to OneDrive."""
-        start = datetime.utcnow()
+        start = datetime.now(timezone.utc)
 
         try:
             if self._client is None:
@@ -353,7 +353,7 @@ class OneDriveProvider(StorageProvider):
 
             result = self._client.put(path, collected)
 
-            duration = (datetime.utcnow() - start).total_seconds() * 1000
+            duration = (datetime.now(timezone.utc) - start).total_seconds() * 1000
 
             return StorageResult(
                 success=True,
@@ -367,7 +367,7 @@ class OneDriveProvider(StorageProvider):
 
     async def download(self, source: str, destination_path: Optional[str] = None) -> StorageResult:
         """Download from OneDrive."""
-        start = datetime.utcnow()
+        start = datetime.now(timezone.utc)
 
         try:
             if self._client is None:
@@ -380,7 +380,7 @@ class OneDriveProvider(StorageProvider):
                 with open(destination_path, 'wb') as f:
                     f.write(data)
 
-            duration = (datetime.utcnow() - start).total_seconds() * 1000
+            duration = (datetime.now(timezone.utc) - start).total_seconds() * 1000
 
             return StorageResult(
                 success=True,
@@ -454,7 +454,7 @@ class MegaProvider(StorageProvider):
         metadata: Optional[dict] = None
     ) -> StorageResult:
         """Upload to Mega."""
-        start = datetime.utcnow()
+        start = datetime.now(timezone.utc)
 
         try:
             if self._client is None:
@@ -476,7 +476,7 @@ class MegaProvider(StorageProvider):
             import os
             os.unlink(temp_path)
 
-            duration = (datetime.utcnow() - start).total_seconds() * 1000
+            duration = (datetime.now(timezone.utc) - start).total_seconds() * 1000
 
             return StorageResult(
                 success=True,
@@ -490,7 +490,7 @@ class MegaProvider(StorageProvider):
 
     async def download(self, source: str, destination_path: Optional[str] = None) -> StorageResult:
         """Download from Mega."""
-        start = datetime.utcnow()
+        start = datetime.now(timezone.utc)
 
         try:
             if self._client is None:
@@ -503,7 +503,7 @@ class MegaProvider(StorageProvider):
                 with open(destination_path, 'wb') as f:
                     f.write(data)
 
-            duration = (datetime.utcnow() - start).total_seconds() * 1000
+            duration = (datetime.now(timezone.utc) - start).total_seconds() * 1000
 
             return StorageResult(
                 success=True,

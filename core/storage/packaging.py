@@ -13,7 +13,7 @@ import json
 import os
 import subprocess
 import tempfile
-from datetime import datetime
+from datetime import datetime, timezone
 import hashlib
 
 
@@ -73,7 +73,7 @@ class PackagingConfig:
 class PackageManifest:
     """Manifest for packaged dataset."""
     package_id: str = ""
-    created_at: datetime = field(default_factory=datetime.utcnow)
+    created_at: datetime = field(default_factory=lambda: datetime.now(timezone.utc))
     dataset_name: str = ""
     version: str = "1.0.0"
     total_size_bytes: int = 0
@@ -117,7 +117,7 @@ class DatasetPackager:
 
         manifest = PackageManifest(
             package_id=package_id,
-            created_at=datetime.utcnow(),
+            created_at=datetime.now(timezone.utc),
             dataset_name=dataset_name,
             version=version,
             total_size_bytes=total_size,
@@ -171,7 +171,7 @@ class DatasetPackager:
         package_id = str(uuid.uuid4())
         manifest = PackageManifest(
             package_id=package_id,
-            created_at=datetime.utcnow(),
+            created_at=datetime.now(timezone.utc),
             dataset_name=dataset_name,
             version="1.0.0",
             total_size_bytes=0,

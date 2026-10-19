@@ -7,7 +7,7 @@ vector search, graph reasoning, and semantic memory.
 
 from typing import Dict, List, Optional, Any, Tuple
 from dataclasses import dataclass, field
-from datetime import datetime
+from datetime import datetime, timezone
 from enum import Enum
 import asyncio
 import json
@@ -38,8 +38,8 @@ class KnowledgeEntry:
     relevance_score: float = 0.0
     usage_count: int = 0
     last_accessed: Optional[datetime] = None
-    created_at: datetime = field(default_factory=datetime.utcnow)
-    updated_at: datetime = field(default_factory=datetime.utcnow)
+    created_at: datetime = field(default_factory=lambda: datetime.now(timezone.utc))
+    updated_at: datetime = field(default_factory=lambda: datetime.now(timezone.utc))
 
 
 @dataclass
@@ -209,7 +209,7 @@ class KnowledgeBase:
             entries.append(entry)
 
             entry.usage_count += 1
-            entry.last_accessed = datetime.utcnow()
+            entry.last_accessed = datetime.now(timezone.utc)
 
         entries = entries[:limit]
 
@@ -439,7 +439,7 @@ class SemanticMemory:
             "action": action,
             "outcome": outcome,
             "success": outcome.get("success", False),
-            "timestamp": datetime.utcnow().isoformat()
+            "timestamp": datetime.now(timezone.utc).isoformat()
         }
 
         if category not in self._experiences:

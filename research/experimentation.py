@@ -6,7 +6,7 @@ A/B testing, multi-variant experimentation, and experiment management.
 
 from typing import Dict, List, Optional, Any, Callable
 from dataclasses import dataclass, field
-from datetime import datetime
+from datetime import datetime, timezone
 from enum import Enum
 import asyncio
 import json
@@ -57,7 +57,7 @@ class Experiment:
     stat_threshold: float = 0.95
     status: ExperimentStatus = ExperimentStatus.PENDING
     winner: Optional[str] = None
-    created_at: datetime = field(default_factory=datetime.utcnow)
+    created_at: datetime = field(default_factory=lambda: datetime.now(timezone.utc))
     started_at: Optional[datetime] = None
     completed_at: Optional[datetime] = None
     metadata: Dict[str, Any] = field(default_factory=dict)
@@ -82,7 +82,7 @@ class ExperimentAssignment:
     experiment_id: str
     variant_id: str
     subject_id: str
-    assigned_at: datetime = field(default_factory=datetime.utcnow)
+    assigned_at: datetime = field(default_factory=lambda: datetime.now(timezone.utc))
 
 
 class ExperimentRunner:
@@ -139,7 +139,7 @@ class ExperimentRunner:
 
         experiment = self._experiments[experiment_id]
         experiment.status = ExperimentStatus.RUNNING
-        experiment.started_at = datetime.utcnow()
+        experiment.started_at = datetime.now(timezone.utc)
 
         return True
 
@@ -209,7 +209,7 @@ class ExperimentRunner:
         results = await self._calculate_results(experiment)
 
         experiment.status = ExperimentStatus.COMPLETED
-        experiment.completed_at = datetime.utcnow()
+        experiment.completed_at = datetime.now(timezone.utc)
         experiment.winner = results.winner
 
         self._results[experiment_id] = results
@@ -447,7 +447,9 @@ class ExperimentScheduler:
 
                 elapsed_hours = 0
                 if exp.started_at:
-                    elapsed_hours = (datetime.utcnow() - exp.started_at).total_seconds() / 3600
+                    now = datetime.now(timezone.utc)
+                    start_dt = exp.started_at if exp.started_at.tzinfo is not None else exp.started_at.replace(tzinfo=timezone.utc)
+                    elapsed_hours = (now - start_dt).total_seconds() / 3600
 
                 if elapsed_hours >= exp.max_duration_hours:
                     await self.runner.evaluate_experiment(exp.experiment_id)

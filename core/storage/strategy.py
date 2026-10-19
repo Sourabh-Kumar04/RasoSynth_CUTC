@@ -6,7 +6,7 @@ Automatically selects optimal delivery strategy based on dataset and user requir
 
 from dataclasses import dataclass, field
 from typing import Optional
-from datetime import datetime
+from datetime import datetime, timezone
 
 from core.storage.base import DeliveryStrategy, StorageProviderType
 
@@ -234,7 +234,7 @@ class DeliveryStrategySelector:
     ) -> None:
         """Log strategy selection for learning."""
         self._history.append({
-            "timestamp": datetime.utcnow(),
+            "timestamp": datetime.now(timezone.utc),
             "criteria": {
                 "size_bytes": criteria.dataset_size_bytes,
                 "dataset_type": criteria.dataset_type,

@@ -7,7 +7,7 @@ experimentation, and self-improvement.
 
 from typing import Dict, List, Optional, Any, Set, Callable
 from dataclasses import dataclass, field
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from enum import Enum
 import asyncio
 import json
@@ -58,7 +58,7 @@ class ResearchFinding:
     citations: int = 0
     verified: bool = False
     metadata: Dict[str, Any] = field(default_factory=dict)
-    discovered_at: datetime = field(default_factory=datetime.utcnow)
+    discovered_at: datetime = field(default_factory=lambda: datetime.now(timezone.utc))
 
 
 @dataclass
@@ -73,7 +73,7 @@ class BenchmarkResult:
     execution_time_ms: float
     quality_metrics: Dict[str, float] = field(default_factory=dict)
     metadata: Dict[str, Any] = field(default_factory=dict)
-    timestamp: datetime = field(default_factory=datetime.utcnow)
+    timestamp: datetime = field(default_factory=lambda: datetime.now(timezone.utc))
 
 
 @dataclass
@@ -87,7 +87,7 @@ class Experiment:
     results: Optional[Dict[str, Any]] = None
     winner: Optional[str] = None
     metadata: Dict[str, Any] = field(default_factory=dict)
-    created_at: datetime = field(default_factory=datetime.utcnow)
+    created_at: datetime = field(default_factory=lambda: datetime.now(timezone.utc))
 
 
 @dataclass
@@ -124,7 +124,7 @@ class ResearchReport:
     top_findings: List[ResearchFinding] = field(default_factory=list)
     active_improvements: List[Improvement] = field(default_factory=list)
     recommendations: List[str] = field(default_factory=list)
-    timestamp: datetime = field(default_factory=datetime.utcnow)
+    timestamp: datetime = field(default_factory=lambda: datetime.now(timezone.utc))
 
 
 class ResearchLoop:
@@ -163,8 +163,8 @@ class ResearchLoop:
         deployed = await self._deploy_improvements(improvements)
 
         report = ResearchReport(
-            report_id=f"report_{datetime.utcnow().timestamp()}",
-            period=f"cycle_{datetime.utcnow().isoformat()}",
+            report_id=f"report_{datetime.now(timezone.utc).timestamp()}",
+            period=f"cycle_{datetime.now(timezone.utc).isoformat()}",
             findings_discovered=len(findings),
             benchmarks_conducted=len(benchmarks),
             experiments_run=len(self._experiments),
@@ -174,7 +174,7 @@ class ResearchLoop:
         )
 
         self.status = ResearchStatus.IDLE
-        self._last_research = datetime.utcnow()
+        self._last_research = datetime.now(timezone.utc)
 
         return report
 
@@ -276,7 +276,7 @@ class ResearchLoop:
             if improvement.improvement_percent >= self._min_improvement_threshold:
                 if improvement.risk_level in ["low", "medium"]:
                     improvement.deployed = True
-                    improvement.deployment_date = datetime.utcnow()
+                    improvement.deployment_date = datetime.now(timezone.utc)
                     deployed.append(improvement)
                 else:
                     improvement.requires_approval = True
@@ -315,7 +315,9 @@ class ResearchLoop:
         if self._last_research is None:
             return True
 
-        hours_since = (datetime.utcnow() - self._last_research).total_seconds() / 3600
+        now = datetime.now(timezone.utc)
+        last_dt = self._last_research if self._last_research.tzinfo is not None else self._last_research.replace(tzinfo=timezone.utc)
+        hours_since = (now - last_dt).total_seconds() / 3600
         return hours_since >= self._research_interval_hours
 
 

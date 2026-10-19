@@ -7,7 +7,7 @@ DAG-based execution with checkpointing and fault tolerance.
 import asyncio
 from typing import Optional, Any, Callable, List
 from dataclasses import dataclass, field
-from datetime import datetime
+from datetime import datetime, timezone
 from enum import Enum
 import json
 
@@ -286,7 +286,7 @@ class PipelineMonitor:
             "total_stages": total_stages,
             "completed_stages": 0,
             "failed_stages": 0,
-            "started_at": datetime.utcnow(),
+            "started_at": datetime.now(timezone.utc),
             "current_stage": "",
             "progress_percent": 0.0,
         }
@@ -315,7 +315,7 @@ class PipelineMonitor:
 
             if pipeline["completed_stages"] + pipeline["failed_stages"] >= pipeline["total_stages"]:
                 pipeline["status"] = "completed"
-                pipeline["completed_at"] = datetime.utcnow()
+                pipeline["completed_at"] = datetime.now(timezone.utc)
 
     def get_pipeline_status(self, pipeline_id: str) -> Optional[dict]:
         """Get current status of a pipeline."""

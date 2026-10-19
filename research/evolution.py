@@ -7,7 +7,7 @@ plugin system, and continuous optimization.
 
 from typing import Dict, List, Optional, Any, Callable
 from dataclasses import dataclass, field
-from datetime import datetime
+from datetime import datetime, timezone
 from enum import Enum
 import asyncio
 import json
@@ -50,7 +50,7 @@ class PipelineVersion:
     version_number: str
     components: List[PipelineComponent]
     status: str = "active"
-    created_at: datetime = field(default_factory=datetime.utcnow)
+    created_at: datetime = field(default_factory=lambda: datetime.now(timezone.utc))
     deployed_at: Optional[datetime] = None
     metadata: Dict[str, Any] = field(default_factory=dict)
 
@@ -67,7 +67,7 @@ class Upgrade:
     requires_approval: bool = False
     status: str = "pending"
     progress_percent: float = 0.0
-    created_at: datetime = field(default_factory=datetime.utcnow)
+    created_at: datetime = field(default_factory=lambda: datetime.now(timezone.utc))
     completed_at: Optional[datetime] = None
 
 
@@ -107,7 +107,7 @@ class PluginRegistry:
             "version": version,
             "implementation": implementation,
             "metadata": metadata or {},
-            "registered_at": datetime.utcnow()
+            "registered_at": datetime.now(timezone.utc)
         }
 
         if plugin_name not in self._versions:
@@ -164,7 +164,7 @@ class PipelineEvolution:
             version_id=f"{pipeline_name}:{version_number}",
             version_number=version_number,
             components=pipeline_components,
-            deployed_at=datetime.utcnow()
+            deployed_at=datetime.now(timezone.utc)
         )
 
         if pipeline_name not in self._pipelines:
@@ -281,14 +281,14 @@ class PipelineEvolution:
 
             if success:
                 upgrade.status = "completed"
-                upgrade.completed_at = datetime.utcnow()
+                upgrade.completed_at = datetime.now(timezone.utc)
                 upgrade.progress_percent = 100.0
 
                 self._evolution_history.append({
                     "upgrade_id": upgrade_id,
                     "from": upgrade.from_version,
                     "to": upgrade.to_version,
-                    "timestamp": datetime.utcnow().isoformat(),
+                    "timestamp": datetime.now(timezone.utc).isoformat(),
                     "success": True
                 })
             else:
@@ -333,7 +333,7 @@ class PipelineEvolution:
         self._evolution_history.append({
             "upgrade_id": upgrade_id,
             "action": "rollback",
-            "timestamp": datetime.utcnow().isoformat()
+            "timestamp": datetime.now(timezone.utc).isoformat()
         })
 
         return True
@@ -483,7 +483,7 @@ class ConfigurationTuner:
         self._tuning_history.append({
             "config": copy.copy(config),
             "metrics": metrics,
-            "timestamp": datetime.utcnow().isoformat()
+            "timestamp": datetime.now(timezone.utc).isoformat()
         })
 
     def get_best_config(self) -> Optional[Dict]:

@@ -7,6 +7,7 @@ with minimal code changes. Each provider is a self-contained plugin.
 
 import asyncio
 import time
+from datetime import datetime, timezone
 from typing import Any, AsyncIterator, Optional
 from abc import ABC, abstractmethod
 
@@ -201,7 +202,7 @@ class AbstractProviderPlugin(ABC):
 
     def _update_health(self, success: bool, error: str | None = None):
         """Update health status."""
-        now = datetime.utcnow()
+        now = datetime.now(timezone.utc)
 
         if self._health_status is None:
             self._health_status = ProviderHealth(
@@ -467,6 +468,3 @@ def find_models_by_capability(capability: ProviderCapability) -> list[ModelMetad
 
     return results
 
-
-# Import datetime for health check
-from datetime import datetime

@@ -11,7 +11,7 @@ import aiohttp
 from email.mime.multipart import MIMEMultipart
 from email.mime.text import MIMEText
 from typing import Optional
-from datetime import datetime
+from datetime import datetime, timezone
 
 from core.storage.base import (
     StorageProvider,
@@ -38,7 +38,7 @@ class TelegramProvider(StorageProvider):
         chat_id: Optional[str] = None
     ) -> StorageResult:
         """Send Telegram message."""
-        start = datetime.utcnow()
+        start = datetime.now(timezone.utc)
 
         try:
             if not self._bot_token:
@@ -56,7 +56,7 @@ class TelegramProvider(StorageProvider):
                     result = await resp.json()
 
                     if result.get("ok"):
-                        duration = (datetime.utcnow() - start).total_seconds() * 1000
+                        duration = (datetime.now(timezone.utc) - start).total_seconds() * 1000
                         return StorageResult(
                             success=True,
                             location=f"tg://{chat_id}",
@@ -75,7 +75,7 @@ class TelegramProvider(StorageProvider):
         chat_id: Optional[str] = None
     ) -> StorageResult:
         """Send file via Telegram."""
-        start = datetime.utcnow()
+        start = datetime.now(timezone.utc)
 
         try:
             if not self._bot_token:
@@ -97,7 +97,7 @@ class TelegramProvider(StorageProvider):
                         result = await resp.json()
 
                         if result.get("ok"):
-                            duration = (datetime.utcnow() - start).total_seconds() * 1000
+                            duration = (datetime.now(timezone.utc) - start).total_seconds() * 1000
                             return StorageResult(
                                 success=True,
                                 location=f"tg://{chat_id}/{result['result']['document']['file_id']}",
@@ -152,7 +152,7 @@ class DiscordProvider(StorageProvider):
         color: int = 0x3498db
     ) -> StorageResult:
         """Send Discord embed message."""
-        start = datetime.utcnow()
+        start = datetime.now(timezone.utc)
 
         try:
             if not self._webhook_url:
@@ -170,7 +170,7 @@ class DiscordProvider(StorageProvider):
             async with aiohttp.ClientSession() as session:
                 async with session.post(self._webhook_url, json=payload) as resp:
                     if resp.status == 204:
-                        duration = (datetime.utcnow() - start).total_seconds() * 1000
+                        duration = (datetime.now(timezone.utc) - start).total_seconds() * 1000
                         return StorageResult(
                             success=True,
                             location="discord://webhook",
@@ -188,7 +188,7 @@ class DiscordProvider(StorageProvider):
         message: str = "Dataset ready"
     ) -> StorageResult:
         """Send file via Discord."""
-        start = datetime.utcnow()
+        start = datetime.now(timezone.utc)
 
         try:
             if not self._webhook_url:
@@ -202,7 +202,7 @@ class DiscordProvider(StorageProvider):
                 async with aiohttp.ClientSession() as session:
                     async with session.post(self._webhook_url, data=form) as resp:
                         if resp.status == 200:
-                            duration = (datetime.utcnow() - start).total_seconds() * 1000
+                            duration = (datetime.now(timezone.utc) - start).total_seconds() * 1000
                             return StorageResult(
                                 success=True,
                                 location="discord://webhook",
@@ -259,7 +259,7 @@ class SlackProvider(StorageProvider):
         blocks: Optional[list] = None
     ) -> StorageResult:
         """Send Slack message."""
-        start = datetime.utcnow()
+        start = datetime.now(timezone.utc)
 
         try:
             if not self._webhook_url:
@@ -272,7 +272,7 @@ class SlackProvider(StorageProvider):
             async with aiohttp.ClientSession() as session:
                 async with session.post(self._webhook_url, json=payload) as resp:
                     if resp.status == 200:
-                        duration = (datetime.utcnow() - start).total_seconds() * 1000
+                        duration = (datetime.now(timezone.utc) - start).total_seconds() * 1000
                         return StorageResult(
                             success=True,
                             location=f"slack://{self._channel}",
@@ -338,7 +338,7 @@ class EmailProvider(StorageProvider):
         attachments: Optional[list] = None
     ) -> StorageResult:
         """Send email."""
-        start = datetime.utcnow()
+        start = datetime.now(timezone.utc)
 
         try:
             if not self._smtp_user:
@@ -366,7 +366,7 @@ class EmailProvider(StorageProvider):
                 server.login(self._smtp_user, self._smtp_password)
                 server.send_message(msg)
 
-            duration = (datetime.utcnow() - start).total_seconds() * 1000
+            duration = (datetime.now(timezone.utc) - start).total_seconds() * 1000
 
             return StorageResult(
                 success=True,
@@ -439,7 +439,7 @@ class WebhookProvider(StorageProvider):
         webhook_url: Optional[str] = None
     ) -> StorageResult:
         """Send webhook payload."""
-        start = datetime.utcnow()
+        start = datetime.now(timezone.utc)
 
         try:
             url = webhook_url or self._default_url
@@ -447,7 +447,7 @@ class WebhookProvider(StorageProvider):
             async with aiohttp.ClientSession() as session:
                 async with session.post(url, json=payload) as resp:
                     if resp.status < 400:
-                        duration = (datetime.utcnow() - start).total_seconds() * 1000
+                        duration = (datetime.now(timezone.utc) - start).total_seconds() * 1000
                         return StorageResult(
                             success=True,
                             location=url,
@@ -472,7 +472,7 @@ class WebhookProvider(StorageProvider):
             "event": "dataset_delivery",
             "dataset_id": dataset_id,
             "status": status,
-            "timestamp": datetime.utcnow().isoformat(),
+            "timestamp": datetime.now(timezone.utc).isoformat(),
         }
 
         if download_url:

@@ -14,7 +14,7 @@ from abc import ABC, abstractmethod
 from dataclasses import dataclass, field
 from typing import Any, AsyncIterator, Optional
 from enum import Enum
-from datetime import datetime
+from datetime import datetime, timezone
 import asyncio
 import time
 from typing import Protocol
@@ -271,7 +271,7 @@ class ProviderHealth:
     avg_latency_ms: float = 0.0
     rate_limit_remaining: int = 0
     last_error: str | None = None
-    last_check: datetime = field(default_factory=datetime.utcnow)
+    last_check: datetime = field(default_factory=lambda: datetime.now(timezone.utc))
 
 
 # =============================================================================

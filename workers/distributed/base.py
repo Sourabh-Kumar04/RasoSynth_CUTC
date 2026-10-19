@@ -7,7 +7,7 @@ Core types and configuration for the distributed pipeline.
 from dataclasses import dataclass, field
 from enum import Enum
 from typing import Optional, Any, List, Dict
-from datetime import datetime
+from datetime import datetime, timezone
 import json
 import hashlib
 
@@ -75,7 +75,7 @@ class WorkerNode:
     current_load: float = 0.0
     tasks_completed: int = 0
     tasks_failed: int = 0
-    last_heartbeat: datetime = field(default_factory=datetime.utcnow)
+    last_heartbeat: datetime = field(default_factory=lambda: datetime.now(timezone.utc))
     # Capabilities
     capabilities: List[str] = field(default_factory=list)
     labels: Dict[str, str] = field(default_factory=dict)
@@ -122,8 +122,8 @@ class ExecutionResult:
     success: bool = False
     output: Optional[Any] = None
     error: Optional[str] = None
-    start_time: datetime = field(default_factory=datetime.utcnow)
-    end_time: datetime = field(default_factory=datetime.utcnow)
+    start_time: datetime = field(default_factory=lambda: datetime.now(timezone.utc))
+    end_time: datetime = field(default_factory=lambda: datetime.now(timezone.utc))
     duration_ms: float = 0.0
     gpu_used: bool = False
     gpu_time_ms: float = 0.0
@@ -167,8 +167,8 @@ class PipelineState:
     active_tasks: int = 0
     completed_tasks: int = 0
     failed_tasks: int = 0
-    started_at: datetime = field(default_factory=datetime.utcnow)
-    updated_at: datetime = field(default_factory=datetime.utcnow)
+    started_at: datetime = field(default_factory=lambda: datetime.now(timezone.utc))
+    updated_at: datetime = field(default_factory=lambda: datetime.now(timezone.utc))
     checkpoints: dict = field(default_factory=dict)
 
 
@@ -178,7 +178,7 @@ class CheckpointData:
     def __init__(self, task_id: str, stage: str):
         self.task_id = task_id
         self.stage = stage
-        self.timestamp = datetime.utcnow()
+        self.timestamp = datetime.now(timezone.utc)
         self.progress = 0.0
         self.data = {}
         self.dependencies_resolved = []

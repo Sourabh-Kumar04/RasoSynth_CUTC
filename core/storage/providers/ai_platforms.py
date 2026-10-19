@@ -10,7 +10,7 @@ import json
 import os
 import subprocess
 from typing import Optional, AsyncIterator
-from datetime import datetime
+from datetime import datetime, timezone
 
 from core.storage.base import (
     StorageProvider,
@@ -45,7 +45,7 @@ class HuggingFaceProvider(StorageProvider):
         metadata: Optional[dict] = None
     ) -> StorageResult:
         """Upload to HuggingFace Hub."""
-        start = datetime.utcnow()
+        start = datetime.now(timezone.utc)
 
         try:
             if self._api is None:
@@ -72,7 +72,7 @@ class HuggingFaceProvider(StorageProvider):
 
             os.unlink(temp_path)
 
-            duration = (datetime.utcnow() - start).total_seconds() * 1000
+            duration = (datetime.now(timezone.utc) - start).total_seconds() * 1000
 
             return StorageResult(
                 success=True,
@@ -90,7 +90,7 @@ class HuggingFaceProvider(StorageProvider):
         private: bool = False
     ) -> StorageResult:
         """Upload a full dataset to HuggingFace."""
-        start = datetime.utcnow()
+        start = datetime.now(timezone.utc)
 
         try:
             if self._api is None:
@@ -111,7 +111,7 @@ class HuggingFaceProvider(StorageProvider):
                 repo_type="dataset",
             )
 
-            duration = (datetime.utcnow() - start).total_seconds() * 1000
+            duration = (datetime.now(timezone.utc) - start).total_seconds() * 1000
 
             return StorageResult(
                 success=True,
@@ -124,7 +124,7 @@ class HuggingFaceProvider(StorageProvider):
 
     async def download(self, source: str, destination_path: Optional[str] = None) -> StorageResult:
         """Download from HuggingFace Hub."""
-        start = datetime.utcnow()
+        start = datetime.now(timezone.utc)
 
         try:
             from huggingface_hub import hf_hub_download
@@ -140,7 +140,7 @@ class HuggingFaceProvider(StorageProvider):
                 repo_type="dataset"
             )
 
-            duration = (datetime.utcnow() - start).total_seconds() * 1000
+            duration = (datetime.now(timezone.utc) - start).total_seconds() * 1000
 
             return StorageResult(
                 success=True,
@@ -224,7 +224,7 @@ class KaggleProvider(StorageProvider):
         public: bool = False
     ) -> StorageResult:
         """Upload dataset to Kaggle."""
-        start = datetime.utcnow()
+        start = datetime.now(timezone.utc)
 
         try:
             from kaggle import api
@@ -244,7 +244,7 @@ class KaggleProvider(StorageProvider):
                 dir_mode='zip'
             )
 
-            duration = (datetime.utcnow() - start).total_seconds() * 1000
+            duration = (datetime.now(timezone.utc) - start).total_seconds() * 1000
 
             return StorageResult(
                 success=True,
@@ -262,7 +262,7 @@ class KaggleProvider(StorageProvider):
         metadata: Optional[dict] = None
     ) -> StorageResult:
         """Upload to Kaggle (simplified)."""
-        start = datetime.utcnow()
+        start = datetime.now(timezone.utc)
 
         try:
             if hasattr(data, '__iter__') and not isinstance(data, bytes):
@@ -276,7 +276,7 @@ class KaggleProvider(StorageProvider):
                 f.write(collected)
                 temp_path = f.name
 
-            duration = (datetime.utcnow() - start).total_seconds() * 1000
+            duration = (datetime.now(timezone.utc) - start).total_seconds() * 1000
 
             return StorageResult(
                 success=True,
@@ -290,7 +290,7 @@ class KaggleProvider(StorageProvider):
 
     async def download(self, source: str, destination_path: Optional[str] = None) -> StorageResult:
         """Download from Kaggle."""
-        start = datetime.utcnow()
+        start = datetime.now(timezone.utc)
 
         try:
             from kaggle import api
@@ -298,7 +298,7 @@ class KaggleProvider(StorageProvider):
             dataset_slug = source.replace("kaggle://", "")
             path = api.dataset_download_files(dataset_slug, path=destination_path, unzip=True)
 
-            duration = (datetime.utcnow() - start).total_seconds() * 1000
+            duration = (datetime.now(timezone.utc) - start).total_seconds() * 1000
 
             return StorageResult(
                 success=True,
@@ -333,7 +333,7 @@ class GitHubReleasesProvider(StorageProvider):
         repo: Optional[str] = None
     ) -> StorageResult:
         """Upload asset to GitHub release."""
-        start = datetime.utcnow()
+        start = datetime.now(timezone.utc)
 
         try:
             if self._client is None:
@@ -356,7 +356,7 @@ class GitHubReleasesProvider(StorageProvider):
 
             asset = release.upload_asset(temp_path, name=filename)
 
-            duration = (datetime.utcnow() - start).total_seconds() * 1000
+            duration = (datetime.now(timezone.utc) - start).total_seconds() * 1000
 
             return StorageResult(
                 success=True,
@@ -383,7 +383,7 @@ class GitHubReleasesProvider(StorageProvider):
 
     async def download(self, source: str, destination_path: Optional[str] = None) -> StorageResult:
         """Download from GitHub release."""
-        start = datetime.utcnow()
+        start = datetime.now(timezone.utc)
 
         try:
             # Parse source
@@ -405,7 +405,7 @@ class GitHubReleasesProvider(StorageProvider):
                         with open(destination_path, 'wb') as f:
                             f.write(data)
 
-                    duration = (datetime.utcnow() - start).total_seconds() * 1000
+                    duration = (datetime.now(timezone.utc) - start).total_seconds() * 1000
 
                     return StorageResult(
                         success=True,
@@ -435,7 +435,7 @@ class DVCProvider(StorageProvider):
         remote: Optional[str] = None
     ) -> StorageResult:
         """Push dataset to DVC remote."""
-        start = datetime.utcnow()
+        start = datetime.now(timezone.utc)
 
         try:
             remote = remote or self._remote
@@ -446,7 +446,7 @@ class DVCProvider(StorageProvider):
             # Push to remote
             subprocess.run(['dvc', 'push', '-r', remote], check=True, capture_output=True)
 
-            duration = (datetime.utcnow() - start).total_seconds() * 1000
+            duration = (datetime.now(timezone.utc) - start).total_seconds() * 1000
 
             return StorageResult(
                 success=True,
@@ -463,14 +463,14 @@ class DVCProvider(StorageProvider):
         remote: Optional[str] = None
     ) -> StorageResult:
         """Pull dataset from DVC remote."""
-        start = datetime.utcnow()
+        start = datetime.now(timezone.utc)
 
         try:
             remote = remote or self._remote
 
             subprocess.run(['dvc', 'pull', '-r', remote, dataset_path], check=True, capture_output=True)
 
-            duration = (datetime.utcnow() - start).total_seconds() * 1000
+            duration = (datetime.now(timezone.utc) - start).total_seconds() * 1000
 
             return StorageResult(
                 success=True,

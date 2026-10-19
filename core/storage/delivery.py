@@ -10,7 +10,7 @@ import time
 from typing import Optional, AsyncIterator
 from dataclasses import dataclass, field
 from enum import Enum
-from datetime import datetime
+from datetime import datetime, timezone
 
 from core.storage.base import (
     StorageProvider,
@@ -53,7 +53,7 @@ class DeliveryInfo:
     signed_url: Optional[str] = None
     manifest: Optional[PackageManifest] = None
     progress: Optional[DeliveryProgress] = None
-    created_at: datetime = field(default_factory=datetime.utcnow)
+    created_at: datetime = field(default_factory=lambda: datetime.now(timezone.utc))
     completed_at: Optional[datetime] = None
     errors: list[str] = field(default_factory=list)
     warnings: list[str] = field(default_factory=list)
@@ -138,7 +138,7 @@ class DeliveryManager:
                 await self._send_notification(request, info)
 
             info.status = DeliveryStatus.COMPLETED
-            info.completed_at = datetime.utcnow()
+            info.completed_at = datetime.now(timezone.utc)
             self._update_progress(delivery_id, 100.0)
 
         except Exception as e:
@@ -191,7 +191,7 @@ class DeliveryManager:
                 )
 
             info.status = DeliveryStatus.COMPLETED
-            info.completed_at = datetime.utcnow()
+            info.completed_at = datetime.now(timezone.utc)
 
         except Exception as e:
             info.status = DeliveryStatus.FAILED
@@ -250,7 +250,7 @@ class DeliveryManager:
                     raise Exception(f"Shard {i} upload failed: {result.errors}")
 
             info.status = DeliveryStatus.COMPLETED
-            info.completed_at = datetime.utcnow()
+            info.completed_at = datetime.now(timezone.utc)
             info.metadata["shard_count"] = total_shards
 
         except Exception as e:
@@ -269,7 +269,7 @@ class DeliveryManager:
             # Already packaged
             return PackageManifest(
                 package_id="streaming",
-                created_at=datetime.utcnow(),
+                created_at=datetime.now(timezone.utc),
                 dataset_name=request.dataset_name,
                 version="1.0.0",
                 total_size_bytes=0,
@@ -381,12 +381,12 @@ class DeliveryManager:
                     estimated_time_remaining_seconds=0,
                     current_chunk=0,
                     total_chunks=0,
-                    started_at=datetime.utcnow(),
-                    updated_at=datetime.utcnow(),
+                    started_at=datetime.now(timezone.utc),
+                    updated_at=datetime.now(timezone.utc),
                 )
             else:
                 info.progress.progress_percent = progress
-                info.progress.updated_at = datetime.utcnow()
+                info.progress.updated_at = datetime.now(timezone.utc)
 
     def get_delivery(self, delivery_id: str) -> Optional[DeliveryInfo]:
         """Get delivery information."""

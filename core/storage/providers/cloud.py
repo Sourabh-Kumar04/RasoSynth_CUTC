@@ -10,7 +10,7 @@ import io
 import hashlib
 import mimetypes
 from typing import Optional, AsyncIterator
-from datetime import datetime
+from datetime import datetime, timedelta, timezone
 
 from core.storage.base import (
     StorageProvider,
@@ -55,7 +55,7 @@ class S3StorageProvider(StorageProvider):
         metadata: Optional[dict] = None
     ) -> StorageResult:
         """Upload to S3."""
-        start = datetime.utcnow()
+        start = datetime.now(timezone.utc)
 
         try:
             if self._client is None:
@@ -82,7 +82,7 @@ class S3StorageProvider(StorageProvider):
                 **extra_args
             )
 
-            duration = (datetime.utcnow() - start).total_seconds() * 1000
+            duration = (datetime.now(timezone.utc) - start).total_seconds() * 1000
 
             return StorageResult(
                 success=True,
@@ -100,7 +100,7 @@ class S3StorageProvider(StorageProvider):
 
     async def download(self, source: str, destination_path: Optional[str] = None) -> StorageResult:
         """Download from S3."""
-        start = datetime.utcnow()
+        start = datetime.now(timezone.utc)
 
         try:
             if self._client is None:
@@ -117,7 +117,7 @@ class S3StorageProvider(StorageProvider):
                 with open(destination_path, 'wb') as f:
                     f.write(data)
 
-            duration = (datetime.utcnow() - start).total_seconds() * 1000
+            duration = (datetime.now(timezone.utc) - start).total_seconds() * 1000
 
             return StorageResult(
                 success=True,
@@ -163,8 +163,8 @@ class S3StorageProvider(StorageProvider):
                 key=path,
                 size_bytes=response['ContentLength'],
                 content_type=response.get('ContentType', 'application/octet-stream'),
-                created_at=response.get('LastModified', datetime.utcnow()),
-                modified_at=response.get('LastModified', datetime.utcnow()),
+                created_at=response.get('LastModified', datetime.now(timezone.utc)),
+                modified_at=response.get('LastModified', datetime.now(timezone.utc)),
                 checksum=response.get('ETag', '').strip('"'),
                 storage_class=response.get('StorageClass', 'STANDARD'),
                 region=self.config.region,
@@ -209,7 +209,7 @@ class S3StorageProvider(StorageProvider):
         progress_callback: Optional[callable] = None
     ) -> StorageResult:
         """Multipart upload for large files."""
-        start = datetime.utcnow()
+        start = datetime.now(timezone.utc)
 
         try:
             if self._client is None:
@@ -260,7 +260,7 @@ class S3StorageProvider(StorageProvider):
                 MultipartUpload={'Parts': parts}
             )
 
-            duration = (datetime.utcnow() - start).total_seconds() * 1000
+            duration = (datetime.now(timezone.utc) - start).total_seconds() * 1000
 
             return StorageResult(
                 success=True,
@@ -298,7 +298,7 @@ class GCSStorageProvider(StorageProvider):
         metadata: Optional[dict] = None
     ) -> StorageResult:
         """Upload to GCS."""
-        start = datetime.utcnow()
+        start = datetime.now(timezone.utc)
 
         try:
             if self._client is None:
@@ -311,7 +311,7 @@ class GCSStorageProvider(StorageProvider):
             else:
                 blob.upload_from_string(data)
 
-            duration = (datetime.utcnow() - start).total_seconds() * 1000
+            duration = (datetime.now(timezone.utc) - start).total_seconds() * 1000
 
             return StorageResult(
                 success=True,
@@ -325,7 +325,7 @@ class GCSStorageProvider(StorageProvider):
 
     async def download(self, source: str, destination_path: Optional[str] = None) -> StorageResult:
         """Download from GCS."""
-        start = datetime.utcnow()
+        start = datetime.now(timezone.utc)
 
         try:
             if self._client is None:
@@ -338,7 +338,7 @@ class GCSStorageProvider(StorageProvider):
             else:
                 data = blob.download_as_bytes()
 
-            duration = (datetime.utcnow() - start).total_seconds() * 1000
+            duration = (datetime.now(timezone.utc) - start).total_seconds() * 1000
 
             return StorageResult(
                 success=True,
@@ -384,8 +384,8 @@ class GCSStorageProvider(StorageProvider):
                 key=path,
                 size_bytes=blob.size or 0,
                 content_type=blob.content_type or 'application/octet-stream',
-                created_at=blob.time_created or datetime.utcnow(),
-                modified_at=blob.updated or datetime.utcnow(),
+                created_at=blob.time_created or datetime.now(timezone.utc),
+                modified_at=blob.updated or datetime.now(timezone.utc),
                 checksum="",
                 storage_class=blob.storage_class or 'STANDARD',
                 region=self.config.region,
@@ -411,7 +411,7 @@ class GCSStorageProvider(StorageProvider):
                 await self.initialize()
 
             blob = self._bucket.blob(path)
-            return blob.generate_signed_url(expiration=datetime.utcnow() + timedelta(seconds=expiration_seconds))
+            return blob.generate_signed_url(expiration=datetime.now(timezone.utc) + timedelta(seconds=expiration_seconds))
         except Exception:
             return None
 
@@ -459,7 +459,7 @@ class AzureBlobProvider(StorageProvider):
         metadata: Optional[dict] = None
     ) -> StorageResult:
         """Upload to Azure Blob."""
-        start = datetime.utcnow()
+        start = datetime.now(timezone.utc)
 
         try:
             if self._client is None:
@@ -472,7 +472,7 @@ class AzureBlobProvider(StorageProvider):
             else:
                 blob_client.upload_blob(data, overwrite=True)
 
-            duration = (datetime.utcnow() - start).total_seconds() * 1000
+            duration = (datetime.now(timezone.utc) - start).total_seconds() * 1000
 
             return StorageResult(
                 success=True,
@@ -486,7 +486,7 @@ class AzureBlobProvider(StorageProvider):
 
     async def download(self, source: str, destination_path: Optional[str] = None) -> StorageResult:
         """Download from Azure Blob."""
-        start = datetime.utcnow()
+        start = datetime.now(timezone.utc)
 
         try:
             if self._client is None:
@@ -500,7 +500,7 @@ class AzureBlobProvider(StorageProvider):
             else:
                 data = blob_client.download_blob().readall()
 
-            duration = (datetime.utcnow() - start).total_seconds() * 1000
+            duration = (datetime.now(timezone.utc) - start).total_seconds() * 1000
 
             return StorageResult(
                 success=True,

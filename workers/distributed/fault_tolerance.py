@@ -9,7 +9,7 @@ import json
 import time
 from typing import Optional, Any, Callable, List
 from dataclasses import dataclass, field
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from enum import Enum
 import pickle
 import os
@@ -144,7 +144,7 @@ class CheckpointManager:
             task_id=task_id,
             pipeline_id=pipeline_id,
             stage=stage,
-            timestamp=datetime.utcnow(),
+            timestamp=datetime.now(timezone.utc),
             progress=progress,
             data=data,
             metadata=metadata or {},
@@ -153,7 +153,7 @@ class CheckpointManager:
         # Store in memory
         key = f"{pipeline_id}:{task_id}:{stage}"
         self._checkpoints[key] = checkpoint
-        self._last_checkpoint[task_id] = datetime.utcnow()
+        self._last_checkpoint[task_id] = datetime.now(timezone.utc)
 
         # Save to disk
         filepath = os.path.join(self.checkpoint_dir, f"{key.replace(':', '_')}.json")
@@ -219,7 +219,9 @@ class CheckpointManager:
         if not last:
             return True
 
-        return (datetime.utcnow() - last).total_seconds() >= self._interval_seconds
+        now = datetime.now(timezone.utc)
+        last_dt = last if last.tzinfo is not None else last.replace(tzinfo=timezone.utc)
+        return (now - last_dt).total_seconds() >= self._interval_seconds
 
 
 @dataclass
@@ -256,7 +258,7 @@ class DeadLetterQueue:
             task_type=task_type,
             error=str(error),
             error_type=type(error).__name__,
-            failed_at=datetime.utcnow(),
+            failed_at=datetime.now(timezone.utc),
             original_payload=payload,
             stack_trace=self._get_stack_trace(error),
         )
@@ -418,7 +420,7 @@ class CircuitBreaker:
     def record_failure(self) -> None:
         """Record failed call."""
         self._failures += 1
-        self._last_failure_time = datetime.utcnow()
+        self._last_failure_time = datetime.now(timezone.utc)
 
         if self._failures >= self.failure_threshold:
             self._state = "open"
@@ -430,7 +432,9 @@ class CircuitBreaker:
 
         if self._state == "open":
             if self._last_failure_time:
-                elapsed = (datetime.utcnow() - self._last_failure_time).total_seconds()
+                now = datetime.now(timezone.utc)
+                last_fail = self._last_failure_time if self._last_failure_time.tzinfo is not None else self._last_failure_time.replace(tzinfo=timezone.utc)
+                elapsed = (now - last_fail).total_seconds()
                 if elapsed >= self.recovery_timeout:
                     self._state = "half_open"
                     self._half_open_calls = 0

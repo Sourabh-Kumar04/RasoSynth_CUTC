@@ -8,7 +8,7 @@ import asyncio
 import time
 from typing import Optional, Any, List, Dict
 from dataclasses import dataclass, field
-from datetime import datetime
+from datetime import datetime, timezone
 from enum import Enum
 import json
 import psutil
@@ -97,7 +97,7 @@ class MetricsCollector:
             name=name,
             value=value,
             metric_type=metric_type,
-            timestamp=datetime.utcnow(),
+            timestamp=datetime.now(timezone.utc),
             labels=labels or {},
             unit=unit,
         )
@@ -178,7 +178,7 @@ class WorkerMonitor:
 
         metrics = WorkerMetrics(
             worker_id=worker_id,
-            timestamp=datetime.utcnow(),
+            timestamp=datetime.now(timezone.utc),
             cpu_percent=cpu_percent,
             cpu_cores_used=psutil.cpu_count() * cpu_percent / 100,
             memory_used_gb=memory.used / (1024**3),
@@ -288,7 +288,7 @@ class GPUMonitor:
 
                 metrics = GPUMetrics(
                     gpu_id=i,
-                    timestamp=datetime.utcnow(),
+                    timestamp=datetime.now(timezone.utc),
                     memory_used_gb=memory_allocated,
                     memory_total_gb=memory_total,
                     memory_percent=(memory_allocated / memory_total) * 100 if memory_total > 0 else 0,
@@ -352,7 +352,7 @@ class PipelineTracer:
         self._traces[trace_id] = [{
             "type": "trace_start",
             "pipeline_id": pipeline_id,
-            "timestamp": datetime.utcnow().isoformat(),
+            "timestamp": datetime.now(timezone.utc).isoformat(),
         }]
 
     def start_span(
@@ -370,7 +370,7 @@ class PipelineTracer:
             "span_id": span_id,
             "parent_span_id": parent_span_id,
             "stage_name": stage_name,
-            "start_time": datetime.utcnow().isoformat(),
+            "start_time": datetime.now(timezone.utc).isoformat(),
             "status": "started",
         })
 
@@ -387,13 +387,12 @@ class PipelineTracer:
 
         for span in self._spans[trace_id]:
             if span["span_id"] == span_id:
-                span["end_time"] = datetime.utcnow().isoformat()
+                span["end_time"] = datetime.now(timezone.utc).isoformat()
                 span["status"] = status
                 if result:
                     span["result"] = result
 
                 # Calculate duration
-                from datetime import datetime
                 start = datetime.fromisoformat(span["start_time"])
                 end = datetime.fromisoformat(span["end_time"])
                 span["duration_ms"] = (end - start).total_seconds() * 1000
@@ -417,7 +416,7 @@ class PipelineTracer:
                     span["events"] = []
                 span["events"].append({
                     "name": event_name,
-                    "timestamp": datetime.utcnow().isoformat(),
+                    "timestamp": datetime.now(timezone.utc).isoformat(),
                     "data": event_data,
                 })
                 break
@@ -428,7 +427,7 @@ class PipelineTracer:
             self._traces[trace_id].append({
                 "type": "trace_end",
                 "status": status,
-                "timestamp": datetime.utcnow().isoformat(),
+                "timestamp": datetime.now(timezone.utc).isoformat(),
             })
 
     def get_trace(self, trace_id: str) -> Optional[dict]:

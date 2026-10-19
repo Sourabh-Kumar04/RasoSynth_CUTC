@@ -8,7 +8,7 @@ import asyncio
 import json
 from typing import Optional, Any, Callable
 from dataclasses import dataclass, field
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from enum import Enum
 
 # Try Celery imports
@@ -434,4 +434,4 @@ def CleanupTask():
 @app.task(name='health_check')
 def HealthCheck():
     """Periodic health check of all workers."""
-    return {"status": "healthy", "timestamp": datetime.utcnow().isoformat()}
+    return {"status": "healthy", "timestamp": datetime.now(timezone.utc).isoformat()}

@@ -6,7 +6,7 @@ Comprehensive benchmarking for techniques, pipelines, and improvements.
 
 from typing import Dict, List, Optional, Any, Callable
 from dataclasses import dataclass, field
-from datetime import datetime
+from datetime import datetime, timezone
 from enum import Enum
 import asyncio
 import json
@@ -105,7 +105,7 @@ class BenchmarkRunner:
             comparison_id=comparison_id,
             config=config,
             status=BenchmarkStatus.RUNNING,
-            started_at=datetime.utcnow()
+            started_at=datetime.now(timezone.utc)
         )
 
         self._benchmarks[comparison_id] = comparison
@@ -145,7 +145,7 @@ class BenchmarkRunner:
             comparison.status = BenchmarkStatus.FAILED
             comparison.error = str(e)
 
-        comparison.completed_at = datetime.utcnow()
+        comparison.completed_at = datetime.now(timezone.utc)
         return comparison
 
     def _calculate_metric(

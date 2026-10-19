@@ -8,7 +8,7 @@ import hashlib
 import json
 from typing import Optional, List
 from dataclasses import dataclass, field
-from datetime import datetime
+from datetime import datetime, timezone
 from enum import Enum
 
 
@@ -96,7 +96,7 @@ class DatasetVersionManager:
             version_id=version_id,
             version_number=version_number,
             dataset_id=dataset_id,
-            created_at=datetime.utcnow(),
+            created_at=datetime.now(timezone.utc),
             created_by=created_by,
             status=VersionStatus.DRAFT,
             size_bytes=total_size,
@@ -246,8 +246,8 @@ class DatasetVersionManager:
             versions=versions,
             total_size_bytes=sum(v.size_bytes for v in versions),
             total_versions=len(versions),
-            created_at=versions[0].created_at if versions else datetime.utcnow(),
-            updated_at=versions[0].created_at if versions else datetime.utcnow(),
+            created_at=versions[0].created_at if versions else datetime.now(timezone.utc),
+            updated_at=versions[0].created_at if versions else datetime.now(timezone.utc),
         )
 
     def tag_version(
@@ -284,7 +284,8 @@ class IncrementalUpdater:
         self,
         dataset_id: str,
         current_data: list[dict],
-        previous_version_id: str
+        previous_version_id: str,
+        previous_data: Optional[list[dict]] = None
     ) -> tuple[DatasetVersion, list[dict]]:
         """Create an incremental update package."""
         previous_version = self.version_manager.get_version(dataset_id, previous_version_id)
@@ -292,11 +293,12 @@ class IncrementalUpdater:
             raise ValueError(f"Previous version {previous_version_id} not found")
 
         # Compare versions
+        base_records = previous_data if previous_data is not None else []
         diff = self.version_manager.compare_versions(
             dataset_id,
             previous_version_id,
-            "new",  # Placeholder
-            [],  # Would need previous data
+            "pending",
+            base_records,
             current_data
         )
 
@@ -307,7 +309,7 @@ class IncrementalUpdater:
             "added": diff.added,
             "removed": diff.removed,
             "modified": [new for _, new in diff.modified],
-            "timestamp": datetime.utcnow().isoformat(),
+            "timestamp": datetime.now(timezone.utc).isoformat(),
         }
 
         # Create new version

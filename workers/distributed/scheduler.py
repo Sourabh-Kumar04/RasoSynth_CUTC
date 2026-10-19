@@ -7,7 +7,7 @@ Handles workload scheduling, resource allocation, and autoscaling.
 import asyncio
 from typing import Optional, Any, List
 from dataclasses import dataclass, field
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from enum import Enum
 import heapq
 
@@ -66,13 +66,13 @@ class PriorityQueue:
         if len(self._queue) >= self._max_size:
             return False
 
-        timestamp = datetime.utcnow().timestamp()
+        timestamp = datetime.now(timezone.utc).timestamp()
         heapq.heappush(self._queue, (priority, -timestamp, task_id, task_data))
 
         self._task_data[task_id] = task_data
         self._scheduled[task_id] = ScheduledTask(
             task_id=task_id,
-            scheduled_at=datetime.utcnow(),
+            scheduled_at=datetime.now(timezone.utc),
             priority=priority,
             estimated_duration=estimated_duration,
         )
@@ -229,7 +229,7 @@ class GPUScheduler:
                     "gpu_id": gpu_id,
                     "task_id": task_id,
                     "memory_gb": memory_released_gb,
-                    "timestamp": datetime.utcnow().isoformat(),
+                    "timestamp": datetime.now(timezone.utc).isoformat(),
                 })
 
             del self._task_gpu_assignment[task_id]
@@ -337,7 +337,7 @@ class ResourceAllocator:
             "current_load": 0.0,
             "status": "active",
             "tasks_completed": 0,
-            "added_at": datetime.utcnow(),
+            "added_at": datetime.now(timezone.utc),
         }
 
     def remove_worker(self, worker_id: str) -> bool:

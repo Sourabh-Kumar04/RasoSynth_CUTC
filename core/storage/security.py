@@ -10,7 +10,7 @@ import base64
 import json
 import time
 from typing import Optional
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from dataclasses import dataclass, field
 from enum import Enum
 
@@ -28,8 +28,8 @@ class AccessToken:
     token_id: str = ""
     dataset_id: str = ""
     access_level: AccessLevel = AccessLevel.PRIVATE
-    created_at: datetime = field(default_factory=datetime.utcnow)
-    expires_at: datetime = field(default_factory=lambda: datetime.utcnow())
+    created_at: datetime = field(default_factory=lambda: datetime.now(timezone.utc))
+    expires_at: datetime = field(default_factory=lambda: datetime.now(timezone.utc))
     usage_limit: Optional[int] = None
     usage_count: int = 0
     metadata: dict = field(default_factory=dict)
@@ -38,7 +38,7 @@ class AccessToken:
 @dataclass
 class AccessLog:
     """Access log entry."""
-    timestamp: datetime = field(default_factory=datetime.utcnow)
+    timestamp: datetime = field(default_factory=lambda: datetime.now(timezone.utc))
     token_id: str = ""
     dataset_id: str = ""
     action: str = ""  # download, view, share
@@ -205,12 +205,13 @@ class AccessController:
         import uuid
 
         token_id = str(uuid.uuid4())
+        now = datetime.now(timezone.utc)
         token = AccessToken(
             token_id=token_id,
             dataset_id=dataset_id,
             access_level=access_level,
-            created_at=datetime.utcnow(),
-            expires_at=datetime.utcnow() + timedelta(hours=expiration_hours),
+            created_at=now,
+            expires_at=now + timedelta(hours=expiration_hours),
             usage_limit=usage_limit,
             metadata=metadata or {}
         )
@@ -225,7 +226,9 @@ class AccessController:
             return False
 
         # Check expiration
-        if datetime.utcnow() > token.expires_at:
+        now = datetime.now(timezone.utc)
+        expires_at = token.expires_at if token.expires_at.tzinfo is not None else token.expires_at.replace(tzinfo=timezone.utc)
+        if now > expires_at:
             return False
 
         # Check usage limit
@@ -276,7 +279,7 @@ class AccessController:
     ) -> None:
         """Log dataset access."""
         log = AccessLog(
-            timestamp=datetime.utcnow(),
+            timestamp=datetime.now(timezone.utc),
             token_id=token_id,
             dataset_id=dataset_id,
             action=action,
