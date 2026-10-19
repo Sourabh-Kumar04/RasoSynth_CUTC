@@ -249,6 +249,7 @@ async def extract_intent(
         output_format=data.get("output_format", "unknown").strip(),
         confidence=float(data["confidence"]),
         raw_input=raw_input,
+        ideal_samples=data.get("ideal_samples", []),
     )
 
     logger.info(

@@ -167,7 +167,7 @@ class CSRFTokenManager:
 
     def generate_token(self, user_id: str) -> str:
         """Generate a stateless CSRF token for a user."""
-        timestamp = str(int(datetime.utcnow().timestamp()))
+        timestamp = str(int(time.time()))
         raw = f"{user_id}:{timestamp}"
         sig = self._sign(raw)
         return f"{sig}:{timestamp}:{user_id}"
@@ -191,7 +191,7 @@ class CSRFTokenManager:
             return False
 
         # Check expiry
-        age = datetime.utcnow().timestamp() - float(timestamp)
+        age = time.time() - float(timestamp)
         if age > self._token_ttl:
             return False
 

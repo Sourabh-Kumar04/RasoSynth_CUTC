@@ -1,5 +1,5 @@
 """Structured representation of the user's request."""
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from typing import List
 
 
@@ -36,6 +36,9 @@ class UserIntent:
 
     """Original user string – kept for logging and error messages."""
     raw_input: str
+
+    """Optional few-shot ideal examples provided by the user to anchor crawling and generation."""
+    ideal_samples: List[dict] = field(default_factory=list)
 
 
 class IntentExtractionError(Exception):

@@ -29,7 +29,10 @@ class SimpleRedisCache:
     async def disconnect(self):
         """Disconnect from Redis."""
         if self._redis:
-            await self._redis.close()
+            if hasattr(self._redis, "aclose"):
+                await self._redis.aclose()
+            else:
+                await self._redis.close()
             self._redis = None
 
     async def _ensure_connection(self) -> aioredis.Redis:

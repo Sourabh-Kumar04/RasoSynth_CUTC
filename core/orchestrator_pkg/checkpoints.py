@@ -339,7 +339,10 @@ class CheckpointStore:
         if self._pool:
             await self._pool.close()
         if self._redis:
-            await self._redis.close()
+            if hasattr(self._redis, "aclose"):
+                await self._redis.aclose()
+            else:
+                await self._redis.close()
         logger.info("Checkpoint store closed")
 
 

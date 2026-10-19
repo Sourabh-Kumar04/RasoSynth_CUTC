@@ -113,6 +113,7 @@ class JobRequest(BaseModel):
     require_reference_sources: bool = Field(default=False)
     approved_sources: list[dict[str, Any]] = Field(default_factory=list, max_length=20)
     approved_examples: list[dict[str, Any]] = Field(default_factory=list, max_length=3)
+    ideal_samples: list[dict[str, Any]] = Field(default_factory=list, max_length=10, description="Optional few-shot ideal examples to anchor crawling and generation")
     approved_examples_token: Optional[str] = None
     approved_example_indices: Optional[list[int]] = Field(default=None, max_length=3)
     excluded_source_urls: list[str] = Field(default_factory=list)

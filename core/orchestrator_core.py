@@ -1746,6 +1746,16 @@ class DatasetOrchestrator:
             for key in ordered_keys:
                 review_samples.extend(buckets[key][:allocations[key]])
 
+            # Confidence-based flagging: automatically route low-quality or high-hallucination samples to HITL review
+            seen_sample_ids = {id(s) for s in review_samples}
+            for s in samples:
+                if id(s) not in seen_sample_ids:
+                    q_score = float(s.get("quality_score", 1.0) or 1.0)
+                    h_risk = float(s.get("hallucination_risk", 0.0) or 0.0)
+                    if q_score < 0.70 or h_risk > 0.40:
+                        review_samples.append(s)
+                        seen_sample_ids.add(id(s))
+
         submitted = 0
         review_service = None
         review_ids = {}
