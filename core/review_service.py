@@ -77,6 +77,7 @@ class ReviewService:
         hallucination_risk: float = 0.0,
         duplicate_score: float = 0.0,
         diversity_score: float = 0.0,
+        metadata: Optional[dict] = None,
     ) -> dict:
         if dataset_id and hasattr(self.db, "get_review_item_for_job_sample"):
             existing = await self.db.get_review_item_for_job_sample(job_id, dataset_id)
@@ -94,6 +95,7 @@ class ReviewService:
             hallucination_risk=hallucination_risk,
             duplicate_score=duplicate_score,
             diversity_score=diversity_score,
+            extra_metadata=metadata or {},
             review_status="pending",
         ))
         return item.to_dict()

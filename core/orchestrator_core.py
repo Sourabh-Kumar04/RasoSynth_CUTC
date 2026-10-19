@@ -1816,6 +1816,7 @@ class DatasetOrchestrator:
                             hallucination_risk=float(sample.get("hallucination_risk", 0.0)),
                             duplicate_score=float(sample.get("duplicate_score", 0.0)),
                             diversity_score=float(sample.get("diversity_score", 0.0)),
+                            metadata=sample.get("metadata", {}),
                         )
                         review_ids[sample_review_id] = sample
                         submitted += 1

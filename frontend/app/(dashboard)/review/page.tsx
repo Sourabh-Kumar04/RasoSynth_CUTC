@@ -33,6 +33,7 @@ interface ReviewItem {
   reviewed_by: string; review_timestamp: string | null
   edited_instruction: string | null; edited_response: string | null
   created_at: string
+  metadata?: Record<string, any>
 }
 
 interface ReviewStats {
@@ -598,6 +599,30 @@ export default function ReviewPage() {
                               </div>
                               <span className={clsx('text-[10px] font-bold font-mono', diff.color)}>{diff.label}</span>
                             </div>
+                            {item.metadata && (
+                              <div className="flex items-center gap-1.5 mt-1.5 flex-wrap">
+                                {item.metadata.pii_detected && Object.keys(item.metadata.pii_detected).length > 0 && (
+                                  <span className="text-[9px] font-mono px-1.5 py-0.2 rounded bg-amber-950/40 text-amber-300 border border-amber-800">
+                                    DPDP Redacted
+                                  </span>
+                                )}
+                                {item.metadata.parallel_en && (
+                                  <span className="text-[9px] font-mono px-1.5 py-0.2 rounded bg-indigo-950/40 text-indigo-300 border border-indigo-800">
+                                    Bitext
+                                  </span>
+                                )}
+                                {item.metadata.rejected_response && (
+                                  <span className="text-[9px] font-mono px-1.5 py-0.2 rounded bg-emerald-950/40 text-[#10b981] border border-emerald-800">
+                                    DPO Pair
+                                  </span>
+                                )}
+                                {item.metadata.regional_dialect && item.metadata.regional_dialect !== 'standard' && (
+                                  <span className="text-[9px] font-mono px-1.5 py-0.2 rounded bg-purple-950/40 text-purple-300 border border-purple-800">
+                                    {item.metadata.regional_dialect}
+                                  </span>
+                                )}
+                              </div>
+                            )}
                             <p className="text-[10px] font-mono text-[#64748b] mt-1 truncate">
                               Job: {item.job_id.slice(0, 8)}
                             </p>
@@ -786,6 +811,61 @@ function DetailPane({
               {item.source_text}
             </div>
           </details>
+        )}
+
+        {/* DPO Contrast Pair: Rejected Baseline */}
+        {item.metadata?.rejected_response && (
+          <div className="rounded-xl border border-rose-900/40 bg-rose-950/20 p-3 space-y-1.5">
+            <div className="flex items-center justify-between">
+              <span className="text-[10px] font-mono font-bold uppercase tracking-wider text-rose-400">
+                DPO Contrast Pair: Rejected Baseline
+              </span>
+              <span className="text-[9px] font-mono px-1.5 py-0.2 rounded bg-rose-900/60 text-rose-300">
+                Missing Statutory Disclaimer / Low Quality
+              </span>
+            </div>
+            <div className="bg-[#0a0a0f] rounded-lg p-2.5 text-xs text-rose-200 border border-rose-950 font-sans whitespace-pre-wrap max-h-32 overflow-y-auto">
+              {item.metadata.rejected_response}
+            </div>
+          </div>
+        )}
+
+        {/* Parallel Bilingual Bitext & Semantic Fidelity */}
+        {item.metadata?.parallel_en && (
+          <div className="rounded-xl border border-indigo-900/40 bg-indigo-950/20 p-3 space-y-2">
+            <div className="flex items-center justify-between">
+              <span className="text-[10px] font-mono font-bold uppercase tracking-wider text-indigo-400">
+                Parallel Bilingual Bitext (English Pair)
+              </span>
+              {item.metadata.fidelity_metrics && (
+                <span className="text-[9px] font-mono px-1.5 py-0.2 rounded bg-indigo-900/60 text-indigo-200">
+                  chrF++: {item.metadata.fidelity_metrics.chrf_score}% ({item.metadata.fidelity_metrics.quality_tier})
+                </span>
+              )}
+            </div>
+            <div className="text-[11px] text-[#94a3b8] font-mono">
+              <span className="text-white font-semibold">EN Prompt:</span> {item.metadata.parallel_en.instruction}
+            </div>
+            <div className="text-[11px] text-[#94a3b8] font-sans bg-[#0a0a0f] p-2 rounded border border-[#272738] max-h-24 overflow-y-auto">
+              <span className="text-white font-semibold font-mono">EN Response:</span> {item.metadata.parallel_en.response}
+            </div>
+          </div>
+        )}
+
+        {/* Indian DPDP PII Redaction Audit */}
+        {item.metadata?.pii_detected && Object.keys(item.metadata.pii_detected).length > 0 && (
+          <div className="rounded-xl border border-amber-900/40 bg-amber-950/20 p-3 space-y-1">
+            <span className="text-[10px] font-mono font-bold uppercase tracking-wider text-amber-400 block">
+              DPDP Statutory PII Redaction Audit
+            </span>
+            <div className="flex flex-wrap gap-1.5 pt-1">
+              {Object.entries(item.metadata.pii_detected).map(([entity, values]: [string, any]) => (
+                <span key={entity} className="text-[10px] font-mono px-2 py-0.5 rounded bg-amber-950 border border-amber-800 text-amber-200">
+                  {entity.toUpperCase()}: {(Array.isArray(values) ? values.length : 1)} redacted
+                </span>
+              ))}
+            </div>
+          </div>
         )}
 
         {/* Notes + reviewer */}

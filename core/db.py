@@ -182,6 +182,7 @@ class ReviewQueueItem(Base):
     edited_instruction = Column(Text)
     edited_response = Column(Text)
     review_version = Column(Integer, default=0)
+    extra_metadata = Column(JSON, default=dict)
     # timestamps
     created_at = Column(DateTime, default=lambda: datetime.now(timezone.utc), index=True)
     updated_at = Column(DateTime, default=lambda: datetime.now(timezone.utc), onupdate=lambda: datetime.now(timezone.utc))
@@ -207,6 +208,7 @@ class ReviewQueueItem(Base):
             "edited_instruction": self.edited_instruction,
             "edited_response": self.edited_response,
             "review_version": self.review_version,
+            "metadata": self.extra_metadata or {},
             "created_at": self.created_at.isoformat() if self.created_at else None,
             "updated_at": self.updated_at.isoformat() if self.updated_at else None,
         }
