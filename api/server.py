@@ -101,7 +101,7 @@ class RateLimiter:
 
     def _cleanup(self):
         """Remove expired entries."""
-        now = datetime.utcnow().timestamp()
+        now = time.time()
         expired_keys = [
             k for k, v in self._buckets.items()
             if v and (now - v[-1]) > self.window_seconds
@@ -111,7 +111,7 @@ class RateLimiter:
 
     def check(self, client_key: str) -> bool:
         """Check if request is allowed. Returns True if allowed, False if rate limited."""
-        now = datetime.utcnow().timestamp()
+        now = time.time()
         self._cleanup()
 
         if client_key not in self._buckets:
@@ -948,11 +948,11 @@ async def test_provider(request: ProviderTestRequest, fastapi_request: Request):
     if not router:
         raise HTTPException(status_code=500, detail="Router not initialized")
 
-    start_time = datetime.utcnow()
-
+    start_time = time.perf_counter()
+ 
     try:
         success = await router.test_provider(request.provider)
-        latency_ms = (datetime.utcnow() - start_time).total_seconds() * 1000
+        latency_ms = (time.perf_counter() - start_time) * 1000
 
         return ProviderTestResponse(
             provider=request.provider,
@@ -960,7 +960,7 @@ async def test_provider(request: ProviderTestRequest, fastapi_request: Request):
             latency_ms=latency_ms
         )
     except Exception as e:
-        latency_ms = (datetime.utcnow() - start_time).total_seconds() * 1000
+        latency_ms = (time.perf_counter() - start_time) * 1000
         return ProviderTestResponse(
             provider=request.provider,
             success=False,
@@ -1294,7 +1294,7 @@ async def readiness_check():
     return {
         "ready": is_ready,
         "checks": checks,
-        "timestamp": datetime.utcnow().isoformat()
+        "timestamp": datetime.now(timezone.utc).isoformat()
     }
 
 
@@ -1841,7 +1841,7 @@ async def create_job(request: JobRequest, background_tasks: BackgroundTasks):
                 raise HTTPException(status_code=400, detail="Select at least one valid example from the reviewed preview batch.")
 
     job_id = str(uuid.uuid4())
-    now = datetime.utcnow()
+    now = datetime.now(timezone.utc)
 
     config = request.model_dump()
     if request.approved_examples and request.approved_example_indices is not None:
@@ -2905,8 +2905,8 @@ async def run_pipeline(job_id: str, request: JobRequest | dict, resume_state: Op
     job = Job(
         id=job_id,
         status=JobStatus.RUNNING,
-        created_at=datetime.utcnow(),
-        updated_at=datetime.utcnow(),
+        created_at=datetime.now(timezone.utc),
+        updated_at=datetime.now(timezone.utc),
         current_stage="analyzing_constraints",
         progress=0.0,
         samples_processed=0,

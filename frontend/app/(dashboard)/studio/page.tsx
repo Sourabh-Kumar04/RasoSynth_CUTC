@@ -97,19 +97,34 @@ function StudioContent() {
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [optimizationStatus, setOptimizationStatus] = useState<string>('Refined (Saved 42% tokens)')
   const [activePreset, setActivePreset] = useState<string>('aikosh-tax')
+  const [idealSamples, setIdealSamples] = useState<Array<{ instruction: string; response: string }>>([])
 
   // Launch job
   const handleGenerate = async () => {
     setIsSubmitting(true)
     try {
-      const response = await api.createJob({
-        target_domain: targetDomain,
+      const validAnchors = idealSamples
+        .filter((s) => s.instruction.trim() && s.response.trim())
+        .map((s) => ({
+          instruction: s.instruction.trim(),
+          response: s.response.trim(),
+        }))
+
+      const payload: Record<string, any> = {
+        target_domain: prompt.trim() || targetDomain,
+        dataset_name: targetDomain,
         dataset_type: datasetType,
         dataset_size: datasetSize,
         quality_level: 'standard',
-        generation_mode: generationMode,
-        prompt: prompt,
-      })
+        generation_mode: generationMode === 'grounded' ? 'strict_source' : 'synthetic',
+        allow_seedless_generation: generationMode === 'synthetic',
+      }
+
+      if (validAnchors.length > 0) {
+        payload.ideal_samples = validAnchors
+      }
+
+      const response = await api.createJob(payload)
 
       if (response && response.id) {
         router.push(`/orchestration?job=${response.id}`)
@@ -249,6 +264,70 @@ function StudioContent() {
                 className="w-full bg-[#0a0a0f] border border-[#272738] focus:border-[#6366f1] rounded-md p-3 text-xs font-mono text-white placeholder:text-[#94a3b8] focus:outline-none transition-colors resize-none"
                 placeholder="Describe the exact instruction schema, personas, and verification checks..."
               />
+            </div>
+
+            {/* Few-Shot Ideal Anchor Examples */}
+            <div className="space-y-2 pt-2 border-t border-[#1c1c28]">
+              <div className="flex items-center justify-between">
+                <div>
+                  <span className="text-xs font-semibold text-white flex items-center gap-1.5">
+                    <Sparkles className="w-3.5 h-3.5 text-[#10b981]" />
+                    Few-Shot Anchor Examples (Optional)
+                  </span>
+                  <span className="text-[10px] font-mono text-[#94a3b8] block">
+                    Anchor crawling, quality filtering, and generation with 1-3 target output demonstrations
+                  </span>
+                </div>
+                {idealSamples.length < 3 && (
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    onClick={() => setIdealSamples([...idealSamples, { instruction: '', response: '' }])}
+                    className="h-7 px-2.5 text-[11px] font-mono border-[#272738] bg-[#0e0e13] hover:bg-[#1a1a24] text-[#818cf8] flex items-center gap-1"
+                  >
+                    <Plus className="w-3 h-3" />
+                    <span>Add Anchor ({idealSamples.length}/3)</span>
+                  </Button>
+                )}
+              </div>
+
+              {idealSamples.map((sample, idx) => (
+                <div key={idx} className="p-3 rounded bg-[#0a0a0f] border border-[#272738] space-y-2 relative">
+                  <div className="flex items-center justify-between text-[10px] font-mono text-[#818cf8]">
+                    <span>Anchor #{idx + 1}</span>
+                    <button
+                      type="button"
+                      onClick={() => setIdealSamples(idealSamples.filter((_, i) => i !== idx))}
+                      className="text-[#ef4444] hover:text-[#f87171] flex items-center gap-0.5"
+                    >
+                      <X className="w-3 h-3" />
+                      <span>Remove</span>
+                    </button>
+                  </div>
+                  <Input
+                    value={sample.instruction}
+                    onChange={(e) => {
+                      const updated = [...idealSamples]
+                      updated[idx].instruction = e.target.value
+                      setIdealSamples(updated)
+                    }}
+                    placeholder="Ideal prompt / user instruction..."
+                    className="bg-[#12121a] border-[#272738] focus:border-[#6366f1] text-xs font-mono text-white h-7"
+                  />
+                  <textarea
+                    value={sample.response}
+                    onChange={(e) => {
+                      const updated = [...idealSamples]
+                      updated[idx].response = e.target.value
+                      setIdealSamples(updated)
+                    }}
+                    rows={2}
+                    placeholder="Ideal assistant response..."
+                    className="w-full bg-[#12121a] border border-[#272738] focus:border-[#6366f1] rounded p-2 text-xs font-mono text-white placeholder:text-[#64748b] focus:outline-none resize-none"
+                  />
+                </div>
+              ))}
             </div>
 
             {/* Ingestion Mode Segmented Switch */}

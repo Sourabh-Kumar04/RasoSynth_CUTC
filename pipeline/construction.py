@@ -241,6 +241,7 @@ class ConstructionPipeline:
             "key_entities": [str(value)[:120] for value in (intent.key_entities or [])[:12]],
             "constraints": [str(value)[:240] for value in (intent.constraints or [])[:12]],
             "optimized_search_queries": [str(value)[:200] for value in (intent.specialized_queries or [])[:10]],
+            "ideal_samples": (getattr(intent, "ideal_samples", None) or [])[:5],
             "dataset_type": self.dataset_type.value,
         }
 

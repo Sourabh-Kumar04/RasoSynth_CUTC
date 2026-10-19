@@ -1,7 +1,7 @@
 """Database management with SQLAlchemy supporting both PostgreSQL and SQLite."""
 import uuid
 import os
-from datetime import datetime
+from datetime import datetime, timezone
 from typing import Optional
 from sqlalchemy.ext.asyncio import create_async_engine, AsyncSession, async_sessionmaker
 from sqlalchemy.orm import declarative_base, relationship
@@ -28,8 +28,8 @@ class Job(Base):
 
     id = Column(PG_UUID(as_uuid=False), primary_key=True, default=lambda: str(uuid.uuid4()))
     status = Column(String, nullable=False, default="pending", index=True)
-    created_at = Column(DateTime, default=datetime.utcnow)
-    updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+    created_at = Column(DateTime, default=lambda: datetime.now(timezone.utc))
+    updated_at = Column(DateTime, default=lambda: datetime.now(timezone.utc), onupdate=lambda: datetime.now(timezone.utc))
     config = Column(JSON)
     progress = Column(Float, default=0.0)
     current_stage = Column(String)
@@ -53,7 +53,7 @@ class Dataset(Base):
     name = Column(String, nullable=False)
     type = Column(String)
     size = Column(Integer)
-    created_at = Column(DateTime, default=datetime.utcnow)
+    created_at = Column(DateTime, default=lambda: datetime.now(timezone.utc))
     metadata_ = Column("metadata", JSON)
     output_path = Column(String)
 
@@ -73,7 +73,7 @@ class Sample(Base):
     metadata_ = Column("metadata", JSON)
     quality_score = Column(Float)
     difficulty_tier = Column(Integer)
-    created_at = Column(DateTime, default=datetime.utcnow)
+    created_at = Column(DateTime, default=lambda: datetime.now(timezone.utc))
 
     dataset = relationship("Dataset", back_populates="samples")
     quality_scores = relationship("QualityScore", back_populates="sample", cascade="all, delete-orphan")
@@ -88,7 +88,7 @@ class Source(Base):
     source_type = Column(String)
     title = Column(String)
     metadata_ = Column("metadata", JSON)
-    discovered_at = Column(DateTime, default=datetime.utcnow)
+    discovered_at = Column(DateTime, default=lambda: datetime.now(timezone.utc))
     license = Column(String)
 
 
@@ -102,7 +102,7 @@ class QualityScore(Base):
     toxicity = Column(Float)
     hallucination = Column(Float)
     overall = Column(Float)
-    evaluated_at = Column(DateTime, default=datetime.utcnow)
+    evaluated_at = Column(DateTime, default=lambda: datetime.now(timezone.utc))
 
     sample = relationship("Sample", back_populates="quality_scores")
 
@@ -129,10 +129,10 @@ class FineTuneJob(Base):
     output_path = Column(String)                         # local checkpoint dir
     hf_repo_url = Column(String)                         # HF Hub URL if pushed
     # timing
-    created_at = Column(DateTime, default=datetime.utcnow)
+    created_at = Column(DateTime, default=lambda: datetime.now(timezone.utc))
     started_at = Column(DateTime)
     completed_at = Column(DateTime)
-    updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+    updated_at = Column(DateTime, default=lambda: datetime.now(timezone.utc), onupdate=lambda: datetime.now(timezone.utc))
 
     def to_dict(self) -> dict:
         return {
@@ -183,8 +183,8 @@ class ReviewQueueItem(Base):
     edited_response = Column(Text)
     review_version = Column(Integer, default=0)
     # timestamps
-    created_at = Column(DateTime, default=datetime.utcnow, index=True)
-    updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+    created_at = Column(DateTime, default=lambda: datetime.now(timezone.utc), index=True)
+    updated_at = Column(DateTime, default=lambda: datetime.now(timezone.utc), onupdate=lambda: datetime.now(timezone.utc))
 
     def to_dict(self) -> dict:
         return {

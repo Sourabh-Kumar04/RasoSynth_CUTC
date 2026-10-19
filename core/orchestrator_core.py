@@ -1218,6 +1218,31 @@ class DatasetOrchestrator:
                 "curriculum_order": len(samples),
             })
 
+        # Seed with few-shot ideal examples provided directly by the user to anchor generation
+        ideal_samples = config.get("ideal_samples") or getattr(intent, "ideal_samples", []) or []
+        for ideal in ideal_samples:
+            if len(samples) >= target_dataset_size:
+                break
+            instruction = str(ideal.get("instruction") or ideal.get("prompt") or "").strip()
+            response = str(ideal.get("response") or ideal.get("output") or "").strip()
+            if not instruction or not response:
+                continue
+            key = sample_key(instruction, response)
+            if key in seen_sample_keys:
+                continue
+            seen_sample_keys.add(key)
+            samples.append({
+                "instruction": instruction,
+                "response": response,
+                "input": ideal.get("input"),
+                "conversation": ideal.get("conversation"),
+                "metadata": {**(ideal.get("metadata", {}) or {}), "anchor_sample": True},
+                "source_text": str(ideal.get("source_text", ""))[:2000],
+                "quality_score": float(ideal.get("quality_score", 1.0) or 1.0),
+                "difficulty_tier": ideal.get("difficulty_tier", 3),
+                "curriculum_order": len(samples),
+            })
+
         # Check if we should use seedless synthetic generation
         generation_mode = config.get("generation_mode", "strict_source")
         allow_seedless = config.get("allow_seedless_generation", False)
@@ -2092,6 +2117,9 @@ class DatasetOrchestrator:
             approved_queries = job.config.get("specialized_queries") or []
             if approved_queries:
                 intent.specialized_queries = approved_queries[:10]
+            ideal_samples = job.config.get("ideal_samples") or []
+            if ideal_samples:
+                intent.ideal_samples = ideal_samples[:10]
             initial_state["intent"] = intent
         except IntentExtractionError as e:
             raise e  # will be caught by outer try block
