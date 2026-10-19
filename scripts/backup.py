@@ -27,7 +27,7 @@ import subprocess
 import sys
 import tarfile
 import time
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from pathlib import Path
 from typing import Optional
 
@@ -61,7 +61,7 @@ class BackupManager:
         self.verify = verify
 
         # Timestamp for this backup run
-        self.timestamp = datetime.utcnow().strftime("%Y%m%d_%H%M%S")
+        self.timestamp = datetime.now(timezone.utc).strftime("%Y%m%d_%H%M%S")
         self.backup_path = self.backup_dir / f"backup_{self.timestamp}"
 
         # Track backup artifacts for verification
@@ -206,7 +206,7 @@ class BackupManager:
         """Write a backup manifest file with metadata and checksums."""
         manifest = {
             "backup_timestamp": self.timestamp,
-            "created_at": datetime.utcnow().isoformat(),
+            "created_at": datetime.now(timezone.utc).isoformat(),
             "tool_version": "1.0.0",
             "artifacts": self._artifacts.copy(),
             "retention_count": self.retention_count,

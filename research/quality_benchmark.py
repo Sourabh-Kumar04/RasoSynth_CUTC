@@ -3,7 +3,7 @@ Quality Benchmark Suite — measures generation quality, latency, provider quali
 """
 import time
 import statistics
-from datetime import datetime
+from datetime import datetime, timezone
 from typing import Optional
 
 
@@ -15,13 +15,13 @@ class BenchmarkResults:
 
     def add(self, name: str, data: dict):
         self.results[name] = data
-        self.timestamps[name] = datetime.utcnow().isoformat()
+        self.timestamps[name] = datetime.now(timezone.utc).isoformat()
 
     def to_dict(self) -> dict:
         return {
             "results": self.results,
             "timestamps": self.timestamps,
-            "generated_at": datetime.utcnow().isoformat(),
+            "generated_at": datetime.now(timezone.utc).isoformat(),
         }
 
 
@@ -144,7 +144,7 @@ class QualityBenchmark:
 
         report = f"""# Quality Benchmark Report
 
-Generated: {datetime.utcnow().isoformat()}
+Generated: {datetime.now(timezone.utc).isoformat()}
 
 ## Summary
 

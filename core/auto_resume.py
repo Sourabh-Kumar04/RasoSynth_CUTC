@@ -12,7 +12,7 @@ Recovery behavior:
 """
 import asyncio
 import logging
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from typing import Optional, Any
 
 logger = logging.getLogger(__name__)
@@ -114,7 +114,9 @@ class AutoResumeManager:
                 if created_str:
                     try:
                         created = datetime.fromisoformat(created_str)
-                        if datetime.utcnow() - created > timedelta(hours=24):
+                        if created.tzinfo is None:
+                            created = created.replace(tzinfo=timezone.utc)
+                        if datetime.now(timezone.utc) - created > timedelta(hours=24):
                             await self._mark_stale(job_id)
                             logger.info("AutoResume: Job %s is stale (>24h), marking failed", job_id)
                             return JobRecoveryState.SKIPPED
@@ -210,8 +212,8 @@ class AutoResumeManager:
             job = Job(
                 id=job_id,
                 status=JobStatus.PENDING,
-                created_at=datetime.utcnow(),
-                updated_at=datetime.utcnow(),
+                created_at=datetime.now(timezone.utc),
+                updated_at=datetime.now(timezone.utc),
                 current_stage="pending",
                 progress=0.0,
                 samples_processed=0,
@@ -295,8 +297,8 @@ class AutoResumeManager:
                 job = Job(
                     id=job_id,
                     status=JobStatus.RUNNING,
-                    created_at=datetime.utcnow(),
-                    updated_at=datetime.utcnow(),
+                    created_at=datetime.now(timezone.utc),
+                    updated_at=datetime.now(timezone.utc),
                     current_stage=f"resuming_{resume_stage_name}",
                     progress=resume_progress,
                     config=config,

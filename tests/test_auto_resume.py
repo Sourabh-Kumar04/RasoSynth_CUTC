@@ -5,7 +5,7 @@ Covers: recovery detection, checkpoint restore, stale job handling, edge cases.
 """
 import pytest
 from unittest.mock import AsyncMock, MagicMock, patch
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 
 from core.auto_resume import AutoResumeManager, JobRecoveryState
 
@@ -71,7 +71,7 @@ class TestAutoResumeManager:
             "id": "job-001",
             "status": "pending",
             "config": {"target_domain": "test"},
-            "created_at": datetime.utcnow().isoformat(),
+            "created_at": datetime.now(timezone.utc).isoformat(),
         }
 
         result = await resume_manager.recover_all()
@@ -92,7 +92,7 @@ class TestAutoResumeManager:
             "id": "job-002",
             "status": "running",
             "config": {},
-            "created_at": datetime.utcnow().isoformat(),
+            "created_at": datetime.now(timezone.utc).isoformat(),
         }
         mock_checkpoint_manager.get_latest_checkpoint.return_value = None
 
@@ -113,7 +113,7 @@ class TestAutoResumeManager:
             "id": "job-003",
             "status": "running",
             "config": {},
-            "created_at": datetime.utcnow().isoformat(),
+            "created_at": datetime.now(timezone.utc).isoformat(),
         }
         mock_checkpoint_manager.get_latest_checkpoint.return_value = {
             "checkpoint_id": "cp-test",
@@ -146,7 +146,7 @@ class TestAutoResumeManager:
             "id": "job-hitl",
             "status": "awaiting_review",
             "config": {},
-            "created_at": datetime.utcnow().isoformat(),
+            "created_at": datetime.now(timezone.utc).isoformat(),
         }
         mock_checkpoint_manager.get_resume_checkpoint.return_value = MagicMock(
             checkpoint_id="cp-construct",
@@ -174,7 +174,7 @@ class TestAutoResumeManager:
             [{"id": "job-stale", "job_id": "job-stale", "status": "running", "config": {}}]
             if status == "running" else []
         )
-        stale_time = (datetime.utcnow() - timedelta(hours=48)).isoformat()
+        stale_time = (datetime.now(timezone.utc) - timedelta(hours=48)).isoformat()
         mock_db.get_job_status.return_value = {
             "id": "job-stale",
             "status": "running",
@@ -237,7 +237,7 @@ class TestAutoResumeManager:
         )
         mock_db.get_job_status.return_value = {
             "id": "test", "status": "pending", "config": {},
-            "created_at": datetime.utcnow().isoformat(),
+            "created_at": datetime.now(timezone.utc).isoformat(),
         }
 
         result = await resume_manager.recover_all()
