@@ -11,7 +11,7 @@ from __future__ import annotations
 
 import asyncio
 import logging
-from datetime import datetime
+from datetime import datetime, timezone
 from typing import AsyncGenerator, Optional
 
 from core.db import DatabaseManager, ReviewQueueItem
@@ -132,7 +132,7 @@ class ReviewService:
             review_decision="approve",
             review_notes=notes,
             reviewed_by=reviewer,
-            review_timestamp=datetime.utcnow(),
+            review_timestamp=datetime.now(timezone.utc),
             review_version=(existing.review_version or 0) + 1,
         )
         return item.to_dict() if item else None
@@ -147,7 +147,7 @@ class ReviewService:
             review_decision="reject",
             review_notes=reason,
             reviewed_by=reviewer,
-            review_timestamp=datetime.utcnow(),
+            review_timestamp=datetime.now(timezone.utc),
             review_version=(existing.review_version or 0) + 1,
         )
         return item.to_dict() if item else None
@@ -171,7 +171,7 @@ class ReviewService:
             review_decision="edit",
             review_notes=notes,
             reviewed_by=reviewer,
-            review_timestamp=datetime.utcnow(),
+            review_timestamp=datetime.now(timezone.utc),
             review_version=(existing.review_version or 0) + 1,
         )
         return item.to_dict() if item else None
@@ -185,7 +185,7 @@ class ReviewService:
             review_status="flagged",
             review_notes=reason,
             reviewed_by=reviewer,
-            review_timestamp=datetime.utcnow(),
+            review_timestamp=datetime.now(timezone.utc),
             review_version=(existing.review_version or 0) + 1,
         )
         return item.to_dict() if item else None

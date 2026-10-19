@@ -4,7 +4,7 @@ import pytest_asyncio
 import sys
 from pathlib import Path
 from unittest.mock import AsyncMock, MagicMock, patch
-from datetime import datetime
+from datetime import datetime, timezone
 
 sys.path.insert(0, str(Path(__file__).parent.parent))
 
@@ -31,8 +31,8 @@ class _FakeItem:
         self.edited_instruction = kw.get("edited_instruction", None)
         self.edited_response = kw.get("edited_response", None)
         self.review_version = kw.get("review_version", 0)
-        self.created_at = datetime.utcnow()
-        self.updated_at = datetime.utcnow()
+        self.created_at = datetime.now(timezone.utc)
+        self.updated_at = datetime.now(timezone.utc)
 
     def to_dict(self):
         return {k: v for k, v in self.__dict__.items()}
@@ -67,7 +67,7 @@ class _FakeDB:
         for k, v in kwargs.items():
             if hasattr(item, k):
                 setattr(item, k, v)
-        item.updated_at = datetime.utcnow()
+        item.updated_at = datetime.now(timezone.utc)
         return item
 
     async def list_review_items(self, status=None, job_id=None, page=1, page_size=50):
