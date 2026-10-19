@@ -322,15 +322,18 @@ ruff format src/
 python -m research.prompt_optimizer
 ```
 
-## Monitoring
+## Monitoring & Observability
 
-| Service | URL |
-|---------|-----|
-| API | http://localhost:8000 |
-| Swagger Docs | http://localhost:8000/docs |
-| Frontend | http://localhost:3000 |
-| Prometheus Metrics | http://localhost:8000/metrics |
-| Flower (Celery) | http://localhost:5555 |
+| Service / Endpoint | URL | Description |
+|--------------------|-----|-------------|
+| API Root | http://localhost:8000 | Core FastAPI service |
+| Swagger Docs | http://localhost:8000/docs | OpenAPI interactive documentation |
+| Frontend Dashboard | http://localhost:3000 | Next.js 14 management console |
+| Prometheus Metrics | http://localhost:8000/metrics | Prometheus scraping endpoint |
+| Telemetry History | http://localhost:8000/metrics/history | Live time-series metrics (`cost`, `latency`, `throughput`) |
+| Distributed Traces | http://localhost:8000/traces | In-memory distributed trace buffer (`x-trace-id`, `x-correlation-id`) |
+| Single Trace Lookup | http://localhost:8000/traces/{trace_id} | Detailed request execution waterfall |
+| Flower (Celery) | http://localhost:5555 | Celery worker task monitoring |
 
 ## License
 
