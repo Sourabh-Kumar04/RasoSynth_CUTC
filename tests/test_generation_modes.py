@@ -349,4 +349,132 @@ async def test_multilingual_advanced_controls_and_cultural_guardrails():
     assert fertility["potential_token_savings_pct"] > 50.0
 
 
+@pytest.mark.asyncio
+async def test_indian_pii_numerical_chat_noise_and_fidelity():
+    """Verify Indian statutory PII masking, numerical formatting, chat noise, and fidelity metrics."""
+    from core.validation.indian_pii import detect_indian_pii, mask_indian_pii
+    from core.normalization.indian_numerical import format_indian_number, standardize_currency_text, verbalize_for_speech
+    from core.augmentation.transliteration_noise import inject_chat_noise
+    from core.metrics.fidelity import compute_chrf_score, evaluate_fidelity
+    from pipeline.synthetic_generator import SeedlessGenerator, _build_language_instruction
+    from pipeline.planner import DatasetPlan
+
+    # 1. Test Indian PII Detection & Masking
+    pii_sample = (
+        "User Aadhaar: 3234 5678 9012, PAN: ABCDE1234F, GSTIN: 27ABCDE1234F1Z5, "
+        "UPI: vendor@okaxis, Mobile: +91 9876543210, Vehicle: DL 01 AB 1234."
+    )
+    detected = detect_indian_pii(pii_sample)
+    assert "aadhaar" in detected
+    assert "pan" in detected
+    assert "gstin" in detected
+    assert "upi" in detected
+    assert "mobile" in detected
+    assert "vehicle" in detected
+
+    redacted = mask_indian_pii(pii_sample, replacement_mode="redact")
+    assert "[AADHAAR_REDACTED]" in redacted
+    assert "[PAN_REDACTED]" in redacted
+    assert "[GSTIN_REDACTED]" in redacted
+    assert "[UPI_REDACTED]" in redacted
+    assert "[PHONE_REDACTED]" in redacted
+    assert "[VEHICLE_REDACTED]" in redacted
+    assert "3234 5678 9012" not in redacted
+
+    synthetic_pii = mask_indian_pii(pii_sample, replacement_mode="synthetic")
+    assert "XXXX-XXXX-0000" in synthetic_pii
+
+    # 2. Test Indian Numerical Formatting & Currency Standardization
+    assert format_indian_number(100000) == "1,00,000"
+    assert format_indian_number(12345678) == "1,23,45,678"
+    assert format_indian_number(500) == "500"
+
+    curr_text = standardize_currency_text("Total liability is Rs. 50000 plus INR 1200 penalty.")
+    assert "₹50000" in curr_text
+    assert "₹1200" in curr_text
+
+    # 3. Test Voice AI Speech Normalization
+    speech_hi = verbalize_for_speech("₹500 ka GST penalty aur OTP bhejo", language="hi")
+    assert "500 rupaye" in speech_hi
+    assert "जीएसटी" in speech_hi
+    assert "ओटीपी" in speech_hi
+
+    # 4. Test Chat Noise Augmentation
+    clean_chat = "aapka challan theek hai ya nahi kar rahe ho please"
+    noisy = inject_chat_noise(clean_chat, noise_level=1.0, seed=42)
+    assert ("apka" in noisy or "apk" in noisy)
+    assert ("h" in noisy or "hy" in noisy)
+    assert ("nhi" in noisy or "ni" in noisy or "nh" in noisy)
+    assert "pls" in noisy or "plz" in noisy
+
+    # 5. Test chrF++ Semantic Fidelity
+    exact_score = compute_chrf_score("Tax liability calculation", "Tax liability calculation")
+    assert exact_score == 100.0
+
+    fidelity_result = evaluate_fidelity(
+        original_text="What is the deadline for filing GSTR-3B return?",
+        back_translated_text="What is the time limit for submitting GSTR-3B return?"
+    )
+    assert fidelity_result["chrf_score"] > 40.0
+    assert fidelity_result["is_faithful"] is True
+
+    # 6. Test Prompt Directives for Regional Dialect and DPO Refusal Pairs
+    dial_rule = _build_language_instruction(
+        "hinglish",
+        regional_dialect="bambaiya",
+        number_formatting="indian_lakhs",
+        generate_dpo_refusal_pairs=True,
+        speech_normalization=True,
+        turn_language_drift=True,
+    )
+    assert "Bambaiya/Mumbai" in dial_rule
+    assert "Lakhs and Crores" in dial_rule
+    assert "DPO Contrastive Pair" in dial_rule
+    assert "Voice AI Speech Normalization" in dial_rule
+    assert "Conversational Language Drift" in dial_rule
+
+    # 7. Test End-to-End Generator Execution with PII Redaction & Noise Augmentation
+    router = AsyncMock()
+    mock_resp = MagicMock()
+    mock_resp.content = json.dumps({
+        "instruction": "Aapka PAN ABCDE1234F hai aur phone +91 9876543210 hai, kya kar rahe ho?",
+        "response": "Aapka claim Rs. 50000 accept ho gaya hai.",
+        "rejected_response": "Claim reject ho gaya bina kisi statutory rule ke.",
+        "instruction_en": "What is the status of my claim?",
+        "response_en": "Your claim has been accepted.",
+    })
+    router.route.return_value = mock_resp
+
+    generator = SeedlessGenerator(router, {
+        "language": "hinglish",
+        "mask_indian_pii": True,
+        "chat_noise_level": 0.5,
+        "speech_normalization": True,
+        "number_formatting": "indian_lakhs",
+        "parallel_bilingual": True,
+        "generate_dpo_refusal_pairs": True,
+    })
+
+    plan = DatasetPlan(
+        domain="Taxation",
+        objective="Test PII & Robustness",
+        roles=["taxpayer", "assistant"],
+        constraints=["timeless"],
+        size=1,
+    )
+
+    sample = await generator.generate_sample(plan, {"domain": "Taxation"})
+    assert sample is not None
+    # Verify PII was redacted
+    assert "[PAN_REDACTED]" in sample.instruction
+    assert "[PHONE_REDACTED]" in sample.instruction
+    assert "ABCDE1234F" not in sample.instruction
+    # Verify metadata captured PII and DPO pairs
+    assert "pan" in sample.metadata.get("pii_detected", {})
+    assert "rejected_response" in sample.metadata
+    assert "parallel_en" in sample.metadata
+    assert "fidelity_metrics" in sample.metadata
+
+
+
 

@@ -113,6 +113,36 @@ class JobRequest(BaseModel):
         default=False,
         description="Emit parallel bilingual English-target language pairs in output"
     )
+    regional_dialect: Optional[str] = Field(
+        default="standard",
+        description="Regional dialect profile (e.g., standard, bambaiya, bhojpuri_influenced, chennai, indian_english)"
+    )
+    number_formatting: Literal["indian_lakhs", "western_millions"] = Field(
+        default="indian_lakhs",
+        description="Number notation: indian_lakhs (1,00,000 / ₹) | western_millions (100,000 / $)"
+    )
+    chat_noise_level: float = Field(
+        default=0.0,
+        ge=0.0,
+        le=1.0,
+        description="Noisy transliteration and chat/WhatsApp shorthand augmentation ratio (0.0 - 1.0)"
+    )
+    speech_normalization: bool = Field(
+        default=False,
+        description="Verbalize numbers, acronyms, and symbols for Voice AI / TTS / ASR pipelines"
+    )
+    mask_indian_pii: bool = Field(
+        default=True,
+        description="Detect and redact Indian statutory PII (Aadhaar, PAN, GSTIN, UPI, Mobile, Vehicle)"
+    )
+    generate_dpo_refusal_pairs: bool = Field(
+        default=False,
+        description="Generate culturally grounded refusal / negative contrastive pairs for DPO/RLHF alignment"
+    )
+    turn_language_drift: bool = Field(
+        default=False,
+        description="Simulate realistic turn-by-turn language code-switch migration across multi-turn dialogues"
+    )
     region_restrictions: list[str] = Field(default_factory=list)
     allowed_domains: list[str] = Field(default_factory=list)
     blocked_domains: list[str] = Field(default_factory=list)

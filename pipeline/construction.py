@@ -339,6 +339,11 @@ class ConstructionPipeline:
                     code_switch_intensity=self.config.get("code_switch_intensity", "balanced"),
                     preserved_terms=self.config.get("preserved_terms", []),
                     parallel_bilingual=self.config.get("parallel_bilingual", False),
+                    regional_dialect=self.config.get("regional_dialect", "standard"),
+                    number_formatting=self.config.get("number_formatting", "indian_lakhs"),
+                    generate_dpo_refusal_pairs=self.config.get("generate_dpo_refusal_pairs", False),
+                    speech_normalization=self.config.get("speech_normalization", False),
+                    turn_language_drift=self.config.get("turn_language_drift", False),
                 )
 
                 prompt = f"""You are an AI dataset engineering assistant. Given the user request and reference text, generate exactly 2 high-quality, diverse instruction-response training pairs for an AI assistant{domain_str}.
@@ -432,6 +437,13 @@ Output strictly in JSON format as a list of objects:
                                     "code_switch_intensity": self.config.get("code_switch_intensity", "balanced"),
                                     "preserved_terms": self.config.get("preserved_terms", []),
                                     "parallel_bilingual": self.config.get("parallel_bilingual", False),
+                                    "regional_dialect": self.config.get("regional_dialect", "standard"),
+                                    "number_formatting": self.config.get("number_formatting", "indian_lakhs"),
+                                    "chat_noise_level": float(self.config.get("chat_noise_level", 0.0) or 0.0),
+                                    "speech_normalization": self.config.get("speech_normalization", False),
+                                    "mask_indian_pii": self.config.get("mask_indian_pii", True),
+                                    "generate_dpo_refusal_pairs": self.config.get("generate_dpo_refusal_pairs", False),
+                                    "turn_language_drift": self.config.get("turn_language_drift", False),
                                 },
                                 difficulty_tier=difficulty,
                                 curriculum_order=i

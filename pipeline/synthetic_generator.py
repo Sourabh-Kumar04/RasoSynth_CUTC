@@ -6,6 +6,10 @@ from typing import Optional
 from pipeline.construction import ConstructedSample
 from pipeline.planner import DatasetPlan
 from core.provider_router import ProviderRouter, TaskType
+from core.validation.indian_pii import detect_indian_pii, mask_indian_pii
+from core.normalization.indian_numerical import format_indian_number, standardize_currency_text, verbalize_for_speech
+from core.augmentation.transliteration_noise import inject_chat_noise
+from core.metrics.fidelity import evaluate_fidelity
 
 logger = logging.getLogger(__name__)
 
@@ -102,8 +106,13 @@ def _build_language_instruction(
     code_switch_intensity: str = "balanced",
     preserved_terms: list[str] | None = None,
     parallel_bilingual: bool = False,
+    regional_dialect: str = "standard",
+    number_formatting: str = "indian_lakhs",
+    generate_dpo_refusal_pairs: bool = False,
+    speech_normalization: bool = False,
+    turn_language_drift: bool = False,
 ) -> str:
-    """Build comprehensive language, script, register, and glossary rules for synthetic prompt generation."""
+    """Build comprehensive language, script, register, glossary, dialect, and numerical rules for synthetic prompt generation."""
     lang = (language or "en").lower().strip()
     script = (script_mode or "native").lower().strip()
     register = (formality_register or "formal").lower().strip()
@@ -206,6 +215,56 @@ def _build_language_instruction(
             "keys 'instruction_en' and 'response_en'."
         )
 
+    # 5. Regional Dialect & Localization
+    dialect = (regional_dialect or "standard").lower().strip()
+    if dialect == "bambaiya":
+        rules.append(
+            "9. Regional Dialect: Infuse conversational Bambaiya/Mumbai slang and cadence ('apun', 'bindaas', 'boss', 'tension mat le') where natural."
+        )
+    elif dialect in ("bhojpuri_influenced", "bhojpuri"):
+        rules.append(
+            "9. Regional Dialect: Infuse Eastern Hindi / Bhojpuri-influenced syntactic markers and polite regional phrasing ('hum/humar', 'ka ho', 'baat samjhi')."
+        )
+    elif dialect in ("chennai", "tanglish"):
+        rules.append(
+            "9. Regional Dialect: Infuse Chennai colloquial Tanglish discourse markers ('da', 'machi', 'pa', 'super ji') where appropriate."
+        )
+    elif dialect in ("indian_english", "in_en"):
+        rules.append(
+            "9. Regional Dialect: Use authentic Indian English expressions and syntax ('do the needful', 'prepone', 'revert back', 'itself')."
+        )
+    elif dialect != "standard":
+        rules.append(f"9. Regional Dialect: Follow the {regional_dialect} dialectal nuances.")
+
+    # 6. Numbering & Currency Standardization
+    num_fmt = (number_formatting or "indian_lakhs").lower().strip()
+    if num_fmt == "indian_lakhs":
+        rules.append(
+            "10. Numbering & Currency: Use the Indian numbering system (Lakhs and Crores, e.g. 1,50,000 / 1,20,00,000) and currency symbol '₹' (INR). Do NOT use Western Millions or Billions."
+        )
+    elif num_fmt == "western_millions":
+        rules.append(
+            "10. Numbering & Currency: Use Western decimal numbering (e.g. 150,000 / millions / billions)."
+        )
+
+    # 7. Voice AI Speech-Ready Normalization
+    if speech_normalization:
+        rules.append(
+            "11. Voice AI Speech Normalization: Verbalize numbers, currencies, and technical acronyms into spoken phonetic words suitable for TTS and ASR training (e.g., '₹500' -> 'panch sau rupaye', 'GST' -> 'जीएसटी')."
+        )
+
+    # 8. Multi-Turn Language Drift
+    if turn_language_drift:
+        rules.append(
+            "12. Conversational Language Drift: In multi-turn dialogue, simulate realistic language drift where initial turns start in one language/code-mix (e.g., English or light Hinglish) and evolve into vernacular over progressive turns."
+        )
+
+    # 9. DPO Alignment & Refusal Pairs
+    if generate_dpo_refusal_pairs:
+        rules.append(
+            "13. DPO Contrastive Pair: Output a JSON with 'instruction', 'response' (chosen helpful response with statutory disclaimers), and 'rejected_response' (flawed, hallucinated, or ungrounded response lacking required safety disclaimers)."
+        )
+
     return "\n".join(rules)
 
 
@@ -265,6 +324,11 @@ class SeedlessGenerator:
             code_switch_intensity=self.config.get("code_switch_intensity", "balanced"),
             preserved_terms=self.config.get("preserved_terms", []),
             parallel_bilingual=self.config.get("parallel_bilingual", False),
+            regional_dialect=self.config.get("regional_dialect", "standard"),
+            number_formatting=self.config.get("number_formatting", "indian_lakhs"),
+            generate_dpo_refusal_pairs=self.config.get("generate_dpo_refusal_pairs", False),
+            speech_normalization=self.config.get("speech_normalization", False),
+            turn_language_drift=self.config.get("turn_language_drift", False),
         )
         system_prompt = (
             f"You are an expert dataset generator specializing in the '{plan.domain}' domain. "
@@ -334,6 +398,30 @@ class SeedlessGenerator:
                         continue
 
                     self._seen_topics.add(topic_key)
+
+                    # 1. Indian PII detection & masking
+                    pii_found = {}
+                    if self.config.get("mask_indian_pii", True):
+                        pii_found = {
+                            **detect_indian_pii(instruction),
+                            **detect_indian_pii(resp_text),
+                        }
+                        instruction = mask_indian_pii(instruction, replacement_mode="redact")
+                        resp_text = mask_indian_pii(resp_text, replacement_mode="redact")
+
+                    # 2. Chat noise / transliteration shorthand augmentation on instruction
+                    chat_noise_level = float(self.config.get("chat_noise_level", 0.0) or 0.0)
+                    if chat_noise_level > 0.0:
+                        instruction = inject_chat_noise(instruction, noise_level=chat_noise_level)
+
+                    # 3. Voice AI verbalized speech normalization
+                    if self.config.get("speech_normalization", False):
+                        resp_text = verbalize_for_speech(resp_text, language=self.config.get("language", "hi"))
+
+                    # 4. Currency standardization
+                    if self.config.get("number_formatting", "indian_lakhs") == "indian_lakhs":
+                        resp_text = standardize_currency_text(resp_text, target_symbol="₹")
+
                     meta = {
                         **cell,
                         "type": "synthetic_seedless",
@@ -343,12 +431,30 @@ class SeedlessGenerator:
                         "code_switch_intensity": self.config.get("code_switch_intensity", "balanced"),
                         "preserved_terms": self.config.get("preserved_terms", []),
                         "parallel_bilingual": self.config.get("parallel_bilingual", False),
+                        "regional_dialect": self.config.get("regional_dialect", "standard"),
+                        "number_formatting": self.config.get("number_formatting", "indian_lakhs"),
+                        "chat_noise_level": chat_noise_level,
+                        "speech_normalization": self.config.get("speech_normalization", False),
+                        "mask_indian_pii": self.config.get("mask_indian_pii", True),
+                        "generate_dpo_refusal_pairs": self.config.get("generate_dpo_refusal_pairs", False),
+                        "turn_language_drift": self.config.get("turn_language_drift", False),
+                        "pii_detected": pii_found,
                     }
+
+                    if data.get("rejected_response"):
+                        rejected_text = str(data.get("rejected_response"))
+                        if self.config.get("mask_indian_pii", True):
+                            rejected_text = mask_indian_pii(rejected_text, replacement_mode="redact")
+                        meta["rejected_response"] = rejected_text
+
                     if data.get("instruction_en") and data.get("response_en"):
                         meta["parallel_en"] = {
                             "instruction": data.get("instruction_en"),
                             "response": data.get("response_en"),
                         }
+                        fidelity = evaluate_fidelity(data.get("instruction_en"), instruction)
+                        meta["fidelity_metrics"] = fidelity
+
                     if data.get("instruction_romanized") and data.get("response_romanized"):
                         meta["romanized"] = {
                             "instruction": data.get("instruction_romanized"),
@@ -380,6 +486,13 @@ class SeedlessGenerator:
                 "code_switch_intensity": self.config.get("code_switch_intensity", "balanced"),
                 "preserved_terms": self.config.get("preserved_terms", []),
                 "parallel_bilingual": self.config.get("parallel_bilingual", False),
+                "regional_dialect": self.config.get("regional_dialect", "standard"),
+                "number_formatting": self.config.get("number_formatting", "indian_lakhs"),
+                "chat_noise_level": float(self.config.get("chat_noise_level", 0.0) or 0.0),
+                "speech_normalization": self.config.get("speech_normalization", False),
+                "mask_indian_pii": self.config.get("mask_indian_pii", True),
+                "generate_dpo_refusal_pairs": self.config.get("generate_dpo_refusal_pairs", False),
+                "turn_language_drift": self.config.get("turn_language_drift", False),
             },
             difficulty_tier=tier,
             curriculum_order=0,
@@ -397,6 +510,11 @@ class SeedlessGenerator:
             code_switch_intensity=self.config.get("code_switch_intensity", "balanced"),
             preserved_terms=self.config.get("preserved_terms", []),
             parallel_bilingual=self.config.get("parallel_bilingual", False),
+            regional_dialect=self.config.get("regional_dialect", "standard"),
+            number_formatting=self.config.get("number_formatting", "indian_lakhs"),
+            generate_dpo_refusal_pairs=self.config.get("generate_dpo_refusal_pairs", False),
+            speech_normalization=self.config.get("speech_normalization", False),
+            turn_language_drift=self.config.get("turn_language_drift", False),
         )
         system_prompt = (
             f"You are an expert conversational dataset generator specializing in the '{plan.domain}' domain. "
@@ -447,16 +565,39 @@ class SeedlessGenerator:
 
                 conversation = data.get("conversation", [])
                 if isinstance(conversation, list) and len(conversation) > 0:
-                    first_turn = conversation[0].get("content", "")
+                    chat_noise_level = float(self.config.get("chat_noise_level", 0.0) or 0.0)
+                    mask_pii = self.config.get("mask_indian_pii", True)
+                    speech_norm = self.config.get("speech_normalization", False)
+                    pii_found = {}
+
+                    processed_conv = []
+                    for t in conversation:
+                        role = t.get("role", "")
+                        text = t.get("content", "")
+                        if mask_pii:
+                            found = detect_indian_pii(text)
+                            if found:
+                                pii_found.update(found)
+                            text = mask_indian_pii(text, replacement_mode="redact")
+
+                        # If user or patient turn, inject chat noise if enabled
+                        if role.lower() in ("patient", "user", "human") and chat_noise_level > 0.0:
+                            text = inject_chat_noise(text, noise_level=chat_noise_level)
+                        elif role.lower() in ("doctor", "assistant", "bot") and speech_norm:
+                            text = verbalize_for_speech(text, language=self.config.get("language", "hi"))
+
+                        processed_conv.append({"role": role, "content": text})
+
+                    first_turn = processed_conv[0].get("content", "")
                     full_dialogue = "\n\n".join(
                         f"{t.get('role', '').capitalize()}: {t.get('content', '')}"
-                        for t in conversation
+                        for t in processed_conv
                     )
                     return ConstructedSample(
                         instruction=first_turn,
                         response=full_dialogue,
                         input=None,
-                        conversation=conversation,
+                        conversation=processed_conv,
                         metadata={
                             **cell,
                             "type": "synthetic_seedless",
@@ -466,6 +607,14 @@ class SeedlessGenerator:
                             "code_switch_intensity": self.config.get("code_switch_intensity", "balanced"),
                             "preserved_terms": self.config.get("preserved_terms", []),
                             "parallel_bilingual": self.config.get("parallel_bilingual", False),
+                            "regional_dialect": self.config.get("regional_dialect", "standard"),
+                            "number_formatting": self.config.get("number_formatting", "indian_lakhs"),
+                            "chat_noise_level": chat_noise_level,
+                            "speech_normalization": speech_norm,
+                            "mask_indian_pii": mask_pii,
+                            "generate_dpo_refusal_pairs": self.config.get("generate_dpo_refusal_pairs", False),
+                            "turn_language_drift": self.config.get("turn_language_drift", False),
+                            "pii_detected": pii_found,
                         },
                         difficulty_tier=tier,
                         curriculum_order=0,
@@ -484,6 +633,13 @@ class SeedlessGenerator:
                 "code_switch_intensity": self.config.get("code_switch_intensity", "balanced"),
                 "preserved_terms": self.config.get("preserved_terms", []),
                 "parallel_bilingual": self.config.get("parallel_bilingual", False),
+                "regional_dialect": self.config.get("regional_dialect", "standard"),
+                "number_formatting": self.config.get("number_formatting", "indian_lakhs"),
+                "chat_noise_level": float(self.config.get("chat_noise_level", 0.0) or 0.0),
+                "speech_normalization": self.config.get("speech_normalization", False),
+                "mask_indian_pii": self.config.get("mask_indian_pii", True),
+                "generate_dpo_refusal_pairs": self.config.get("generate_dpo_refusal_pairs", False),
+                "turn_language_drift": self.config.get("turn_language_drift", False),
             },
             difficulty_tier=tier, curriculum_order=0,
         )

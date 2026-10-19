@@ -2999,6 +2999,43 @@ async def get_tokenizer_fertility_metrics(
     return estimate_tokenizer_fertility(language=language, script_mode=script_mode)
 
 
+@app.post("/tools/mask-pii", tags=["Tools"])
+async def tool_mask_pii(request: dict = Body(...)):
+    """Detect and mask Indian statutory identifiers (Aadhaar, PAN, GSTIN, UPI, Mobile)."""
+    from core.validation.indian_pii import detect_indian_pii, mask_indian_pii
+    text = str(request.get("text", ""))
+    mode = str(request.get("mode", "redact"))
+    detected = detect_indian_pii(text)
+    masked_text = mask_indian_pii(text, replacement_mode=mode)
+    return {
+        "original": text,
+        "masked": masked_text,
+        "detected": detected,
+        "pii_count": sum(len(v) for v in detected.values()),
+    }
+
+
+@app.post("/tools/speech-normalize", tags=["Tools"])
+async def tool_speech_normalize(request: dict = Body(...)):
+    """Verbalize numbers, abbreviations, and currencies for Voice AI pipelines."""
+    from core.normalization.indian_numerical import verbalize_for_speech
+    text = str(request.get("text", ""))
+    lang = str(request.get("language", "hi"))
+    return {
+        "original": text,
+        "verbalized": verbalize_for_speech(text, language=lang),
+    }
+
+
+@app.post("/tools/evaluate-fidelity", tags=["Tools"])
+async def tool_evaluate_fidelity(request: dict = Body(...)):
+    """Calculate cross-lingual semantic fidelity and chrF++ score."""
+    from core.metrics.fidelity import evaluate_fidelity
+    hyp = str(request.get("hypothesis", ""))
+    ref = str(request.get("reference", ""))
+    return evaluate_fidelity(original_text=ref, back_translated_text=hyp)
+
+
 @app.get("/", tags=["Root"])
 async def root():
     """Root endpoint."""

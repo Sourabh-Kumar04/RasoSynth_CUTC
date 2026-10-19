@@ -107,6 +107,13 @@ function StudioContent() {
   const [scriptMode, setScriptMode] = useState<'native' | 'romanized' | 'dual'>('native')
   const [formalityRegister, setFormalityRegister] = useState<'formal' | 'neutral' | 'casual'>('formal')
   const [codeSwitchIntensity, setCodeSwitchIntensity] = useState<'light' | 'balanced' | 'heavy'>('balanced')
+  const [regionalDialect, setRegionalDialect] = useState<string>('standard')
+  const [numberFormatting, setNumberFormatting] = useState<'indian_lakhs' | 'western_millions'>('indian_lakhs')
+  const [chatNoiseLevel, setChatNoiseLevel] = useState<number>(0.0)
+  const [maskIndianPii, setMaskIndianPii] = useState<boolean>(true)
+  const [speechNormalization, setSpeechNormalization] = useState<boolean>(false)
+  const [generateDpoRefusalPairs, setGenerateDpoRefusalPairs] = useState<boolean>(false)
+  const [turnLanguageDrift, setTurnLanguageDrift] = useState<boolean>(false)
   const [preservedTermsInput, setPreservedTermsInput] = useState<string>('')
   const [parallelBilingual, setParallelBilingual] = useState<boolean>(false)
   const [datasetSize, setDatasetSize] = useState(10000)
@@ -147,6 +154,13 @@ function StudioContent() {
         script_mode: scriptMode,
         formality_register: formalityRegister,
         code_switch_intensity: codeSwitchIntensity,
+        regional_dialect: regionalDialect,
+        number_formatting: numberFormatting,
+        chat_noise_level: chatNoiseLevel,
+        mask_indian_pii: maskIndianPii,
+        speech_normalization: speechNormalization,
+        generate_dpo_refusal_pairs: generateDpoRefusalPairs,
+        turn_language_drift: turnLanguageDrift,
         preserved_terms: preservedTerms,
         parallel_bilingual: parallelBilingual,
         dataset_size: datasetSize,
@@ -240,6 +254,27 @@ function StudioContent() {
                   }
                   if ((preset as any).parallelBilingual !== undefined) {
                     setParallelBilingual(Boolean((preset as any).parallelBilingual))
+                  }
+                  if ((preset as any).regionalDialect) {
+                    setRegionalDialect((preset as any).regionalDialect)
+                  }
+                  if ((preset as any).numberFormatting) {
+                    setNumberFormatting((preset as any).numberFormatting)
+                  }
+                  if ((preset as any).chatNoiseLevel !== undefined) {
+                    setChatNoiseLevel(Number((preset as any).chatNoiseLevel))
+                  }
+                  if ((preset as any).maskIndianPii !== undefined) {
+                    setMaskIndianPii(Boolean((preset as any).maskIndianPii))
+                  }
+                  if ((preset as any).speechNormalization !== undefined) {
+                    setSpeechNormalization(Boolean((preset as any).speechNormalization))
+                  }
+                  if ((preset as any).generateDpoRefusalPairs !== undefined) {
+                    setGenerateDpoRefusalPairs(Boolean((preset as any).generateDpoRefusalPairs))
+                  }
+                  if ((preset as any).turnLanguageDrift !== undefined) {
+                    setTurnLanguageDrift(Boolean((preset as any).turnLanguageDrift))
                   }
                 }}
                 className={clsx(
@@ -556,6 +591,110 @@ function StudioContent() {
                   placeholder="e.g. ITC, GSTR-3B, Challan, TDS, API"
                   className="w-full bg-[#0a0a0f] border border-[#272738] rounded p-2 text-xs font-mono text-white focus:outline-none placeholder:text-[#55556a]"
                 />
+              </div>
+
+              {/* Regional Dialect & Localization Profile */}
+              <div>
+                <label className="text-[10px] font-mono uppercase text-[#94a3b8] block mb-1">
+                  Regional Dialect & Localization Profile
+                </label>
+                <select
+                  value={regionalDialect}
+                  onChange={(e) => setRegionalDialect(e.target.value)}
+                  className="w-full bg-[#0a0a0f] border border-[#272738] rounded p-2 text-xs font-mono text-white focus:outline-none"
+                >
+                  <option value="standard">Standard / Neutral Regional Dialect</option>
+                  <option value="bambaiya">Bambaiya / Mumbai Slang (Western India)</option>
+                  <option value="bhojpuri_influenced">Bhojpuri-Influenced Hindi (Eastern India)</option>
+                  <option value="chennai">Chennai Colloquial Tanglish (Southern India)</option>
+                  <option value="indian_english">Indian English Business Idioms & Syntax</option>
+                </select>
+              </div>
+
+              {/* Numbering & Currency Standardization */}
+              <div>
+                <label className="text-[10px] font-mono uppercase text-[#94a3b8] block mb-1">
+                  Numbering System & Currency
+                </label>
+                <select
+                  value={numberFormatting}
+                  onChange={(e) => setNumberFormatting(e.target.value as any)}
+                  className="w-full bg-[#0a0a0f] border border-[#272738] rounded p-2 text-xs font-mono text-white focus:outline-none"
+                >
+                  <option value="indian_lakhs">Indian Numbering: Lakhs & Crores (₹ 1,50,000 / 12 Cr)</option>
+                  <option value="western_millions">Western Decimal: Millions & Billions ($ 150,000 / 1.5M)</option>
+                </select>
+              </div>
+
+              {/* Transliteration Noise / WhatsApp Chat Shorthand */}
+              <div>
+                <label className="text-[10px] font-mono uppercase text-[#94a3b8] block mb-1">
+                  Chat & Transliteration Noise (WhatsApp/SMS Robustness)
+                </label>
+                <select
+                  value={chatNoiseLevel}
+                  onChange={(e) => setChatNoiseLevel(Number(e.target.value))}
+                  className="w-full bg-[#0a0a0f] border border-[#272738] rounded p-2 text-xs font-mono text-white focus:outline-none"
+                >
+                  <option value={0.0}>0% - Clean Textbook Transliteration</option>
+                  <option value={0.15}>15% - Light SMS/Chat Shorthands (apka, h, nhi)</option>
+                  <option value={0.30}>30% - Realistic Colloquial Messaging Noise</option>
+                </select>
+              </div>
+
+              {/* Compliance, Voice AI & Safety Alignment Toggles */}
+              <div className="space-y-2 pt-1 border-t border-[#1c1c28]">
+                <div className="flex items-center justify-between p-2 rounded bg-[#0e0e13] border border-[#1c1c28]">
+                  <div>
+                    <div className="text-xs font-mono text-white font-medium">Indian DPDP PII Masking</div>
+                    <div className="text-[10px] text-[#94a3b8]">Redact Aadhaar, PAN, GSTIN, UPI & Mobile numbers</div>
+                  </div>
+                  <input
+                    type="checkbox"
+                    checked={maskIndianPii}
+                    onChange={(e) => setMaskIndianPii(e.target.checked)}
+                    className="w-4 h-4 accent-[#6366f1] cursor-pointer"
+                  />
+                </div>
+
+                <div className="flex items-center justify-between p-2 rounded bg-[#0e0e13] border border-[#1c1c28]">
+                  <div>
+                    <div className="text-xs font-mono text-white font-medium">Voice AI Speech Normalization</div>
+                    <div className="text-[10px] text-[#94a3b8]">Verbalize symbols, numbers & acronyms for TTS / ASR</div>
+                  </div>
+                  <input
+                    type="checkbox"
+                    checked={speechNormalization}
+                    onChange={(e) => setSpeechNormalization(e.target.checked)}
+                    className="w-4 h-4 accent-[#6366f1] cursor-pointer"
+                  />
+                </div>
+
+                <div className="flex items-center justify-between p-2 rounded bg-[#0e0e13] border border-[#1c1c28]">
+                  <div>
+                    <div className="text-xs font-mono text-white font-medium">Multi-Turn Language Drift</div>
+                    <div className="text-[10px] text-[#94a3b8]">Simulate turn-by-turn code-switch migration across turns</div>
+                  </div>
+                  <input
+                    type="checkbox"
+                    checked={turnLanguageDrift}
+                    onChange={(e) => setTurnLanguageDrift(e.target.checked)}
+                    className="w-4 h-4 accent-[#6366f1] cursor-pointer"
+                  />
+                </div>
+
+                <div className="flex items-center justify-between p-2 rounded bg-[#0e0e13] border border-[#1c1c28]">
+                  <div>
+                    <div className="text-xs font-mono text-white font-medium">DPO Culturally Grounded Refusal Pairs</div>
+                    <div className="text-[10px] text-[#94a3b8]">Generate negative pairs with statutory disclaimer compliance</div>
+                  </div>
+                  <input
+                    type="checkbox"
+                    checked={generateDpoRefusalPairs}
+                    onChange={(e) => setGenerateDpoRefusalPairs(e.target.checked)}
+                    className="w-4 h-4 accent-[#6366f1] cursor-pointer"
+                  />
+                </div>
               </div>
 
               {/* Parallel Bilingual Bitext Output Mode */}
