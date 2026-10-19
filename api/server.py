@@ -57,6 +57,8 @@ CreateCheckpointRequest = getattr(_legacy_schemas, 'CreateCheckpointRequest', No
 RestoreCheckpointRequest = getattr(_legacy_schemas, 'RestoreCheckpointRequest', None)
 ProviderSwitchRequest = getattr(_legacy_schemas, 'ProviderSwitchRequest', None)
 FailoverRequest = getattr(_legacy_schemas, 'FailoverRequest', None)
+CheckpointStage = getattr(_legacy_schemas, 'CheckpointStage', None)
+ProviderContextSchema = getattr(_legacy_schemas, 'ProviderContextSchema', None)
 
 JobRequest = getattr(_legacy_schemas, 'JobRequest', None)
 JobResponse = getattr(_legacy_schemas, 'JobResponse', None)
@@ -518,23 +520,22 @@ async def lifespan(app: FastAPI):
     except Exception as mlc_err:
         logger.warning(f"  ⚠ MultiLevelCache init skipped: {mlc_err}")
 
-    # (4b) Persistent API checkpoints. The graph itself also has a
-    # PostgreSQL checkpointer; this store backs the checkpoint API endpoints.
+    # (4b) Persistent API checkpoints. CheckpointStore uses PostgreSQL if available,
+    # or its built-in memory/Redis fallback mode when running on SQLite.
     checkpoint_manager = None
     checkpoint_store = None
-    if settings.postgres_url.startswith(("postgresql://", "postgresql+asyncpg://")):
-        try:
-            from core.orchestrator_pkg.checkpoints import CheckpointManager, CheckpointStore
-            checkpoint_store = CheckpointStore(settings.postgres_url, settings.redis_url)
-            await checkpoint_store.connect()
-            checkpoint_manager = CheckpointManager(checkpoint_store)
-            app.state.checkpoint_manager = checkpoint_manager
-            app.state.checkpoint_store = checkpoint_store
-            logger.info("  ✓ Persistent checkpoint store initialized")
-        except Exception as e:
-            checkpoint_store = None
-            checkpoint_manager = None
-            logger.warning("  ⚠ Persistent checkpoint store unavailable: %s", e)
+    try:
+        from core.orchestrator_pkg.checkpoints import CheckpointManager, CheckpointStore
+        checkpoint_store = CheckpointStore(settings.postgres_url, settings.redis_url)
+        await checkpoint_store.connect()
+        checkpoint_manager = CheckpointManager(checkpoint_store)
+        app.state.checkpoint_manager = checkpoint_manager
+        app.state.checkpoint_store = checkpoint_store
+        logger.info("  ✓ Checkpoint store initialized")
+    except Exception as e:
+        checkpoint_store = None
+        checkpoint_manager = None
+        logger.warning("  ⚠ Checkpoint store unavailable: %s", e)
 
     # (5) WebSocket manager (optional — used by /jobs/{id}/stream). The
     # ``connect()`` method on ConnectionManager is per-connection and takes
@@ -2390,6 +2391,24 @@ async def get_job_dataset_summary(job_id: str):
         "topics": dict(topics),
         "human_review": review,
         "sampled_records": len(stored),
+    }
+
+
+@app.get("/jobs/{job_id}/report", tags=["Jobs"])
+async def get_job_report(job_id: str):
+    """Return comprehensive analytical and execution report for a job."""
+    summary = await get_job_dataset_summary(job_id)
+    job = await db.get_job_status(job_id) if db else None
+    config = (job.get("config") or {}) if job else {}
+    return {
+        "job_id": job_id,
+        "status": job.get("status") if job else summary.get("status"),
+        "created_at": job.get("created_at") if job else None,
+        "completed_at": job.get("completed_at") if job else None,
+        "generated_at": datetime.now(timezone.utc).isoformat(),
+        "config": config,
+        "summary": summary,
+        "error": job.get("error") if job else None,
     }
 
 
