@@ -3,7 +3,7 @@ Quality Dashboard API — endpoints for dataset quality metrics.
 """
 import logging
 from fastapi import APIRouter, Query, Request
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from typing import Optional
 
 logger = logging.getLogger(__name__)
@@ -72,7 +72,7 @@ async def quality_overview(request: Request):
         "total_samples_reviewed": total_samples or review_stats.get("total", 0),
         "approval_rate": review_stats.get("approval_rate", 0.0),
         "rejection_rate": review_stats.get("rejection_rate", 0.0),
-        "last_updated": datetime.utcnow().isoformat(),
+        "last_updated": datetime.now(timezone.utc).isoformat(),
     }
 
 
@@ -288,7 +288,7 @@ def record_quality_snapshot(
 ):
     """Record a quality snapshot for trend tracking."""
     entry = {
-        "timestamp": datetime.utcnow(),
+        "timestamp": datetime.now(timezone.utc),
         "avg_quality": avg_quality,
         "min_quality": min_quality,
         "max_quality": max_quality,
@@ -302,4 +302,4 @@ def record_quality_snapshot(
         if job_id not in _job_quality:
             _job_quality[job_id] = {"quality_scores": []}
         _job_quality[job_id]["quality_scores"].append(avg_quality)
-        _job_quality[job_id]["last_updated"] = datetime.utcnow().isoformat()
+        _job_quality[job_id]["last_updated"] = datetime.now(timezone.utc).isoformat()

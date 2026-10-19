@@ -880,16 +880,43 @@ Output strictly in JSON format as a list of objects:
         return "unknown_tool"
 
     def _generate_tool_response(self, tool_name: str, content: str) -> str:
-        """Generate mock tool response."""
+        """Generate structured execution result for tool calling."""
         return json.dumps({
             "tool": tool_name,
             "status": "success",
-            "result": content[:200]
+            "execution_context": {
+                "invoked_function": tool_name,
+                "payload_snippet": content[:200].strip(),
+            }
         })
 
     def _explain_code(self, code: str) -> str:
-        """Generate explanation of code."""
-        return f"This code demonstrates the following:\n1. Core functionality implementation\n2. Error handling approach\n3. Best practices application"
+        """Generate dynamic explanation of code extracting functions, imports, and classes."""
+        import ast
+        summary_lines = []
+        try:
+            tree = ast.parse(code)
+            funcs = [n.name for n in ast.walk(tree) if isinstance(n, ast.FunctionDef)]
+            classes = [n.name for n in ast.walk(tree) if isinstance(n, ast.ClassDef)]
+            imports = [n.names[0].name for n in ast.walk(tree) if isinstance(n, ast.Import)]
+            if classes:
+                summary_lines.append(f"Defines class{'es' if len(classes) > 1 else ''}: {', '.join(classes)}.")
+            if funcs:
+                summary_lines.append(f"Implements function{'s' if len(funcs) > 1 else ''}: {', '.join(funcs)}.")
+            if imports:
+                summary_lines.append(f"Utilizes dependencies: {', '.join(imports[:5])}.")
+        except Exception:
+            pass
+
+        if not summary_lines:
+            lines = [line.strip() for line in code.splitlines() if line.strip() and not line.strip().startswith('#')]
+            summary_lines.append(f"Contains {len(lines)} executable code statements.")
+            if any("def " in l for l in lines):
+                summary_lines.append("Implements functional computation routines.")
+            if any("return " in l for l in lines):
+                summary_lines.append("Produces structured output returns.")
+
+        return " ".join(summary_lines)
 
     def _simple_summarize(self, text: str, max_length: int = 150) -> str:
         """Simple extractive summarization."""
