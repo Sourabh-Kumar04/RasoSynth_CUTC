@@ -95,53 +95,118 @@ def _resolve_difficulty_tier(cell: dict, cell_index: int, total_cells: int) -> i
     return (cell_index % 5) + 1
 
 
-def _build_language_instruction(language: str) -> str:
-    """Build explicit language instruction rule for synthetic prompt generation."""
+def _build_language_instruction(
+    language: str,
+    script_mode: str = "native",
+    formality_register: str = "formal",
+    code_switch_intensity: str = "balanced",
+    preserved_terms: list[str] | None = None,
+    parallel_bilingual: bool = False,
+) -> str:
+    """Build comprehensive language, script, register, and glossary rules for synthetic prompt generation."""
     lang = (language or "en").lower().strip()
+    script = (script_mode or "native").lower().strip()
+    register = (formality_register or "formal").lower().strip()
+    intensity = (code_switch_intensity or "balanced").lower().strip()
+
+    # 1. Base language & script
     if lang in ("en", "english"):
-        return "5. Generate the instruction and response strictly in English."
+        base_rule = "5. Generate the instruction and response strictly in English."
+    elif script == "romanized":
+        if lang in ("hi", "hindi"):
+            base_rule = (
+                "5. Generate the instruction and response in Hindi written phonetically in Latin / Romanized script "
+                "(e.g., 'Namaste, main aapki kya sahayata kar sakta hoon?'). Do NOT use Devanagari script."
+            )
+        else:
+            base_rule = f"5. Generate the instruction and response in {language} written phonetically in Latin / Romanized script."
+    elif script == "dual":
+        base_rule = (
+            f"5. Generate the instruction and response in {language} with dual script output: "
+            "provide standard native script in 'instruction' and 'response', and include 'instruction_romanized' "
+            "and 'response_romanized' in phonetic Latin script."
+        )
     elif lang in ("hi", "hindi"):
-        return "5. Generate the instruction and response strictly in Hindi (हिन्दी) using Devanagari script."
+        base_rule = "5. Generate the instruction and response strictly in Hindi (हिन्दी) using Devanagari script."
     elif lang in ("hinglish", "hi-en", "en-hi"):
-        return (
-            "5. Generate the instruction and response in Hinglish (natural code-switched Hindi + English "
-            "as commonly used in India, written primarily in Latin script with standard technical and professional terms)."
+        intensity_notes = {
+            "light": "predominantly Hindi (80%) with English only for technical loanwords (code-switched)",
+            "balanced": "natural 50/50 conversational Hindi and English code-switched dialogue",
+            "heavy": "predominantly English (80%) accented with natural Hindi discourse markers (code-switched)",
+        }.get(intensity, "natural conversational Hindi and English code-switched dialogue")
+        base_rule = (
+            f"5. Generate the instruction and response in Hinglish ({intensity_notes}) "
+            "written primarily in Latin script with standard technical terminology."
         )
     elif lang in ("indic_multilingual", "indic"):
-        return (
+        base_rule = (
             "5. Generate the instruction and response in an Indic language (e.g., Hindi, Tamil, Telugu, "
             "Bengali, Marathi), or natural Indic-English code-switched dialogue."
         )
     elif lang in ("bn", "bengali"):
-        return "5. Generate the instruction and response strictly in Bengali (বাংলা) script."
+        base_rule = "5. Generate the instruction and response strictly in Bengali (বাংলা) script."
     elif lang in ("ta", "tamil"):
-        return "5. Generate the instruction and response strictly in Tamil (தமிழ்) script."
+        base_rule = "5. Generate the instruction and response strictly in Tamil (தமிழ்) script."
     elif lang in ("te", "telugu"):
-        return "5. Generate the instruction and response strictly in Telugu (తెలుగు) script."
+        base_rule = "5. Generate the instruction and response strictly in Telugu (తెలుగు) script."
     elif lang in ("mr", "marathi"):
-        return "5. Generate the instruction and response strictly in Marathi (मराठी) using Devanagari script."
+        base_rule = "5. Generate the instruction and response strictly in Marathi (मराठी) using Devanagari script."
     elif lang in ("gu", "gujarati"):
-        return "5. Generate the instruction and response strictly in Gujarati (ગુજરાતી) script."
+        base_rule = "5. Generate the instruction and response strictly in Gujarati (ગુજરાતી) script."
     elif lang in ("kn", "kannada"):
-        return "5. Generate the instruction and response strictly in Kannada (ಕನ್ನಡ) script."
+        base_rule = "5. Generate the instruction and response strictly in Kannada (ಕನ್ನಡ) script."
     elif lang in ("ml", "malayalam"):
-        return "5. Generate the instruction and response strictly in Malayalam (മലയാളം) script."
+        base_rule = "5. Generate the instruction and response strictly in Malayalam (മലയാളം) script."
     elif lang in ("pa", "punjabi"):
-        return "5. Generate the instruction and response strictly in Punjabi (ਪੰਜਾਬੀ) using Gurmukhi script."
+        base_rule = "5. Generate the instruction and response strictly in Punjabi (ਪੰਜਾਬੀ) using Gurmukhi script."
     elif lang in ("es", "spanish"):
-        return "5. Generate the instruction and response strictly in Spanish (Español)."
+        base_rule = "5. Generate the instruction and response strictly in Spanish (Español)."
     elif lang in ("fr", "french"):
-        return "5. Generate the instruction and response strictly in French (Français)."
+        base_rule = "5. Generate the instruction and response strictly in French (Français)."
     elif lang in ("de", "german"):
-        return "5. Generate the instruction and response strictly in German (Deutsch)."
+        base_rule = "5. Generate the instruction and response strictly in German (Deutsch)."
     elif lang in ("zh", "chinese"):
-        return "5. Generate the instruction and response strictly in Simplified Chinese (中文)."
+        base_rule = "5. Generate the instruction and response strictly in Simplified Chinese (中文)."
     elif lang in ("ja", "japanese"):
-        return "5. Generate the instruction and response strictly in Japanese (日本語)."
+        base_rule = "5. Generate the instruction and response strictly in Japanese (日本語)."
     elif lang in ("ar", "arabic"):
-        return "5. Generate the instruction and response strictly in Arabic (العربية)."
+        base_rule = "5. Generate the instruction and response strictly in Arabic (العربية)."
     else:
-        return f"5. Generate the instruction and response strictly in {language}."
+        base_rule = f"5. Generate the instruction and response strictly in {language}."
+
+    rules = [base_rule]
+
+    # 2. Formality Register
+    if register == "formal":
+        rules.append(
+            "6. Register & Honorifics: Use a formal, respectful, and professional register. "
+            "In Hindi/Indic dialogue, address the user with honorifics ('आप' / 'आपण' / 'நீங்கள்') and polite verbal forms."
+        )
+    elif register == "casual":
+        rules.append(
+            "6. Register & Honorifics: Use a friendly, colloquial, peer-to-peer register ('तुम' / casual conversational tone)."
+        )
+    elif register == "neutral":
+        rules.append(
+            "6. Register & Honorifics: Use an objective, standard professional register without overly casual or archaic language."
+        )
+
+    # 3. Preserved Glossary Terms
+    if preserved_terms:
+        clean_terms = [f"'{t.strip()}'" for t in preserved_terms if t and t.strip()]
+        if clean_terms:
+            rules.append(
+                f"7. Preserved Glossary: Keep the following domain terms and acronyms verbatim without translation or alteration: {', '.join(clean_terms)}."
+            )
+
+    # 4. Parallel Bilingual Bitext
+    if parallel_bilingual:
+        rules.append(
+            "8. Parallel Bilingual Mode: Include accurate parallel English translations in the JSON under "
+            "keys 'instruction_en' and 'response_en'."
+        )
+
+    return "\n".join(rules)
 
 
 class SeedlessGenerator:
@@ -193,7 +258,14 @@ class SeedlessGenerator:
     async def _generate_sft(
         self, plan: DatasetPlan, cell: dict, tier: int
     ) -> ConstructedSample:
-        lang_rule = _build_language_instruction(self.config.get("language", "en"))
+        lang_rule = _build_language_instruction(
+            language=self.config.get("language", "en"),
+            script_mode=self.config.get("script_mode", "native"),
+            formality_register=self.config.get("formality_register", "formal"),
+            code_switch_intensity=self.config.get("code_switch_intensity", "balanced"),
+            preserved_terms=self.config.get("preserved_terms", []),
+            parallel_bilingual=self.config.get("parallel_bilingual", False),
+        )
         system_prompt = (
             f"You are an expert dataset generator specializing in the '{plan.domain}' domain. "
             f"Your objective: {plan.objective}.\n"
@@ -262,15 +334,32 @@ class SeedlessGenerator:
                         continue
 
                     self._seen_topics.add(topic_key)
+                    meta = {
+                        **cell,
+                        "type": "synthetic_seedless",
+                        "language": self.config.get("language", "en"),
+                        "script_mode": self.config.get("script_mode", "native"),
+                        "formality_register": self.config.get("formality_register", "formal"),
+                        "code_switch_intensity": self.config.get("code_switch_intensity", "balanced"),
+                        "preserved_terms": self.config.get("preserved_terms", []),
+                        "parallel_bilingual": self.config.get("parallel_bilingual", False),
+                    }
+                    if data.get("instruction_en") and data.get("response_en"):
+                        meta["parallel_en"] = {
+                            "instruction": data.get("instruction_en"),
+                            "response": data.get("response_en"),
+                        }
+                    if data.get("instruction_romanized") and data.get("response_romanized"):
+                        meta["romanized"] = {
+                            "instruction": data.get("instruction_romanized"),
+                            "response": data.get("response_romanized"),
+                        }
+
                     return ConstructedSample(
                         instruction=instruction,
                         response=resp_text,
                         input=data.get("input"),
-                        metadata={
-                            **cell,
-                            "type": "synthetic_seedless",
-                            "language": self.config.get("language", "en"),
-                        },
+                        metadata=meta,
                         difficulty_tier=tier,      # Fix #2
                         curriculum_order=0,
                     )
@@ -286,6 +375,11 @@ class SeedlessGenerator:
                 **cell,
                 "type": "synthetic_seedless_failed",
                 "language": self.config.get("language", "en"),
+                "script_mode": self.config.get("script_mode", "native"),
+                "formality_register": self.config.get("formality_register", "formal"),
+                "code_switch_intensity": self.config.get("code_switch_intensity", "balanced"),
+                "preserved_terms": self.config.get("preserved_terms", []),
+                "parallel_bilingual": self.config.get("parallel_bilingual", False),
             },
             difficulty_tier=tier,
             curriculum_order=0,
@@ -296,7 +390,14 @@ class SeedlessGenerator:
     async def _generate_conversational(
         self, plan: DatasetPlan, cell: dict, tier: int
     ) -> ConstructedSample:
-        lang_rule = _build_language_instruction(self.config.get("language", "en"))
+        lang_rule = _build_language_instruction(
+            language=self.config.get("language", "en"),
+            script_mode=self.config.get("script_mode", "native"),
+            formality_register=self.config.get("formality_register", "formal"),
+            code_switch_intensity=self.config.get("code_switch_intensity", "balanced"),
+            preserved_terms=self.config.get("preserved_terms", []),
+            parallel_bilingual=self.config.get("parallel_bilingual", False),
+        )
         system_prompt = (
             f"You are an expert conversational dataset generator specializing in the '{plan.domain}' domain. "
             f"Your objective: {plan.objective}.\n"
@@ -360,6 +461,11 @@ class SeedlessGenerator:
                             **cell,
                             "type": "synthetic_seedless",
                             "language": self.config.get("language", "en"),
+                            "script_mode": self.config.get("script_mode", "native"),
+                            "formality_register": self.config.get("formality_register", "formal"),
+                            "code_switch_intensity": self.config.get("code_switch_intensity", "balanced"),
+                            "preserved_terms": self.config.get("preserved_terms", []),
+                            "parallel_bilingual": self.config.get("parallel_bilingual", False),
                         },
                         difficulty_tier=tier,
                         curriculum_order=0,
@@ -373,6 +479,11 @@ class SeedlessGenerator:
                 **cell,
                 "type": "synthetic_seedless_failed",
                 "language": self.config.get("language", "en"),
+                "script_mode": self.config.get("script_mode", "native"),
+                "formality_register": self.config.get("formality_register", "formal"),
+                "code_switch_intensity": self.config.get("code_switch_intensity", "balanced"),
+                "preserved_terms": self.config.get("preserved_terms", []),
+                "parallel_bilingual": self.config.get("parallel_bilingual", False),
             },
             difficulty_tier=tier, curriculum_order=0,
         )

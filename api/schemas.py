@@ -93,6 +93,26 @@ class JobRequest(BaseModel):
     quality_level: QualityLevel = Field(default=QualityLevel.STANDARD)
     language: str = Field(default="en", description="Primary language code")
     secondary_languages: list[str] = Field(default_factory=list, description="Additional languages")
+    script_mode: Literal["native", "romanized", "dual"] = Field(
+        default="native",
+        description="Script orthography: native (Devanagari/Tamil etc.) | romanized (Latin) | dual (both)"
+    )
+    formality_register: Literal["formal", "neutral", "casual"] = Field(
+        default="formal",
+        description="Linguistic register: formal (honorific 'आप') | neutral | casual ('तुम')"
+    )
+    code_switch_intensity: Literal["light", "balanced", "heavy"] = Field(
+        default="balanced",
+        description="Code-switching mixing ratio for Hinglish/multilingual: light | balanced | heavy"
+    )
+    preserved_terms: list[str] = Field(
+        default_factory=list,
+        description="Domain terms/acronyms to keep verbatim without translation"
+    )
+    parallel_bilingual: bool = Field(
+        default=False,
+        description="Emit parallel bilingual English-target language pairs in output"
+    )
     region_restrictions: list[str] = Field(default_factory=list)
     allowed_domains: list[str] = Field(default_factory=list)
     blocked_domains: list[str] = Field(default_factory=list)

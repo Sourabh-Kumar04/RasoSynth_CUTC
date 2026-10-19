@@ -46,6 +46,9 @@ const INDUSTRY_PRESETS = [
     prompt: 'Synthesize 20,000 multi-turn legal and financial audit dialogues from Indian GST statutes, Income Tax Appellate Tribunal decisions, and Section 16(4) input-tax-credit reconciliation case studies with grounded citations.',
     type: 'sft',
     language: 'hinglish',
+    scriptMode: 'romanized',
+    formalityRegister: 'formal',
+    preservedTerms: ['ITC', 'GSTR-3B', 'Section 16(4)', 'Challan'],
     size: 20000,
     sources: ['AI Kosh', 'OpenML', 'India.gov.in'],
   },
@@ -57,6 +60,9 @@ const INDUSTRY_PRESETS = [
     prompt: 'Construct high-quality parallel instruction-tuning dialogues across Hindi, Tamil, Telugu, and English covering healthcare and public governance with script validation.',
     type: 'sft',
     language: 'indic_multilingual',
+    scriptMode: 'native',
+    formalityRegister: 'formal',
+    parallelBilingual: true,
     size: 25000,
     sources: ['Bhashini', 'AI Kosh', 'HuggingFace'],
   },
@@ -98,12 +104,23 @@ function StudioContent() {
   const [datasetType, setDatasetType] = useState('sft')
   const [instructionFormat, setInstructionFormat] = useState('alpaca')
   const [language, setLanguage] = useState(searchParams.get('language') || 'en')
+  const [scriptMode, setScriptMode] = useState<'native' | 'romanized' | 'dual'>('native')
+  const [formalityRegister, setFormalityRegister] = useState<'formal' | 'neutral' | 'casual'>('formal')
+  const [codeSwitchIntensity, setCodeSwitchIntensity] = useState<'light' | 'balanced' | 'heavy'>('balanced')
+  const [preservedTermsInput, setPreservedTermsInput] = useState<string>('')
+  const [parallelBilingual, setParallelBilingual] = useState<boolean>(false)
   const [datasetSize, setDatasetSize] = useState(10000)
   const [generationMode, setGenerationMode] = useState<'grounded' | 'synthetic'>('grounded')
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [optimizationStatus, setOptimizationStatus] = useState<string>('Refined (Saved 42% tokens)')
   const [activePreset, setActivePreset] = useState<string>('aikosh-tax')
   const [idealSamples, setIdealSamples] = useState<Array<{ instruction: string; response: string }>>([])
+
+  // Live Tokenizer Fertility Estimation
+  const isIndicOrHinglish = ['hi', 'hinglish', 'indic_multilingual', 'ta', 'te', 'bn', 'mr', 'gu', 'kn', 'ml', 'pa'].includes(language)
+  const estLlama3Fertility = isIndicOrHinglish ? (scriptMode === 'romanized' || language === 'hinglish' ? 1.55 : 3.65) : 1.25
+  const estSarvamFertility = isIndicOrHinglish ? (scriptMode === 'romanized' || language === 'hinglish' ? 1.32 : 1.28) : 1.24
+  const estSavings = Math.round((1 - estSarvamFertility / estLlama3Fertility) * 100)
 
   // Launch job
   const handleGenerate = async () => {
@@ -116,12 +133,22 @@ function StudioContent() {
           response: s.response.trim(),
         }))
 
+      const preservedTerms = preservedTermsInput
+        .split(',')
+        .map((t) => t.trim())
+        .filter(Boolean)
+
       const payload: Record<string, any> = {
         target_domain: prompt.trim() || targetDomain,
         dataset_name: targetDomain,
         dataset_type: datasetType,
         instruction_format: instructionFormat,
         language: language,
+        script_mode: scriptMode,
+        formality_register: formalityRegister,
+        code_switch_intensity: codeSwitchIntensity,
+        preserved_terms: preservedTerms,
+        parallel_bilingual: parallelBilingual,
         dataset_size: datasetSize,
         quality_level: 'standard',
         generation_mode: generationMode === 'grounded' ? 'strict_source' : 'synthetic',
@@ -201,6 +228,18 @@ function StudioContent() {
                   setDatasetType(preset.type)
                   if ((preset as any).language) {
                     setLanguage((preset as any).language)
+                  }
+                  if ((preset as any).scriptMode) {
+                    setScriptMode((preset as any).scriptMode)
+                  }
+                  if ((preset as any).formalityRegister) {
+                    setFormalityRegister((preset as any).formalityRegister)
+                  }
+                  if ((preset as any).preservedTerms) {
+                    setPreservedTermsInput(((preset as any).preservedTerms || []).join(', '))
+                  }
+                  if ((preset as any).parallelBilingual !== undefined) {
+                    setParallelBilingual(Boolean((preset as any).parallelBilingual))
                   }
                 }}
                 className={clsx(
@@ -453,6 +492,98 @@ function StudioContent() {
                   <option value="ja">Japanese (日本語)</option>
                   <option value="ar">Arabic (العربية)</option>
                 </select>
+              </div>
+
+              {/* Script & Orthography */}
+              <div>
+                <label className="text-[10px] font-mono uppercase text-[#94a3b8] block mb-1">
+                  Script & Orthography
+                </label>
+                <select
+                  value={scriptMode}
+                  onChange={(e) => setScriptMode(e.target.value as any)}
+                  className="w-full bg-[#0a0a0f] border border-[#272738] rounded p-2 text-xs font-mono text-white focus:outline-none"
+                >
+                  <option value="native">Native Script (Devanagari, Tamil, etc.)</option>
+                  <option value="romanized">Romanized / Phonetic (Latin Script)</option>
+                  <option value="dual">Dual-Script (Parallel Native + Latin)</option>
+                </select>
+              </div>
+
+              {/* Formality Register & Honorifics */}
+              <div>
+                <label className="text-[10px] font-mono uppercase text-[#94a3b8] block mb-1">
+                  Register & Honorifics
+                </label>
+                <select
+                  value={formalityRegister}
+                  onChange={(e) => setFormalityRegister(e.target.value as any)}
+                  className="w-full bg-[#0a0a0f] border border-[#272738] rounded p-2 text-xs font-mono text-white focus:outline-none"
+                >
+                  <option value="formal">Formal / Honorific (आप / Respectful)</option>
+                  <option value="neutral">Professional Neutral</option>
+                  <option value="casual">Casual / Colloquial (तुम / Peer)</option>
+                </select>
+              </div>
+
+              {/* Code-Switching Intensity */}
+              {(language === 'hinglish' || language === 'indic_multilingual') && (
+                <div>
+                  <label className="text-[10px] font-mono uppercase text-[#94a3b8] block mb-1">
+                    Code-Switching Intensity
+                  </label>
+                  <select
+                    value={codeSwitchIntensity}
+                    onChange={(e) => setCodeSwitchIntensity(e.target.value as any)}
+                    className="w-full bg-[#0a0a0f] border border-[#272738] rounded p-2 text-xs font-mono text-white focus:outline-none"
+                  >
+                    <option value="light">Light (80% Vernacular + English technical terms)</option>
+                    <option value="balanced">Balanced (50/50 Conversational mixing)</option>
+                    <option value="heavy">Heavy (80% English + Vernacular discourse markers)</option>
+                  </select>
+                </div>
+              )}
+
+              {/* Preserved Domain Terms / Glossary */}
+              <div>
+                <label className="text-[10px] font-mono uppercase text-[#94a3b8] block mb-1">
+                  Preserved Domain Terms (Do Not Translate)
+                </label>
+                <input
+                  type="text"
+                  value={preservedTermsInput}
+                  onChange={(e) => setPreservedTermsInput(e.target.value)}
+                  placeholder="e.g. ITC, GSTR-3B, Challan, TDS, API"
+                  className="w-full bg-[#0a0a0f] border border-[#272738] rounded p-2 text-xs font-mono text-white focus:outline-none placeholder:text-[#55556a]"
+                />
+              </div>
+
+              {/* Parallel Bilingual Bitext Output Mode */}
+              <div className="flex items-center justify-between p-2 rounded bg-[#0e0e13] border border-[#1c1c28]">
+                <div>
+                  <div className="text-xs font-mono text-white font-medium">Parallel Bilingual Bitext</div>
+                  <div className="text-[10px] text-[#94a3b8]">Emit parallel English pairs (instruction_en, response_en)</div>
+                </div>
+                <input
+                  type="checkbox"
+                  checked={parallelBilingual}
+                  onChange={(e) => setParallelBilingual(e.target.checked)}
+                  className="w-4 h-4 accent-[#6366f1] cursor-pointer"
+                />
+              </div>
+
+              {/* Tokenizer Fertility & Efficiency Estimator */}
+              <div className="p-2.5 rounded bg-[#0a0a0f] border border-[#272738] space-y-1.5 font-mono text-[11px]">
+                <div className="flex justify-between items-center">
+                  <span className="text-[#94a3b8] uppercase text-[10px] font-bold">Tokenizer Fertility</span>
+                  <span className={clsx("font-bold px-1.5 py-0.5 rounded text-[10px]", isIndicOrHinglish ? "bg-emerald-950/80 text-[#10b981] border border-emerald-800" : "bg-[#161622] text-[#818cf8]")}>
+                    {isIndicOrHinglish ? `~${estSavings}% Token Savings on Sarvam/Gemma` : "Standard Latin (1.25 tok/word)"}
+                  </span>
+                </div>
+                <div className="flex justify-between text-[10px] text-[#94a3b8]">
+                  <span>Llama-3: <span className="text-white">{estLlama3Fertility} t/w</span></span>
+                  <span>Sarvam / Gemma-2: <span className="text-[#10b981] font-semibold">{estSarvamFertility} t/w</span></span>
+                </div>
               </div>
 
               <div>

@@ -134,4 +134,24 @@ class MultiStageValidator:
             except Exception as e:
                 logger.warning(f"LLM validation request failed (non-fatal): {e}")
 
+        # 4. Multilingual Script Conformity, Preserved Terms & Indic Cultural Safety
+        combined_text = f"{sample.instruction} {sample.response}"
+        meta = sample.metadata or {}
+        language = str(self.config.get("language") or meta.get("language") or "en").lower().strip()
+        script_mode = str(self.config.get("script_mode") or meta.get("script_mode") or "native").lower().strip()
+
+        from core.validation.cultural_guardrails import check_cultural_safety, validate_script_conformity
+
+        # A. Indic Cultural & Communal Safety Guardrail
+        is_culturally_safe, safety_violation = check_cultural_safety(combined_text)
+        if not is_culturally_safe:
+            reasons.append(f"Cultural/Indic safety guardrail triggered: {safety_violation}")
+            return ValidationResult(is_valid=False, score=0.0, reasons=reasons, regenerate_needed=True)
+
+        # B. Script Conformity
+        is_script_valid, script_reason = validate_script_conformity(combined_text, language, script_mode)
+        if not is_script_valid:
+            reasons.append(f"Orthography mismatch: {script_reason}")
+            return ValidationResult(is_valid=False, score=0.2, reasons=reasons, regenerate_needed=True)
+
         return ValidationResult(is_valid=True, score=0.95, reasons=[])

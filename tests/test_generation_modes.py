@@ -269,3 +269,84 @@ async def test_language_prompt_generation_and_metadata():
     assert "Section 16(4)" in sample.response
 
 
+@pytest.mark.asyncio
+async def test_multilingual_advanced_controls_and_cultural_guardrails():
+    """Verify script orthography, formality registers, preserved terms, parallel bitext, and cultural guardrails."""
+    from pipeline.synthetic_generator import _build_language_instruction, SeedlessGenerator
+    from core.validation.cultural_guardrails import check_cultural_safety, validate_script_conformity
+    from core.tokenizer_metrics import estimate_tokenizer_fertility
+    from pipeline.validation import MultiStageValidator
+    from pipeline.construction import ConstructedSample
+    from pipeline.planner import DatasetPlan
+
+    # 1. Test script modes in instruction builder
+    romanized_rule = _build_language_instruction("hi", script_mode="romanized")
+    assert "Latin / Romanized script" in romanized_rule
+    assert "Do NOT use Devanagari" in romanized_rule
+
+    dual_rule = _build_language_instruction("hi", script_mode="dual")
+    assert "instruction_romanized" in dual_rule
+
+    # 2. Test formality register & honorifics
+    formal_rule = _build_language_instruction("hi", formality_register="formal")
+    assert "आप" in formal_rule
+    assert "honorific" in formal_rule.lower()
+
+    casual_rule = _build_language_instruction("hi", formality_register="casual")
+    assert "तुम" in casual_rule
+
+    # 3. Test code-switching intensity
+    light_rule = _build_language_instruction("hinglish", code_switch_intensity="light")
+    assert "predominantly Hindi (80%)" in light_rule
+
+    heavy_rule = _build_language_instruction("hinglish", code_switch_intensity="heavy")
+    assert "predominantly English (80%)" in heavy_rule
+
+    # 4. Test preserved terms and parallel bilingual mode
+    glossary_rule = _build_language_instruction(
+        "hi",
+        preserved_terms=["ITC", "GSTR-3B", "Challan"],
+        parallel_bilingual=True
+    )
+    assert "'ITC'" in glossary_rule
+    assert "'GSTR-3B'" in glossary_rule
+    assert "instruction_en" in glossary_rule
+
+    # 5. Test Cultural Guardrails
+    is_safe, violation = check_cultural_safety("This is a clean discussion on taxation.")
+    assert is_safe is True
+    assert violation is None
+
+    is_unsafe, violation = check_cultural_safety("Tu neech jaati ka hai aur chamar jaisa baat karta hai.")
+    assert is_unsafe is False
+    assert "discriminatory or communal slur" in violation.lower()
+
+    # 6. Test Script Conformity Validator
+    valid_dev, _ = validate_script_conformity("जीएसटी चालान कैसे भरें?", "hi", "native")
+    assert valid_dev is True
+
+    invalid_dev, reason = validate_script_conformity("GST challan kaise bharein?", "hi", "native")
+    assert invalid_dev is False
+    assert "Devanagari" in reason
+
+    valid_rom, _ = validate_script_conformity("GST challan kaise bharein?", "hi", "romanized")
+    assert valid_rom is True
+
+    # 7. Test MultiStageValidator with Cultural Guardrail
+    validator = MultiStageValidator(AsyncMock(), {"validation_strictness": "standard"})
+    bad_sample = ConstructedSample(
+        instruction="Tell me about this caste",
+        response="Woh neech jaati ke log hain.",
+        metadata={"language": "hi"}
+    )
+    val_result = await validator.validate(bad_sample)
+    assert val_result.is_valid is False
+    assert any("Cultural/Indic safety guardrail" in r for r in val_result.reasons)
+
+    # 8. Test Tokenizer Fertility Metrics
+    fertility = estimate_tokenizer_fertility("hi", "native")
+    assert fertility["reference_llama3_fertility"] > fertility["optimal_fertility"]
+    assert fertility["potential_token_savings_pct"] > 50.0
+
+
+

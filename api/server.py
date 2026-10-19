@@ -2989,6 +2989,16 @@ async def get_metrics_history(time_range: str = Query(default="1h", alias="range
     }
 
 
+@app.get("/metrics/tokenizer-fertility", tags=["Metrics"])
+async def get_tokenizer_fertility_metrics(
+    language: str = Query(default="en"),
+    script_mode: str = Query(default="native"),
+):
+    """Estimate tokenizer fertility and token efficiency across foundation models."""
+    from core.tokenizer_metrics import estimate_tokenizer_fertility
+    return estimate_tokenizer_fertility(language=language, script_mode=script_mode)
+
+
 @app.get("/", tags=["Root"])
 async def root():
     """Root endpoint."""

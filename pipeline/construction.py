@@ -240,6 +240,11 @@ class ConstructionPipeline:
             "domain": str(intent.domain or "")[:240],
             "modality": str(intent.modality or "")[:80],
             "language": configured_language,
+            "script_mode": str(self.config.get("script_mode", "native")),
+            "formality_register": str(self.config.get("formality_register", "formal")),
+            "code_switch_intensity": str(self.config.get("code_switch_intensity", "balanced")),
+            "preserved_terms": self.config.get("preserved_terms", []),
+            "parallel_bilingual": self.config.get("parallel_bilingual", False),
             "key_entities": [str(value)[:120] for value in (intent.key_entities or [])[:12]],
             "constraints": [str(value)[:240] for value in (intent.constraints or [])[:12]],
             "optimized_search_queries": [str(value)[:200] for value in (intent.specialized_queries or [])[:10]],
@@ -326,17 +331,15 @@ class ConstructionPipeline:
                     .replace(">", "\\u003e")
                 )
 
-                target_lang = str(self.config.get("language", "en")).lower().strip()
-                if target_lang in ("hi", "hindi"):
-                    lang_rule_line = "7. Write instructions and responses strictly in Hindi (Devanagari script).\n"
-                elif target_lang in ("hinglish", "hi-en", "en-hi"):
-                    lang_rule_line = "7. Write instructions and responses in natural Hinglish (code-switched Hindi + English in Latin script).\n"
-                elif target_lang in ("indic_multilingual", "indic"):
-                    lang_rule_line = "7. Write instructions and responses in an appropriate Indic language or Indic-English code-switched format.\n"
-                elif target_lang not in ("en", "english", ""):
-                    lang_rule_line = f"7. Write instructions and responses strictly in {target_lang}.\n"
-                else:
-                    lang_rule_line = ""
+                from pipeline.synthetic_generator import _build_language_instruction
+                lang_rules = _build_language_instruction(
+                    language=self.config.get("language", "en"),
+                    script_mode=self.config.get("script_mode", "native"),
+                    formality_register=self.config.get("formality_register", "formal"),
+                    code_switch_intensity=self.config.get("code_switch_intensity", "balanced"),
+                    preserved_terms=self.config.get("preserved_terms", []),
+                    parallel_bilingual=self.config.get("parallel_bilingual", False),
+                )
 
                 prompt = f"""You are an AI dataset engineering assistant. Given the user request and reference text, generate exactly 2 high-quality, diverse instruction-response training pairs for an AI assistant{domain_str}.
 
@@ -347,7 +350,8 @@ class ConstructionPipeline:
 4. The instruction must be a natural, realistic user prompt asking about concepts supported by the reference text. DO NOT mention "news" unless the text is about news. DO NOT refer to a "chunk", "text", or "reference document".
 5. The response must answer using facts supported by the reference text only. Do not make up facts; if the request asks for details absent from the source, narrow the question to supported details.
 6. Output strictly in JSON format as a list of objects with "instruction" and "response" strings.
-{lang_rule_line}</rules>
+{lang_rules}
+</rules>
 
 <user_request_json>
 {request_brief}
@@ -423,6 +427,11 @@ Output strictly in JSON format as a list of objects:
                                     "type": "llm_generated",
                                     "domain": target_domain,
                                     "language": self.config.get("language", "en"),
+                                    "script_mode": self.config.get("script_mode", "native"),
+                                    "formality_register": self.config.get("formality_register", "formal"),
+                                    "code_switch_intensity": self.config.get("code_switch_intensity", "balanced"),
+                                    "preserved_terms": self.config.get("preserved_terms", []),
+                                    "parallel_bilingual": self.config.get("parallel_bilingual", False),
                                 },
                                 difficulty_tier=difficulty,
                                 curriculum_order=i
