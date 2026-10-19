@@ -759,11 +759,33 @@ export default function DatasetsPage() {
                     <div key={i} className="p-3.5 bg-[#12121a] rounded-xl border border-[#272738] text-xs space-y-2">
                       <div className="flex items-center justify-between text-[10px] text-[#94a3b8] font-mono">
                         <span className="text-[#10b981] font-semibold">Record #{i + 1}</span>
-                        {rec.difficulty_tier !== undefined && (
-                          <Badge variant="outline" className="text-[9px] px-1.5 py-0 font-mono rounded-full border-[#272738] text-indigo-300">
-                            Tier {rec.difficulty_tier}
-                          </Badge>
-                        )}
+                        <div className="flex items-center gap-1.5 flex-wrap">
+                          {rec.metadata?.language && (
+                            <Badge variant="outline" className="text-[9px] px-1.5 py-0 font-mono rounded-full border-[#272738] text-purple-300">
+                              {rec.metadata.language}
+                            </Badge>
+                          )}
+                          {rec.metadata?.regional_dialect && rec.metadata.regional_dialect !== 'standard' && (
+                            <Badge variant="outline" className="text-[9px] px-1.5 py-0 font-mono rounded-full border-[#272738] text-indigo-300">
+                              {rec.metadata.regional_dialect}
+                            </Badge>
+                          )}
+                          {rec.metadata?.parallel_en && (
+                            <Badge variant="outline" className="text-[9px] px-1.5 py-0 font-mono rounded-full border-indigo-900/40 text-indigo-300 bg-indigo-950/20">
+                              Bitext
+                            </Badge>
+                          )}
+                          {rec.metadata?.rejected_response && (
+                            <Badge variant="outline" className="text-[9px] px-1.5 py-0 font-mono rounded-full border-rose-900/40 text-rose-300 bg-rose-950/20">
+                              DPO Pair
+                            </Badge>
+                          )}
+                          {rec.difficulty_tier !== undefined && (
+                            <Badge variant="outline" className="text-[9px] px-1.5 py-0 font-mono rounded-full border-[#272738] text-indigo-300">
+                              Tier {rec.difficulty_tier}
+                            </Badge>
+                          )}
+                        </div>
                       </div>
                       {rec.instruction || rec.prompt ? (
                         <div className="space-y-1">
@@ -781,6 +803,30 @@ export default function DatasetsPage() {
                           </p>
                         </div>
                       ) : null}
+                      {rec.metadata?.rejected_response && (
+                        <div className="space-y-1 pt-1 border-t border-[#272738]">
+                          <p className="text-[10px] font-mono font-bold uppercase tracking-wider text-rose-400">DPO Rejected Baseline:</p>
+                          <p className="bg-[#0a0a0f] p-2.5 rounded-lg text-rose-200/90 text-xs font-sans whitespace-pre-wrap border border-rose-950">
+                            {rec.metadata.rejected_response}
+                          </p>
+                        </div>
+                      )}
+                      {rec.metadata?.parallel_en && (
+                        <div className="space-y-1 pt-1 border-t border-[#272738]">
+                          <div className="flex items-center justify-between">
+                            <p className="text-[10px] font-mono font-bold uppercase tracking-wider text-indigo-400">Parallel English Bitext:</p>
+                            {rec.metadata.fidelity_metrics?.chrf_score && (
+                              <span className="text-[9px] font-mono text-indigo-300">
+                                chrF++: {rec.metadata.fidelity_metrics.chrf_score}%
+                              </span>
+                            )}
+                          </div>
+                          <div className="bg-[#0a0a0f] p-2.5 rounded-lg text-xs font-sans space-y-1 border border-[#272738]">
+                            <p className="text-[#94a3b8] font-mono text-[11px]"><span className="text-white font-medium">Prompt:</span> {rec.metadata.parallel_en.instruction}</p>
+                            <p className="text-[#f1f5f9]"><span className="text-white font-mono text-[11px] font-medium">Response:</span> {rec.metadata.parallel_en.response}</p>
+                          </div>
+                        </div>
+                      )}
                       {!rec.instruction && !rec.prompt && !rec.response && !rec.output ? (
                         <pre className="text-[11px] font-mono text-[#f1f5f9] bg-[#0a0a0f] p-3 rounded-lg overflow-x-auto whitespace-pre border border-[#272738]">
                           {JSON.stringify(rec, null, 2)}
