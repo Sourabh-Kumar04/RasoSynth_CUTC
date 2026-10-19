@@ -8,7 +8,7 @@ semantic awareness, and intelligent policy management.
 from abc import ABC, abstractmethod
 from typing import Dict, List, Optional, Any, Callable, Union, Tuple
 from dataclasses import dataclass, field
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from enum import Enum
 import asyncio
 import hashlib
@@ -114,7 +114,8 @@ class CachePolicy:
         if not self.adaptive_enabled:
             return self.base_ttl_seconds
 
-        time_since_access = (datetime.utcnow() - last_access).total_seconds()
+        la = last_access if last_access.tzinfo is not None else last_access.replace(tzinfo=timezone.utc)
+        time_since_access = (datetime.now(timezone.utc) - la).total_seconds()
         access_frequency = access_count / max(time_since_access, 1)
 
         # Calculate usage factor
@@ -148,8 +149,8 @@ class CacheEntry:
     key: str
     value: Any
     category: CacheCategory = CacheCategory.METADATA
-    created_at: datetime = field(default_factory=datetime.utcnow)
-    last_access: datetime = field(default_factory=datetime.utcnow)
+    created_at: datetime = field(default_factory=lambda: datetime.now(timezone.utc))
+    last_access: datetime = field(default_factory=lambda: datetime.now(timezone.utc))
     access_count: int = 0
     size_bytes: int = 0
     compressed: bool = False
@@ -166,12 +167,13 @@ class CacheEntry:
 
     def is_expired(self) -> bool:
         """Check if entry is expired."""
-        age = (datetime.utcnow() - self.created_at).total_seconds()
+        ca = self.created_at if self.created_at.tzinfo is not None else self.created_at.replace(tzinfo=timezone.utc)
+        age = (datetime.now(timezone.utc) - ca).total_seconds()
         return age > self.ttl_seconds
 
     def access(self) -> None:
         """Record an access to this entry."""
-        self.last_access = datetime.utcnow()
+        self.last_access = datetime.now(timezone.utc)
         self.access_count += 1
 
     def calculate_adaptive_ttl(self, policy: CachePolicy) -> float:

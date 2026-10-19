@@ -6,7 +6,7 @@ Dynamic execution graph with agent nodes, weighted edges, and topological execut
 
 from typing import Dict, List, Optional, Any, Set, Callable
 from dataclasses import dataclass, field
-from datetime import datetime
+from datetime import datetime, timezone
 from enum import Enum
 import uuid
 import asyncio
@@ -88,7 +88,7 @@ class ExecutionPlan:
     estimated_duration_ms: float = 0.0
     required_capabilities: Set[str] = field(default_factory=set)
     resource_requirements: Dict[str, Any] = field(default_factory=dict)
-    created_at: datetime = field(default_factory=datetime.utcnow)
+    created_at: datetime = field(default_factory=lambda: datetime.now(timezone.utc))
     metadata: Dict[str, Any] = field(default_factory=dict)
 
     def get_next_ready_nodes(self, completed: Set[str]) -> List[str]:
@@ -388,7 +388,7 @@ class GraphExecutor:
             raise ValueError(f"Node {node_id} not found")
 
         node.status = NodeStatus.RUNNING
-        node.start_time = datetime.utcnow()
+        node.start_time = datetime.now(timezone.utc)
 
         try:
             result = await executor_func(node_id, input_data)
@@ -401,7 +401,7 @@ class GraphExecutor:
             node.error = str(e)
             raise
         finally:
-            node.end_time = datetime.utcnow()
+            node.end_time = datetime.now(timezone.utc)
 
     def cancel(self, node_id: str) -> bool:
         """Cancel a running node."""

@@ -6,7 +6,7 @@ for monitoring and observability.
 """
 
 from typing import Dict, List, Optional, Any, Set
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from dataclasses import dataclass, field
 from collections import defaultdict
 import asyncio
@@ -33,7 +33,7 @@ class APIMetrics:
         self._validation_counts: Dict[str, int] = defaultdict(int)
         self._validation_latencies: List[float] = []
 
-        self._start_time = datetime.utcnow()
+        self._start_time = datetime.now(timezone.utc)
 
     def record_request(
         self,
@@ -61,7 +61,8 @@ class APIMetrics:
 
     def get_request_rate(self, endpoint: Optional[str] = None) -> float:
         """Get requests per second."""
-        uptime = (datetime.utcnow() - self._start_time).total_seconds()
+        st = self._start_time if self._start_time.tzinfo is not None else self._start_time.replace(tzinfo=timezone.utc)
+        uptime = (datetime.now(timezone.utc) - st).total_seconds()
         if uptime == 0:
             return 0.0
 
@@ -130,8 +131,9 @@ class APIMetrics:
 
     def get_summary(self) -> Dict[str, Any]:
         """Get metrics summary."""
+        st = self._start_time if self._start_time.tzinfo is not None else self._start_time.replace(tzinfo=timezone.utc)
         return {
-            "uptime_seconds": (datetime.utcnow() - self._start_time).total_seconds(),
+            "uptime_seconds": (datetime.now(timezone.utc) - st).total_seconds(),
             "total_requests": sum(self._request_counts.values()),
             "total_errors": sum(self._error_counts.values()),
             "error_rate_percent": self.get_error_rate(),
@@ -358,12 +360,12 @@ class MetricsCollector:
         self.orchestration_metrics = OrchestrationMetrics()
 
         self._export_interval_seconds = 60
-        self._last_export = datetime.utcnow()
+        self._last_export = datetime.now(timezone.utc)
 
     async def export_metrics(self) -> Dict[str, Any]:
         """Export all metrics."""
         return {
-            "timestamp": datetime.utcnow().isoformat(),
+            "timestamp": datetime.now(timezone.utc).isoformat(),
             "api": self.api_metrics.get_summary(),
             "validation": self.validation_metrics.get_summary(),
             "orchestration": self.orchestration_metrics.get_summary()

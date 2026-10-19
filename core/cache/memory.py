@@ -7,7 +7,7 @@ workflow synchronization, and distributed computation coordination.
 
 from typing import Dict, List, Optional, Any, Callable, Set, Tuple
 from dataclasses import dataclass, field
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from enum import Enum
 import asyncio
 import json
@@ -40,7 +40,8 @@ class SharedMemoryEntry:
 
     def is_expired(self) -> bool:
         """Check if entry is expired."""
-        return (datetime.utcnow() - self.created_at).total_seconds() > self.ttl_seconds
+        created = self.created_at if self.created_at.tzinfo is not None else self.created_at.replace(tzinfo=timezone.utc)
+        return (datetime.now(timezone.utc) - created).total_seconds() > self.ttl_seconds
 
 
 class AgentSharedMemory:
@@ -71,7 +72,7 @@ class AgentSharedMemory:
             value=value,
             region=region,
             owner=owner,
-            created_at=datetime.utcnow(),
+            created_at=datetime.now(timezone.utc),
             ttl_seconds=ttl,
             metadata=metadata or {}
         )
@@ -183,7 +184,7 @@ class AgentSharedMemory:
             "event_type": event_type,
             "key": key,
             "region": region.value,
-            "timestamp": datetime.utcnow().isoformat()
+            "timestamp": datetime.now(timezone.utc).isoformat()
         })
         await self.redis.publish(channel, message)
 
@@ -212,7 +213,7 @@ class DistributedStateManager:
             "state_id": state_id,
             "data": initial,
             "agents": agents,
-            "created_at": datetime.utcnow().isoformat(),
+            "created_at": datetime.now(timezone.utc).isoformat(),
             "version": 1
         }
 
@@ -250,7 +251,7 @@ class DistributedStateManager:
 
         current["version"] += 1
         current["last_update_agent"] = agent_id
-        current["last_updated"] = datetime.utcnow().isoformat()
+        current["last_updated"] = datetime.now(timezone.utc).isoformat()
 
         await self.redis.set(
             f"state:{state_id}",
@@ -334,7 +335,7 @@ class WorkflowCoordinator:
             "participants": participants,
             "status": "created",
             "current_step": 0,
-            "created_at": datetime.utcnow().isoformat(),
+            "created_at": datetime.now(timezone.utc).isoformat(),
             "started_at": None,
             "completed_at": None,
             "results": {}
@@ -356,7 +357,7 @@ class WorkflowCoordinator:
             return False
 
         workflow["status"] = "running"
-        workflow["started_at"] = datetime.utcnow().isoformat()
+        workflow["started_at"] = datetime.now(timezone.utc).isoformat()
 
         await self._save_workflow(workflow)
         return True
@@ -388,7 +389,7 @@ class WorkflowCoordinator:
         if step_index < len(workflow["steps"]):
             workflow["steps"][step_index]["result"] = result
             workflow["steps"][step_index]["completed_by"] = agent_id
-            workflow["steps"][step_index]["completed_at"] = datetime.utcnow().isoformat()
+            workflow["steps"][step_index]["completed_at"] = datetime.now(timezone.utc).isoformat()
 
         workflow["results"][f"step_{step_index}"] = result
         workflow["current_step"] = step_index + 1
@@ -407,7 +408,7 @@ class WorkflowCoordinator:
             return False
 
         workflow["status"] = "completed"
-        workflow["completed_at"] = datetime.utcnow().isoformat()
+        workflow["completed_at"] = datetime.now(timezone.utc).isoformat()
         workflow["final_result"] = final_result
 
         await self._save_workflow(workflow)
@@ -445,7 +446,7 @@ class PipelineCheckpointManager:
             "pipeline_id": pipeline_id,
             "stage": stage,
             "data": data,
-            "created_at": datetime.utcnow().isoformat(),
+            "created_at": datetime.now(timezone.utc).isoformat(),
             "metadata": metadata or {}
         }
 

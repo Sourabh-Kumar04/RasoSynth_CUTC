@@ -7,7 +7,7 @@ distributed Ray cluster monitoring.
 
 from typing import Dict, List, Optional, Any
 from dataclasses import dataclass, field
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from enum import Enum
 import asyncio
 
@@ -31,7 +31,7 @@ class GPUInfo:
     temperature_celsius: float = 0.0
     power_watts: float = 0.0
     status: GPUStatus = GPUStatus.UNKNOWN
-    last_updated: datetime = field(default_factory=datetime.utcnow)
+    last_updated: datetime = field(default_factory=lambda: datetime.now(timezone.utc))
 
     def memory_percent(self) -> float:
         """Calculate memory usage percentage."""
@@ -50,7 +50,7 @@ class InferenceMetrics:
     output_tokens: int
     inference_time_ms: float
     throughput_tokens_per_sec: float
-    timestamp: datetime = field(default_factory=datetime.utcnow)
+    timestamp: datetime = field(default_factory=lambda: datetime.now(timezone.utc))
 
 
 @dataclass
@@ -60,7 +60,7 @@ class VRAMAllocation:
     agent_id: str
     allocated_gb: float
     requested_gb: float
-    timestamp: datetime = field(default_factory=datetime.utcnow)
+    timestamp: datetime = field(default_factory=lambda: datetime.now(timezone.utc))
 
 
 class GPUMonitor:
@@ -114,7 +114,7 @@ class GPUMonitor:
                         temperature_celsius=0,    # Would use nvidia-smi
                         power_watts=0,           # Would use nvidia-smi
                         status=self._calculate_status(memory_allocated, props.total_memory / 1e9),
-                        last_updated=datetime.utcnow()
+                        last_updated=datetime.now(timezone.utc)
                     )
 
                     self._gpus[i] = gpu_info
@@ -342,13 +342,13 @@ class DistributedWorkerMonitor:
             "current_task": None,
             "tasks_completed": 0,
             "tasks_failed": 0,
-            "last_heartbeat": datetime.utcnow()
+            "last_heartbeat": datetime.now(timezone.utc)
         }
 
     async def heartbeat(self, worker_id: str) -> None:
         """Worker heartbeat."""
         if worker_id in self._workers:
-            self._workers[worker_id]["last_heartbeat"] = datetime.utcnow()
+            self._workers[worker_id]["last_heartbeat"] = datetime.now(timezone.utc)
 
     def get_idle_workers(self) -> List[str]:
         """Get idle workers."""

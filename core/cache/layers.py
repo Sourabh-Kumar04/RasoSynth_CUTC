@@ -7,7 +7,7 @@ and semantic vector (L4) cache layers with intelligent routing.
 
 from typing import Dict, List, Optional, Any, Callable, Tuple
 from dataclasses import dataclass, field
-from datetime import datetime
+from datetime import datetime, timezone
 from enum import Enum
 import asyncio
 import hashlib
@@ -430,7 +430,7 @@ class PersistentCache:
                 f.write(data)
 
             self._index[key] = {
-                "created_at": datetime.utcnow().isoformat(),
+                "created_at": datetime.now(timezone.utc).isoformat(),
                 "ttl_seconds": ttl,
                 "size_bytes": len(data),
                 **metadata
@@ -467,8 +467,10 @@ class PersistentCache:
     def _is_expired(self, metadata: Dict) -> bool:
         """Check if entry is expired."""
         created = datetime.fromisoformat(metadata["created_at"])
+        if created.tzinfo is None:
+            created = created.replace(tzinfo=timezone.utc)
         ttl = metadata.get("ttl_seconds", 86400)
-        return (datetime.utcnow() - created).total_seconds() > ttl
+        return (datetime.now(timezone.utc) - created).total_seconds() > ttl
 
     async def _compress(self, data: bytes) -> bytes:
         """Compress data."""

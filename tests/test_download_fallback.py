@@ -13,7 +13,7 @@ from core.config import Settings
 from core.db import AsyncDB
 from core.orchestrator_core import DatasetOrchestrator, Job, JobStatus
 from unittest.mock import Mock, AsyncMock, patch
-from datetime import datetime
+from datetime import datetime, timezone
 
 
 class MockSample:
@@ -86,7 +86,7 @@ async def test_download_from_db():
 
         orchestrator.active_jobs[job_id] = Job(
             id=job_id, status=JobStatus.RUNNING,
-            created_at=datetime.utcnow(), updated_at=datetime.utcnow(),
+            created_at=datetime.now(timezone.utc), updated_at=datetime.now(timezone.utc),
             current_stage="export", progress=0.9, config={},
         )
 

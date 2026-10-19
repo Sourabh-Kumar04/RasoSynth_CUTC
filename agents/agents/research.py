@@ -6,7 +6,7 @@ for dataset engineering workflows.
 """
 
 from typing import Dict, List, Optional, Any
-from datetime import datetime
+from datetime import datetime, timezone
 
 from agents.base import Agent, AgentConfig, AgentType, AgentState, TaskResult, AgentContext
 
@@ -31,7 +31,7 @@ class ResearchAgent(Agent):
 
     async def execute(self, task: Any, context: AgentContext) -> TaskResult:
         """Execute research analysis on dataset requirements."""
-        start_time = datetime.utcnow()
+        start_time = datetime.now(timezone.utc)
         self.update_state(AgentState.EXECUTING)
 
         try:
@@ -51,10 +51,10 @@ class ResearchAgent(Agent):
             if domain and domain not in self._analyzed_domains:
                 self._analyzed_domains.append(domain)
 
-            execution_time = (datetime.utcnow() - start_time).total_seconds() * 1000
+            execution_time = (datetime.now(timezone.utc) - start_time).total_seconds() * 1000
 
             return TaskResult(
-                task_id=task_input.get("task_id", str(datetime.utcnow().timestamp())),
+                task_id=task_input.get("task_id", str(datetime.now(timezone.utc).timestamp())),
                 agent_id=self.agent_id,
                 success=True,
                 output=results,
@@ -68,11 +68,11 @@ class ResearchAgent(Agent):
 
         except Exception as e:
             return TaskResult(
-                task_id=getattr(task, "get", lambda k, d=None: d)(task, "task_id", str(datetime.utcnow().timestamp())),
+                task_id=getattr(task, "get", lambda k, d=None: d)(task, "task_id", str(datetime.now(timezone.utc).timestamp())),
                 agent_id=self.agent_id,
                 success=False,
                 error=str(e),
-                execution_time_ms=(datetime.utcnow() - start_time).total_seconds() * 1000
+                execution_time_ms=(datetime.now(timezone.utc) - start_time).total_seconds() * 1000
             )
         finally:
             self.update_state(AgentState.IDLE)

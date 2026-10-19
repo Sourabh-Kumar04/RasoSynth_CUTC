@@ -195,7 +195,7 @@ class TestExportPersistence:
         """Test that _export_node creates dataset and sample records."""
         from unittest.mock import patch, AsyncMock, Mock
         from core.orchestrator_core import Job, JobStatus
-        from datetime import datetime
+        from datetime import datetime, timezone
         from api.websocket_manager import MessageType
 
         # Create ws_manager for this test
@@ -207,7 +207,7 @@ class TestExportPersistence:
         job_id = "test-job-export-456"
         orchestrator.active_jobs[job_id] = Job(
             id=job_id, status=JobStatus.RUNNING,
-            created_at=datetime.utcnow(), updated_at=datetime.utcnow(),
+            created_at=datetime.now(timezone.utc), updated_at=datetime.now(timezone.utc),
             current_stage="export", progress=0.9, config={"target_domain": "test"},
         )
 
@@ -277,7 +277,7 @@ class TestWebSocketIntegration:
         """Test _update_job_status broadcasts via ws_manager."""
         from unittest.mock import AsyncMock, MagicMock
         from core.orchestrator_core import Job, JobStatus
-        from datetime import datetime
+        from datetime import datetime, timezone
         from api.websocket_manager import MessageType
 
         ws_manager = MagicMock()
@@ -289,7 +289,7 @@ class TestWebSocketIntegration:
         job_id = "test-ws-broadcast"
         orchestrator.active_jobs[job_id] = Job(
             id=job_id, status=JobStatus.RUNNING,
-            created_at=datetime.utcnow(), updated_at=datetime.utcnow(),
+            created_at=datetime.now(timezone.utc), updated_at=datetime.now(timezone.utc),
             current_stage="export", progress=0.0, config={},
         )
 

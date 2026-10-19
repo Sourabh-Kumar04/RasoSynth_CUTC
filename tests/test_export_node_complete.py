@@ -4,7 +4,7 @@
 import asyncio
 import os
 import sys
-from datetime import datetime
+from datetime import datetime, timezone
 from unittest.mock import Mock, AsyncMock, patch
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
@@ -88,8 +88,8 @@ async def test_export_node_with_db():
         orchestrator.active_jobs[job_id] = OrchestratorJob(
             id=job_id,
             status=JobStatus.RUNNING,
-            created_at=datetime.utcnow(),
-            updated_at=datetime.utcnow(),
+            created_at=datetime.now(timezone.utc),
+            updated_at=datetime.now(timezone.utc),
             current_stage="export",
             progress=0.9,
             config=job_data["config"],

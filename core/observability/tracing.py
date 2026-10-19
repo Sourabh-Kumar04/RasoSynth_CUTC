@@ -7,7 +7,7 @@ and AI workflow introspection.
 
 from typing import Dict, List, Optional, Any, Callable
 from dataclasses import dataclass, field
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from enum import Enum
 import asyncio
 import json
@@ -45,9 +45,11 @@ class Span:
 
     def duration_ms(self) -> float:
         """Calculate span duration."""
+        st = self.start_time if self.start_time.tzinfo is not None else self.start_time.replace(tzinfo=timezone.utc)
         if self.end_time:
-            return (self.end_time - self.start_time).total_seconds() * 1000
-        return (datetime.utcnow() - self.start_time).total_seconds() * 1000
+            et = self.end_time if self.end_time.tzinfo is not None else self.end_time.replace(tzinfo=timezone.utc)
+            return (et - st).total_seconds() * 1000
+        return (datetime.now(timezone.utc) - st).total_seconds() * 1000
 
     def add_attribute(self, key: str, value: Any) -> None:
         """Add an attribute to the span."""
@@ -57,7 +59,7 @@ class Span:
         """Add an event to the span."""
         self.events.append({
             "name": name,
-            "timestamp": datetime.utcnow().isoformat(),
+            "timestamp": datetime.now(timezone.utc).isoformat(),
             "attributes": attributes or {}
         })
 
@@ -69,7 +71,7 @@ class Span:
 
     def finish(self) -> None:
         """Finish the span."""
-        self.end_time = datetime.utcnow()
+        self.end_time = datetime.now(timezone.utc)
         if self.status == SpanStatus.UNSET:
             self.status = SpanStatus.OK
 
@@ -117,7 +119,7 @@ class Trace:
     """A complete trace."""
     trace_id: str
     spans: List[Span] = field(default_factory=list)
-    start_time: datetime = field(default_factory=datetime.utcnow)
+    start_time: datetime = field(default_factory=lambda: datetime.now(timezone.utc))
     end_time: Optional[datetime] = None
     metadata: Dict[str, Any] = field(default_factory=dict)
 
@@ -126,8 +128,11 @@ class Trace:
         if not self.spans:
             return 0.0
 
-        start = min(s.start_time for s in self.spans)
-        end = max(s.end_time or datetime.utcnow() for s in self.spans)
+        def _to_utc(dt: datetime) -> datetime:
+            return dt if dt.tzinfo is not None else dt.replace(tzinfo=timezone.utc)
+
+        start = min(_to_utc(s.start_time) for s in self.spans)
+        end = max(_to_utc(s.end_time) if s.end_time else datetime.now(timezone.utc) for s in self.spans)
         return (end - start).total_seconds() * 1000
 
     def get_span(self, span_id: str) -> Optional[Span]:
@@ -213,7 +218,7 @@ class DistributedTracer:
             span_id=str(uuid.uuid4()),
             trace_id=trace_id,
             name=name,
-            start_time=datetime.utcnow(),
+            start_time=datetime.now(timezone.utc),
             parent_span_id=parent_span_id,
             span_type=span_type,
             attributes=attributes or {},

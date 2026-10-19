@@ -6,7 +6,7 @@ content for quality and safety.
 """
 
 from typing import Dict, List, Optional, Any
-from datetime import datetime
+from datetime import datetime, timezone
 
 from agents.base import Agent, AgentConfig, AgentType, AgentState, TaskResult, AgentContext
 
@@ -31,7 +31,7 @@ class SyntheticGenerationAgent(Agent):
 
     async def execute(self, task: Any, context: AgentContext) -> TaskResult:
         """Execute synthetic data generation."""
-        start_time = datetime.utcnow()
+        start_time = datetime.now(timezone.utc)
         self.update_state(AgentState.EXECUTING)
 
         try:
@@ -47,13 +47,13 @@ class SyntheticGenerationAgent(Agent):
             self._generation_history.append({
                 "count": len(generated),
                 "domain": domain,
-                "timestamp": datetime.utcnow().isoformat(),
+                "timestamp": datetime.now(timezone.utc).isoformat(),
             })
 
-            execution_time = (datetime.utcnow() - start_time).total_seconds() * 1000
+            execution_time = (datetime.now(timezone.utc) - start_time).total_seconds() * 1000
 
             return TaskResult(
-                task_id=task_input.get("task_id", str(datetime.utcnow().timestamp())),
+                task_id=task_input.get("task_id", str(datetime.now(timezone.utc).timestamp())),
                 agent_id=self.agent_id,
                 success=True,
                 output={
@@ -72,11 +72,11 @@ class SyntheticGenerationAgent(Agent):
 
         except Exception as e:
             return TaskResult(
-                task_id=str(datetime.utcnow().timestamp()),
+                task_id=str(datetime.now(timezone.utc).timestamp()),
                 agent_id=self.agent_id,
                 success=False,
                 error=str(e),
-                execution_time_ms=(datetime.utcnow() - start_time).total_seconds() * 1000
+                execution_time_ms=(datetime.now(timezone.utc) - start_time).total_seconds() * 1000
             )
         finally:
             self.update_state(AgentState.IDLE)
@@ -98,7 +98,7 @@ class SyntheticGenerationAgent(Agent):
                 "metadata": {
                     "source": "synthetic",
                     "domain": domain,
-                    "generated_at": datetime.utcnow().isoformat(),
+                    "generated_at": datetime.now(timezone.utc).isoformat(),
                 }
             }
             samples.append(sample)
@@ -136,7 +136,7 @@ class ValidationAgent(Agent):
 
     async def execute(self, task: Any, context: AgentContext) -> TaskResult:
         """Execute validation on synthetic data."""
-        start_time = datetime.utcnow()
+        start_time = datetime.now(timezone.utc)
         self.update_state(AgentState.EXECUTING)
 
         try:
@@ -150,13 +150,13 @@ class ValidationAgent(Agent):
                 "samples_count": len(samples),
                 "passed": results["passed"],
                 "failed": results["failed"],
-                "timestamp": datetime.utcnow().isoformat(),
+                "timestamp": datetime.now(timezone.utc).isoformat(),
             })
 
-            execution_time = (datetime.utcnow() - start_time).total_seconds() * 1000
+            execution_time = (datetime.now(timezone.utc) - start_time).total_seconds() * 1000
 
             return TaskResult(
-                task_id=task_input.get("task_id", str(datetime.utcnow().timestamp())),
+                task_id=task_input.get("task_id", str(datetime.now(timezone.utc).timestamp())),
                 agent_id=self.agent_id,
                 success=True,
                 output={
@@ -175,11 +175,11 @@ class ValidationAgent(Agent):
 
         except Exception as e:
             return TaskResult(
-                task_id=str(datetime.utcnow().timestamp()),
+                task_id=str(datetime.now(timezone.utc).timestamp()),
                 agent_id=self.agent_id,
                 success=False,
                 error=str(e),
-                execution_time_ms=(datetime.utcnow() - start_time).total_seconds() * 1000
+                execution_time_ms=(datetime.now(timezone.utc) - start_time).total_seconds() * 1000
             )
         finally:
             self.update_state(AgentState.IDLE)
@@ -241,7 +241,7 @@ class ConsensusAgent(Agent):
 
     async def execute(self, task: Any, context: AgentContext) -> TaskResult:
         """Execute consensus validation with multiple models."""
-        start_time = datetime.utcnow()
+        start_time = datetime.now(timezone.utc)
         self.update_state(AgentState.EXECUTING)
 
         try:
@@ -256,13 +256,13 @@ class ConsensusAgent(Agent):
                 "samples": len(samples),
                 "models": num_models,
                 "agreement_rate": results["agreement_rate"],
-                "timestamp": datetime.utcnow().isoformat(),
+                "timestamp": datetime.now(timezone.utc).isoformat(),
             })
 
-            execution_time = (datetime.utcnow() - start_time).total_seconds() * 1000
+            execution_time = (datetime.now(timezone.utc) - start_time).total_seconds() * 1000
 
             return TaskResult(
-                task_id=task_input.get("task_id", str(datetime.utcnow().timestamp())),
+                task_id=task_input.get("task_id", str(datetime.now(timezone.utc).timestamp())),
                 agent_id=self.agent_id,
                 success=True,
                 output={
@@ -280,11 +280,11 @@ class ConsensusAgent(Agent):
 
         except Exception as e:
             return TaskResult(
-                task_id=str(datetime.utcnow().timestamp()),
+                task_id=str(datetime.now(timezone.utc).timestamp()),
                 agent_id=self.agent_id,
                 success=False,
                 error=str(e),
-                execution_time_ms=(datetime.utcnow() - start_time).total_seconds() * 1000
+                execution_time_ms=(datetime.now(timezone.utc) - start_time).total_seconds() * 1000
             )
         finally:
             self.update_state(AgentState.IDLE)

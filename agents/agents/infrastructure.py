@@ -6,7 +6,7 @@ distribution across platforms.
 """
 
 from typing import Dict, List, Optional, Any
-from datetime import datetime
+from datetime import datetime, timezone
 
 from agents.base import Agent, AgentConfig, AgentType, AgentState, TaskResult, AgentContext
 
@@ -26,7 +26,7 @@ class GPUSchedulingAgent(Agent):
 
     async def execute(self, task: Any, context: AgentContext) -> TaskResult:
         """Execute GPU scheduling optimization."""
-        start_time = datetime.utcnow()
+        start_time = datetime.now(timezone.utc)
         self.update_state(AgentState.EXECUTING)
 
         try:
@@ -41,13 +41,13 @@ class GPUSchedulingAgent(Agent):
                 "tasks_count": len(tasks),
                 "gpus_count": len(available_gpus),
                 "strategy": strategy,
-                "timestamp": datetime.utcnow().isoformat(),
+                "timestamp": datetime.now(timezone.utc).isoformat(),
             })
 
-            execution_time = (datetime.utcnow() - start_time).total_seconds() * 1000
+            execution_time = (datetime.now(timezone.utc) - start_time).total_seconds() * 1000
 
             return TaskResult(
-                task_id=task_input.get("task_id", str(datetime.utcnow().timestamp())),
+                task_id=task_input.get("task_id", str(datetime.now(timezone.utc).timestamp())),
                 agent_id=self.agent_id,
                 success=True,
                 output={
@@ -65,11 +65,11 @@ class GPUSchedulingAgent(Agent):
 
         except Exception as e:
             return TaskResult(
-                task_id=str(datetime.utcnow().timestamp()),
+                task_id=str(datetime.now(timezone.utc).timestamp()),
                 agent_id=self.agent_id,
                 success=False,
                 error=str(e),
-                execution_time_ms=(datetime.utcnow() - start_time).total_seconds() * 1000
+                execution_time_ms=(datetime.now(timezone.utc) - start_time).total_seconds() * 1000
             )
         finally:
             self.update_state(AgentState.IDLE)
@@ -141,7 +141,7 @@ class StorageOptimizationAgent(Agent):
 
     async def execute(self, task: Any, context: AgentContext) -> TaskResult:
         """Execute storage optimization."""
-        start_time = datetime.utcnow()
+        start_time = datetime.now(timezone.utc)
         self.update_state(AgentState.EXECUTING)
 
         try:
@@ -155,10 +155,10 @@ class StorageOptimizationAgent(Agent):
             self._optimization_stats["total_optimized_gb"] += results["original_size_gb"]
             self._optimization_stats["compression_ratio"] = results["compression_ratio"]
 
-            execution_time = (datetime.utcnow() - start_time).total_seconds() * 1000
+            execution_time = (datetime.now(timezone.utc) - start_time).total_seconds() * 1000
 
             return TaskResult(
-                task_id=task_input.get("task_id", str(datetime.utcnow().timestamp())),
+                task_id=task_input.get("task_id", str(datetime.now(timezone.utc).timestamp())),
                 agent_id=self.agent_id,
                 success=True,
                 output={
@@ -178,11 +178,11 @@ class StorageOptimizationAgent(Agent):
 
         except Exception as e:
             return TaskResult(
-                task_id=str(datetime.utcnow().timestamp()),
+                task_id=str(datetime.now(timezone.utc).timestamp()),
                 agent_id=self.agent_id,
                 success=False,
                 error=str(e),
-                execution_time_ms=(datetime.utcnow() - start_time).total_seconds() * 1000
+                execution_time_ms=(datetime.now(timezone.utc) - start_time).total_seconds() * 1000
             )
         finally:
             self.update_state(AgentState.IDLE)
@@ -239,7 +239,7 @@ class DistributionAgent(Agent):
 
     async def execute(self, task: Any, context: AgentContext) -> TaskResult:
         """Execute dataset distribution."""
-        start_time = datetime.utcnow()
+        start_time = datetime.now(timezone.utc)
         self.update_state(AgentState.EXECUTING)
 
         try:
@@ -253,13 +253,13 @@ class DistributionAgent(Agent):
             self._distribution_history.append({
                 "dataset_size": len(dataset),
                 "destinations": destinations,
-                "timestamp": datetime.utcnow().isoformat(),
+                "timestamp": datetime.now(timezone.utc).isoformat(),
             })
 
-            execution_time = (datetime.utcnow() - start_time).total_seconds() * 1000
+            execution_time = (datetime.now(timezone.utc) - start_time).total_seconds() * 1000
 
             return TaskResult(
-                task_id=task_input.get("task_id", str(datetime.utcnow().timestamp())),
+                task_id=task_input.get("task_id", str(datetime.now(timezone.utc).timestamp())),
                 agent_id=self.agent_id,
                 success=True,
                 output={
@@ -278,11 +278,11 @@ class DistributionAgent(Agent):
 
         except Exception as e:
             return TaskResult(
-                task_id=str(datetime.utcnow().timestamp()),
+                task_id=str(datetime.now(timezone.utc).timestamp()),
                 agent_id=self.agent_id,
                 success=False,
                 error=str(e),
-                execution_time_ms=(datetime.utcnow() - start_time).total_seconds() * 1000
+                execution_time_ms=(datetime.now(timezone.utc) - start_time).total_seconds() * 1000
             )
         finally:
             self.update_state(AgentState.IDLE)

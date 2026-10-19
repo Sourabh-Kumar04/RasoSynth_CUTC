@@ -7,7 +7,7 @@ recovery, and resumable execution across distributed agents.
 
 from typing import Dict, List, Optional, Any, Callable, Set
 from dataclasses import dataclass, field
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from enum import Enum
 import asyncio
 import json
@@ -39,7 +39,8 @@ class PipelineCheckpoint:
 
     def is_expired(self) -> bool:
         """Check if checkpoint has expired."""
-        return datetime.utcnow() > self.expires_at
+        exp = self.expires_at if self.expires_at.tzinfo is not None else self.expires_at.replace(tzinfo=timezone.utc)
+        return datetime.now(timezone.utc) > exp
 
 
 @dataclass
@@ -51,7 +52,7 @@ class DAGCheckpoint:
     pending_nodes: List[str] = field(default_factory=list)
     node_results: Dict[str, Any] = field(default_factory=dict)
     node_states: Dict[str, str] = field(default_factory=dict)
-    created_at: datetime = field(default_factory=datetime.utcnow)
+    created_at: datetime = field(default_factory=lambda: datetime.now(timezone.utc))
     checkpoint_interval_seconds: float = 60.0
     metadata: Dict[str, Any] = field(default_factory=dict)
 
@@ -128,7 +129,7 @@ class DAGCheckpointManager:
                 pending_nodes=parsed.get("pending_nodes", []),
                 node_results=parsed.get("node_results", {}),
                 node_states=parsed.get("node_states", {}),
-                created_at=datetime.fromisoformat(parsed.get("created_at", datetime.utcnow().isoformat())),
+                created_at=datetime.fromisoformat(parsed.get("created_at", datetime.now(timezone.utc).isoformat())),
                 metadata=parsed.get("metadata", {})
             )
 
@@ -260,7 +261,7 @@ class ResumableExecutionManager:
             "execution_id": execution_id,
             "pipeline_id": pipeline_id,
             "status": "running",
-            "started_at": datetime.utcnow().isoformat(),
+            "started_at": datetime.now(timezone.utc).isoformat(),
             "current_stage": 0,
             "stages_completed": [],
             "metadata": config or {}
@@ -300,8 +301,8 @@ class ResumableExecutionManager:
             stage=stage,
             step_index=len(self._checkpoints.get(execution_id, [])),
             checkpoint_type=checkpoint_type,
-            created_at=datetime.utcnow(),
-            expires_at=datetime.utcnow() + timedelta(seconds=ttl_seconds or 604800),
+            created_at=datetime.now(timezone.utc),
+            expires_at=datetime.now(timezone.utc) + timedelta(seconds=ttl_seconds or 604800),
             data=data,
             artifacts=artifacts or {}
         )
@@ -411,7 +412,7 @@ class ResumableExecutionManager:
 
         data = json.loads(execution)
         data["status"] = "completed"
-        data["completed_at"] = datetime.utcnow().isoformat()
+        data["completed_at"] = datetime.now(timezone.utc).isoformat()
         data["final_result"] = str(final_result)[:1000]  # Truncate
 
         await self.redis.setex(
@@ -437,7 +438,7 @@ class ResumableExecutionManager:
 
         data = json.loads(execution)
         data["status"] = "failed"
-        data["failed_at"] = datetime.utcnow().isoformat()
+        data["failed_at"] = datetime.now(timezone.utc).isoformat()
         data["error"] = error
 
         await self.redis.setex(
@@ -510,7 +511,7 @@ class CheckpointPruner:
             "pipelines_cleaned": set()
         }
 
-        cutoff = datetime.utcnow() - timedelta(days=self.max_age_days)
+        cutoff = datetime.now(timezone.utc) - timedelta(days=self.max_age_days)
 
         # Find old checkpoints
         async for key in self.redis.scan_iter(match="checkpoint:*"):
@@ -518,7 +519,8 @@ class CheckpointPruner:
                 data = await self.redis.get(key)
                 if data and key.decode().startswith("checkpoint:execution:"):
                     checkpoint = pickle.loads(data)
-                    if checkpoint.created_at < cutoff:
+                    ca = checkpoint.created_at if checkpoint.created_at.tzinfo is not None else checkpoint.created_at.replace(tzinfo=timezone.utc)
+                    if ca < cutoff:
                         await self.redis.delete(key)
                         results["checkpoints_deleted"] += 1
                         results["pipelines_cleaned"].add(checkpoint.pipeline_id)

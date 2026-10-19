@@ -7,7 +7,7 @@ and adaptive execution strategies.
 
 from typing import Dict, List, Optional, Any, Callable, Set
 from dataclasses import dataclass, field
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from enum import Enum
 import asyncio
 import uuid
@@ -88,7 +88,7 @@ class AgentScheduler:
             "agent_id": agent_id,
             "task": task,
             "priority": priority,
-            "scheduled_at": scheduled_at or datetime.utcnow(),
+            "scheduled_at": scheduled_at or datetime.now(timezone.utc),
             "status": "scheduled",
         }
 
@@ -123,7 +123,7 @@ class AgentScheduler:
         if task_id in self._scheduled_tasks:
             self._scheduled_tasks[task_id]["status"] = "completed"
             self._scheduled_tasks[task_id]["result"] = result
-            self._scheduled_tasks[task_id]["completed_at"] = datetime.utcnow()
+            self._scheduled_tasks[task_id]["completed_at"] = datetime.now(timezone.utc)
             self._remove_from_queue(task_id)
             return True
         return False
@@ -253,7 +253,7 @@ class MultiAgentOrchestrator:
         execution = WorkflowExecution(workflow_id=workflow_id)
         self.executions[execution.execution_id] = execution
 
-        execution.started_at = datetime.utcnow()
+        execution.started_at = datetime.now(timezone.utc)
         execution.status = "running"
 
         try:
@@ -275,10 +275,10 @@ class MultiAgentOrchestrator:
             execution.status = "failed"
             execution.errors.append({
                 "error": str(e),
-                "timestamp": datetime.utcnow().isoformat(),
+                "timestamp": datetime.now(timezone.utc).isoformat(),
             })
 
-        execution.completed_at = datetime.utcnow()
+        execution.completed_at = datetime.now(timezone.utc)
         self._execution_history.append(execution)
         return execution
 
@@ -431,7 +431,7 @@ class MultiAgentOrchestrator:
         """Cancel a running execution."""
         if execution_id in self.executions:
             self.executions[execution_id].status = "cancelled"
-            self.executions[execution_id].completed_at = datetime.utcnow()
+            self.executions[execution_id].completed_at = datetime.now(timezone.utc)
             return True
         return False
 

@@ -7,7 +7,7 @@ reasoning quality monitoring, confidence tracking, and semantic drift detection.
 
 from typing import Dict, List, Optional, Any, Tuple
 from dataclasses import dataclass, field
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from enum import Enum
 import asyncio
 
@@ -29,7 +29,7 @@ class HallucinationDetection:
     confidence: float
     flagged_spans: List[Dict] = field(default_factory=list)
     detector_type: str = ""
-    timestamp: datetime = field(default_factory=datetime.utcnow)
+    timestamp: datetime = field(default_factory=lambda: datetime.now(timezone.utc))
 
 
 @dataclass
@@ -39,7 +39,7 @@ class ConfidenceMetric:
     confidence: float
     reasoning_depth: int
     validation_score: float = 0.0
-    timestamp: datetime = field(default_factory=datetime.utcnow)
+    timestamp: datetime = field(default_factory=lambda: datetime.now(timezone.utc))
 
 
 @dataclass
@@ -50,7 +50,7 @@ class SemanticDrift:
     current_value: float
     drift_percent: float
     severity: str = "normal"
-    timestamp: datetime = field(default_factory=datetime.utcnow)
+    timestamp: datetime = field(default_factory=lambda: datetime.now(timezone.utc))
 
 
 class AIAnalyticsEngine:
@@ -191,7 +191,7 @@ class AIAnalyticsEngine:
             "model1": model1,
             "model2": model2,
             "agreement": agreement,
-            "timestamp": datetime.utcnow().isoformat()
+            "timestamp": datetime.now(timezone.utc).isoformat()
         })
 
         if len(self._model_disagreements) > self._max_history:

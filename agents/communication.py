@@ -7,7 +7,7 @@ Message passing, event system, and shared memory for inter-agent communication.
 import asyncio
 from typing import Dict, List, Optional, Any, Callable
 from dataclasses import dataclass, field
-from datetime import datetime
+from datetime import datetime, timezone
 from enum import Enum
 import uuid
 import json
@@ -36,7 +36,7 @@ class AgentMessage:
     subject: str = ""
     content: Any = None
     metadata: Dict[str, Any] = field(default_factory=dict)
-    timestamp: datetime = field(default_factory=datetime.utcnow)
+    timestamp: datetime = field(default_factory=lambda: datetime.now(timezone.utc))
     correlation_id: Optional[str] = None
     reply_to: Optional[str] = None
     priority: int = 5
@@ -44,7 +44,8 @@ class AgentMessage:
 
     def is_expired(self) -> bool:
         """Check if message has expired."""
-        age = (datetime.utcnow() - self.timestamp).total_seconds()
+        ts = self.timestamp if self.timestamp.tzinfo is not None else self.timestamp.replace(tzinfo=timezone.utc)
+        age = (datetime.now(timezone.utc) - ts).total_seconds()
         return age > self.ttl_seconds
 
 
@@ -60,7 +61,7 @@ class Event:
         self.event_type = event_type
         self.source = source
         self.data = data
-        self.timestamp = timestamp or datetime.utcnow()
+        self.timestamp = timestamp or datetime.now(timezone.utc)
         self.event_id = str(uuid.uuid4())
 
 
@@ -200,7 +201,7 @@ class SharedMemory:
             if key not in self._history:
                 self._history[key] = []
             self._history[key].append({
-                "timestamp": datetime.utcnow(),
+                "timestamp": datetime.now(timezone.utc),
                 "value": value,
                 "old_value": old_value,
             })

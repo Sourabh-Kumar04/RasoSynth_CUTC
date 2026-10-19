@@ -8,7 +8,7 @@ import os
 import time
 import logging
 from typing import Optional, Dict, Any
-from datetime import datetime
+from datetime import datetime, timezone
 
 logger = logging.getLogger(__name__)
 
@@ -74,7 +74,7 @@ class LangSmithTracer:
                 run_type="chain",
                 inputs={"prompt": prompt, "target_domain": target_domain, "config": config},
                 project_name=self.project_name,
-                extra={"job_id": job_id, "start_time": datetime.utcnow().isoformat()},
+                extra={"job_id": job_id, "start_time": datetime.now(timezone.utc).isoformat()},
             )
             run.post()
             self._active_runs[job_id] = run

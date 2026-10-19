@@ -6,7 +6,7 @@ and distributed job management.
 """
 
 from typing import Dict, List, Optional, Any, Set, Callable, AsyncGenerator
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from dataclasses import dataclass, field
 from enum import Enum
 import asyncio
@@ -38,7 +38,7 @@ class JobCheckpoint:
     samples_processed: int
 
     state: JobState
-    timestamp: datetime = field(default_factory=datetime.utcnow)
+    timestamp: datetime = field(default_factory=lambda: datetime.now(timezone.utc))
 
     metrics: Dict[str, Any] = field(default_factory=dict)
     metadata: Dict[str, Any] = field(default_factory=dict)
@@ -62,6 +62,9 @@ class JobCheckpoint:
     def from_json(cls, data: str) -> "JobCheckpoint":
         """Deserialize checkpoint from JSON."""
         obj = json.loads(data)
+        ts = datetime.fromisoformat(obj["timestamp"])
+        if ts.tzinfo is None:
+            ts = ts.replace(tzinfo=timezone.utc)
         return cls(
             checkpoint_id=obj["checkpoint_id"],
             job_id=obj["job_id"],
@@ -70,7 +73,7 @@ class JobCheckpoint:
             progress_percentage=obj["progress_percentage"],
             samples_processed=obj["samples_processed"],
             state=JobState(obj["state"]),
-            timestamp=datetime.fromisoformat(obj["timestamp"]),
+            timestamp=ts,
             metrics=obj.get("metrics", {}),
             metadata=obj.get("metadata", {})
         )
@@ -95,8 +98,8 @@ class ProgressTracker:
             "total_steps": total_steps,
             "completed_steps": [],
             "progress_percentage": 0.0,
-            "started_at": datetime.utcnow(),
-            "last_updated": datetime.utcnow(),
+            "started_at": datetime.now(timezone.utc),
+            "last_updated": datetime.now(timezone.utc),
             "current_step": None,
             "estimated_remaining_seconds": None,
             "metrics": {}
@@ -114,10 +117,13 @@ class ProgressTracker:
         if total > 0:
             progress["progress_percentage"] = (progress["completed_samples"] / total) * 100
 
-        progress["last_updated"] = datetime.utcnow()
+        progress["last_updated"] = datetime.now(timezone.utc)
 
         if progress["progress_percentage"] > 0:
-            elapsed = (datetime.utcnow() - progress["started_at"]).total_seconds()
+            st = progress["started_at"]
+            if st.tzinfo is None:
+                st = st.replace(tzinfo=timezone.utc)
+            elapsed = (datetime.now(timezone.utc) - st).total_seconds()
             rate = progress["completed_samples"] / elapsed if elapsed > 0 else 0
             remaining = total - progress["completed_samples"]
             progress["estimated_remaining_seconds"] = remaining / rate if rate > 0 else None
@@ -136,7 +142,7 @@ class ProgressTracker:
         if total > 0:
             progress["progress_percentage"] = (completed / total) * 100
 
-        progress["last_updated"] = datetime.utcnow()
+        progress["last_updated"] = datetime.now(timezone.utc)
 
     def set_current_step(self, job_id: str, step_id: str) -> None:
         """Set current processing step."""

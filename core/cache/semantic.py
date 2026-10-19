@@ -7,7 +7,7 @@ and partial-response reuse for LLM call optimization.
 
 from typing import Dict, List, Optional, Any, Tuple, Callable
 from dataclasses import dataclass, field
-from datetime import datetime
+from datetime import datetime, timezone
 import asyncio
 import hashlib
 import numpy as np
@@ -30,7 +30,7 @@ class SemanticEntry:
 
     def access(self) -> None:
         """Record access."""
-        self.last_access = datetime.utcnow()
+        self.last_access = datetime.now(timezone.utc)
         self.access_count += 1
 
 
@@ -132,7 +132,7 @@ class SemanticCacheManager:
             response=response,
             embedding=embedding.tolist() if isinstance(embedding, np.ndarray) else embedding,
             semantic_hash=await self._compute_semantic_hash(query),
-            created_at=datetime.utcnow(),
+            created_at=datetime.now(timezone.utc),
             access_count=0,
             metadata=metadata or {},
             partial_content=partial_content
@@ -159,7 +159,7 @@ class SemanticCacheManager:
         if key in self._cache:
             entry = self._cache[key]
             entry.access_count += 1
-            entry.last_access = datetime.utcnow()
+            entry.last_access = datetime.now(timezone.utc)
             self._hits += 1
             return entry.response
 
@@ -445,7 +445,7 @@ class EmbeddingCache:
         self._embeddings[key] = embedding
         self._metadata[key] = {
             "model": model,
-            "created_at": datetime.utcnow().isoformat(),
+            "created_at": datetime.now(timezone.utc).isoformat(),
             **(metadata or {})
         }
         self._access_counts[key] = 0

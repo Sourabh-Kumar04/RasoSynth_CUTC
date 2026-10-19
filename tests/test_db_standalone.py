@@ -5,7 +5,7 @@ import asyncio
 import os
 import sys
 import uuid
-from datetime import datetime
+from datetime import datetime, timezone
 from typing import Optional, List
 
 # Add the project root to Python path
@@ -33,8 +33,8 @@ class Job(Base):
 
     id = Column(PG_UUID(as_uuid=False), primary_key=True, default=lambda: str(uuid.uuid4()))
     status = Column(String, nullable=False, default="pending")
-    created_at = Column(DateTime, default=datetime.utcnow)
-    updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+    created_at = Column(DateTime, default=lambda: datetime.now(timezone.utc))
+    updated_at = Column(DateTime, default=lambda: datetime.now(timezone.utc), onupdate=lambda: datetime.now(timezone.utc))
     config = Column(JSON)
     progress = Column(Float, default=0.0)
     current_stage = Column(String)
@@ -56,7 +56,7 @@ class Dataset(Base):
     name = Column(String, nullable=False)
     type = Column(String)
     size = Column(Integer)
-    created_at = Column(DateTime, default=datetime.utcnow)
+    created_at = Column(DateTime, default=lambda: datetime.now(timezone.utc))
     metadata_ = Column("metadata", JSON)
     output_path = Column(String)
 
@@ -73,7 +73,7 @@ class Sample(Base):
     metadata_ = Column("metadata", JSON)
     quality_score = Column(Float)
     difficulty_tier = Column(Integer)
-    created_at = Column(DateTime, default=datetime.utcnow)
+    created_at = Column(DateTime, default=lambda: datetime.now(timezone.utc))
 
 
 class DatabaseManager:

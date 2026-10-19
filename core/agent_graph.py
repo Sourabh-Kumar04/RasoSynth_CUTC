@@ -2,7 +2,7 @@
 import asyncio
 from dataclasses import dataclass
 from typing import Any, TypedDict
-from datetime import datetime
+from datetime import datetime, timezone
 from langgraph.graph import StateGraph, END
 from enum import Enum
 
@@ -263,7 +263,7 @@ class MultiAgentGraph:
             "messages": state["messages"] + [{
                 "sender": "system",
                 "content": "Pipeline started",
-                "timestamp": datetime.utcnow().timestamp(),
+                "timestamp": datetime.now(timezone.utc).timestamp(),
             }]
         }
 
@@ -284,7 +284,7 @@ class MultiAgentGraph:
                     "messages": state["messages"] + [{
                         "sender": agent_name,
                         "content": result,
-                        "timestamp": datetime.utcnow().timestamp(),
+                        "timestamp": datetime.now(timezone.utc).timestamp(),
                     }]
                 }
             except Exception as e:

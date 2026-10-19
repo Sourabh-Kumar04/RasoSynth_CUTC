@@ -7,7 +7,7 @@ alert rules, and incident response.
 
 from typing import Dict, List, Optional, Any, Callable
 from dataclasses import dataclass, field
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from enum import Enum
 import asyncio
 import json
@@ -89,7 +89,7 @@ class Incident:
     title: str
     severity: AlertSeverity
     status: str = "open"
-    created_at: datetime = field(default_factory=datetime.utcnow)
+    created_at: datetime = field(default_factory=lambda: datetime.now(timezone.utc))
     resolved_at: Optional[datetime] = None
     alerts: List[str] = field(default_factory=list)  # Alert IDs
     affected_components: List[str] = field(default_factory=list)
@@ -145,7 +145,7 @@ class AlertManager:
             name=rule.name,
             severity=rule.severity,
             message=f"Alert triggered: {rule.name} (threshold: {rule.threshold})",
-            triggered_at=datetime.utcnow(),
+            triggered_at=datetime.now(timezone.utc),
             metadata={"metrics": metrics}
         )
 
@@ -154,7 +154,7 @@ class AlertManager:
             self._alerts = self._alerts[-self._max_alerts:]
 
         self._active_alerts[alert.alert_id] = alert
-        rule.last_triggered = datetime.utcnow()
+        rule.last_triggered = datetime.now(timezone.utc)
 
         return alert
 
@@ -162,7 +162,7 @@ class AlertManager:
         """Resolve an alert."""
         if alert_id in self._active_alerts:
             alert = self._active_alerts[alert_id]
-            alert.resolved_at = datetime.utcnow()
+            alert.resolved_at = datetime.now(timezone.utc)
             del self._active_alerts[alert_id]
             return True
         return False
@@ -263,7 +263,7 @@ class IncidentTracker:
         if incident_id in self._incidents:
             incident = self._incidents[incident_id]
             incident.status = "resolved"
-            incident.resolved_at = datetime.utcnow()
+            incident.resolved_at = datetime.now(timezone.utc)
             incident.resolution = resolution
 
             # Resolve linked alerts
@@ -331,7 +331,7 @@ class GrafanaExporter:
             "id": dashboard_id,
             "name": name,
             "panels": panels,
-            "created_at": datetime.utcnow().isoformat()
+            "created_at": datetime.now(timezone.utc).isoformat()
         }
 
         return dashboard_id
@@ -378,7 +378,7 @@ class RealTimeMetricsStream:
         """Publish metrics to stream."""
         self._buffer.append({
             "metrics": metrics,
-            "timestamp": datetime.utcnow().isoformat()
+            "timestamp": datetime.now(timezone.utc).isoformat()
         })
 
         if len(self._buffer) > self._max_buffer:
@@ -429,8 +429,8 @@ class DashboardManager:
             "id": dashboard_id,
             "name": name,
             "widgets": widgets,
-            "created_at": datetime.utcnow(),
-            "updated_at": datetime.utcnow()
+            "created_at": datetime.now(timezone.utc),
+            "updated_at": datetime.now(timezone.utc)
         }
 
         return dashboard_id
@@ -447,7 +447,7 @@ class DashboardManager:
         """Update dashboard widgets."""
         if dashboard_id in self._dashboards:
             self._dashboards[dashboard_id]["widgets"] = widgets
-            self._dashboards[dashboard_id]["updated_at"] = datetime.utcnow()
+            self._dashboards[dashboard_id]["updated_at"] = datetime.now(timezone.utc)
             return True
         return False
 
@@ -471,6 +471,6 @@ class DashboardManager:
         """Add widget to dashboard."""
         if dashboard_id in self._dashboards:
             self._dashboards[dashboard_id]["widgets"].append(widget)
-            self._dashboards[dashboard_id]["updated_at"] = datetime.utcnow()
+            self._dashboards[dashboard_id]["updated_at"] = datetime.now(timezone.utc)
             return True
         return False

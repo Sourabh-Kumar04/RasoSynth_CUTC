@@ -7,7 +7,7 @@ maintaining persistent state across agent sessions.
 
 from typing import Dict, List, Optional, Any, Tuple
 from dataclasses import dataclass, field
-from datetime import datetime
+from datetime import datetime, timezone
 from enum import Enum
 import json
 import asyncio
@@ -30,8 +30,8 @@ class MemoryEntry:
     content: Any = None
     embedding: Optional[List[float]] = None
     importance: float = 1.0
-    created_at: datetime = field(default_factory=datetime.utcnow)
-    accessed_at: datetime = field(default_factory=datetime.utcnow)
+    created_at: datetime = field(default_factory=lambda: datetime.now(timezone.utc))
+    accessed_at: datetime = field(default_factory=lambda: datetime.now(timezone.utc))
     access_count: int = 0
     tags: List[str] = field(default_factory=list)
     source_agent: Optional[str] = None
@@ -39,7 +39,7 @@ class MemoryEntry:
 
     def access(self) -> None:
         """Record access to this memory."""
-        self.accessed_at = datetime.utcnow()
+        self.accessed_at = datetime.now(timezone.utc)
         self.access_count += 1
 
     def to_dict(self) -> dict:
@@ -62,7 +62,7 @@ class Episode:
     episode_id: str = field(default_factory=lambda: str(uuid.uuid4()))
     name: str = ""
     entries: List[MemoryEntry] = field(default_factory=list)
-    start_time: datetime = field(default_factory=datetime.utcnow)
+    start_time: datetime = field(default_factory=lambda: datetime.now(timezone.utc))
     end_time: Optional[datetime] = None
     context: Dict[str, Any] = field(default_factory=dict)
     outcome: Optional[str] = None
@@ -78,7 +78,7 @@ class KnowledgeFact:
     object: Any = None
     confidence: float = 1.0
     source: str = ""
-    valid_from: datetime = field(default_factory=datetime.utcnow)
+    valid_from: datetime = field(default_factory=lambda: datetime.now(timezone.utc))
     valid_until: Optional[datetime] = None
     metadata: Dict[str, Any] = field(default_factory=dict)
 
@@ -227,7 +227,7 @@ class EpisodicMemory:
         episode = Episode(
             name=name,
             context=context or {},
-            start_time=datetime.utcnow()
+            start_time=datetime.now(timezone.utc)
         )
         self._episodes[episode.episode_id] = episode
         self._current_episode = episode
@@ -236,7 +236,7 @@ class EpisodicMemory:
     async def end_episode(self, outcome: Optional[str] = None) -> Optional[Episode]:
         """End the current episode."""
         if self._current_episode:
-            self._current_episode.end_time = datetime.utcnow()
+            self._current_episode.end_time = datetime.now(timezone.utc)
             self._current_episode.outcome = outcome
             episode = self._current_episode
             self._current_episode = None
@@ -323,7 +323,7 @@ class GraphMemory:
             "node_id": node_id,
             "node_type": node_type,
             "properties": properties,
-            "created_at": datetime.utcnow().isoformat(),
+            "created_at": datetime.now(timezone.utc).isoformat(),
         }
 
         self._nodes[node_id] = node
@@ -352,7 +352,7 @@ class GraphMemory:
             "target_id": target_id,
             "relationship": relationship,
             "properties": properties or {},
-            "created_at": datetime.utcnow().isoformat(),
+            "created_at": datetime.now(timezone.utc).isoformat(),
         }
 
         self._edges.append(edge)

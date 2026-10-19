@@ -6,7 +6,7 @@ multi-stage dataset engineering pipelines.
 """
 
 from typing import Dict, List, Optional, Any
-from datetime import datetime
+from datetime import datetime, timezone
 
 from agents.base import Agent, AgentConfig, AgentType, AgentState, TaskResult, AgentContext
 
@@ -36,7 +36,7 @@ class StrategyAgent(Agent):
 
     async def execute(self, task: Any, context: AgentContext) -> TaskResult:
         """Execute strategy planning for dataset engineering."""
-        start_time = datetime.utcnow()
+        start_time = datetime.now(timezone.utc)
         self.update_state(AgentState.EXECUTING)
 
         try:
@@ -56,15 +56,15 @@ class StrategyAgent(Agent):
             }
 
             self._execution_plans.append({
-                "plan_id": str(datetime.utcnow().timestamp()),
+                "plan_id": str(datetime.now(timezone.utc).timestamp()),
                 "requirements": requirements,
-                "created_at": datetime.utcnow().isoformat(),
+                "created_at": datetime.now(timezone.utc).isoformat(),
             })
 
-            execution_time = (datetime.utcnow() - start_time).total_seconds() * 1000
+            execution_time = (datetime.now(timezone.utc) - start_time).total_seconds() * 1000
 
             return TaskResult(
-                task_id=task_input.get("task_id", str(datetime.utcnow().timestamp())),
+                task_id=task_input.get("task_id", str(datetime.now(timezone.utc).timestamp())),
                 agent_id=self.agent_id,
                 success=True,
                 output=plan,
@@ -75,11 +75,11 @@ class StrategyAgent(Agent):
 
         except Exception as e:
             return TaskResult(
-                task_id=str(datetime.utcnow().timestamp()),
+                task_id=str(datetime.now(timezone.utc).timestamp()),
                 agent_id=self.agent_id,
                 success=False,
                 error=str(e),
-                execution_time_ms=(datetime.utcnow() - start_time).total_seconds() * 1000
+                execution_time_ms=(datetime.now(timezone.utc) - start_time).total_seconds() * 1000
             )
         finally:
             self.update_state(AgentState.IDLE)

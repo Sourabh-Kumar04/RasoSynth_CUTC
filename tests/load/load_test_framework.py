@@ -14,7 +14,7 @@ import subprocess
 import json
 from typing import Dict, List, Optional, Any
 from dataclasses import dataclass, field
-from datetime import datetime
+from datetime import datetime, timezone
 import os
 
 
@@ -106,7 +106,7 @@ def generate_k6_test(
 
     return K6_TEST_TEMPLATE.format(
         name=name,
-        timestamp=datetime.utcnow().isoformat(),
+        timestamp=datetime.now(timezone.utc).isoformat(),
         environment="production",
         base_url=base_url,
         api_key=api_key or "${__ENV.API_KEY || 'test'}",
@@ -438,7 +438,7 @@ def generate_locust_test(
     """Generate a Locust distributed load test script."""
     return LOCUST_TEST_TEMPLATE.format(
         name=name,
-        timestamp=datetime.utcnow().isoformat(),
+        timestamp=datetime.now(timezone.utc).isoformat(),
         class_name=name.replace(" ", "").replace("-", ""),
         min_wait=min_wait,
         max_wait=max_wait,

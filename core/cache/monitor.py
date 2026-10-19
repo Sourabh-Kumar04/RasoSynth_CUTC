@@ -7,7 +7,7 @@ cache observability for the distributed caching layer.
 
 from typing import Dict, List, Optional, Any, Callable
 from dataclasses import dataclass, field
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from enum import Enum
 import asyncio
 import time
@@ -254,14 +254,14 @@ class CacheObservabilityManager:
                 "level": "critical",
                 "message": "Cache system is critical",
                 "details": health.issues,
-                "timestamp": datetime.utcnow().isoformat()
+                "timestamp": datetime.now(timezone.utc).isoformat()
             })
         elif health.status == "degraded":
             alerts.append({
                 "level": "warning",
                 "message": "Cache system is degraded",
                 "details": health.issues,
-                "timestamp": datetime.utcnow().isoformat()
+                "timestamp": datetime.now(timezone.utc).isoformat()
             })
 
         self._alerts.extend(alerts)
@@ -374,7 +374,7 @@ class OpenTelemetryIntegration:
         self._traces[trace_id] = [{
             "type": "start",
             "operation": operation,
-            "timestamp": datetime.utcnow().isoformat(),
+            "timestamp": datetime.now(timezone.utc).isoformat(),
             "metadata": metadata or {}
         }]
 
@@ -392,7 +392,7 @@ class OpenTelemetryIntegration:
             "span_id": span_id,
             "name": span_name,
             "parent_span_id": parent_span_id,
-            "start_time": datetime.utcnow().isoformat(),
+            "start_time": datetime.now(timezone.utc).isoformat(),
             "attributes": attributes or {}
         }
 
@@ -415,7 +415,7 @@ class OpenTelemetryIntegration:
 
         for span in self._spans[trace_id]:
             if span["span_id"] == span_id:
-                span["end_time"] = datetime.utcnow().isoformat()
+                span["end_time"] = datetime.now(timezone.utc).isoformat()
                 span["status"] = status
                 if result:
                     span["result"] = str(result)[:100]
@@ -432,7 +432,7 @@ class OpenTelemetryIntegration:
             self._traces[trace_id].append({
                 "type": "end",
                 "status": status,
-                "timestamp": datetime.utcnow().isoformat()
+                "timestamp": datetime.now(timezone.utc).isoformat()
             })
 
     def get_trace(self, trace_id: str) -> Optional[Dict]:

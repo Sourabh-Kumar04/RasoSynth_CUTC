@@ -6,7 +6,7 @@ for better retrieval across web and structured data sources.
 """
 
 from typing import Dict, List, Optional, Any
-from datetime import datetime
+from datetime import datetime, timezone
 
 from agents.base import Agent, AgentConfig, AgentType, AgentState, TaskResult, AgentContext
 
@@ -26,7 +26,7 @@ class SourceDiscoveryAgent(Agent):
 
     async def execute(self, task: Any, context: AgentContext) -> TaskResult:
         """Execute source discovery for a domain."""
-        start_time = datetime.utcnow()
+        start_time = datetime.now(timezone.utc)
         self.update_state(AgentState.EXECUTING)
 
         try:
@@ -40,10 +40,10 @@ class SourceDiscoveryAgent(Agent):
 
             self._discovered_sources.extend(sources)
 
-            execution_time = (datetime.utcnow() - start_time).total_seconds() * 1000
+            execution_time = (datetime.now(timezone.utc) - start_time).total_seconds() * 1000
 
             return TaskResult(
-                task_id=task_input.get("task_id", str(datetime.utcnow().timestamp())),
+                task_id=task_input.get("task_id", str(datetime.now(timezone.utc).timestamp())),
                 agent_id=self.agent_id,
                 success=True,
                 output={
@@ -61,11 +61,11 @@ class SourceDiscoveryAgent(Agent):
 
         except Exception as e:
             return TaskResult(
-                task_id=str(datetime.utcnow().timestamp()),
+                task_id=str(datetime.now(timezone.utc).timestamp()),
                 agent_id=self.agent_id,
                 success=False,
                 error=str(e),
-                execution_time_ms=(datetime.utcnow() - start_time).total_seconds() * 1000
+                execution_time_ms=(datetime.now(timezone.utc) - start_time).total_seconds() * 1000
             )
         finally:
             self.update_state(AgentState.IDLE)
@@ -148,7 +148,7 @@ class SearchOptimizationAgent(Agent):
 
     async def execute(self, task: Any, context: AgentContext) -> TaskResult:
         """Execute search query optimization."""
-        start_time = datetime.utcnow()
+        start_time = datetime.now(timezone.utc)
         self.update_state(AgentState.EXECUTING)
 
         try:
@@ -166,13 +166,13 @@ class SearchOptimizationAgent(Agent):
             self._query_history.append({
                 "original": original_query,
                 "optimized": optimized_queries,
-                "timestamp": datetime.utcnow().isoformat(),
+                "timestamp": datetime.now(timezone.utc).isoformat(),
             })
 
-            execution_time = (datetime.utcnow() - start_time).total_seconds() * 1000
+            execution_time = (datetime.now(timezone.utc) - start_time).total_seconds() * 1000
 
             return TaskResult(
-                task_id=task_input.get("task_id", str(datetime.utcnow().timestamp())),
+                task_id=task_input.get("task_id", str(datetime.now(timezone.utc).timestamp())),
                 agent_id=self.agent_id,
                 success=True,
                 output={
@@ -186,11 +186,11 @@ class SearchOptimizationAgent(Agent):
 
         except Exception as e:
             return TaskResult(
-                task_id=str(datetime.utcnow().timestamp()),
+                task_id=str(datetime.now(timezone.utc).timestamp()),
                 agent_id=self.agent_id,
                 success=False,
                 error=str(e),
-                execution_time_ms=(datetime.utcnow() - start_time).total_seconds() * 1000
+                execution_time_ms=(datetime.now(timezone.utc) - start_time).total_seconds() * 1000
             )
         finally:
             self.update_state(AgentState.IDLE)

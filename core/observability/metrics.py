@@ -7,7 +7,7 @@ analytics, and distributed infrastructure monitoring.
 
 from typing import Dict, List, Optional, Any, Callable
 from dataclasses import dataclass, field
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from enum import Enum
 import asyncio
 import json
@@ -38,22 +38,22 @@ class GaugeMetrics:
     name: str
     value: float = 0.0
     labels: Dict[str, str] = field(default_factory=dict)
-    last_updated: datetime = field(default_factory=datetime.utcnow)
+    last_updated: datetime = field(default_factory=lambda: datetime.now(timezone.utc))
 
     def set(self, value: float) -> None:
         """Set gauge value."""
         self.value = value
-        self.last_updated = datetime.utcnow()
+        self.last_updated = datetime.now(timezone.utc)
 
     def increment(self, delta: float = 1.0) -> None:
         """Increment gauge."""
         self.value += delta
-        self.last_updated = datetime.utcnow()
+        self.last_updated = datetime.now(timezone.utc)
 
     def decrement(self, delta: float = 1.0) -> None:
         """Decrement gauge."""
         self.value -= delta
-        self.last_updated = datetime.utcnow()
+        self.last_updated = datetime.now(timezone.utc)
 
 
 @dataclass
@@ -182,7 +182,7 @@ class MetricsCollector:
             name=name,
             value=value,
             metric_type=metric_type,
-            timestamp=datetime.utcnow(),
+            timestamp=datetime.now(timezone.utc),
             labels=labels,
             unit=unit
         )
@@ -192,8 +192,11 @@ class MetricsCollector:
         self._series[name].append(point)
 
         # Trim old points (keep last hour)
-        cutoff = datetime.utcnow() - timedelta(hours=1)
-        self._series[name] = [p for p in self._series[name] if p.timestamp > cutoff]
+        cutoff = datetime.now(timezone.utc) - timedelta(hours=1)
+        self._series[name] = [
+            p for p in self._series[name]
+            if (p.timestamp if p.timestamp.tzinfo is not None else p.timestamp.replace(tzinfo=timezone.utc)) > cutoff
+        ]
 
     def get_gauge(self, name: str, labels: Optional[Dict[str, str]] = None) -> Optional[float]:
         """Get current gauge value."""

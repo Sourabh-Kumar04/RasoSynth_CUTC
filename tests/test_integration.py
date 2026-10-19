@@ -5,7 +5,7 @@ import asyncio
 import os
 import sys
 import uuid
-from datetime import datetime
+from datetime import datetime, timezone
 
 # Add the project root to Python path
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
@@ -50,8 +50,8 @@ async def test_integration():
         job = type('Job', (), {
             'id': job_id,
             'status': JobStatus.PENDING,
-            'created_at': datetime.utcnow(),
-            'updated_at': datetime.utcnow(),
+            'created_at': datetime.now(timezone.utc),
+            'updated_at': datetime.now(timezone.utc),
             'current_stage': 'analyzing_constraints',
             'progress': 0.0,
             'samples_processed': 0,

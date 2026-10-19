@@ -4,7 +4,7 @@
 import asyncio
 import os
 import sys
-from datetime import datetime
+from datetime import datetime, timezone
 from unittest.mock import Mock, AsyncMock, patch
 
 # Add project root to path
@@ -56,8 +56,8 @@ async def test_orchestrator_export_node():
         job = Job(
             id=job_id,
             status=JobStatus.RUNNING,
-            created_at=datetime.utcnow(),
-            updated_at=datetime.utcnow(),
+            created_at=datetime.now(timezone.utc),
+            updated_at=datetime.now(timezone.utc),
             current_stage="export",
             progress=0.9,
             samples_processed=0,

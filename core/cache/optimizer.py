@@ -7,7 +7,7 @@ and adaptive expiration strategies.
 
 from typing import Dict, List, Optional, Any, Callable, Tuple
 from dataclasses import dataclass, field
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from enum import Enum
 import asyncio
 import gzip
@@ -319,7 +319,7 @@ class AdaptiveExpirationManager:
 
     def _track_access(self, key: str) -> None:
         """Track access pattern for key."""
-        now = datetime.utcnow()
+        now = datetime.now(timezone.utc)
 
         if key not in self._usage_patterns:
             self._usage_patterns[key] = []
@@ -341,7 +341,9 @@ class AdaptiveExpirationManager:
         if not accesses:
             return 0.0
 
-        time_span = (datetime.utcnow() - accesses[0]).total_seconds()
+        now = datetime.now(timezone.utc)
+        first_dt = accesses[0] if accesses[0].tzinfo is not None else accesses[0].replace(tzinfo=timezone.utc)
+        time_span = (now - first_dt).total_seconds()
         if time_span == 0:
             return len(accesses)
 
@@ -375,14 +377,15 @@ class AdaptiveExpirationManager:
         """Get last access time for key."""
         timestamp = await self.redis.get(f"{key}:last_access")
         if timestamp:
-            return datetime.fromisoformat(timestamp.decode())
-        return datetime.utcnow()
+            dt = datetime.fromisoformat(timestamp.decode())
+            return dt if dt.tzinfo is not None else dt.replace(tzinfo=timezone.utc)
+        return datetime.now(timezone.utc)
 
     async def increment_access(self, key: str) -> None:
         """Increment access count for key."""
         pipe = self.redis.pipeline()
         pipe.incr(f"{key}:access_count")
-        pipe.set(f"{key}:last_access", datetime.utcnow().isoformat())
+        pipe.set(f"{key}:last_access", datetime.now(timezone.utc).isoformat())
         await pipe.execute()
 
 
@@ -415,7 +418,7 @@ class ChunkedStorageManager:
         await self.redis.hset(key, "metadata", json.dumps({
             "total_chunks": total_chunks,
             "total_size": len(data),
-            "created_at": datetime.utcnow().isoformat()
+            "created_at": datetime.now(timezone.utc).isoformat()
         }))
 
         # Store chunks

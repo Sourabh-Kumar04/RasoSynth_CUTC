@@ -7,7 +7,7 @@ and distributed system observability.
 
 from typing import Dict, List, Optional, Any, Callable
 from dataclasses import dataclass, field
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from enum import Enum
 import json
 import asyncio
@@ -156,7 +156,7 @@ class StructuredLogger:
             context = _log_context.get() or LogContext()
 
         schema = LogSchema(
-            timestamp=datetime.utcnow().isoformat(),
+            timestamp=datetime.now(timezone.utc).isoformat(),
             level=level.name,
             trace_id=context.trace_id,
             span_id=context.span_id,
@@ -277,7 +277,7 @@ class CorrelationManager:
         )
 
         self._correlations[trace_id] = {
-            "created_at": datetime.utcnow(),
+            "created_at": datetime.now(timezone.utc),
             "parent_trace_id": parent_trace_id,
             "metadata": metadata or {},
             "spans": []

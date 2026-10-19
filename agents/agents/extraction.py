@@ -5,7 +5,7 @@ Agents for web crawling, OCR processing, and multimodal document extraction.
 """
 
 from typing import Dict, List, Optional, Any, Iterator
-from datetime import datetime
+from datetime import datetime, timezone
 
 from agents.base import Agent, AgentConfig, AgentType, AgentState, TaskResult, AgentContext
 
@@ -30,7 +30,7 @@ class WebCrawlerAgent(Agent):
 
     async def execute(self, task: Any, context: AgentContext) -> TaskResult:
         """Execute web crawling task."""
-        start_time = datetime.utcnow()
+        start_time = datetime.now(timezone.utc)
         self.update_state(AgentState.EXECUTING)
 
         try:
@@ -42,10 +42,10 @@ class WebCrawlerAgent(Agent):
 
             results = await self._crawl_urls(urls, max_depth, patterns, filters)
 
-            execution_time = (datetime.utcnow() - start_time).total_seconds() * 1000
+            execution_time = (datetime.now(timezone.utc) - start_time).total_seconds() * 1000
 
             return TaskResult(
-                task_id=task_input.get("task_id", str(datetime.utcnow().timestamp())),
+                task_id=task_input.get("task_id", str(datetime.now(timezone.utc).timestamp())),
                 agent_id=self.agent_id,
                 success=True,
                 output={
@@ -64,11 +64,11 @@ class WebCrawlerAgent(Agent):
 
         except Exception as e:
             return TaskResult(
-                task_id=str(datetime.utcnow().timestamp()),
+                task_id=str(datetime.now(timezone.utc).timestamp()),
                 agent_id=self.agent_id,
                 success=False,
                 error=str(e),
-                execution_time_ms=(datetime.utcnow() - start_time).total_seconds() * 1000
+                execution_time_ms=(datetime.now(timezone.utc) - start_time).total_seconds() * 1000
             )
         finally:
             self.update_state(AgentState.IDLE)
@@ -99,7 +99,7 @@ class WebCrawlerAgent(Agent):
                     "title": f"Title for {url}",
                     "text": f"Extracted content from {url}",
                     "links": [f"{url}/page{i}" for i in range(5)],
-                    "metadata": {"crawled_at": datetime.utcnow().isoformat()},
+                    "metadata": {"crawled_at": datetime.now(timezone.utc).isoformat()},
                 }
 
                 content.append(page_content)
@@ -150,7 +150,7 @@ class OCRAgent(Agent):
 
     async def execute(self, task: Any, context: AgentContext) -> TaskResult:
         """Execute OCR processing on images."""
-        start_time = datetime.utcnow()
+        start_time = datetime.now(timezone.utc)
         self.update_state(AgentState.EXECUTING)
 
         try:
@@ -161,10 +161,10 @@ class OCRAgent(Agent):
 
             results = await self._process_images(images, language, enhance)
 
-            execution_time = (datetime.utcnow() - start_time).total_seconds() * 1000
+            execution_time = (datetime.now(timezone.utc) - start_time).total_seconds() * 1000
 
             return TaskResult(
-                task_id=task_input.get("task_id", str(datetime.utcnow().timestamp())),
+                task_id=task_input.get("task_id", str(datetime.now(timezone.utc).timestamp())),
                 agent_id=self.agent_id,
                 success=True,
                 output={
@@ -183,11 +183,11 @@ class OCRAgent(Agent):
 
         except Exception as e:
             return TaskResult(
-                task_id=str(datetime.utcnow().timestamp()),
+                task_id=str(datetime.now(timezone.utc).timestamp()),
                 agent_id=self.agent_id,
                 success=False,
                 error=str(e),
-                execution_time_ms=(datetime.utcnow() - start_time).total_seconds() * 1000
+                execution_time_ms=(datetime.now(timezone.utc) - start_time).total_seconds() * 1000
             )
         finally:
             self.update_state(AgentState.IDLE)
@@ -248,7 +248,7 @@ class MultimodalAgent(Agent):
 
     async def execute(self, task: Any, context: AgentContext) -> TaskResult:
         """Execute multimodal extraction on documents."""
-        start_time = datetime.utcnow()
+        start_time = datetime.now(timezone.utc)
         self.update_state(AgentState.EXECUTING)
 
         try:
@@ -263,10 +263,10 @@ class MultimodalAgent(Agent):
                 extract_images
             )
 
-            execution_time = (datetime.utcnow() - start_time).total_seconds() * 1000
+            execution_time = (datetime.now(timezone.utc) - start_time).total_seconds() * 1000
 
             return TaskResult(
-                task_id=task_input.get("task_id", str(datetime.utcnow().timestamp())),
+                task_id=task_input.get("task_id", str(datetime.now(timezone.utc).timestamp())),
                 agent_id=self.agent_id,
                 success=True,
                 output={
@@ -287,11 +287,11 @@ class MultimodalAgent(Agent):
 
         except Exception as e:
             return TaskResult(
-                task_id=str(datetime.utcnow().timestamp()),
+                task_id=str(datetime.now(timezone.utc).timestamp()),
                 agent_id=self.agent_id,
                 success=False,
                 error=str(e),
-                execution_time_ms=(datetime.utcnow() - start_time).total_seconds() * 1000
+                execution_time_ms=(datetime.now(timezone.utc) - start_time).total_seconds() * 1000
             )
         finally:
             self.update_state(AgentState.IDLE)

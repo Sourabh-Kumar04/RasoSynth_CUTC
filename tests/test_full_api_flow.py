@@ -73,12 +73,12 @@ async def test_full_flow():
         print("✓ Orchestrator initialized")
 
         # Register job in active_jobs (like the real pipeline does)
-        from datetime import datetime
+        from datetime import datetime, timezone
         orchestrator.active_jobs[job_id] = Job(
             id=job_id,
             status=JobStatus.RUNNING,
-            created_at=datetime.utcnow(),
-            updated_at=datetime.utcnow(),
+            created_at=datetime.now(timezone.utc),
+            updated_at=datetime.now(timezone.utc),
             current_stage="export",
             progress=0.9,
             config={"target_domain": "machine learning"},

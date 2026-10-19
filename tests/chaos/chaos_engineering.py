@@ -18,7 +18,7 @@ import time
 import logging
 from typing import Dict, List, Optional, Any, Callable
 from dataclasses import dataclass, field
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from enum import Enum
 from abc import ABC, abstractmethod
 import subprocess
@@ -191,7 +191,7 @@ class ProviderChaosInjector(ChaosInjector):
             "provider": provider,
             "failures_injected": failure_count,
             "circuit_state": "OPEN",
-            "timestamp": datetime.utcnow().isoformat(),
+            "timestamp": datetime.now(timezone.utc).isoformat(),
         }
 
         self._circuit_breakers[provider] = failure_count
@@ -506,7 +506,7 @@ class ChaosEngine:
 
         result = ExperimentResult(
             experiment=experiment,
-            started_at=datetime.utcnow(),
+            started_at=datetime.now(timezone.utc),
         )
 
         logger.warning(
@@ -541,13 +541,13 @@ class ChaosEngine:
             }
 
             result.success = True
-            result.completed_at = datetime.utcnow()
+            result.completed_at = datetime.now(timezone.utc)
 
         except Exception as e:
             result.errors.append(str(e))
             logger.error(f"Experiment failed: {e}")
             result.success = False
-            result.completed_at = datetime.utcnow()
+            result.completed_at = datetime.now(timezone.utc)
 
         finally:
             # Rollback if configured
@@ -719,7 +719,7 @@ class DisasterRecoveryTester:
 
         # Record pre-shutdown state
         pre_state = {
-            "timestamp": datetime.utcnow().isoformat(),
+            "timestamp": datetime.now(timezone.utc).isoformat(),
             "jobs_in_progress": random.randint(5, 20),
             "cache_size": random.randint(1000, 10000),
         }

@@ -7,7 +7,7 @@ deduplication, validation, synthetic data, agents, workflows, and search.
 
 from typing import Dict, List, Optional, Any, Callable
 from dataclasses import dataclass, field
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 import asyncio
 import json
 import hashlib
@@ -75,7 +75,7 @@ class LLMCache:
             "prompt_hash": prompt_hash,
             "response": response,
             "usage": usage or {},
-            "cached_at": datetime.utcnow().isoformat(),
+            "cached_at": datetime.now(timezone.utc).isoformat(),
             "tokens_saved": usage.get("total_tokens", 0) if usage else 0
         }
 
@@ -171,7 +171,7 @@ class WebCache:
             "url": url,
             "content": content,
             "content_type": content_type,
-            "cached_at": datetime.utcnow().isoformat(),
+            "cached_at": datetime.now(timezone.utc).isoformat(),
             "metadata": metadata or {}
         }
 
@@ -457,7 +457,7 @@ class AgentStateCache:
     async def heartbeat(self, agent_id: str, ttl: float = 60.0) -> None:
         """Update agent heartbeat."""
         key = f"agent:heartbeat:{agent_id}"
-        await self.redis.setex(key, ttl, datetime.utcnow().isoformat())
+        await self.redis.setex(key, ttl, datetime.now(timezone.utc).isoformat())
 
     async def get_active_agents(self) -> List[str]:
         """Get list of active agents."""
@@ -513,7 +513,7 @@ class WorkflowCache:
 
         workflow["stages"][stage] = {
             "result": result,
-            "updated_at": datetime.utcnow().isoformat()
+            "updated_at": datetime.now(timezone.utc).isoformat()
         }
 
         await self.set_workflow(workflow_id, workflow)
@@ -581,7 +581,7 @@ class SearchCache:
         cache_data = {
             "query": query,
             "results": results,
-            "cached_at": datetime.utcnow().isoformat(),
+            "cached_at": datetime.now(timezone.utc).isoformat(),
             "result_count": len(results.get("items", []))
         }
 
@@ -634,7 +634,7 @@ class OCRCache:
         cache_data = {
             "result": result,
             "confidence": confidence,
-            "cached_at": datetime.utcnow().isoformat()
+            "cached_at": datetime.now(timezone.utc).isoformat()
         }
 
         await self.redis.setex(

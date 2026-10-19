@@ -7,7 +7,7 @@ and quality metrics throughout the pipeline.
 
 from typing import Dict, List, Optional, Any
 from dataclasses import dataclass, field
-from datetime import datetime
+from datetime import datetime, timezone
 from enum import Enum
 import asyncio
 import json
@@ -33,7 +33,7 @@ class DataSource:
     source_type: str  # web, api, database, synthetic
     url: str = ""
     provider: str = ""
-    accessed_at: datetime = field(default_factory=datetime.utcnow)
+    accessed_at: datetime = field(default_factory=lambda: datetime.now(timezone.utc))
     records_count: int = 0
     metadata: Dict[str, Any] = field(default_factory=dict)
 
@@ -99,7 +99,7 @@ class DatasetLineageTracker:
         """Track a new dataset."""
         self._datasets[dataset_id] = {
             "dataset_id": dataset_id,
-            "created_at": datetime.utcnow().isoformat(),
+            "created_at": datetime.now(timezone.utc).isoformat(),
             "metadata": metadata or {},
             "sources": [],
             "transformations": []
@@ -223,7 +223,7 @@ class ProvenanceGraph:
             "node_id": node_id,
             "node_type": node_type,
             "metadata": metadata or {},
-            "created_at": datetime.utcnow().isoformat()
+            "created_at": datetime.now(timezone.utc).isoformat()
         }
 
     def add_edge(
@@ -316,7 +316,7 @@ class QualityTracker:
 
         self._quality_records[dataset_id].append({
             "stage": stage,
-            "timestamp": datetime.utcnow().isoformat(),
+            "timestamp": datetime.now(timezone.utc).isoformat(),
             "scores": scores,
             "overall_score": sum(scores.values()) / max(len(scores), 1)
         })
@@ -396,7 +396,7 @@ class PipelineTelemetry:
             stage = PipelineStage(
                 stage_id=f"{pipeline_id}:stage_{i}",
                 stage_name=stage_name,
-                start_time=datetime.utcnow()
+                start_time=datetime.now(timezone.utc)
             )
             self._stages[stage.stage_id] = stage
             self._active_pipelines[pipeline_id].append(stage)
@@ -415,7 +415,7 @@ class PipelineTelemetry:
         """Mark stage as completed."""
         if stage_id in self._stages:
             stage = self._stages[stage_id]
-            stage.end_time = datetime.utcnow()
+            stage.end_time = datetime.now(timezone.utc)
             stage.status = "completed"
             stage.output_count = output_count
             stage.quality_score = quality_score
@@ -428,7 +428,7 @@ class PipelineTelemetry:
         """Mark stage as failed."""
         if stage_id in self._stages:
             stage = self._stages[stage_id]
-            stage.end_time = datetime.utcnow()
+            stage.end_time = datetime.now(timezone.utc)
             stage.status = "failed"
             stage.error = error
 

@@ -7,7 +7,7 @@ multi-agent coordination with fault tolerance and dynamic load balancing.
 
 from typing import Dict, List, Optional, Any, Set, Callable
 from dataclasses import dataclass, field
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from enum import Enum
 import asyncio
 import uuid
@@ -65,7 +65,7 @@ class DelegatedTask:
     spec: TaskSpec
     assigned_agent: Optional[str] = None
     status: TaskStatus = TaskStatus.PENDING
-    created_at: datetime = field(default_factory=datetime.utcnow)
+    created_at: datetime = field(default_factory=lambda: datetime.now(timezone.utc))
     started_at: Optional[datetime] = None
     completed_at: Optional[datetime] = None
     result: Any = None
@@ -82,7 +82,7 @@ class ConsensusVote:
     value: Any
     confidence: float = 1.0
     reason: str = ""
-    timestamp: datetime = field(default_factory=datetime.utcnow)
+    timestamp: datetime = field(default_factory=lambda: datetime.now(timezone.utc))
 
 
 @dataclass
@@ -95,7 +95,7 @@ class PlanningDecision:
     selected_option: Any
     reasoning: str
     confidence: float
-    timestamp: datetime = field(default_factory=datetime.utcnow)
+    timestamp: datetime = field(default_factory=lambda: datetime.now(timezone.utc))
 
 
 class Supervisor:
@@ -119,7 +119,7 @@ class Supervisor:
         self._agents[agent_id] = {
             "capabilities": capabilities,
             "health_check_interval": health_check_interval,
-            "last_health_check": datetime.utcnow(),
+            "last_health_check": datetime.now(timezone.utc),
             "status": "active",
             "assigned_tasks": [],
             "completed_tasks": 0,
@@ -174,7 +174,7 @@ class Supervisor:
         task.progress = progress
 
         if status == TaskStatus.IN_PROGRESS and not task.started_at:
-            task.started_at = datetime.utcnow()
+            task.started_at = datetime.now(timezone.utc)
 
         if result is not None:
             task.result = result
@@ -183,7 +183,7 @@ class Supervisor:
             task.error = error
 
         if status in (TaskStatus.COMPLETED, TaskStatus.FAILED):
-            task.completed_at = datetime.utcnow()
+            task.completed_at = datetime.now(timezone.utc)
             if task.assigned_agent and task.assigned_agent in self._agents:
                 agent = self._agents[task.assigned_agent]
                 if status == TaskStatus.COMPLETED:
@@ -193,13 +193,15 @@ class Supervisor:
 
     async def health_check(self, agent_id: str) -> Dict[str, Any]:
         """Perform health check on an agent."""
-        now = datetime.utcnow()
+        now = datetime.now(timezone.utc)
         agent_info = self._agents.get(agent_id)
 
         if not agent_info:
             return {"status": "unknown", "agent_id": agent_id}
 
         last_check = agent_info["last_health_check"]
+        if last_check.tzinfo is None:
+            last_check = last_check.replace(tzinfo=timezone.utc)
         time_since = (now - last_check).total_seconds()
         interval = agent_info["health_check_interval"]
 
@@ -387,7 +389,7 @@ class TaskDelegator:
             "task_id": task.task_id,
             "agent_id": agent_id,
             "strategy": strategy,
-            "timestamp": datetime.utcnow(),
+            "timestamp": datetime.now(timezone.utc),
         })
 
         return delegated

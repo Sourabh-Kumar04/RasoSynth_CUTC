@@ -8,7 +8,7 @@ from abc import ABC, abstractmethod
 from dataclasses import dataclass, field
 from enum import Enum
 from typing import Optional, Any, Dict, List, Callable
-from datetime import datetime
+from datetime import datetime, timezone
 import uuid
 import json
 
@@ -126,7 +126,7 @@ class AgentMessage:
     message_type: MessageType = MessageType.TASK
     content: Any = None
     metadata: Dict[str, Any] = field(default_factory=dict)
-    timestamp: datetime = field(default_factory=datetime.utcnow)
+    timestamp: datetime = field(default_factory=lambda: datetime.now(timezone.utc))
     reply_to: Optional[str] = None
     correlation_id: Optional[str] = None
     priority: int = 5

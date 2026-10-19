@@ -507,7 +507,7 @@ class ObservabilityManager:
             # ↓ NEW: top-level error field for log aggregators
             "error": issues[0] if issues and decision in ("failed", "rejected") else None,
             "issue_count": len(issues) if issues else 0,
-            "timestamp": datetime.utcnow().isoformat(),
+            "timestamp": datetime.now(timezone.utc).isoformat(),
             **(metadata or {})
         }
         self.log_event(f"pipeline_{stage}", f"Job {job_id} stage {stage}: {decision}", log_payload)

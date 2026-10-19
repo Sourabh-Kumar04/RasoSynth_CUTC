@@ -6,7 +6,7 @@ conflict detection, and feasibility evaluation.
 """
 
 from typing import Dict, List, Optional, Any, Set, Callable, Union
-from datetime import datetime
+from datetime import datetime, timezone
 from dataclasses import dataclass, field
 import asyncio
 import json
@@ -62,7 +62,7 @@ class ConstraintReasoningEngine:
     def analyze(self, request: SemanticRequest) -> ConstraintAnalysis:
         """Analyze constraints from semantic request."""
         analysis = ConstraintAnalysis(
-            request_id=request.request_id or f"analysis_{datetime.utcnow().timestamp()}",
+            request_id=request.request_id or f"analysis_{datetime.now(timezone.utc).timestamp()}",
             constraints=request.get_all_constraints()
         )
 
@@ -79,7 +79,7 @@ class ConstraintReasoningEngine:
     ) -> FeasibilityResult:
         """Evaluate feasibility of request given constraints."""
         result = FeasibilityResult(
-            request_id=request.request_id or f"feasibility_{datetime.utcnow().timestamp()}",
+            request_id=request.request_id or f"feasibility_{datetime.now(timezone.utc).timestamp()}",
             overall_feasibility=FeasibilityLevel.UNKNOWN,
             feasibility_score=0.0
         )
@@ -412,7 +412,7 @@ class SemanticValidator:
     ) -> ValidationResult:
         """Perform comprehensive semantic validation."""
         result = ValidationResult(
-            request_id=request.request_id or f"validation_{datetime.utcnow().timestamp()}",
+            request_id=request.request_id or f"validation_{datetime.now(timezone.utc).timestamp()}",
             status=ValidationStatus.VALID
         )
 
@@ -422,7 +422,7 @@ class SemanticValidator:
             is_valid, details = rule["check"](request, config, context)
             if not is_valid:
                 issue = ValidationIssue(
-                    issue_id=f"issue_{rule['name']}_{datetime.utcnow().timestamp()}",
+                    issue_id=f"issue_{rule['name']}_{datetime.now(timezone.utc).timestamp()}",
                     field_path="semantic",
                     severity=rule["severity"],
                     code=rule["name"],
@@ -524,7 +524,7 @@ class ConstraintAnalyzer:
     ) -> ValidationResult:
         """Perform complete request analysis."""
         result = ValidationResult(
-            request_id=request.request_id or f"analysis_{datetime.utcnow().timestamp()}",
+            request_id=request.request_id or f"analysis_{datetime.now(timezone.utc).timestamp()}",
             status=ValidationStatus.VALID
         )
 

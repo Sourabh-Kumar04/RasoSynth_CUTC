@@ -7,7 +7,7 @@ for AI infrastructure observability.
 
 from typing import Optional, Dict, Any, List, Callable
 from dataclasses import dataclass, field
-from datetime import datetime
+from datetime import datetime, timezone
 from contextvars import ContextVar
 import asyncio
 import logging
@@ -233,7 +233,7 @@ class StructuredFormatter(logging.Formatter):
 
     def format(self, record: logging.LogRecord) -> str:
         log_data = {
-            "timestamp": datetime.utcnow().isoformat() + "Z",
+            "timestamp": datetime.now(timezone.utc).isoformat(),
             "level": record.levelname,
             "logger": record.name,
             "message": record.getMessage(),
@@ -399,7 +399,7 @@ class MetricsCollector:
     def get_summary(self) -> Dict[str, Any]:
         """Get metrics summary."""
         return {
-            "timestamp": datetime.utcnow().isoformat(),
+            "timestamp": datetime.now(timezone.utc).isoformat(),
             "metrics": {
                 "requests": {"count": 0, "avg_duration": 0},
                 "providers": {},
@@ -672,7 +672,7 @@ class HealthChecker:
         return {
             "healthy": all_healthy,
             "checks": results,
-            "timestamp": datetime.utcnow().isoformat(),
+            "timestamp": datetime.now(timezone.utc).isoformat(),
         }
 
 

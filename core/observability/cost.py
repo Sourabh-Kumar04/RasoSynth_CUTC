@@ -7,7 +7,7 @@ cost optimization recommendations.
 
 from typing import Dict, List, Optional, Any
 from dataclasses import dataclass, field
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from enum import Enum
 import asyncio
 
@@ -25,7 +25,7 @@ class CostCategory(Enum):
 @dataclass
 class CostEntry:
     """Individual cost entry."""
-    timestamp: datetime = field(default_factory=datetime.utcnow)
+    timestamp: datetime = field(default_factory=lambda: datetime.now(timezone.utc))
     category: CostCategory = CostCategory.API_CALLS
     provider: str = ""
     amount: float = 0.0
@@ -58,7 +58,7 @@ class CostTracker:
     ) -> None:
         """Record a cost entry."""
         entry = CostEntry(
-            timestamp=datetime.utcnow(),
+            timestamp=datetime.now(timezone.utc),
             category=category,
             provider=provider,
             model=model,
@@ -78,7 +78,7 @@ class CostTracker:
         cat_name = category.value if isinstance(category, CostCategory) else str(category)
         self._category_costs[cat_name] = self._category_costs.get(cat_name, 0) + amount
 
-        date_key = datetime.utcnow().strftime("%Y-%m-%d")
+        date_key = datetime.now(timezone.utc).strftime("%Y-%m-%d")
         self._daily_costs[date_key] = self._daily_costs.get(date_key, 0) + amount
 
     def get_total_cost(self, since: Optional[datetime] = None) -> float:
@@ -86,7 +86,11 @@ class CostTracker:
         if since is None:
             return sum(e.amount for e in self._costs)
 
-        return sum(e.amount for e in self._costs if e.timestamp >= since)
+        since_utc = since if since.tzinfo is not None else since.replace(tzinfo=timezone.utc)
+        return sum(
+            e.amount for e in self._costs
+            if (e.timestamp if e.timestamp.tzinfo is not None else e.timestamp.replace(tzinfo=timezone.utc)) >= since_utc
+        )
 
     def get_cost_by_provider(self) -> Dict[str, float]:
         """Get costs by provider."""
@@ -98,12 +102,13 @@ class CostTracker:
 
     def get_daily_costs(self, days: int = 7) -> Dict[str, float]:
         """Get daily costs for last N days."""
-        cutoff = datetime.utcnow() - timedelta(days=days)
+        cutoff = datetime.now(timezone.utc) - timedelta(days=days)
         daily = {}
 
         for entry in self._costs:
-            if entry.timestamp >= cutoff:
-                date_key = entry.timestamp.strftime("%Y-%m-%d")
+            ts = entry.timestamp if entry.timestamp.tzinfo is not None else entry.timestamp.replace(tzinfo=timezone.utc)
+            if ts >= cutoff:
+                date_key = ts.strftime("%Y-%m-%d")
                 daily[date_key] = daily.get(date_key, 0) + entry.amount
 
         return daily
@@ -138,8 +143,11 @@ class CostAnalyzer:
         threshold_std: float = 2.0
     ) -> List[Dict]:
         """Find cost anomalies."""
-        cutoff = datetime.utcnow() - timedelta(hours=window_hours)
-        recent_costs = [e.amount for e in self.tracker._costs if e.timestamp >= cutoff]
+        cutoff = datetime.now(timezone.utc) - timedelta(hours=window_hours)
+        recent_costs = [
+            e.amount for e in self.tracker._costs
+            if (e.timestamp if e.timestamp.tzinfo is not None else e.timestamp.replace(tzinfo=timezone.utc)) >= cutoff
+        ]
 
         if len(recent_costs) < 10:
             return []
@@ -150,9 +158,10 @@ class CostAnalyzer:
 
         anomalies = []
         for entry in self.tracker._costs:
-            if entry.timestamp >= cutoff and entry.amount > avg + threshold_std * std:
+            ts = entry.timestamp if entry.timestamp.tzinfo is not None else entry.timestamp.replace(tzinfo=timezone.utc)
+            if ts >= cutoff and entry.amount > avg + threshold_std * std:
                 anomalies.append({
-                    "timestamp": entry.timestamp.isoformat(),
+                    "timestamp": ts.isoformat(),
                     "provider": entry.provider,
                     "amount": entry.amount,
                     "avg": avg,
@@ -291,7 +300,7 @@ class BudgetMonitor:
             self._alerts.append({
                 "type": "daily_budget_warning",
                 "message": f"Daily budget at {status['daily_percent']:.1f}%",
-                "timestamp": datetime.utcnow().isoformat()
+                "timestamp": datetime.now(timezone.utc).isoformat()
             })
 
         return status

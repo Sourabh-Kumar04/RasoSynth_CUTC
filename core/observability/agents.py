@@ -7,7 +7,7 @@ and multi-agent graph visualization.
 
 from typing import Dict, List, Optional, Any, Set
 from dataclasses import dataclass, field
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from enum import Enum
 import asyncio
 
@@ -165,7 +165,7 @@ class AgentCoordinationTracker:
             "supervisor_id": supervisor_id,
             "agent_id": agent_id,
             "task_id": task_id,
-            "timestamp": datetime.utcnow().isoformat()
+            "timestamp": datetime.now(timezone.utc).isoformat()
         })
 
     async def record_consensus(
@@ -190,7 +190,7 @@ class AgentCoordinationTracker:
             "agent_id": agent_id,
             "task_id": task_id,
             "attempt": attempt,
-            "timestamp": datetime.utcnow().isoformat()
+            "timestamp": datetime.now(timezone.utc).isoformat()
         })
 
     async def record_deadlock(
@@ -203,7 +203,7 @@ class AgentCoordinationTracker:
         self._deadlocks[f"{task_id}:{len(self._deadlocks)}"] = {
             "agents": agents,
             "task_id": task_id,
-            "detected_at": datetime.utcnow().isoformat(),
+            "detected_at": datetime.now(timezone.utc).isoformat(),
             "resolution": resolution
         }
 
@@ -282,8 +282,11 @@ class MultiAgentGraphVisualizer:
             executions = self.observer.get_agent_executions(agent_id, limit=1000)
 
             # Count executions in time window
-            cutoff = datetime.utcnow() - time_window
-            recent = [e for e in executions if e.start_time > cutoff]
+            cutoff = datetime.now(timezone.utc) - time_window
+            recent = [
+                e for e in executions
+                if (e.start_time if e.start_time.tzinfo is not None else e.start_time.replace(tzinfo=timezone.utc)) > cutoff
+            ]
 
             heatmap[agent_id] = {
                 "execution_count": len(recent),

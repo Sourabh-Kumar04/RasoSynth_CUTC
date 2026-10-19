@@ -7,7 +7,7 @@ event broadcasting, workflow triggering, and real-time coordination.
 
 from typing import Dict, List, Optional, Any, Callable, Set, Tuple
 from dataclasses import dataclass, field
-from datetime import datetime
+from datetime import datetime, timezone
 from enum import Enum
 import asyncio
 import json
@@ -92,7 +92,7 @@ class EventBus:
             event_id=str(uuid.uuid4()),
             event_type=event_type,
             source=source,
-            timestamp=datetime.utcnow(),
+            timestamp=datetime.now(timezone.utc),
             data=data,
             correlation_id=correlation_id,
             metadata=metadata or {}
@@ -202,7 +202,7 @@ class PubSubManager:
         """Publish message to channel."""
         data = json.dumps({
             "message": message,
-            "timestamp": datetime.utcnow().isoformat(),
+            "timestamp": datetime.now(timezone.utc).isoformat(),
             "message_id": str(uuid.uuid4())
         }, default=str)
 
@@ -308,7 +308,7 @@ class StreamProcessor:
         """Add entry to stream."""
         entry_id = await self.redis.xadd(
             stream_name,
-            {**data, "timestamp": datetime.utcnow().isoformat()},
+            {**data, "timestamp": datetime.now(timezone.utc).isoformat()},
             maxlen=max_len,
             approximate=True
         )
@@ -414,7 +414,7 @@ class DistributedLockManager:
         if acquired:
             self._locks[lock_name] = {
                 "holder_id": holder_id,
-                "acquired_at": datetime.utcnow(),
+                "acquired_at": datetime.now(timezone.utc),
                 "ttl": ttl
             }
             self._acquired.add(lock_name)
@@ -425,15 +425,15 @@ class DistributedLockManager:
         if current_holder == holder_id:
             self._locks[lock_name] = {
                 "holder_id": holder_id,
-                "acquired_at": datetime.utcnow(),
+                "acquired_at": datetime.now(timezone.utc),
                 "ttl": ttl
             }
             self._acquired.add(lock_name)
             return True
 
         # Wait for lock
-        start = datetime.utcnow()
-        while (datetime.utcnow() - start).total_seconds() < timeout:
+        start = datetime.now(timezone.utc)
+        while (datetime.now(timezone.utc) - start).total_seconds() < timeout:
             acquired = await self.redis.set(
                 lock_key,
                 holder_id,
@@ -443,7 +443,7 @@ class DistributedLockManager:
             if acquired:
                 self._locks[lock_name] = {
                     "holder_id": holder_id,
-                    "acquired_at": datetime.utcnow(),
+                    "acquired_at": datetime.now(timezone.utc),
                     "ttl": ttl
                 }
                 self._acquired.add(lock_name)
@@ -575,7 +575,7 @@ class RateLimitProtector:
         daily_limit: int
     ) -> Tuple[bool, int]:
         """Track daily token usage."""
-        date = datetime.utcnow().strftime("%Y-%m-%d")
+        date = datetime.now(timezone.utc).strftime("%Y-%m-%d")
         key = f"tokens:{provider}:{date}"
 
         current = await self.redis.get(key)
@@ -590,7 +590,7 @@ class RateLimitProtector:
 
     async def get_token_usage(self, provider: str) -> Dict[str, int]:
         """Get today's token usage."""
-        date = datetime.utcnow().strftime("%Y-%m-%d")
+        date = datetime.now(timezone.utc).strftime("%Y-%m-%d")
         key = f"tokens:{provider}:{date}"
 
         used = await self.redis.get(key)

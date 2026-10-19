@@ -51,12 +51,12 @@ def test_websocket_broadcasting():
         # Create a job
         import uuid
         job_id = str(uuid.uuid4())
-        from datetime import datetime
+        from datetime import datetime, timezone
         job = Job(
             id=job_id,
             status=JobStatus.RUNNING,
-            created_at=datetime.utcnow(),
-            updated_at=datetime.utcnow(),
+            created_at=datetime.now(timezone.utc),
+            updated_at=datetime.now(timezone.utc),
             current_stage="export",
             progress=0.9,
             config={"target_domain": "test"},

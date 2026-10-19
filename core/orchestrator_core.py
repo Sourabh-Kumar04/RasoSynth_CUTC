@@ -11,7 +11,7 @@ import asyncio
 import logging
 from typing import TypedDict, Annotated, Any, Optional, AsyncGenerator
 from dataclasses import dataclass, field
-from datetime import datetime
+from datetime import datetime, timezone
 from enum import Enum
 from langgraph.graph import StateGraph, END
 from langgraph.checkpoint.memory import MemorySaver
@@ -2302,7 +2302,7 @@ class DatasetOrchestrator:
         job = self.active_jobs[job_id]
         job.current_stage = stage
         job.progress = progress
-        job.updated_at = datetime.utcnow()
+        job.updated_at = datetime.now(timezone.utc)
         if error:
             job.error = error
             job.status = JobStatus.FAILED

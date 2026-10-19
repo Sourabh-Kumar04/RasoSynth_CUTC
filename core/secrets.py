@@ -17,7 +17,7 @@ import logging
 from typing import Optional, Dict, Any, List
 from dataclasses import dataclass, field
 from enum import Enum
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from abc import ABC, abstractmethod
 from functools import lru_cache
 
@@ -108,9 +108,12 @@ class InMemorySecretCache:
             if key in self._cache:
                 secret = self._cache[key]
                 # Check expiration
-                if secret.metadata.expires_at and datetime.utcnow() > secret.metadata.expires_at:
-                    del self._cache[key]
-                    return None
+                if secret.metadata.expires_at:
+                    now = datetime.now(timezone.utc)
+                    exp = secret.metadata.expires_at if secret.metadata.expires_at.tzinfo is not None else secret.metadata.expires_at.replace(tzinfo=timezone.utc)
+                    if now > exp:
+                        del self._cache[key]
+                        return None
                 secret.cached = True
                 return secret
             return None
@@ -239,7 +242,7 @@ class VaultSecretsProvider(SecretsProvider):
                 metadata=metadata,
                 cache_ttl_seconds=self.cache_ttl,
             )
-            result.metadata.expires_at = datetime.utcnow() + timedelta(seconds=self.cache_ttl)
+            result.metadata.expires_at = datetime.now(timezone.utc) + timedelta(seconds=self.cache_ttl)
 
             await self._cache.set(cache_key, result)
             return result
@@ -352,7 +355,7 @@ class AWSSecretsProvider(SecretsProvider):
                 backend=SecretBackend.AWS_SECRETS,
                 path=path,
                 version=response.get("VersionId"),
-                updated_at=datetime.fromisoformat(response.get("LastChangedDate", datetime.utcnow().isoformat())),
+                updated_at=datetime.fromisoformat(response.get("LastChangedDate", datetime.now(timezone.utc).isoformat())),
             )
 
             result = SecretValue(
@@ -360,7 +363,7 @@ class AWSSecretsProvider(SecretsProvider):
                 metadata=metadata,
                 cache_ttl_seconds=self.cache_ttl,
             )
-            result.metadata.expires_at = datetime.utcnow() + timedelta(seconds=self.cache_ttl)
+            result.metadata.expires_at = datetime.now(timezone.utc) + timedelta(seconds=self.cache_ttl)
 
             await self._cache.set(cache_key, result)
             return result

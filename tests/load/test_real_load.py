@@ -11,7 +11,7 @@ import time
 import json
 import os
 import sys
-from datetime import datetime
+from datetime import datetime, timezone
 from dataclasses import dataclass, field
 from typing import Optional
 
@@ -34,7 +34,7 @@ class LoadTestResult:
     p95_duration: float
     p99_duration: float
     errors: list[str] = field(default_factory=list)
-    timestamp: str = field(default_factory=lambda: datetime.utcnow().isoformat())
+    timestamp: str = field(default_factory=lambda: datetime.now(timezone.utc).isoformat())
 
 
 class RasoDatasetLoadTester:
@@ -127,7 +127,7 @@ class RasoDatasetLoadTester:
     def generate_report(self, results: list[LoadTestResult]) -> str:
         report = f"""# Real Load Test Results
 
-Date: {datetime.utcnow().isoformat()}
+Date: {datetime.now(timezone.utc).isoformat()}
 Target: {self.base_url}
 
 ## Summary

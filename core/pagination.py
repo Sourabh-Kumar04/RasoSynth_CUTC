@@ -10,7 +10,7 @@ from typing import (
     List, Dict, Protocol, runtime_checkable, Iterator
 )
 from dataclasses import dataclass, field
-from datetime import datetime
+from datetime import datetime, timezone
 from enum import Enum
 import asyncio
 import logging
@@ -95,11 +95,13 @@ class StreamProgress:
     total_filtered: int = 0
     bytes_processed: int = 0
     errors: int = 0
-    start_time: datetime = field(default_factory=datetime.utcnow)
+    start_time: datetime = field(default_factory=lambda: datetime.now(timezone.utc))
 
     @property
     def items_per_second(self) -> float:
-        elapsed = (datetime.utcnow() - self.start_time).total_seconds()
+        now = datetime.now(timezone.utc)
+        start_dt = self.start_time if self.start_time.tzinfo is not None else self.start_time.replace(tzinfo=timezone.utc)
+        elapsed = (now - start_dt).total_seconds()
         return self.total_processed / max(elapsed, 0.001)
 
     def to_dict(self) -> Dict[str, Any]:

@@ -6,7 +6,7 @@ and workflow optimization.
 """
 
 from typing import Dict, List, Optional, Any, Set, Callable, Literal
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from dataclasses import dataclass, field
 import asyncio
 
@@ -74,7 +74,7 @@ class WorkflowPlanner:
     ) -> ExecutionPlan:
         """Create an execution plan from configuration."""
         plan = ExecutionPlan(
-            plan_id=f"plan_{datetime.utcnow().timestamp()}",
+            plan_id=f"plan_{datetime.now(timezone.utc).timestamp()}",
             request_id=config.request_id or "",
             orchestration_mode="sequential",
             execution_strategy="balanced"
@@ -214,7 +214,7 @@ class WorkflowPlanner:
         """Plan DAG execution for complex workflow."""
         plan = WorkflowPlan(
             workflow_id=workflow.workflow_id or "",
-            plan_id=f"dag_{datetime.utcnow().timestamp()}",
+            plan_id=f"dag_{datetime.now(timezone.utc).timestamp()}",
             steps_order=[s.step_id for s in workflow.steps]
         )
 
@@ -464,7 +464,7 @@ class ExecutionOptimizer:
         potential_savings = plan.total_estimated_cost_usd * 0.15
 
         return PlanOptimization(
-            optimization_id=f"opt_cost_{datetime.utcnow().timestamp()}",
+            optimization_id=f"opt_cost_{datetime.now(timezone.utc).timestamp()}",
             category="cost",
             title="Cost Optimization",
             description="Reduce costs through batching and caching",
@@ -484,7 +484,7 @@ class ExecutionOptimizer:
         potential_savings = plan.total_estimated_duration_seconds * 0.2
 
         return PlanOptimization(
-            optimization_id=f"opt_speed_{datetime.utcnow().timestamp()}",
+            optimization_id=f"opt_speed_{datetime.now(timezone.utc).timestamp()}",
             category="speed",
             title="Speed Optimization",
             description="Improve throughput through parallelization",
@@ -502,7 +502,7 @@ class ExecutionOptimizer:
     async def _optimize_quality(self, plan: ExecutionPlan) -> Optional[PlanOptimization]:
         """Optimize for quality."""
         return PlanOptimization(
-            optimization_id=f"opt_quality_{datetime.utcnow().timestamp()}",
+            optimization_id=f"opt_quality_{datetime.now(timezone.utc).timestamp()}",
             category="quality",
             title="Quality Optimization",
             description="Improve output quality through multiple passes",

@@ -15,7 +15,7 @@ import logging
 import os
 import re
 from base64 import b64encode, b64decode
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from typing import Optional, Dict, Any, List, Set
 from dataclasses import dataclass, field
 from enum import Enum
@@ -111,7 +111,7 @@ class EncryptedSecret:
     encrypted_value: str
     salt: str
     algorithm: str = "fernet"
-    created_at: datetime = field(default_factory=datetime.utcnow)
+    created_at: datetime = field(default_factory=lambda: datetime.now(timezone.utc))
     expires_at: Optional[datetime] = None
 
 
@@ -163,7 +163,7 @@ class SecretManager:
         # Create secret object
         expires_at = None
         if expiration_days:
-            expires_at = datetime.utcnow() + timedelta(days=expiration_days)
+            expires_at = datetime.now(timezone.utc) + timedelta(days=expiration_days)
 
         secret = EncryptedSecret(
             encrypted_value=encrypted.decode(),
@@ -176,9 +176,12 @@ class SecretManager:
     def decrypt(self, secret: EncryptedSecret) -> Optional[str]:
         """Decrypt a secret value."""
         # Check expiration
-        if secret.expires_at and secret.expires_at < datetime.utcnow():
-            logger.warning("Secret has expired")
-            return None
+        if secret.expires_at:
+            now = datetime.now(timezone.utc)
+            exp = secret.expires_at if secret.expires_at.tzinfo is not None else secret.expires_at.replace(tzinfo=timezone.utc)
+            if exp < now:
+                logger.warning("Secret has expired")
+                return None
 
         try:
             return self._fernet.decrypt(secret.encrypted_value.encode()).decode()
@@ -220,7 +223,7 @@ class User:
     username: str
     role: UserRole
     permissions: Set[Permission]
-    created_at: datetime = field(default_factory=datetime.utcnow)
+    created_at: datetime = field(default_factory=lambda: datetime.now(timezone.utc))
     last_login: Optional[datetime] = None
     metadata: Dict[str, Any] = field(default_factory=dict)
 
@@ -233,7 +236,7 @@ class AuthToken:
     role: UserRole
     permissions: List[str]
     exp: datetime
-    iat: datetime = field(default_factory=datetime.utcnow)
+    iat: datetime = field(default_factory=lambda: datetime.now(timezone.utc))
 
 
 class RBACManager:
@@ -280,7 +283,7 @@ class RBACManager:
         if not user:
             return None
 
-        exp = datetime.utcnow() + timedelta(hours=expires_in_hours)
+        exp = datetime.now(timezone.utc) + timedelta(hours=expires_in_hours)
         token_data = {
             "sub": user.user_id,
             "username": user.username,
@@ -290,7 +293,7 @@ class RBACManager:
         }
 
         token = jwt.encode(token_data, self._secret_key, algorithm=self._algorithm)
-        self._sessions[user_id] = datetime.utcnow()
+        self._sessions[user_id] = datetime.now(timezone.utc)
 
         return token
 
@@ -387,7 +390,7 @@ class AuditLogger:
         """Log an audit event."""
         event = AuditEvent(
             event_id=os.urandom(16).hex(),
-            timestamp=datetime.utcnow(),
+            timestamp=datetime.now(timezone.utc),
             user_id=user_id,
             username=username,
             action=action,
