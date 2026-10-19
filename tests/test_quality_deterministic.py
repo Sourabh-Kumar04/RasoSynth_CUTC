@@ -192,3 +192,27 @@ class TestDeterminism:
             semantic_score=0.9, statistical_score=0.7, signal_score=0.8,
         )
         assert compute_final_score(b1) == compute_final_score(b2)
+
+
+class TestAdaptiveFilterEngine:
+    """Test adaptive threshold calibration."""
+
+    @pytest.mark.asyncio
+    async def test_adaptive_calibration_from_distribution(self):
+        from pipeline.filtering import AdaptiveFilterEngine
+        engine = AdaptiveFilterEngine({"dataset_type": "sft"})
+        initial_quality = engine.get_thresholds().quality
+
+        # High-quality samples should adaptively elevate the quality threshold within bounds
+        high_quality_samples = [
+            {"instruction": f"Q{i}", "response": f"A{i}", "quality_score": 0.92}
+            for i in range(20)
+        ]
+        await engine.learn_thresholds(high_quality_samples)
+        adapted_quality = engine.get_thresholds().quality
+        assert 0.35 <= adapted_quality <= 0.75
+        assert adapted_quality >= initial_quality
+
+        # Empty samples shouldn't change anything
+        await engine.learn_thresholds([])
+        assert engine.get_thresholds().quality == adapted_quality

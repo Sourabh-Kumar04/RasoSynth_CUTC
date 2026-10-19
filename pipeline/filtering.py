@@ -64,10 +64,10 @@ class FilteredSample:
 # keyword argument 'signal'`` when the call site passes ``signal=...``.
 
 class AdaptiveFilterEngine:
-    """DEPRECATED: Thresholds are now static.
+    """Adaptive quality filtering engine that calibrates thresholds from data distributions.
 
-    Kept for backward compatibility. ``learn_thresholds`` is a no-op.
-    Thresholds are now loaded statically via ``get_thresholds()``.
+    Initializes with dataset-type specific defaults from ``get_thresholds()`` and
+    dynamically tunes thresholds using sample quality distributions via ``learn_thresholds()``.
     """
 
     def __init__(self, config: dict):
