@@ -2176,17 +2176,23 @@ async def export_dataset(dataset_id: str, request: dict = None):
             )
         ):
             file_path = Path(output_path)
-        elif export_format in {"sql", "qdrant"}:
+        elif export_format in {"jsonl", "csv", "parquet", "sql", "qdrant"}:
             samples = await db.get_samples(dataset["id"], limit=50000)
             if not samples:
                 raise HTTPException(status_code=404, detail="No samples found for this dataset")
             from pipeline.export import ExportPipeline, ExportConfig
-            exp = ExportPipeline(ExportConfig(format=export_format), output_dir=output_dir.parent)
+            exp = ExportPipeline(ExportConfig(format=export_format, output_dir=str(output_dir.parent)))
             output_dir.mkdir(parents=True, exist_ok=True)
             if export_format == "sql":
                 file_path = await exp._export_sql(samples, output_dir.name, output_dir)
-            else:
+            elif export_format == "qdrant":
                 file_path = await exp._export_qdrant(samples, output_dir.name, output_dir)
+            elif export_format == "csv":
+                file_path = await exp._export_csv(samples, output_dir.name, output_dir)
+            elif export_format == "parquet":
+                file_path = await exp._export_parquet(samples, output_dir.name, output_dir)
+            else:
+                file_path = await exp._export_jsonl(samples, output_dir.name, output_dir)
         else:
             raise HTTPException(
                 status_code=404,
