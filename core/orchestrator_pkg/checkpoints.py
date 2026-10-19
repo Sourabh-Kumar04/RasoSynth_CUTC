@@ -10,7 +10,7 @@ import json
 import logging
 from typing import Any, Optional, List, Dict
 from dataclasses import dataclass, field, asdict
-from datetime import datetime
+from datetime import datetime, timezone
 from enum import Enum
 from uuid import uuid4
 import asyncio
@@ -71,7 +71,7 @@ class Checkpoint:
     metadata: Dict[str, Any] = field(default_factory=dict)
 
     # Temporal
-    created_at: datetime = field(default_factory=datetime.utcnow)
+    created_at: datetime = field(default_factory=lambda: datetime.now(timezone.utc))
     version: int = 1
 
     def to_dict(self) -> Dict[str, Any]:

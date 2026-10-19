@@ -7,7 +7,7 @@ and resilience patterns for distributed AI infrastructure.
 
 from typing import Optional, Callable, Any, Dict, List, TypeVar, Generic, AsyncGenerator
 from dataclasses import dataclass, field
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from enum import Enum
 from functools import wraps
 import asyncio
@@ -70,7 +70,7 @@ class CircuitBreaker:
         """Get current circuit state with timeout-based transitions."""
         if self._state == CircuitState.OPEN:
             if self._last_failure_time:
-                elapsed = (datetime.utcnow() - self._last_failure_time).total_seconds()
+                elapsed = (datetime.now(timezone.utc) - self._last_failure_time).total_seconds()
                 if elapsed >= self.config.timeout_seconds:
                     self._state = CircuitState.HALF_OPEN
                     self._half_open_calls = 0
@@ -113,7 +113,7 @@ class CircuitBreaker:
 
         async with self._lock:
             self._failure_count += 1
-            self._last_failure_time = datetime.utcnow()
+            self._last_failure_time = datetime.now(timezone.utc)
             self._success_count = 0
 
             if self._state == CircuitState.HALF_OPEN:
@@ -268,7 +268,7 @@ class Bulkhead:
         self._total_accepted = 0
         self._total_rejected = 0
         self._lock = asyncio.Lock()
-        self._created_time = datetime.utcnow()
+        self._created_time = datetime.now(timezone.utc)
 
     def _get_semaphore(self) -> asyncio.Semaphore:
         """Get or create semaphore lazily."""
@@ -343,7 +343,7 @@ class Bulkhead:
             "queue_depth": self.queue_depth,
             "total_accepted": self._total_accepted,
             "total_rejected": self._total_rejected,
-            "uptime_seconds": (datetime.utcnow() - self._created_time).total_seconds(),
+            "uptime_seconds": (datetime.now(timezone.utc) - self._created_time).total_seconds(),
         }
 
 
@@ -413,7 +413,7 @@ class PooledConnection(Generic[T]):
         self._connection = connection
         self._pool = pool
         self._created_at = created_at
-        self._last_used = datetime.utcnow()
+        self._last_used = datetime.now(timezone.utc)
         self._is_valid = True
 
     @property
@@ -425,14 +425,14 @@ class PooledConnection(Generic[T]):
         if not self._is_valid:
             return False
         # Check idle time
-        idle_time = (datetime.utcnow() - self._last_used).total_seconds()
+        idle_time = (datetime.now(timezone.utc) - self._last_used).total_seconds()
         if idle_time > self._pool.config.max_idle_time_seconds:
             self._is_valid = False
         return self._is_valid
 
     async def release(self) -> None:
         """Release connection back to pool."""
-        self._last_used = datetime.utcnow()
+        self._last_used = datetime.now(timezone.utc)
         await self._pool._return_connection(self)
 
     async def close(self) -> None:
@@ -486,7 +486,7 @@ class ConnectionPool(Generic[T]):
             if self._total_created < self.config.max_size:
                 try:
                     new_conn = self.factory()
-                    pooled = PooledConnection(new_conn, self, datetime.utcnow())
+                    pooled = PooledConnection(new_conn, self, datetime.now(timezone.utc))
                     self._total_created += 1
                     self._in_use += 1
                     return pooled

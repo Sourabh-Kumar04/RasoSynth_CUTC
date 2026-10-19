@@ -9,7 +9,7 @@ import asyncio
 import logging
 from typing import Optional, List, Dict, Any, Callable, Set
 from dataclasses import dataclass, field
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from enum import Enum
 from uuid import uuid4
 
@@ -38,7 +38,7 @@ class FailureEvent:
     provider: str = ""
     failure_type: FailureType = FailureType.UNKNOWN_ERROR
     error_message: str = ""
-    timestamp: datetime = field(default_factory=datetime.utcnow)
+    timestamp: datetime = field(default_factory=lambda: datetime.now(timezone.utc))
     retry_count: int = 0
     latency_ms: float = 0.0
 
@@ -53,7 +53,7 @@ class MigrationRecord:
     failure_type: Optional[FailureType] = None
     checkpoint_id: Optional[str] = None
     success: bool = True
-    timestamp: datetime = field(default_factory=datetime.utcnow)
+    timestamp: datetime = field(default_factory=lambda: datetime.now(timezone.utc))
     error: Optional[str] = None
 
 

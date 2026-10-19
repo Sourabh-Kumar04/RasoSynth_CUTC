@@ -9,7 +9,7 @@ import asyncio
 import logging
 from typing import Optional, List, Dict, Any, Callable
 from dataclasses import dataclass, field
-from datetime import datetime
+from datetime import datetime, timezone
 from enum import Enum
 from uuid import uuid4
 
@@ -258,10 +258,10 @@ class StreamingRecoveryManager:
         state["events"].append({
             "index": event_index,
             "data": event_data,
-            "timestamp": datetime.utcnow().isoformat(),
+            "timestamp": datetime.now(timezone.utc).isoformat(),
         })
         state["last_index"] = event_index
-        state["last_timestamp"] = datetime.utcnow()
+        state["last_timestamp"] = datetime.now(timezone.utc)
 
     async def get_last_event_index(self, job_id: str) -> int:
         """Get index of last processed event."""
