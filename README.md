@@ -163,18 +163,28 @@ curl -X POST http://localhost:8000/jobs/preview \
     "max_sources": 5
   }'
 
-# Generate a grounded dataset
+# Obtain CSRF token for state-changing operations
+CSRF_TOKEN=$(curl -s http://localhost:8000/auth/csrf-token | jq -r .csrf_token)
+
+# Generate a grounded dataset with few-shot anchor examples
 curl -X POST http://localhost:8000/jobs \
   -H "Content-Type: application/json" \
+  -H "X-CSRF-Token: $CSRF_TOKEN" \
   -d '{
     "target_domain": "Finance & Taxation (AI Kosh)",
     "dataset_type": "sft",
     "dataset_size": 5000,
     "quality_level": "high",
-    "generation_mode": "grounded",
+    "generation_mode": "strict_source",
     "human_review": true,
     "human_review_percentage": 10.0,
-    "export_format": "jsonl"
+    "export_format": "jsonl",
+    "ideal_samples": [
+      {
+        "instruction": "What are the conditions for claiming Input Tax Credit under Section 16(4)?",
+        "response": "Under Section 16(4) of the CGST Act, a registered person is entitled to claim ITC within the prescribed statutory period..."
+      }
+    ]
   }'
 
 # Check status
@@ -207,6 +217,7 @@ curl http://localhost:8000/jobs/{job_id}/download
 # Fine-tune using the output of a dataset job
 curl -X POST http://localhost:8000/api/finetune/jobs \
   -H "Content-Type: application/json" \
+  -H "X-CSRF-Token: $CSRF_TOKEN" \
   -d '{
     "dataset_id": "<your-dataset-id>",
     "base_model": "HuggingFaceTB/SmolLM2-1.7B-Instruct",
