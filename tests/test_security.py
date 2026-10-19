@@ -17,19 +17,15 @@ def test_security_headers():
 
     # Test startup validation
     print("\n--- JWT_SECRET validation ---")
-    try:
-        _validate_security_config()
-        print("✓ JWT_SECRET validation passed")
-    except RuntimeError as e:
-        print(f"✗ JWT_SECRET validation failed: {e}")
-        return False
+    _validate_security_config()
+    print("✓ JWT_SECRET validation passed")
 
     # Use single TestClient instance to avoid lifespan re-trigger issues
     client = TestClient(app)
 
     # Test GET /health for security headers
     resp = client.get("/health")
-    status = resp.status_code
+    assert resp.status_code == 200
 
     expected_headers = {
         "X-Content-Type-Options": "nosniff",
@@ -42,11 +38,8 @@ def test_security_headers():
     print(f"\n--- Security Headers (/health) ---")
     for header, expected_value in expected_headers.items():
         actual = resp.headers.get(header)
-        if actual == expected_value:
-            print(f"✓ {header}: {actual}")
-        else:
-            print(f"✗ {header}: expected '{expected_value}', got '{actual}'")
-            return False
+        assert actual == expected_value, f"{header}: expected '{expected_value}', got '{actual}'"
+        print(f"✓ {header}: {actual}")
 
     # Test CORS preflight
     print(f"\n--- CORS preflight (/health) ---")
@@ -58,7 +51,6 @@ def test_security_headers():
     print(f"  Access-Control-Allow-Origin: {resp.headers.get('Access-Control-Allow-Origin', 'N/A')}")
 
     print("\n✅ All security headers test PASSED")
-    return True
 
 
 def test_request_size_validation():
@@ -78,9 +70,9 @@ def test_request_size_validation():
 
     print(f"✓ SecurityHeadersMiddleware configured")
     print(f"  MAX_BODY_SIZE: {middleware.MAX_BODY_SIZE} bytes")
+    assert middleware.MAX_BODY_SIZE > 0
 
     print("✅ Request size limit test PASSED")
-    return True
 
 
 if __name__ == "__main__":
