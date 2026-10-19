@@ -179,6 +179,7 @@ curl -X POST http://localhost:8000/jobs \
     "human_review": true,
     "human_review_percentage": 10.0,
     "export_format": "jsonl",
+    "instruction_format": "alpaca",
     "ideal_samples": [
       {
         "instruction": "What are the conditions for claiming Input Tax Credit under Section 16(4)?",
@@ -211,6 +212,17 @@ curl http://localhost:8000/jobs/{job_id}/download
 
 `jsonl` · `csv` · `parquet` · `huggingface` · `sql` · `qdrant`
 
+### Instruction / Chat Formats
+
+| Format | Target Schema / Standard |
+|--------|--------------------------|
+| `alpaca` | Standard instruction tuning (`instruction`, `input`, `output`) |
+| `sharegpt` | Multi-turn conversational format (`conversations: [{"from": "human"\|"gpt", "value": "..."}]`) |
+| `chatml` | ChatML dialogue structure with system/user/assistant message blocks (`messages`, `text`) |
+| `openai_jsonl` | Standard OpenAI fine-tuning payload (`messages: [{"role": "system"\|"user"\|"assistant", "content": "..."}]`) |
+
+Export formats and instruction formats are fully decoupled: any instruction schema can be serialized to JSONL, CSV, or Parquet, or re-formatted on-demand via `POST /datasets/{id}/export`.
+
 ## Fine-Tuning Integration
 
 ```bash
@@ -235,6 +247,8 @@ curl http://localhost:8000/api/finetune/models
 ```
 
 **Supported base models:** Llama-3 8B, Mistral 7B, Phi-3 Mini 3.8B, Gemma-2 9B, Qwen-2.5 7B, SmolLM2 1.7B
+
+**Supported chat templates:** `alpaca`, `sharegpt`, `chatml`, `openai_jsonl`, `llama3`. The fine-tuning trainer automatically normalizes input datasets across any instruction/chat format (`conversations`, `messages`, or `instruction`/`response`) to the requested training template without manual preprocessing.
 
 | Endpoint | Description |
 |----------|-------------|
