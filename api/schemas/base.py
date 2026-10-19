@@ -6,10 +6,16 @@ semantic requests, and base validation types.
 """
 
 from typing import Dict, List, Optional, Any, Set, Union, Literal, Callable
-from datetime import datetime
+from datetime import datetime, timezone
 from enum import Enum
 from pydantic import BaseModel, Field, field_validator, computed_field, model_validator
 from pydantic.types import StrictInt, StrictFloat
+
+
+def utc_now() -> datetime:
+    """Return timezone-aware current UTC datetime."""
+    return datetime.now(timezone.utc)
+
 
 
 class ConstraintType(str, Enum):
@@ -122,7 +128,7 @@ class BaseSchema(BaseModel):
     """Enhanced base schema with semantic capabilities."""
 
     request_id: Optional[str] = None
-    timestamp: datetime = Field(default_factory=datetime.utcnow)
+    timestamp: datetime = Field(default_factory=utc_now)
 
     tenant_id: Optional[str] = None
     user_id: Optional[str] = None

@@ -3,7 +3,7 @@ import asyncio
 import logging
 from typing import Dict, List, Optional, Any
 from dataclasses import dataclass, field
-from datetime import datetime
+from datetime import datetime, timezone
 from enum import Enum
 
 logger = logging.getLogger(__name__)
@@ -24,7 +24,7 @@ class ProviderValidationResult:
     status: ProviderHealth
     latency_ms: Optional[float] = None
     error: Optional[str] = None
-    validated_at: datetime = field(default_factory=datetime.utcnow)
+    validated_at: datetime = field(default_factory=lambda: datetime.now(timezone.utc))
 
 
 class ProviderValidator:

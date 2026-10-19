@@ -9,7 +9,7 @@ from typing import Dict, List, Optional, Any, Set, Union, Literal, Callable
 from datetime import datetime
 from enum import Enum
 from pydantic import BaseModel, Field, field_validator
-from api.schemas.base import BaseSchema, Constraint
+from api.schemas.base import BaseSchema, Constraint, utc_now
 from api.schemas.workflow import WorkflowStep, StepResourceAllocation
 
 
@@ -71,7 +71,7 @@ class ExecutionPlan(BaseSchema):
     orchestration_mode: Literal["sequential", "parallel", "hierarchical", "swarm", "adaptive"] = "sequential"
     execution_strategy: Literal["auto", "cost", "speed", "quality", "balanced"] = "balanced"
 
-    created_at: datetime = Field(default_factory=datetime.utcnow)
+    created_at: datetime = Field(default_factory=utc_now)
     approved_at: Optional[datetime] = None
     started_at: Optional[datetime] = None
     completed_at: Optional[datetime] = None

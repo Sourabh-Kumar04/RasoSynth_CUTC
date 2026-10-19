@@ -8,7 +8,7 @@ cost budgets, and routing policies.
 from typing import Dict, List, Optional, Any, Set, Literal, Callable
 from datetime import datetime
 from pydantic import BaseModel, Field, field_validator
-from api.schemas.base import BaseSchema, Constraint, ConstraintType
+from api.schemas.base import BaseSchema, Constraint, ConstraintType, utc_now
 
 
 class ProviderConstraint(BaseSchema):
@@ -181,7 +181,7 @@ class ProviderMetrics(BaseSchema):
     rate_limit_hits: int = 0
     timeout_rate: float = 0.0
 
-    last_updated: datetime = Field(default_factory=datetime.utcnow)
+    last_updated: datetime = Field(default_factory=utc_now)
 
 
 class ProviderHealth(BaseSchema):

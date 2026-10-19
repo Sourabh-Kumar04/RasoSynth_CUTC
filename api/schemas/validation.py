@@ -9,7 +9,7 @@ from typing import Dict, List, Optional, Any, Set, Union, Literal, Callable
 from datetime import datetime
 from enum import Enum
 from pydantic import BaseModel, Field, field_validator
-from api.schemas.base import BaseSchema, Constraint, ConstraintType, ConstraintScope
+from api.schemas.base import BaseSchema, Constraint, ConstraintType, ConstraintScope, utc_now
 
 
 class ValidationStatus(str, Enum):
@@ -164,7 +164,7 @@ class ValidationResult(BaseSchema):
     processing_recommendations: List[str] = Field(default_factory=list)
 
     validation_duration_ms: float = 0.0
-    timestamp: datetime = Field(default_factory=datetime.utcnow)
+    timestamp: datetime = Field(default_factory=utc_now)
 
     def has_errors(self) -> bool:
         """Check if there are validation errors."""
@@ -291,4 +291,4 @@ class ValidationSummary(BaseSchema):
 
     feasibility_distribution: Dict[str, int] = Field(default_factory=dict)
 
-    timestamp: datetime = Field(default_factory=datetime.utcnow)
+    timestamp: datetime = Field(default_factory=utc_now)

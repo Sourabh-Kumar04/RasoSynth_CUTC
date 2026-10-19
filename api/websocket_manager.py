@@ -2,8 +2,9 @@
 import asyncio
 import json
 import logging
+import time
 from typing import Dict, List, Set, Optional, Any, Callable
-from datetime import datetime
+from datetime import datetime, timezone
 from dataclasses import dataclass, field
 from enum import Enum
 import uuid
@@ -29,7 +30,7 @@ class WebSocketMessage:
     type: MessageType
     job_id: str
     data: Dict[str, Any]
-    timestamp: datetime = field(default_factory=datetime.utcnow)
+    timestamp: datetime = field(default_factory=lambda: datetime.now(timezone.utc))
     message_id: str = field(default_factory=lambda: str(uuid.uuid4()))
 
 
@@ -121,10 +122,10 @@ class ConnectionManager:
         self._connections[job_id].add(websocket)
         self._connection_metadata[connection_id] = {
             "job_id": job_id,
-            "connected_at": datetime.utcnow(),
-            "last_heartbeat": datetime.utcnow()
+            "connected_at": datetime.now(timezone.utc),
+            "last_heartbeat": datetime.now(timezone.utc)
         }
-        self._connection_timeouts[connection_id] = datetime.utcnow().timestamp()
+        self._connection_timeouts[connection_id] = time.time()
         self._connection_websockets[connection_id] = websocket
 
         logger.info(f"WebSocket connected: {connection_id} for job {job_id}")
@@ -307,11 +308,11 @@ class ConnectionManager:
 
     async def touch_connection(self, connection_id: str) -> None:
         """Update the last heartbeat time for a connection."""
-        self._connection_timeouts[connection_id] = datetime.utcnow().timestamp()
+        self._connection_timeouts[connection_id] = time.time()
 
     async def cleanup_stale_connections(self) -> int:
         """Remove connections that haven't sent heartbeat within threshold."""
-        now = datetime.utcnow().timestamp()
+        now = time.time()
         timeout_threshold = self._heartbeat_interval * 3
         removed_count = 0
 

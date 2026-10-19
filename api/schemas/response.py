@@ -9,7 +9,7 @@ from typing import Dict, List, Optional, Any, Generic, TypeVar, Union, Literal
 from datetime import datetime
 from enum import Enum
 from pydantic import BaseModel, Field, field_validator
-from api.schemas.base import BaseSchema
+from api.schemas.base import BaseSchema, utc_now
 
 T = TypeVar("T")
 
@@ -57,7 +57,7 @@ class ErrorDetail(BaseSchema):
     field_errors: List[ValidationError] = Field(default_factory=list)
 
     request_id: Optional[str] = None
-    timestamp: datetime = Field(default_factory=datetime.utcnow)
+    timestamp: datetime = Field(default_factory=utc_now)
 
     help_url: Optional[str] = None
     documentation_url: Optional[str] = None
@@ -130,7 +130,7 @@ class PaginationMeta(BaseSchema):
 class MetaInfo(BaseSchema):
     """Response metadata."""
     request_id: Optional[str] = None
-    timestamp: datetime = Field(default_factory=datetime.utcnow)
+    timestamp: datetime = Field(default_factory=utc_now)
 
     version: str = "1.0.0"
 
@@ -245,7 +245,7 @@ class HealthResponse(BaseSchema):
 
     checks: Dict[str, Dict[str, Any]] = Field(default_factory=dict)
 
-    timestamp: datetime = Field(default_factory=datetime.utcnow)
+    timestamp: datetime = Field(default_factory=utc_now)
 
 
 class StatusResponse(BaseSchema):

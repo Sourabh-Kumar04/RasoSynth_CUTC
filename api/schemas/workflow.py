@@ -9,7 +9,7 @@ from typing import Dict, List, Optional, Any, Set, Union, Literal, Callable
 from datetime import datetime
 from enum import Enum
 from pydantic import BaseModel, Field, field_validator, computed_field, model_validator
-from api.schemas.base import BaseSchema, Constraint, RetryPolicy, TimeoutConfig
+from api.schemas.base import BaseSchema, Constraint, RetryPolicy, TimeoutConfig, utc_now
 
 
 class OrchestrationMode(str, Enum):
@@ -272,8 +272,8 @@ class WorkflowExecution(BaseSchema):
 
     status: Literal["pending", "running", "completed", "failed", "cancelled", "paused"] = "pending"
 
-    started_at: datetime = Field(default_factory=datetime.utcnow)
-    updated_at: datetime = Field(default_factory=datetime.utcnow)
+    started_at: datetime = Field(default_factory=utc_now)
+    updated_at: datetime = Field(default_factory=utc_now)
     completed_at: Optional[datetime] = None
 
     current_step: Optional[str] = None

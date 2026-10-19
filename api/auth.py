@@ -13,7 +13,7 @@ import logging
 import hashlib
 import hmac
 import secrets
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from typing import Optional, Dict, Any, List
 from dataclasses import dataclass
 from enum import Enum
@@ -200,7 +200,7 @@ class AuthManager:
 
     def create_token(self, user_id: str, username: str, role: UserRole) -> str:
         """Create JWT token for user."""
-        exp = datetime.utcnow() + timedelta(hours=self.expiration_hours)
+        exp = datetime.now(timezone.utc) + timedelta(hours=self.expiration_hours)
 
         payload = {
             "user_id": user_id,
@@ -219,7 +219,7 @@ class AuthManager:
                 user_id=payload["user_id"],
                 username=payload["username"],
                 role=payload["role"],
-                exp=datetime.fromtimestamp(payload["exp"])
+                exp=datetime.fromtimestamp(payload["exp"], tz=timezone.utc)
             )
         except jwt.ExpiredSignatureError:
             raise HTTPException(status_code=401, detail="Token has expired")

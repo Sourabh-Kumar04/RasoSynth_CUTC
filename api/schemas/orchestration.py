@@ -9,7 +9,7 @@ from typing import Dict, List, Optional, Any, Set, Union, Literal, Callable
 from datetime import datetime
 from enum import Enum
 from pydantic import BaseModel, Field, field_validator, computed_field, model_validator
-from api.schemas.base import BaseSchema, Constraint, RetryPolicy
+from api.schemas.base import BaseSchema, Constraint, RetryPolicy, utc_now
 from api.schemas.workflow import WorkflowStep, StepResourceAllocation
 
 
@@ -299,7 +299,7 @@ class ExecutionMetrics(BaseSchema):
 
     throughput_tasks_per_second: float = 0.0
 
-    timestamp: datetime = Field(default_factory=datetime.utcnow)
+    timestamp: datetime = Field(default_factory=utc_now)
 
 
 class WorkerState(BaseSchema):
@@ -313,7 +313,7 @@ class WorkerState(BaseSchema):
 
     gpu_allocations: List[GPUAllocation] = Field(default_factory=list)
 
-    last_heartbeat: datetime = Field(default_factory=datetime.utcnow)
+    last_heartbeat: datetime = Field(default_factory=utc_now)
     task_started_at: Optional[datetime] = None
 
     metrics: Dict[str, Any] = Field(default_factory=dict)

@@ -9,7 +9,7 @@ from typing import Dict, List, Optional, Any, Set, Literal, Callable
 from datetime import datetime
 from enum import Enum
 from pydantic import BaseModel, Field
-from api.schemas.base import BaseSchema
+from api.schemas.base import BaseSchema, utc_now
 
 
 class JobStatus(str, Enum):
@@ -41,7 +41,7 @@ class JobEvent(str, Enum):
 class WebhookEvent(BaseModel):
     """Webhook event payload."""
     event: JobEvent
-    timestamp: datetime = Field(default_factory=datetime.utcnow)
+    timestamp: datetime = Field(default_factory=utc_now)
 
     job_id: str
     job_status: JobStatus
@@ -92,7 +92,7 @@ class JobProgress(BaseSchema):
 
     metrics: Dict[str, float] = Field(default_factory=dict)
 
-    updated_at: datetime = Field(default_factory=datetime.utcnow)
+    updated_at: datetime = Field(default_factory=utc_now)
 
 
 class JobResult(BaseSchema):
@@ -116,7 +116,7 @@ class JobResult(BaseSchema):
     warnings: List[str] = Field(default_factory=list)
     errors: List[str] = Field(default_factory=list)
 
-    completed_at: datetime = Field(default_factory=datetime.utcnow)
+    completed_at: datetime = Field(default_factory=utc_now)
 
 
 class JobCancellation(BaseSchema):
@@ -162,7 +162,7 @@ class JobEventLog(BaseSchema):
     job_id: str
     event: JobEvent
 
-    timestamp: datetime = Field(default_factory=datetime.utcnow)
+    timestamp: datetime = Field(default_factory=utc_now)
 
     details: Dict[str, Any] = Field(default_factory=dict)
 

@@ -9,7 +9,7 @@ from typing import Dict, List, Optional, Any, Set, Literal, Callable
 from datetime import datetime
 from enum import Enum
 from pydantic import BaseModel, Field, field_validator
-from api.schemas.base import BaseSchema
+from api.schemas.base import BaseSchema, utc_now
 
 
 class RBACPermission(str, Enum):
@@ -109,8 +109,8 @@ class TenantContext(BaseSchema):
     security_policy_id: Optional[str] = None
     rate_limit_policy_id: Optional[str] = None
 
-    created_at: datetime = Field(default_factory=datetime.utcnow)
-    updated_at: datetime = Field(default_factory=datetime.utcnow)
+    created_at: datetime = Field(default_factory=utc_now)
+    updated_at: datetime = Field(default_factory=utc_now)
 
     def get_quota(self, resource: str) -> Optional[int]:
         """Get quota for resource."""
@@ -216,7 +216,7 @@ class AuditLogEntry(BaseSchema):
     """Audit log entry."""
     entry_id: str
 
-    timestamp: datetime = Field(default_factory=datetime.utcnow)
+    timestamp: datetime = Field(default_factory=utc_now)
 
     user_id: Optional[str] = None
     tenant_id: Optional[str] = None
@@ -247,7 +247,7 @@ class APIKey(BaseSchema):
     key_hash: str
     key_prefix: str
 
-    created_at: datetime = Field(default_factory=datetime.utcnow)
+    created_at: datetime = Field(default_factory=utc_now)
     last_used_at: Optional[datetime] = None
 
     expires_at: Optional[datetime] = None

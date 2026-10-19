@@ -9,7 +9,7 @@ from typing import Dict, List, Optional, Any, Set, Union, Literal, Callable
 from datetime import datetime
 from enum import Enum
 from pydantic import BaseModel, Field, field_validator, computed_field, model_validator
-from api.schemas.base import BaseSchema, Constraint, ConstraintType, SemanticRequest
+from api.schemas.base import BaseSchema, Constraint, ConstraintType, SemanticRequest, utc_now
 
 
 class DataModality(str, Enum):
@@ -155,8 +155,8 @@ class DatasetMetadata(BaseSchema):
     description: Optional[str] = None
 
     version: str = "1.0.0"
-    created_at: datetime = Field(default_factory=datetime.utcnow)
-    updated_at: datetime = Field(default_factory=datetime.utcnow)
+    created_at: datetime = Field(default_factory=utc_now)
+    updated_at: datetime = Field(default_factory=utc_now)
 
     domain: str
     task_type: str
