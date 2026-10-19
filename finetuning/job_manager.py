@@ -17,7 +17,7 @@ import logging
 import os
 import uuid
 from collections import deque
-from datetime import datetime
+from datetime import datetime, timezone
 from typing import AsyncGenerator, Optional
 
 from core.db import DatabaseManager, FineTuneJob
@@ -167,7 +167,7 @@ class FinetuneJobManager:
 
     async def _run_job(self, job_id: str, config: FineTuneConfig):
         async with self._semaphore:
-            await self.db.update_finetune_job(job_id, status="running", started_at=datetime.utcnow())
+            await self.db.update_finetune_job(job_id, status="running", started_at=datetime.now(timezone.utc))
             self._list_cache = None
             await self._broadcast(job_id, {"type": "started", "job_id": job_id})
 
@@ -197,7 +197,7 @@ class FinetuneJobManager:
                             job_id, status="completed", progress=100.0,
                             output_path=event.get("output_path"),
                             hf_repo_url=event.get("hf_repo_url"),
-                            completed_at=datetime.utcnow(),
+                            completed_at=datetime.now(timezone.utc),
                         )
                         self._list_cache = None
                         logger.info("Fine-tune job %s completed", job_id)
@@ -205,27 +205,27 @@ class FinetuneJobManager:
                         await self.db.update_finetune_job(
                             job_id, status="failed",
                             error=event.get("message"),
-                            completed_at=datetime.utcnow(),
+                            completed_at=datetime.now(timezone.utc),
                         )
                         self._list_cache = None
                         logger.error("Fine-tune job %s failed: %s", job_id, event.get("message"))
                     elif etype == "cancelled":
                         await self.db.update_finetune_job(
-                            job_id, status="cancelled", completed_at=datetime.utcnow()
+                            job_id, status="cancelled", completed_at=datetime.now(timezone.utc)
                         )
                         self._list_cache = None
 
             except asyncio.CancelledError:
                 trainer.cancel()
                 await self.db.update_finetune_job(
-                    job_id, status="cancelled", completed_at=datetime.utcnow()
+                    job_id, status="cancelled", completed_at=datetime.now(timezone.utc)
                 )
                 await self._broadcast(job_id, {"type": "cancelled", "job_id": job_id})
                 self._list_cache = None
 
             except Exception as exc:
                 await self.db.update_finetune_job(
-                    job_id, status="failed", error=str(exc), completed_at=datetime.utcnow()
+                    job_id, status="failed", error=str(exc), completed_at=datetime.now(timezone.utc)
                 )
                 await self._broadcast(job_id, {"type": "error", "job_id": job_id, "message": str(exc)})
                 self._list_cache = None

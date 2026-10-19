@@ -99,7 +99,10 @@ async def create_finetune_job(
     # Rate limiting: max active queued jobs check
     if manager:
         active_jobs = await manager.list_jobs(limit=100)
-        running_or_pending = [j for j in active_jobs if j.status in ("pending", "running")]
+        running_or_pending = [
+            j for j in active_jobs
+            if (j.get("status") if isinstance(j, dict) else getattr(j, "status", None)) in ("pending", "running")
+        ]
         if len(running_or_pending) >= 10:
             raise HTTPException(
                 status_code=429,
@@ -108,12 +111,16 @@ async def create_finetune_job(
 
     # Auto-resolve dataset path from DB
     if payload.get("dataset_id") and not payload.get("dataset_path"):
-        dataset = await db.db.get_dataset(payload["dataset_id"])
+        get_ds = getattr(db, "get_dataset", None)
+        if not get_ds and hasattr(db, "db"):
+            get_ds = getattr(db.db, "get_dataset", None)
+        dataset = await get_ds(payload["dataset_id"]) if get_ds else None
         if dataset is None:
             raise HTTPException(status_code=404, detail=f"Dataset {payload['dataset_id']} not found")
-        if not dataset.output_path:
+        output_path = getattr(dataset, "output_path", None) or (dataset.get("output_path") if isinstance(dataset, dict) else None)
+        if not output_path:
             raise HTTPException(status_code=400, detail="Dataset has no output_path — re-export first")
-        jsonl_files = glob.glob(os.path.join(dataset.output_path, "*.jsonl"))
+        jsonl_files = glob.glob(os.path.join(output_path, "*.jsonl"))
         if not jsonl_files:
             raise HTTPException(status_code=400, detail="No JSONL file found in dataset output directory")
         payload["dataset_path"] = jsonl_files[0]
