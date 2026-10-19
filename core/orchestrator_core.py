@@ -715,9 +715,10 @@ class DatasetOrchestrator:
         india_focus = configured_language in {
             "hi", "bn", "ta", "te", "mr", "gu", "kn", "ml", "pa", "ur", "or", "as", "sa",
             "ks", "kok", "mni", "sd", "doi", "mai", "sat", "brx", "ne",
+            "hinglish", "indic", "indic_multilingual",
         } or any("india" in str(region).lower() for region in config.get("region_restrictions", [])) or any(term in target_domain for term in (
             "aikosh", "ai kosh", "indiaai", "india ai",
-            "india", "indian", "indic", "hindi", "tamil", "telugu",
+            "india", "indian", "indic", "hindi", "hinglish", "tamil", "telugu",
             "bengali", "marathi", "kannada", "malayalam", "punjabi",
             "gujarati", "odia", "assamese", "urdu", "sanskrit", "manipuri",
             "konkani", "kashmiri", "sindhi", "dogri", "maithili", "santali", "bodo",

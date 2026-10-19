@@ -45,6 +45,7 @@ const INDUSTRY_PRESETS = [
     source: 'AI Kosh (IndiaAI / Bhashini)',
     prompt: 'Synthesize 20,000 multi-turn legal and financial audit dialogues from Indian GST statutes, Income Tax Appellate Tribunal decisions, and Section 16(4) input-tax-credit reconciliation case studies with grounded citations.',
     type: 'sft',
+    language: 'hinglish',
     size: 20000,
     sources: ['AI Kosh', 'OpenML', 'India.gov.in'],
   },
@@ -55,6 +56,7 @@ const INDUSTRY_PRESETS = [
     source: 'Bhashini Data Vatika',
     prompt: 'Construct high-quality parallel instruction-tuning dialogues across Hindi, Tamil, Telugu, and English covering healthcare and public governance with script validation.',
     type: 'sft',
+    language: 'indic_multilingual',
     size: 25000,
     sources: ['Bhashini', 'AI Kosh', 'HuggingFace'],
   },
@@ -65,6 +67,7 @@ const INDUSTRY_PRESETS = [
     source: 'HuggingFace & GitHub',
     prompt: 'Generate 15,000 competitive programming and algorithmic Python solutions with comprehensive test suites, edge case validations, and asymptotic time-space analysis.',
     type: 'coding',
+    language: 'en',
     size: 15000,
     sources: ['HuggingFace', 'GitHub', 'ArXiv'],
   },
@@ -75,6 +78,7 @@ const INDUSTRY_PRESETS = [
     source: 'PubMed & Open Data',
     prompt: 'Extract step-by-step diagnostic reasoning trajectories from PubMed open clinical case studies with contraindication warnings and differential diagnosis verification.',
     type: 'reasoning',
+    language: 'en',
     size: 10000,
     sources: ['PubMed', 'ArXiv', 'Zenodo'],
   },
@@ -93,6 +97,7 @@ function StudioContent() {
   )
   const [datasetType, setDatasetType] = useState('sft')
   const [instructionFormat, setInstructionFormat] = useState('alpaca')
+  const [language, setLanguage] = useState(searchParams.get('language') || 'en')
   const [datasetSize, setDatasetSize] = useState(10000)
   const [generationMode, setGenerationMode] = useState<'grounded' | 'synthetic'>('grounded')
   const [isSubmitting, setIsSubmitting] = useState(false)
@@ -116,6 +121,7 @@ function StudioContent() {
         dataset_name: targetDomain,
         dataset_type: datasetType,
         instruction_format: instructionFormat,
+        language: language,
         dataset_size: datasetSize,
         quality_level: 'standard',
         generation_mode: generationMode === 'grounded' ? 'strict_source' : 'synthetic',
@@ -193,6 +199,9 @@ function StudioContent() {
                   setPrompt(preset.prompt)
                   setDatasetSize(preset.size)
                   setDatasetType(preset.type)
+                  if ((preset as any).language) {
+                    setLanguage((preset as any).language)
+                  }
                 }}
                 className={clsx(
                   'p-3 rounded-lg border cursor-pointer transition-all space-y-2 relative overflow-hidden',
@@ -413,6 +422,36 @@ function StudioContent() {
                   <option value="sharegpt">ShareGPT (conversations: [&#123;from, value&#125;])</option>
                   <option value="chatml">ChatML (&lt;|im_start|&gt;system/user/assistant)</option>
                   <option value="openai_jsonl">OpenAI JSONL (messages: [&#123;role, content&#125;])</option>
+                </select>
+              </div>
+
+              <div>
+                <label className="text-[10px] font-mono uppercase text-[#94a3b8] block mb-1">
+                  Dataset Language
+                </label>
+                <select
+                  value={language}
+                  onChange={(e) => setLanguage(e.target.value)}
+                  className="w-full bg-[#0a0a0f] border border-[#272738] rounded p-2 text-xs font-mono text-white focus:outline-none"
+                >
+                  <option value="en">English (Global Default)</option>
+                  <option value="hi">Hindi Only (हिन्दी)</option>
+                  <option value="hinglish">Hindi + English (Hinglish Code-Switched)</option>
+                  <option value="indic_multilingual">Indic Multilingual (Hindi, Tamil, Telugu, etc.)</option>
+                  <option value="bn">Bengali (বাংলা)</option>
+                  <option value="ta">Tamil (தமிழ்)</option>
+                  <option value="te">Telugu (తెలుగు)</option>
+                  <option value="mr">Marathi (मराठी)</option>
+                  <option value="gu">Gujarati (ગુજરાતી)</option>
+                  <option value="kn">Kannada (ಕನ್ನಡ)</option>
+                  <option value="ml">Malayalam (മലയാളം)</option>
+                  <option value="pa">Punjabi (ਪੰਜਾਬੀ)</option>
+                  <option value="es">Spanish (Español)</option>
+                  <option value="fr">French (Français)</option>
+                  <option value="de">German (Deutsch)</option>
+                  <option value="zh">Chinese (中文)</option>
+                  <option value="ja">Japanese (日本語)</option>
+                  <option value="ar">Arabic (العربية)</option>
                 </select>
               </div>
 

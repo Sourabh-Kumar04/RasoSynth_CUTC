@@ -148,10 +148,12 @@ def validate_filename(filename: str) -> str:
 
 
 def validate_language_code(code: str) -> str:
-    """Validate ISO 639-1 language code."""
+    """Validate ISO 639-1 language code or supported multilingual token."""
     valid_codes = {
         "en", "es", "fr", "de", "it", "pt", "ru", "zh", "ja", "ko",
         "ar", "hi", "nl", "pl", "sv", "da", "no", "fi", "el", "he",
+        "bn", "ta", "te", "mr", "gu", "kn", "ml", "pa", "ur", "or", "as", "sa",
+        "hinglish", "indic", "indic_multilingual",
     }
     if code.lower() not in valid_codes:
         raise ValidationError(f"Unsupported language code: {code}")

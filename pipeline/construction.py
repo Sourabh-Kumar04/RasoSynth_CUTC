@@ -233,11 +233,13 @@ class ConstructionPipeline:
         content = filtered_sample.content if hasattr(filtered_sample, 'content') else str(filtered_sample)
         quality = getattr(filtered_sample, 'quality_score', 0.5)
         target_domain = intent.domain
+        configured_language = str(self.config.get("language", "en"))
         generation_brief = {
             "user_request": str(intent.raw_input or "")[:1200],
             "primary_task": str(intent.primary_task or "")[:240],
             "domain": str(intent.domain or "")[:240],
             "modality": str(intent.modality or "")[:80],
+            "language": configured_language,
             "key_entities": [str(value)[:120] for value in (intent.key_entities or [])[:12]],
             "constraints": [str(value)[:240] for value in (intent.constraints or [])[:12]],
             "optimized_search_queries": [str(value)[:200] for value in (intent.specialized_queries or [])[:10]],
@@ -324,6 +326,18 @@ class ConstructionPipeline:
                     .replace(">", "\\u003e")
                 )
 
+                target_lang = str(self.config.get("language", "en")).lower().strip()
+                if target_lang in ("hi", "hindi"):
+                    lang_rule_line = "7. Write instructions and responses strictly in Hindi (Devanagari script).\n"
+                elif target_lang in ("hinglish", "hi-en", "en-hi"):
+                    lang_rule_line = "7. Write instructions and responses in natural Hinglish (code-switched Hindi + English in Latin script).\n"
+                elif target_lang in ("indic_multilingual", "indic"):
+                    lang_rule_line = "7. Write instructions and responses in an appropriate Indic language or Indic-English code-switched format.\n"
+                elif target_lang not in ("en", "english", ""):
+                    lang_rule_line = f"7. Write instructions and responses strictly in {target_lang}.\n"
+                else:
+                    lang_rule_line = ""
+
                 prompt = f"""You are an AI dataset engineering assistant. Given the user request and reference text, generate exactly 2 high-quality, diverse instruction-response training pairs for an AI assistant{domain_str}.
 
 <rules>
@@ -333,7 +347,7 @@ class ConstructionPipeline:
 4. The instruction must be a natural, realistic user prompt asking about concepts supported by the reference text. DO NOT mention "news" unless the text is about news. DO NOT refer to a "chunk", "text", or "reference document".
 5. The response must answer using facts supported by the reference text only. Do not make up facts; if the request asks for details absent from the source, narrow the question to supported details.
 6. Output strictly in JSON format as a list of objects with "instruction" and "response" strings.
-</rules>
+{lang_rule_line}</rules>
 
 <user_request_json>
 {request_brief}
@@ -405,7 +419,11 @@ Output strictly in JSON format as a list of objects:
                             s = ConstructedSample(
                                 instruction=inst,
                                 response=resp,
-                                metadata={"type": "llm_generated", "domain": target_domain},
+                                metadata={
+                                    "type": "llm_generated",
+                                    "domain": target_domain,
+                                    "language": self.config.get("language", "en"),
+                                },
                                 difficulty_tier=difficulty,
                                 curriculum_order=i
                             )

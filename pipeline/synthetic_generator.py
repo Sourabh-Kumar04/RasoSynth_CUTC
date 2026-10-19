@@ -95,6 +95,55 @@ def _resolve_difficulty_tier(cell: dict, cell_index: int, total_cells: int) -> i
     return (cell_index % 5) + 1
 
 
+def _build_language_instruction(language: str) -> str:
+    """Build explicit language instruction rule for synthetic prompt generation."""
+    lang = (language or "en").lower().strip()
+    if lang in ("en", "english"):
+        return "5. Generate the instruction and response strictly in English."
+    elif lang in ("hi", "hindi"):
+        return "5. Generate the instruction and response strictly in Hindi (हिन्दी) using Devanagari script."
+    elif lang in ("hinglish", "hi-en", "en-hi"):
+        return (
+            "5. Generate the instruction and response in Hinglish (natural code-switched Hindi + English "
+            "as commonly used in India, written primarily in Latin script with standard technical and professional terms)."
+        )
+    elif lang in ("indic_multilingual", "indic"):
+        return (
+            "5. Generate the instruction and response in an Indic language (e.g., Hindi, Tamil, Telugu, "
+            "Bengali, Marathi), or natural Indic-English code-switched dialogue."
+        )
+    elif lang in ("bn", "bengali"):
+        return "5. Generate the instruction and response strictly in Bengali (বাংলা) script."
+    elif lang in ("ta", "tamil"):
+        return "5. Generate the instruction and response strictly in Tamil (தமிழ்) script."
+    elif lang in ("te", "telugu"):
+        return "5. Generate the instruction and response strictly in Telugu (తెలుగు) script."
+    elif lang in ("mr", "marathi"):
+        return "5. Generate the instruction and response strictly in Marathi (मराठी) using Devanagari script."
+    elif lang in ("gu", "gujarati"):
+        return "5. Generate the instruction and response strictly in Gujarati (ગુજરાતી) script."
+    elif lang in ("kn", "kannada"):
+        return "5. Generate the instruction and response strictly in Kannada (ಕನ್ನಡ) script."
+    elif lang in ("ml", "malayalam"):
+        return "5. Generate the instruction and response strictly in Malayalam (മലയാളം) script."
+    elif lang in ("pa", "punjabi"):
+        return "5. Generate the instruction and response strictly in Punjabi (ਪੰਜਾਬੀ) using Gurmukhi script."
+    elif lang in ("es", "spanish"):
+        return "5. Generate the instruction and response strictly in Spanish (Español)."
+    elif lang in ("fr", "french"):
+        return "5. Generate the instruction and response strictly in French (Français)."
+    elif lang in ("de", "german"):
+        return "5. Generate the instruction and response strictly in German (Deutsch)."
+    elif lang in ("zh", "chinese"):
+        return "5. Generate the instruction and response strictly in Simplified Chinese (中文)."
+    elif lang in ("ja", "japanese"):
+        return "5. Generate the instruction and response strictly in Japanese (日本語)."
+    elif lang in ("ar", "arabic"):
+        return "5. Generate the instruction and response strictly in Arabic (العربية)."
+    else:
+        return f"5. Generate the instruction and response strictly in {language}."
+
+
 class SeedlessGenerator:
     def __init__(self, router: ProviderRouter, config: dict):
         self.router = router
@@ -144,6 +193,7 @@ class SeedlessGenerator:
     async def _generate_sft(
         self, plan: DatasetPlan, cell: dict, tier: int
     ) -> ConstructedSample:
+        lang_rule = _build_language_instruction(self.config.get("language", "en"))
         system_prompt = (
             f"You are an expert dataset generator specializing in the '{plan.domain}' domain. "
             f"Your objective: {plan.objective}.\n"
@@ -154,7 +204,8 @@ class SeedlessGenerator:
             "   current prices, stock values, or any other real-time data.\n"
             "2. Generate timeless, factual, or creative instruction-response pairs only.\n"
             "3. Output ONLY a JSON object with keys: instruction, response, input (null).\n"
-            "4. Do not include markdown wrappers, fences, or text outside the JSON."
+            "4. Do not include markdown wrappers, fences, or text outside the JSON.\n"
+            f"{lang_rule}"
         )
 
         user_message = (
@@ -215,7 +266,11 @@ class SeedlessGenerator:
                         instruction=instruction,
                         response=resp_text,
                         input=data.get("input"),
-                        metadata={**cell, "type": "synthetic_seedless"},
+                        metadata={
+                            **cell,
+                            "type": "synthetic_seedless",
+                            "language": self.config.get("language", "en"),
+                        },
                         difficulty_tier=tier,      # Fix #2
                         curriculum_order=0,
                     )
@@ -227,7 +282,11 @@ class SeedlessGenerator:
             instruction="",
             response="",
             input=None,
-            metadata={**cell, "type": "synthetic_seedless_failed"},
+            metadata={
+                **cell,
+                "type": "synthetic_seedless_failed",
+                "language": self.config.get("language", "en"),
+            },
             difficulty_tier=tier,
             curriculum_order=0,
         )
@@ -237,6 +296,7 @@ class SeedlessGenerator:
     async def _generate_conversational(
         self, plan: DatasetPlan, cell: dict, tier: int
     ) -> ConstructedSample:
+        lang_rule = _build_language_instruction(self.config.get("language", "en"))
         system_prompt = (
             f"You are an expert conversational dataset generator specializing in the '{plan.domain}' domain. "
             f"Your objective: {plan.objective}.\n"
@@ -251,7 +311,8 @@ class SeedlessGenerator:
             "  ]\n"
             "}\n"
             "IMPORTANT: Do NOT include questions about current time, live weather, or real-time data.\n"
-            "Do NOT include markdown wrappers, fences, or text outside the JSON."
+            "Do NOT include markdown wrappers, fences, or text outside the JSON.\n"
+            f"{lang_rule}"
         )
 
         user_message = (
@@ -295,7 +356,11 @@ class SeedlessGenerator:
                         response=full_dialogue,
                         input=None,
                         conversation=conversation,
-                        metadata={**cell, "type": "synthetic_seedless"},
+                        metadata={
+                            **cell,
+                            "type": "synthetic_seedless",
+                            "language": self.config.get("language", "en"),
+                        },
                         difficulty_tier=tier,
                         curriculum_order=0,
                     )
@@ -304,6 +369,10 @@ class SeedlessGenerator:
 
         return ConstructedSample(
             instruction="", response="", input=None, conversation=[],
-            metadata={**cell, "type": "synthetic_seedless_failed"},
+            metadata={
+                **cell,
+                "type": "synthetic_seedless_failed",
+                "language": self.config.get("language", "en"),
+            },
             difficulty_tier=tier, curriculum_order=0,
         )
