@@ -868,6 +868,71 @@ function DetailPane({
           </div>
         )}
 
+        {/* CoT Reasoning Trajectory */}
+        {((item.response && item.response.includes('<thought>')) || item.metadata?.thought) && (
+          <details className="rounded-xl border border-amber-900/40 bg-amber-950/20 p-3 space-y-1" open>
+            <summary className="cursor-pointer text-xs font-bold text-amber-300 flex items-center justify-between">
+              <span>Chain-of-Thought (CoT) Reasoning Trace</span>
+              <span className="text-[10px] font-mono text-amber-400/80">DeepSeek-R1 / o1 Trajectory</span>
+            </summary>
+            <div className="mt-2 text-[11px] font-mono text-amber-100/90 whitespace-pre-wrap bg-[#0a0a0f] p-2.5 rounded-lg border border-amber-950 max-h-36 overflow-y-auto leading-relaxed">
+              {item.metadata?.thought || (item.response.match(/<thought>([\s\S]*?)<\/thought>/)?.[1]?.trim() ?? '')}
+            </div>
+          </details>
+        )}
+
+        {/* Vernacular Tool Calling Invocations */}
+        {item.metadata?.tool_calls && Array.isArray(item.metadata.tool_calls) && item.metadata.tool_calls.length > 0 && (
+          <div className="rounded-xl border border-cyan-900/40 bg-cyan-950/20 p-3 space-y-2">
+            <div className="flex items-center justify-between">
+              <span className="text-[10px] font-mono font-bold uppercase tracking-wider text-cyan-400">
+                Structured API Tool Invocations ({item.metadata.tool_calls.length})
+              </span>
+              <span className="text-[9px] font-mono px-1.5 py-0.2 rounded bg-cyan-900/60 text-cyan-200">
+                Function Calling Schema
+              </span>
+            </div>
+            <div className="space-y-1.5">
+              {item.metadata.tool_calls.map((tc: any, idx: number) => (
+                <div key={idx} className="bg-[#0a0a0f] p-2 rounded border border-cyan-950 text-xs font-mono space-y-1">
+                  <div className="flex items-center justify-between text-cyan-300 font-bold">
+                    <span>{tc.name}()</span>
+                  </div>
+                  <pre className="text-[10px] text-slate-300 overflow-x-auto whitespace-pre">
+                    {JSON.stringify(tc.arguments, null, 2)}
+                  </pre>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {/* KTO / SimPO Preference Metrics */}
+        {(item.metadata?.kto || item.metadata?.simpo) && (
+          <div className="rounded-xl border border-purple-900/40 bg-purple-950/20 p-3 space-y-1.5">
+            <div className="flex items-center justify-between">
+              <span className="text-[10px] font-mono font-bold uppercase tracking-wider text-purple-400">
+                {item.metadata?.kto ? 'KTO Alignment Signal' : 'SimPO Preference Metrics'}
+              </span>
+              {item.metadata?.kto && (
+                <span className={clsx("text-[9px] font-mono px-2 py-0.5 rounded font-bold", item.metadata.kto.label ? "bg-emerald-950 text-emerald-400 border border-emerald-800" : "bg-rose-950 text-rose-400 border border-rose-800")}>
+                  {item.metadata.kto.label ? '✓ Desirable (+1)' : '✗ Undesirable (-1)'}
+                </span>
+              )}
+            </div>
+            {item.metadata?.simpo && (
+              <div className="text-[11px] font-mono text-[#94a3b8] flex justify-between">
+                <span>Chosen: {item.metadata.simpo.chosen_word_count}w</span>
+                <span>Rejected: {item.metadata.simpo.rejected_word_count}w</span>
+                <span>Ratio: {item.metadata.simpo.length_ratio}x</span>
+                {item.metadata.simpo.verbosity_bias_flag && (
+                  <span className="text-amber-400 font-bold">Verbosity Alert</span>
+                )}
+              </div>
+            )}
+          </div>
+        )}
+
         {/* Notes + reviewer */}
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
           <div>
