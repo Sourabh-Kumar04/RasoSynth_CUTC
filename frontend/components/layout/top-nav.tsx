@@ -128,9 +128,9 @@ export function TopNav() {
 
             <Link
               href="/studio"
-              className="inline-flex items-center space-x-1.5 px-3.5 py-1.5 rounded-md bg-[#f26625] hover:bg-[#de581a] border border-[#ea580c] text-white text-xs font-mono font-bold shadow-sm transition-all active:scale-95 glow-yc"
+              className="inline-flex items-center space-x-1.5 px-3 py-1.5 rounded-md border border-[#272738] bg-transparent hover:bg-[#161622] text-zinc-300 hover:text-white text-xs font-mono font-medium transition-all active:scale-95"
             >
-              <FlaskConical className="w-3.5 h-3.5" />
+              <FlaskConical className="w-3.5 h-3.5 text-[#f26625]" />
               <span>New Dataset</span>
             </Link>
 

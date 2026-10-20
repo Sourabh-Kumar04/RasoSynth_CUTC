@@ -272,14 +272,9 @@ function StudioContent() {
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-[#272738] pb-5">
         <div>
-          <div className="flex items-center gap-2 mb-1">
-            <span className="px-2 py-0.5 rounded text-[10px] font-mono font-bold bg-[#1a1a24] border border-[#272738] text-[#f26625] uppercase tracking-wider">
-              DATASET STUDIO
-            </span>
-            <h1 className="text-2xl font-bold tracking-tight text-white font-display">
-              Autonomous Dataset Studio
-            </h1>
-          </div>
+          <h1 className="text-2xl font-bold tracking-tight text-white font-display mb-1">
+            Autonomous Dataset Studio
+          </h1>
           <p className="text-xs text-[#94a3b8]">
             Synthesize verified fine-tuning and reasoning datasets grounded in authoritative corpora
           </p>
@@ -295,12 +290,12 @@ function StudioContent() {
         </Button>
       </div>
 
-      {/* 1-Click Industry Benchmark Presets */}
+      {/* Industry Presets */}
       <div className="space-y-3">
         <div className="flex items-center justify-between">
           <span className="text-xs font-mono font-bold uppercase tracking-wider text-white flex items-center gap-1.5">
             <Sparkles className="w-3.5 h-3.5 text-[#f26625]" />
-            1-Click Industry Presets
+            Industry Presets
           </span>
           <span className="text-[11px] font-mono text-[#10b981]">Grounded Schemas</span>
         </div>

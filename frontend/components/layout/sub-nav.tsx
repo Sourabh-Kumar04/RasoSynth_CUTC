@@ -30,11 +30,11 @@ const SUB_NAV_LINKS = [
   { href: '/studio', label: 'Studio Pipeline', icon: FlaskConical },
   { href: '/orchestration', label: 'DAG Visualizer', icon: Workflow },
   { href: '/datasets', label: 'Dataset Store', icon: Database },
-  { href: '/finetune', label: 'Fine-Tune Studio', icon: Cpu },
-  { href: '/research', label: 'Research & Benchmarks', icon: BarChart2 },
+  { href: '/finetune', label: 'Fine-Tune', icon: Cpu },
+  { href: '/research', label: 'Research', icon: BarChart2 },
   { href: '/observability', label: 'Telemetry', icon: Activity },
-  { href: '/review', label: 'HITL Review Queue', icon: ClipboardCheck },
-  { href: '/quality', label: 'Quality & Grounding', icon: Sparkles },
+  { href: '/review', label: 'Review', icon: ClipboardCheck },
+  { href: '/quality', label: 'Quality', icon: Sparkles },
 ]
 
 export function SubNav() {
@@ -84,7 +84,7 @@ export function SubNav() {
           <span className="text-[#3b3b52] hidden sm:inline">|</span>
           <span className="text-[#cbd5e1] hidden sm:inline">Sarvam-2B</span>
           <span className="text-[#3b3b52] hidden md:inline">|</span>
-          <span className="text-[#10b981] font-semibold hidden md:inline">AIR-GAPPED (SHA-256 LIVE)</span>
+          <span className="text-[#10b981] font-semibold hidden md:inline">Air-Gapped</span>
         </div>
 
         {/* Center Section: Horizontal Navigation Tabs */}
