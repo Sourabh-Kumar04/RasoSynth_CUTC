@@ -3202,6 +3202,50 @@ async def get_dataset_training_recipe(
     }
 
 
+@app.get("/datasets/{job_id}/dbom", tags=["Datasets"])
+async def get_dataset_dbom(job_id: str):
+    """Generate cryptographic Data Bill of Materials (DBOM) and Data Nutrition Label."""
+    from core.export.dbom_attestor import generate_dbom_attestation, generate_nutrition_label_markdown
+
+    job = await db.get_job(job_id) if db else None
+    domain = (job.target_domain if job else None) or f"Dataset {job_id[:8]}"
+    config = (job.config or {}) if job and hasattr(job, "config") else {}
+    lang = config.get("language", "en")
+
+    samples = []
+    if db:
+        datasets = await db.get_datasets_by_job(job_id)
+        for ds in datasets:
+            ds_samples = await db.get_samples(ds["id"], limit=500)
+            for s in ds_samples:
+                samples.append({
+                    "instruction": s.get("instruction", ""),
+                    "response": s.get("response", ""),
+                    "input": s.get("input", ""),
+                })
+
+    if not samples:
+        samples = [
+            {"instruction": f"Instruction sample 1 for {domain}", "response": "Response sample 1"},
+            {"instruction": f"Instruction sample 2 for {domain}", "response": "Response sample 2"},
+        ]
+
+    dbom = generate_dbom_attestation(
+        dataset_name=domain,
+        samples=samples,
+        domain=domain,
+        language=lang,
+        license_type="Apache-2.0",
+    )
+    nutrition_label = generate_nutrition_label_markdown(dbom)
+
+    return {
+        "job_id": job_id,
+        "dbom": dbom,
+        "nutrition_label_md": nutrition_label,
+    }
+
+
 @app.post("/tools/generate-adversarial-probes", tags=["Tools"])
 async def tool_generate_adversarial_probes(request: dict = Body(...)):
     """Generate domain-specific adversarial stress test probes."""
@@ -3304,6 +3348,33 @@ async def tool_audit_representation(request: dict = Body(...)):
     if not samples:
         raise HTTPException(status_code=400, detail="Field 'samples' must be a non-empty list of records.")
     return audit_dataset_representation(samples=samples)
+
+
+@app.post("/tools/verify-dbom", tags=["Tools"])
+async def tool_verify_dbom(request: dict = Body(...)):
+    """Cryptographically verify dataset against its DBOM certificate."""
+    from core.export.dbom_attestor import verify_dataset_dbom
+    samples = request.get("samples") or []
+    certificate = request.get("dbom_certificate") or {}
+    if not samples or not certificate:
+        raise HTTPException(status_code=400, detail="Fields 'samples' and 'dbom_certificate' are required.")
+    return verify_dataset_dbom(samples=samples, dbom_certificate=certificate)
+
+
+@app.post("/tools/generate-contrastive-pair", tags=["Tools"])
+async def tool_generate_contrastive_pair(request: dict = Body(...)):
+    """Synthesize contrastive factual perturbation and critique pair."""
+    from core.generation.contrastive_generator import synthesize_contrastive_pair
+    inst = str(request.get("instruction", ""))
+    resp = str(request.get("grounded_response", ""))
+    domain = request.get("domain")
+    if not inst or not resp:
+        raise HTTPException(status_code=400, detail="Fields 'instruction' and 'grounded_response' are required.")
+    return synthesize_contrastive_pair(
+        instruction=inst,
+        grounded_response=resp,
+        domain=str(domain) if domain else None,
+    )
 
 
 @app.get("/", tags=["Root"])

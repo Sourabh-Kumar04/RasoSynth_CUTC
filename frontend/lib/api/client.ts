@@ -756,6 +756,47 @@ class APIClient {
     })
   }
 
+  async getDatasetDbom(jobId: string) {
+    return this.request<{
+      job_id: string
+      dbom: any
+      nutrition_label_md: string
+    }>(`/datasets/${jobId}/dbom`)
+  }
+
+  async verifyDbom(payload: { samples: any[]; dbom_certificate: any }) {
+    return this.request<{
+      is_valid: boolean
+      certificate_id: string
+      expected_root: string
+      computed_root: string
+      total_samples_verified: number
+      status: string
+    }>('/tools/verify-dbom', {
+      method: 'POST',
+      body: JSON.stringify(payload),
+    })
+  }
+
+  async generateContrastivePair(payload: { instruction: string; grounded_response: string; domain?: string }) {
+    return this.request<{
+      instruction: string
+      grounded_response: string
+      perturbed_negative: string
+      perturbation_type: string
+      critique: string
+      preference_pair: {
+        instruction: string
+        chosen: string
+        rejected: string
+        metadata: any
+      }
+    }>('/tools/generate-contrastive-pair', {
+      method: 'POST',
+      body: JSON.stringify(payload),
+    })
+  }
+
   // === Download API ===
   // Download a dataset with format selection - returns a Blob for file saving
   async downloadDataset(id: string, format: string = 'jsonl'): Promise<Blob> {

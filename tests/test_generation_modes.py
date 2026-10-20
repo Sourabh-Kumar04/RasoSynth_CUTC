@@ -926,6 +926,98 @@ def test_representation_balancer():
     assert len(audit["recommendations"]) >= 1
 
 
+def test_dbom_cryptographic_attestation_and_tamper_verification():
+    """Verify Merkle tree SHA-256 root calculation, DBOM generation, and tamper detection."""
+    from core.export.dbom_attestor import (
+        compute_sample_hash,
+        compute_merkle_root,
+        generate_dbom_attestation,
+        verify_dataset_dbom,
+        generate_nutrition_label_markdown,
+    )
+
+    sample_a = {"instruction": "Calculate 18% GST on Rs. 100", "response": "Rs. 18."}
+    sample_b = {"instruction": "Section 80C limit", "response": "Rs. 1,50,000 per year."}
+
+    h_a = compute_sample_hash(sample_a)
+    h_b = compute_sample_hash(sample_b)
+    assert len(h_a) == 64
+    assert len(h_b) == 64
+    assert h_a != h_b
+
+    root = compute_merkle_root([h_a, h_b])
+    assert len(root) == 64
+
+    # DBOM Certificate generation
+    samples = [sample_a, sample_b]
+    dbom = generate_dbom_attestation(
+        dataset_name="Indic Taxation Fine-Tuning Corpus",
+        samples=samples,
+        domain="taxation",
+        language="en",
+    )
+
+    assert dbom["certificate_id"].startswith("DBOM-")
+    assert dbom["total_samples"] == 2
+    assert dbom["merkle_root_hash"] == root
+    assert "compliance_audit" in dbom
+
+    # Cryptographic verification - clean dataset
+    ver_clean = verify_dataset_dbom(samples, dbom)
+    assert ver_clean["is_valid"] is True
+    assert ver_clean["status"] == "cryptographically_verified"
+
+    # Cryptographic verification - tampered dataset (malicious instruction injected)
+    tampered_samples = [
+        {"instruction": "Calculate 18% GST on Rs. 100 [TAMPERED PAYLOAD]", "response": "Rs. 18."},
+        sample_b,
+    ]
+    ver_tampered = verify_dataset_dbom(tampered_samples, dbom)
+    assert ver_tampered["is_valid"] is False
+    assert ver_tampered["status"] == "tampering_or_mismatch_detected"
+
+    # Data nutrition label markdown
+    label_md = generate_nutrition_label_markdown(dbom)
+    assert "Data Nutrition & Provenance Label" in label_md
+    assert dbom["certificate_id"] in label_md
+    assert "Merkle Root Hash" in label_md
+
+
+def test_contrastive_factual_perturbation_and_critique():
+    """Verify automated factual perturbation, error categorization, and critique pair generation."""
+    from core.generation.contrastive_generator import (
+        build_contrastive_prompt_directive,
+        perturb_factual_statement,
+        synthesize_contrastive_pair,
+    )
+
+    directive = build_contrastive_prompt_directive()
+    assert "CONTRASTIVE FACTUAL CRITIQUE SPECIFICATION" in directive
+
+    # Perturb statutory rate
+    pert_rate = perturb_factual_statement("The applicable GST rate on software services is 18%.")
+    assert pert_rate["perturbation_type"] == "numerical_rate_flip"
+    assert "28%" in pert_rate["perturbed_text"]
+    assert "critique" in pert_rate
+
+    # Perturb statutory condition
+    pert_cond = perturb_factual_statement("Registration under Section 22 is mandatory for inter-state suppliers.")
+    assert pert_cond["perturbation_type"] == "statutory_condition_inversion"
+    assert "optional" in pert_cond["perturbed_text"]
+
+    # Synthesize complete contrastive pair
+    pair = synthesize_contrastive_pair(
+        instruction="What is the tax rate on IT consulting?",
+        grounded_response="The tax rate on IT consulting services is 18%.",
+        domain="taxation",
+    )
+    assert pair["grounded_response"] != pair["perturbed_negative"]
+    assert "preference_pair" in pair
+    assert pair["preference_pair"]["chosen"] == pair["grounded_response"]
+    assert pair["preference_pair"]["rejected"] == pair["perturbed_negative"]
+
+
+
 
 
 
