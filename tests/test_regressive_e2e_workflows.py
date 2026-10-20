@@ -554,3 +554,18 @@ class TestWorkflow6FastAPIEndpointsRegression:
         assert res.status_code == 200
         assert "perturbed_negative" in res.json()
         assert "critique" in res.json()
+
+    def test_get_quality_benchmarks(self, client):
+        res = client.get("/benchmarks/quality")
+        assert res.status_code == 200
+        data = res.json()
+        assert "benchmark_data" in data
+        assert "markdown_report" in data
+        results = data["benchmark_data"]["results"]
+        assert "benchmark_generation_quality" in results
+        assert "benchmark_latency" in results
+        assert "benchmark_provider_quality" in results
+        assert "benchmark_cost_efficiency" in results
+        assert results["benchmark_generation_quality"]["status"] == "completed"
+        assert results["benchmark_cost_efficiency"]["status"] == "completed"
+        assert results["benchmark_cost_efficiency"]["cost_reduction_pct"] > 90.0
