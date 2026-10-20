@@ -3204,13 +3204,51 @@ async def get_dataset_training_recipe(
 
 @app.get("/datasets/{job_id}/dbom", tags=["Datasets"])
 async def get_dataset_dbom(job_id: str):
-    """Generate cryptographic Data Bill of Materials (DBOM) and Data Nutrition Label."""
+    """Generate or retrieve cryptographic Data Bill of Materials (DBOM) and Data Nutrition Label."""
+    from pathlib import Path
+    import json
     from core.export.dbom_attestor import generate_dbom_attestation, generate_nutrition_label_markdown
+
+    # Check for flagship pre-attested release
+    if job_id.lower() in ("flagship", "flagship_indic_gst", "indic_gst", "flagship_indic"):
+        flagship_dbom = Path("outputs/flagship_indic_gst/flagship_indic_gst_sft.dbom.json")
+        flagship_nut = Path("outputs/flagship_indic_gst/flagship_indic_gst_sft.nutrition.md")
+        if flagship_dbom.exists():
+            with open(flagship_dbom, "r", encoding="utf-8") as f:
+                dbom = json.load(f)
+            nut_md = flagship_nut.read_text(encoding="utf-8") if flagship_nut.exists() else generate_nutrition_label_markdown(dbom)
+            return {
+                "job_id": job_id,
+                "dbom": dbom,
+                "nutrition_label_md": nut_md,
+            }
 
     job = await db.get_job(job_id) if db else None
     domain = (job.target_domain if job else None) or f"Dataset {job_id[:8]}"
     config = (job.config or {}) if job and hasattr(job, "config") else {}
     lang = config.get("language", "en")
+
+    # Check if this job has already exported a DBOM certificate on disk
+    if db:
+        datasets = await db.get_datasets_by_job(job_id)
+        for ds in datasets:
+            meta = ds.get("metadata") or {}
+            export_p = meta.get("export_path")
+            if export_p:
+                cand_dbom = Path(export_p).parent / f"{Path(export_p).stem}.dbom.json"
+                if cand_dbom.exists():
+                    try:
+                        with open(cand_dbom, "r", encoding="utf-8") as f:
+                            disk_dbom = json.load(f)
+                        cand_nut = Path(export_p).parent / f"{Path(export_p).stem}.nutrition.md"
+                        disk_nut = cand_nut.read_text(encoding="utf-8") if cand_nut.exists() else generate_nutrition_label_markdown(disk_dbom)
+                        return {
+                            "job_id": job_id,
+                            "dbom": disk_dbom,
+                            "nutrition_label_md": disk_nut,
+                        }
+                    except Exception:
+                        pass
 
     samples = []
     if db:

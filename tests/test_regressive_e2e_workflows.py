@@ -581,3 +581,14 @@ class TestWorkflow6FastAPIEndpointsRegression:
         assert data["tuned_model"]["mean_chrf_score"] > data["base_model"]["mean_chrf_score"]
         assert data["tuned_model"]["mean_token_f1"] > data["base_model"]["mean_token_f1"]
         assert data["tuned_model"]["citation_accuracy_pct"] == 100.0
+
+    def test_get_dataset_dbom_flagship(self, client):
+        res = client.get("/datasets/flagship_indic_gst/dbom")
+        assert res.status_code == 200
+        data = res.json()
+        assert data["job_id"] == "flagship_indic_gst"
+        assert "dbom" in data
+        assert "nutrition_label_md" in data
+        assert data["dbom"]["certificate_id"].startswith("DBOM-")
+        assert len(data["dbom"]["merkle_root_hash"]) == 64
+        assert "Data Nutrition & Provenance Label" in data["nutrition_label_md"]
