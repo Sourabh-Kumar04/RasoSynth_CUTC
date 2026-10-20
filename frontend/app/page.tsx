@@ -28,7 +28,7 @@ import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { api } from '@/lib/api/client'
 import { TopNav } from '@/components/layout/top-nav'
-import { Sidebar } from '@/components/layout/sidebar'
+import { SubNav } from '@/components/layout/sub-nav'
 
 export default function OverviewDashboardPage() {
   const router = useRouter()
@@ -73,9 +73,8 @@ export default function OverviewDashboardPage() {
   return (
     <div className="min-h-screen bg-[#09090b] text-[#f8fafc] flex flex-col font-sans antialiased">
       <TopNav />
-      <div className="flex-1 flex w-full">
-        <Sidebar />
-        <main className="flex-1 min-w-0 p-6 sm:p-8 lg:p-10 space-y-10 max-w-7xl mx-auto">
+      <SubNav />
+      <main className="flex-1 w-full max-w-[1600px] mx-auto p-6 sm:p-8 lg:p-10 space-y-10">
           
           {/* Hero Section: Spacious, Bold, Minimal YC Aesthetic */}
           <div className="flex flex-col md:flex-row md:items-end justify-between gap-6 border-b border-[#22222e] pb-8">
@@ -335,7 +334,6 @@ export default function OverviewDashboardPage() {
           </div>
 
         </main>
-      </div>
     </div>
   )
 }
