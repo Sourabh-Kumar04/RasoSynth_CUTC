@@ -79,11 +79,25 @@ docker-compose up redis postgres qdrant -d
 uvicorn api.server:app --reload
 ```
 
-### Fine-Tuning Dependencies (optional)
+### Unified Developer CLI (`rasosynthtune`)
+
+RasoSynthTune includes a command-line interface for autonomous synthesis, cryptographic auditing, latency benchmarking, and fine-tuning recipe generation:
 
 ```bash
-pip install -e ".[finetuning]"   # peft, trl, transformers, accelerate
-pip install unsloth              # optional: 2-4× GPU speedup
+# 1. Autonomous synthetic generation with cryptographic DBOM & Nutrition Label
+rasosynthtune generate --domain "Indian Taxation & GST Compliance" --size 10 --format jsonl
+
+# 2. Cryptographic DBOM integrity, PII scan (DPDP Act), and benchmark contamination audit
+rasosynthtune audit --dataset outputs/dataset_distillation_10.jsonl
+
+# 3. Audited latency profiling, lexical diversity & enterprise ROI benchmark suite
+rasosynthtune benchmark
+
+# 4. Generate fine-tuning recipes (Axolotl / Unsloth / Torchtune)
+rasosynthtune recipe --framework axolotl --model "sarvamai/sarvam-2b-v0.5" --dataset outputs/dataset.jsonl
+
+# 5. Start canonical API server
+rasosynthtune serve --host 0.0.0.0 --port 8000
 ```
 
 ### AIKosh Dataset Discovery (optional)
