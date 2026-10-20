@@ -416,6 +416,15 @@ python -m research.prompt_optimizer
 | Single Trace Lookup | http://localhost:8000/traces/{trace_id} | Detailed request execution waterfall |
 | Flower (Celery) | http://localhost:5555 | Celery worker task monitoring |
 
+## Documentation & Collateral
+
+| Document | Description |
+|:---|:---|
+| [Technical Briefing](docs/TECHNICAL_BRIEFING.md) | Executive architecture overview, 5-D quality filtering, and DPDP / EU AI Act compliance |
+| [3-Minute Demo Walkthrough](docs/DEMO_WALKTHROUGH.md) | Fast-paced demonstration script and benchmark reproducibility guide for investors and evaluators |
+| [Flagship Community Dataset](outputs/flagship_indic_gst/README.md) | Gold-standard Indic GST instruction dataset with cryptographic DBOM attestation |
+| [Empirical Fine-Tuning Delta](outputs/evaluation/before_vs_after_finetune_benchmark.md) | Before vs. After empirical evaluation report on Sarvam-2B (+537% chrF gain) |
+
 ## License
 
 [PolyForm Noncommercial License 1.0.0 (CC BY-NC 4.0)](LICENSE) — Strictly Non-Commercial Use Only.
