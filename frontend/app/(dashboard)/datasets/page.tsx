@@ -542,7 +542,7 @@ export default function DatasetsPage() {
 
       {/* Error State */}
       {error && (
-        <Card className="border border-rose-500/30 bg-rose-950/20 text-rose-300 rounded-2xl">
+        <Card className="border border-rose-500/30 bg-rose-950/20 text-rose-300 rounded-md">
           <CardContent className="p-4 flex items-center gap-4">
             <AlertCircle className="h-5 w-5 text-rose-400 shrink-0" />
             <div className="flex-1">
@@ -558,7 +558,7 @@ export default function DatasetsPage() {
 
       {/* Loading State */}
       {isLoading && datasets.length === 0 && (
-        <Card className="border-[#272738] bg-[#12121a] rounded-2xl">
+        <Card className="border-[#272738] bg-[#12121a] rounded-md">
           <CardContent className="p-12 flex flex-col items-center justify-center">
             <Loader2 className="h-8 w-8 animate-spin text-[#f26625] mb-4" />
             <p className="text-sm text-[#94a3b8] font-mono">Fetching active dataset jobs...</p>
@@ -569,9 +569,9 @@ export default function DatasetsPage() {
       {/* Stats Cards */}
       {!isLoading && (
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-          <Card className="border-[#272738] bg-[#12121a] hover:border-[#3b3b52] transition-all rounded-2xl card-shadow">
+          <Card className="border-[#272738] bg-[#12121a] hover:border-[#3b3b52] transition-all rounded-md card-shadow">
             <CardContent className="p-4 flex items-center gap-4">
-              <div className="h-10 w-10 rounded-xl bg-[#161622] border border-[#272738] flex items-center justify-center">
+              <div className="h-10 w-10 rounded-md bg-[#161622] border border-[#272738] flex items-center justify-center">
                 <Database className="h-5 w-5 text-[#f26625]" />
               </div>
               <div>
@@ -580,9 +580,9 @@ export default function DatasetsPage() {
               </div>
             </CardContent>
           </Card>
-          <Card className="border-[#272738] bg-[#12121a] hover:border-[#3b3b52] transition-all rounded-2xl card-shadow">
+          <Card className="border-[#272738] bg-[#12121a] hover:border-[#3b3b52] transition-all rounded-md card-shadow">
             <CardContent className="p-4 flex items-center gap-4">
-              <div className="h-10 w-10 rounded-xl bg-[#161622] border border-[#272738] flex items-center justify-center">
+              <div className="h-10 w-10 rounded-md bg-[#161622] border border-[#272738] flex items-center justify-center">
                 <CheckCircle2 className="h-5 w-5 text-[#10b981]" />
               </div>
               <div>
@@ -593,9 +593,9 @@ export default function DatasetsPage() {
               </div>
             </CardContent>
           </Card>
-          <Card className="border-[#272738] bg-[#12121a] hover:border-[#3b3b52] transition-all rounded-2xl card-shadow">
+          <Card className="border-[#272738] bg-[#12121a] hover:border-[#3b3b52] transition-all rounded-md card-shadow">
             <CardContent className="p-4 flex items-center gap-4">
-              <div className="h-10 w-10 rounded-xl bg-[#161622] border border-[#272738] flex items-center justify-center">
+              <div className="h-10 w-10 rounded-md bg-[#161622] border border-[#272738] flex items-center justify-center">
                 <Layers className="h-5 w-5 text-[#f26625]" />
               </div>
               <div>
@@ -606,9 +606,9 @@ export default function DatasetsPage() {
               </div>
             </CardContent>
           </Card>
-          <Card className="border-[#272738] bg-[#12121a] hover:border-[#3b3b52] transition-all rounded-2xl card-shadow">
+          <Card className="border-[#272738] bg-[#12121a] hover:border-[#3b3b52] transition-all rounded-md card-shadow">
             <CardContent className="p-4 flex items-center gap-4">
-              <div className="h-10 w-10 rounded-xl bg-[#161622] border border-[#272738] flex items-center justify-center">
+              <div className="h-10 w-10 rounded-md bg-[#161622] border border-[#272738] flex items-center justify-center">
                 <AlertCircle className="h-5 w-5 text-amber-400" />
               </div>
               <div>
@@ -639,7 +639,7 @@ export default function DatasetsPage() {
           {FLAGSHIP_COMMUNITY_DATASETS.map((flagship) => (
             <Card
               key={flagship.id}
-              className="border-[#272738] bg-[#12121a] hover:border-emerald-500/40 transition-all rounded-2xl p-4 flex flex-col justify-between"
+              className="border-[#272738] bg-[#12121a] hover:border-emerald-500/40 transition-all rounded-md p-4 flex flex-col justify-between"
             >
               <div className="space-y-2.5">
                 <div className="flex items-start justify-between gap-2">
@@ -652,7 +652,7 @@ export default function DatasetsPage() {
                   <h3 className="text-xs font-bold text-white leading-snug">{flagship.name}</h3>
                   <p className="text-[11px] text-[#94a3b8] mt-0.5">{flagship.domain}</p>
                 </div>
-                <div className="p-2 rounded-xl bg-[#0a0a0f] border border-[#272738] font-mono text-[10px] space-y-1">
+                <div className="p-2 rounded-md bg-[#0a0a0f] border border-[#272738] font-mono text-[10px] space-y-1">
                   <div className="flex items-center justify-between text-[#64748b]">
                     <span>Cert ID:</span>
                     <span className="text-emerald-400 font-semibold">{flagship.certificate_id}</span>
@@ -748,7 +748,7 @@ export default function DatasetsPage() {
 
       {/* Empty State */}
       {!isLoading && datasets.length === 0 && !error && (
-        <Card className="border-[#272738] bg-[#12121a] rounded-xl">
+        <Card className="border-[#272738] bg-[#12121a] rounded-md">
           <CardContent className="p-12 flex flex-col items-center justify-center">
             <Database className="h-12 w-12 text-[#64748b] mb-4" />
             <h3 className="text-lg font-bold text-white mb-2">No datasets yet</h3>
@@ -765,7 +765,7 @@ export default function DatasetsPage() {
 
       {/* Dataset Table */}
       {datasets.length > 0 && (
-        <Card className="border-[#272738] bg-[#12121a] rounded-2xl card-shadow overflow-hidden">
+        <Card className="border-[#272738] bg-[#12121a] rounded-md card-shadow overflow-hidden">
           <Table>
             <TableHeader className="bg-[#0a0a0f]">
               <TableRow className="border-b border-[#272738]">
@@ -794,7 +794,7 @@ export default function DatasetsPage() {
                   >
                     <TableCell>
                       <div className="flex items-center gap-3">
-                        <div className="h-8 w-8 rounded-xl bg-[#161622] border border-[#272738] flex items-center justify-center shrink-0">
+                        <div className="h-8 w-8 rounded-md bg-[#161622] border border-[#272738] flex items-center justify-center shrink-0">
                           <Database className="h-4 w-4 text-[#f26625]" />
                         </div>
                         <div>
@@ -925,7 +925,7 @@ export default function DatasetsPage() {
 
       {/* Selected Dataset Details Drawer / Card */}
       {selected && (
-        <Card className="border-[#272738] bg-[#12121a] rounded-2xl card-shadow">
+        <Card className="border-[#272738] bg-[#12121a] rounded-md card-shadow">
           <CardHeader className="pb-3 border-b border-[#272738]">
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-2">
@@ -979,7 +979,7 @@ export default function DatasetsPage() {
             </div>
 
             {/* Quick Metrics Grid */}
-            <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 p-3 bg-[#0a0a0f] rounded-xl border border-[#272738]">
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 p-3 bg-[#0a0a0f] rounded-md border border-[#272738]">
               <div>
                 <p className="text-[10px] text-[#94a3b8] font-mono uppercase">Quality Score</p>
                 <p className="text-base font-mono font-bold text-[#10b981] mt-0.5">{Math.round(selected.quality)}%</p>
@@ -1010,17 +1010,17 @@ export default function DatasetsPage() {
               {datasetSummary && (
                 <>
                   <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-                    <div className="rounded-xl border border-[#272738] bg-[#0a0a0f] p-3">
+                    <div className="rounded-md border border-[#272738] bg-[#0a0a0f] p-3">
                       <p className="text-[10px] uppercase font-mono text-[#94a3b8]">Final Samples</p>
                       <p className="text-lg font-bold font-mono text-white mt-0.5">{datasetSummary.sample_count ?? 0}</p>
                     </div>
-                    <div className="rounded-xl border border-[#272738] bg-[#0a0a0f] p-3">
+                    <div className="rounded-md border border-[#272738] bg-[#0a0a0f] p-3">
                       <p className="text-[10px] uppercase font-mono text-[#94a3b8]">Mean Quality</p>
                       <p className="text-lg font-bold font-mono text-[#10b981] mt-0.5">
                         {datasetSummary.quality?.mean == null ? '—' : `${Math.round(datasetSummary.quality.mean * 100)}%`}
                       </p>
                     </div>
-                    <div className="rounded-xl border border-[#272738] bg-[#0a0a0f] p-3">
+                    <div className="rounded-md border border-[#272738] bg-[#0a0a0f] p-3">
                       <p className="text-[10px] uppercase font-mono text-[#94a3b8]">HITL Review Coverage</p>
                       <p className="text-lg font-bold font-mono text-[#f26625] mt-0.5">
                         {datasetSummary.human_review?.enabled ? `${datasetSummary.human_review.total} items` : 'Stratified Auto'}
@@ -1029,20 +1029,20 @@ export default function DatasetsPage() {
                         <p className="mt-1 text-[10px] text-[#94a3b8] font-mono">{datasetSummary.human_review.requested_percentage}% requested</p>
                       )}
                     </div>
-                    <div className="rounded-xl border border-[#272738] bg-[#0a0a0f] p-3">
+                    <div className="rounded-md border border-[#272738] bg-[#0a0a0f] p-3">
                       <p className="text-[10px] uppercase font-mono text-[#94a3b8]">Balance Removals</p>
                       <p className="text-lg font-bold font-mono text-white mt-0.5">{datasetSummary.balance_report?.samples_removed ?? 0}</p>
                     </div>
                   </div>
 
                   {Number(datasetSummary.balance_report?.samples_short_of_target || 0) > 0 && (
-                    <p role="status" className="rounded-xl border border-amber-500/30 bg-amber-950/20 px-3.5 py-2.5 text-xs text-amber-300 font-mono">
+                    <p role="status" className="rounded-md border border-amber-500/30 bg-amber-950/20 px-3.5 py-2.5 text-xs text-amber-300 font-mono">
                       This dataset has {datasetSummary.sample_count ?? 0} of {datasetSummary.balance_report?.requested_samples} requested samples. Fewer qualifying records remained after source filtering, human review, and balancing.
                     </p>
                   )}
 
                   {datasetSummary.provenance && (
-                    <details className="rounded-xl border border-[#272738] bg-[#0a0a0f] p-3">
+                    <details className="rounded-md border border-[#272738] bg-[#0a0a0f] p-3">
                       <summary className="cursor-pointer text-xs font-bold text-white hover:text-[#f26625] transition-colors">
                         Inspect Detailed Grounding Provenance
                       </summary>
@@ -1121,7 +1121,7 @@ export default function DatasetsPage() {
               </div>
 
               {contaminationReport && (
-                <div className="p-3 bg-[#0a0a0f] border border-[#272738] rounded-xl flex items-center justify-between font-mono text-xs">
+                <div className="p-3 bg-[#0a0a0f] border border-[#272738] rounded-md flex items-center justify-between font-mono text-xs">
                   <div className="flex items-center gap-2">
                     <span className={clsx("h-2.5 w-2.5 rounded-full", contaminationReport.status === 'clean' ? 'bg-[#10b981]' : 'bg-rose-500')} />
                     <span className="text-white font-bold">
@@ -1138,7 +1138,7 @@ export default function DatasetsPage() {
               )}
 
               {adversarialProbes && (
-                <div className="p-3 bg-[#0a0a0f] border border-[#272738] rounded-xl space-y-2 font-mono text-xs">
+                <div className="p-3 bg-[#0a0a0f] border border-[#272738] rounded-md space-y-2 font-mono text-xs">
                   <div className="flex items-center justify-between pb-1 border-b border-[#1c1c28]">
                     <span className="text-[#94a3b8] text-[10px] uppercase font-bold">Generated Adversarial Safety Probes</span>
                     <span className="text-amber-400 text-[10px]">{adversarialProbes.length} stress tests synthesized</span>
@@ -1171,22 +1171,22 @@ export default function DatasetsPage() {
               </div>
 
               {recordsLoading ? (
-                <div className="p-8 flex items-center justify-center bg-[#0a0a0f] rounded-xl border border-[#272738]">
+                <div className="p-8 flex items-center justify-center bg-[#0a0a0f] rounded-md border border-[#272738]">
                   <Loader2 className="h-5 w-5 animate-spin text-[#f26625] mr-2" />
                   <span className="text-xs text-[#94a3b8] font-mono">Loading preview records...</span>
                 </div>
               ) : recordsError ? (
-                <div className="p-4 bg-rose-950/20 rounded-xl border border-rose-500/30 text-xs text-rose-300">
+                <div className="p-4 bg-rose-950/20 rounded-md border border-rose-500/30 text-xs text-rose-300">
                   Failed to load preview: {recordsError}
                 </div>
               ) : records.length === 0 ? (
-                <div className="p-8 text-center bg-[#0a0a0f] rounded-xl border border-[#272738] text-xs text-[#94a3b8] font-mono">
+                <div className="p-8 text-center bg-[#0a0a0f] rounded-md border border-[#272738] text-xs text-[#94a3b8] font-mono">
                   No preview records available. Ensure pipeline has completed and exported files successfully.
                 </div>
               ) : (
-                <div className="max-h-[360px] overflow-y-auto space-y-3 rounded-2xl border border-[#272738] bg-[#0a0a0f] p-3">
+                <div className="max-h-[360px] overflow-y-auto space-y-3 rounded-md border border-[#272738] bg-[#0a0a0f] p-3">
                   {records.map((rec, i) => (
-                    <div key={i} className="p-3.5 bg-[#12121a] rounded-xl border border-[#272738] text-xs space-y-2">
+                    <div key={i} className="p-3.5 bg-[#12121a] rounded-md border border-[#272738] text-xs space-y-2">
                       <div className="flex items-center justify-between text-[10px] text-[#94a3b8] font-mono">
                         <span className="text-[#10b981] font-semibold">Record #{i + 1}</span>
                         <div className="flex items-center gap-1.5 flex-wrap">
@@ -1382,7 +1382,7 @@ export default function DatasetsPage() {
       {/* Hugging Face Dataset Card Modal */}
       {hfCardModalOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/70 backdrop-blur-sm animate-fade-in">
-          <div className="relative w-full max-w-4xl max-h-[85vh] flex flex-col bg-[#12121a] border border-[#272738] rounded-2xl shadow-2xl overflow-hidden">
+          <div className="relative w-full max-w-4xl max-h-[85vh] flex flex-col bg-[#12121a] border border-[#272738] rounded-md shadow-2xl overflow-hidden">
             {/* Modal Header */}
             <div className="flex items-center justify-between px-5 py-4 border-b border-[#272738] bg-[#0e0e14]">
               <div className="flex items-center gap-2.5">
@@ -1441,7 +1441,7 @@ export default function DatasetsPage() {
                   <p className="text-xs text-[#94a3b8]">Synthesizing Hugging Face Card with YAML frontmatter...</p>
                 </div>
               ) : (
-                <pre className="p-4 rounded-xl bg-[#0d0d14] border border-[#272738] text-[#e2e8f0] overflow-x-auto whitespace-pre-wrap leading-relaxed select-all">
+                <pre className="p-4 rounded-md bg-[#0d0d14] border border-[#272738] text-[#e2e8f0] overflow-x-auto whitespace-pre-wrap leading-relaxed select-all">
                   {hfCardContent}
                 </pre>
               )}
@@ -1468,7 +1468,7 @@ export default function DatasetsPage() {
       {/* Hugging Face Hub Direct Publish Modal */}
       {hfPublishModalOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/70 backdrop-blur-sm animate-fade-in">
-          <div className="relative w-full max-w-lg bg-[#12121a] border border-[#272738] rounded-2xl shadow-2xl overflow-hidden font-mono">
+          <div className="relative w-full max-w-lg bg-[#12121a] border border-[#272738] rounded-md shadow-2xl overflow-hidden font-mono">
             {/* Header */}
             <div className="flex items-center justify-between px-5 py-4 border-b border-[#272738] bg-[#0e0e14]">
               <div className="flex items-center gap-2">
@@ -1569,7 +1569,7 @@ export default function DatasetsPage() {
       {/* Fine-Tuning Recipe Generator Modal */}
       {recipeModalOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/70 backdrop-blur-sm animate-fade-in">
-          <div className="relative w-full max-w-4xl max-h-[85vh] flex flex-col bg-[#12121a] border border-[#272738] rounded-2xl shadow-2xl overflow-hidden font-mono">
+          <div className="relative w-full max-w-4xl max-h-[85vh] flex flex-col bg-[#12121a] border border-[#272738] rounded-md shadow-2xl overflow-hidden font-mono">
             {/* Header */}
             <div className="flex items-center justify-between px-5 py-4 border-b border-[#272738] bg-[#0e0e14]">
               <div className="flex items-center gap-2.5">
@@ -1656,7 +1656,7 @@ export default function DatasetsPage() {
                   <p className="text-xs text-[#94a3b8]">Generating optimized training recipe...</p>
                 </div>
               ) : (
-                <pre className="p-4 rounded-xl bg-[#0d0d14] border border-[#272738] text-slate-200 overflow-x-auto whitespace-pre font-mono text-[11px] leading-relaxed select-all">
+                <pre className="p-4 rounded-md bg-[#0d0d14] border border-[#272738] text-slate-200 overflow-x-auto whitespace-pre font-mono text-[11px] leading-relaxed select-all">
                   {recipeData?.content || 'No recipe generated.'}
                 </pre>
               )}
@@ -1678,7 +1678,7 @@ export default function DatasetsPage() {
       {/* Cryptographic DBOM Modal */}
       {dbomModalOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/75 backdrop-blur-sm animate-fade-in">
-          <div className="relative w-full max-w-2xl bg-[#12121a] border border-[#272738] rounded-2xl shadow-2xl overflow-hidden font-mono">
+          <div className="relative w-full max-w-2xl bg-[#12121a] border border-[#272738] rounded-md shadow-2xl overflow-hidden font-mono">
             {/* Header */}
             <div className="flex items-center justify-between px-6 py-4 border-b border-[#272738] bg-[#0e0e14]">
               <div className="flex items-center gap-2.5">
@@ -1703,7 +1703,7 @@ export default function DatasetsPage() {
               ) : (
                 <>
                   {/* Certificate ID & Merkle Hash */}
-                  <div className="p-3.5 rounded-xl bg-[#0a0a0f] border border-[#272738] space-y-2">
+                  <div className="p-3.5 rounded-md bg-[#0a0a0f] border border-[#272738] space-y-2">
                     <div className="flex items-center justify-between">
                       <span className="text-[10px] text-[#94a3b8] uppercase font-bold">Attestation Certificate</span>
                       <Badge variant="outline" className="text-[10px] border-purple-800 text-purple-300 bg-purple-950/60 font-mono">
@@ -1734,19 +1734,19 @@ export default function DatasetsPage() {
 
                   {/* Compliance Matrix */}
                   <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5">
-                    <div className="p-2.5 rounded-xl bg-[#0a0a0f] border border-[#272738]">
+                    <div className="p-2.5 rounded-md bg-[#0a0a0f] border border-[#272738]">
                       <span className="text-[10px] text-[#94a3b8] uppercase block">PII Scrubbing</span>
                       <span className="text-xs font-bold text-emerald-400 mt-1 block">✅ Certified Clean</span>
                     </div>
-                    <div className="p-2.5 rounded-xl bg-[#0a0a0f] border border-[#272738]">
+                    <div className="p-2.5 rounded-md bg-[#0a0a0f] border border-[#272738]">
                       <span className="text-[10px] text-[#94a3b8] uppercase block">Cultural Safety</span>
                       <span className="text-xs font-bold text-emerald-400 mt-1 block">✅ Indian IT Act</span>
                     </div>
-                    <div className="p-2.5 rounded-xl bg-[#0a0a0f] border border-[#272738]">
+                    <div className="p-2.5 rounded-md bg-[#0a0a0f] border border-[#272738]">
                       <span className="text-[10px] text-[#94a3b8] uppercase block">Contamination</span>
                       <span className="text-xs font-bold text-cyan-400 mt-1 block">0.0% Leakage</span>
                     </div>
-                    <div className="p-2.5 rounded-xl bg-[#0a0a0f] border border-[#272738]">
+                    <div className="p-2.5 rounded-md bg-[#0a0a0f] border border-[#272738]">
                       <span className="text-[10px] text-[#94a3b8] uppercase block">Topic Entropy</span>
                       <span className="text-xs font-bold text-purple-300 mt-1 block">
                         {Math.round((dbomData?.dbom?.compliance_audit?.diversity_entropy || 0.94) * 100)}% Parity
@@ -1755,7 +1755,7 @@ export default function DatasetsPage() {
                   </div>
 
                   {/* Live Verification Box */}
-                  <div className="p-3.5 rounded-xl bg-[#161622] border border-[#3b3b52] flex flex-col sm:flex-row items-center justify-between gap-3">
+                  <div className="p-3.5 rounded-md bg-[#161622] border border-[#3b3b52] flex flex-col sm:flex-row items-center justify-between gap-3">
                     <div>
                       <p className="text-xs font-bold text-white">Cryptographic Tamper Check</p>
                       <p className="text-[10px] text-[#94a3b8]">Verify all dataset sample hashes against root</p>
@@ -1785,7 +1785,7 @@ export default function DatasetsPage() {
                     <span className="text-[10px] text-[#94a3b8] uppercase font-bold block mb-1">
                       Data Nutrition Label Preview (DATA_NUTRITION_LABEL.md)
                     </span>
-                    <pre className="p-3 rounded-xl bg-[#0a0a0f] border border-[#272738] text-slate-300 text-[11px] overflow-x-auto whitespace-pre-wrap max-h-48">
+                    <pre className="p-3 rounded-md bg-[#0a0a0f] border border-[#272738] text-slate-300 text-[11px] overflow-x-auto whitespace-pre-wrap max-h-48">
                       {dbomData?.nutrition_label_md || 'Generating label...'}
                     </pre>
                   </div>

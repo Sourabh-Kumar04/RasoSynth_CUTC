@@ -249,7 +249,7 @@ export default function ProvidersPage() {
               <Loader2 className="h-5 w-5 animate-spin text-[#f26625]" /> Loading providers…
             </div>
           ) : providers.length === 0 ? (
-            <div className="flex flex-col items-center justify-center py-20 gap-3 text-[#94a3b8] bg-[#12121a] rounded-2xl border border-[#272738]">
+            <div className="flex flex-col items-center justify-center py-20 gap-3 text-[#94a3b8] bg-[#12121a] rounded-md border border-[#272738]">
               <Server className="h-10 w-10 text-[#64748b]" />
               <p className="text-xs font-mono">No providers configured. Add API keys to <code className="bg-[#161622] text-[#f26625] px-1.5 py-0.5 rounded">.env</code></p>
               <Button variant="outline" size="sm" className="rounded-full border-[#3b3b52] text-[#f26625]" onClick={fetchAll}><RefreshCw className="h-3.5 w-3.5 mr-1" />Retry</Button>
@@ -271,7 +271,7 @@ export default function ProvidersPage() {
 
               <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-4">
                 {filtered.map(p => (
-                  <Card key={p.name} className="bg-[#12121a] border-[#272738] rounded-2xl card-shadow hover:border-[#3b3b52] transition-all">
+                  <Card key={p.name} className="bg-[#12121a] border-[#272738] rounded-md card-shadow hover:border-[#3b3b52] transition-all">
                     <CardContent className="p-4 space-y-3">
                       <div className="flex items-start justify-between gap-2">
                         <div className="flex items-center gap-2.5">
@@ -333,7 +333,7 @@ export default function ProvidersPage() {
 
         {/* Latency chart */}
         <TabsContent value="latency" className="mt-4">
-          <Card className="bg-[#12121a] border-[#272738] rounded-2xl card-shadow">
+          <Card className="bg-[#12121a] border-[#272738] rounded-md card-shadow">
             <CardHeader className="pb-3 border-b border-[#272738]"><CardTitle className="text-sm font-bold text-[#f26625]">Provider Latency (ms)</CardTitle></CardHeader>
             <CardContent className="p-4">
               {latencyData.length === 0 ? (
@@ -365,7 +365,7 @@ export default function ProvidersPage() {
 
         {/* Circuit breakers */}
         <TabsContent value="circuit-breakers" className="mt-4">
-          <Card className="bg-[#12121a] border-[#272738] rounded-2xl card-shadow">
+          <Card className="bg-[#12121a] border-[#272738] rounded-md card-shadow">
             <CardHeader className="pb-3 border-b border-[#272738]"><CardTitle className="text-sm font-bold text-[#f26625]">Circuit Breaker States</CardTitle></CardHeader>
             <CardContent className="p-4">
               {Object.keys(circuitBreakers).length === 0 ? (
@@ -399,7 +399,7 @@ export default function ProvidersPage() {
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
 
             {/* Manual Provider Hot-Switcher */}
-            <Card className="bg-[#12121a] border-[#272738] rounded-2xl card-shadow">
+            <Card className="bg-[#12121a] border-[#272738] rounded-md card-shadow">
               <CardHeader className="pb-3 border-b border-[#272738]">
                 <div className="flex items-center gap-2">
                   <ArrowRightLeft className="h-4 w-4 text-[#f26625]" />
@@ -465,7 +465,7 @@ export default function ProvidersPage() {
             </Card>
 
             {/* Trigger Manual Failover */}
-            <Card className="bg-[#12121a] border-[#272738] rounded-2xl card-shadow">
+            <Card className="bg-[#12121a] border-[#272738] rounded-md card-shadow">
               <CardHeader className="pb-3 border-b border-[#272738]">
                 <div className="flex items-center gap-2">
                   <ShieldAlert className="h-4 w-4 text-amber-400" />
@@ -521,7 +521,7 @@ export default function ProvidersPage() {
           </div>
 
           {/* Failover History Table */}
-          <Card className="bg-[#12121a] border-[#272738] rounded-2xl card-shadow">
+          <Card className="bg-[#12121a] border-[#272738] rounded-md card-shadow">
             <CardHeader className="pb-3 border-b border-[#272738] flex flex-row items-center justify-between">
               <div>
                 <CardTitle className="text-sm font-bold text-white flex items-center gap-2">

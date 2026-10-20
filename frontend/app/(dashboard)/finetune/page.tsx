@@ -120,7 +120,7 @@ function Section({
 }: { title: string; children: React.ReactNode; defaultOpen?: boolean }) {
   const [open, setOpen] = useState(defaultOpen)
   return (
-    <div className="rounded-xl border border-[#272738] overflow-hidden bg-[#12121a]">
+    <div className="rounded-md border border-[#272738] overflow-hidden bg-[#12121a]">
       <button
         type="button"
         onClick={() => setOpen(o => !o)}
@@ -173,7 +173,7 @@ function LogRow({ line }: { line: LogLine }) {
 
 function JobSkeleton() {
   return (
-    <div className="rounded-xl border-l-4 border-l-[#3b3b52] border border-[#272738] bg-[#12121a] p-3 space-y-2">
+    <div className="rounded-md border-l-4 border-l-[#3b3b52] border border-[#272738] bg-[#12121a] p-3 space-y-2">
       <div className="flex justify-between">
         <Skeleton className="h-3.5 w-32 bg-[#161622]" />
         <Skeleton className="h-4 w-14 rounded-full bg-[#161622]" />
@@ -199,7 +199,7 @@ interface DetailPaneProps {
 function DetailPane({ job, logs, lossHistory, onCancel, onCopy, onReconnect, logsEndRef }: DetailPaneProps) {
   return (
     <div className="space-y-4">
-      <Card className="bg-[#12121a] border-[#272738] rounded-2xl card-shadow">
+      <Card className="bg-[#12121a] border-[#272738] rounded-md card-shadow">
         <CardHeader className="pb-2 border-b border-[#272738]">
           <div className="flex flex-wrap items-start justify-between gap-2">
             <CardTitle className="text-sm font-bold text-white truncate max-w-[200px]">
@@ -219,7 +219,7 @@ function DetailPane({ job, logs, lossHistory, onCancel, onCopy, onReconnect, log
           {job.status === 'running' && <Progress value={job.progress} className="h-2 bg-[#0a0a0f]" />}
 
           {lossHistory.length > 1 && (
-            <div className="flex items-center gap-3 bg-[#0a0a0f] rounded-xl px-3 py-2 border border-[#272738]">
+            <div className="flex items-center gap-3 bg-[#0a0a0f] rounded-md px-3 py-2 border border-[#272738]">
               <span className="text-xs text-[#94a3b8] font-mono shrink-0">Loss</span>
               <LossSparkline data={lossHistory} />
               <span className="text-xs font-mono text-[#10b981] font-bold shrink-0">
@@ -244,7 +244,7 @@ function DetailPane({ job, logs, lossHistory, onCancel, onCopy, onReconnect, log
           </div>
 
           {job.error && (
-            <div className="flex items-start gap-2 text-xs text-rose-300 bg-rose-950/20 border border-rose-500/30 rounded-xl px-3 py-2 font-mono">
+            <div className="flex items-start gap-2 text-xs text-rose-300 bg-rose-950/20 border border-rose-500/30 rounded-md px-3 py-2 font-mono">
               <AlertCircle className="h-3.5 w-3.5 mt-0.5 shrink-0 text-rose-400" />
               {job.error}
             </div>
@@ -284,7 +284,7 @@ function DetailPane({ job, logs, lossHistory, onCancel, onCopy, onReconnect, log
           </div>
         </CardHeader>
         <CardContent className="p-3">
-          <ScrollArea className="h-52 sm:h-64 rounded-xl bg-[#0a0a0f] border border-[#272738]">
+          <ScrollArea className="h-52 sm:h-64 rounded-md bg-[#0a0a0f] border border-[#272738]">
             <div className="p-3 space-y-0.5">
               {logs.length === 0
                 ? <p className="text-xs text-[#94a3b8] font-mono">
@@ -563,7 +563,7 @@ function FineTuneContent() {
             { key: 'failed',    label: 'Failed',    stripe: 'border-l-rose-500',    color: 'text-rose-400' },
           ] as const
         ).map(({ key, label, stripe, color }) => (
-          <Card key={key} className={clsx('border-l-4 bg-[#12121a] border-[#272738] rounded-xl card-shadow', stripe)}>
+          <Card key={key} className={clsx('border-l-4 bg-[#12121a] border-[#272738] rounded-md card-shadow', stripe)}>
             <CardContent className="pt-4 pb-4 px-4">
               <p className="text-[10px] text-[#94a3b8] font-mono uppercase tracking-wider">{label}</p>
               <p className={clsx('text-2xl font-bold font-mono mt-0.5 tnum', color)}>{counts[key]}</p>
@@ -574,7 +574,7 @@ function FineTuneContent() {
 
       {/* ── New job form ── */}
       {tab === 'new' && (
-        <Card className="bg-[#12121a] border-[#272738] rounded-xl card-shadow">
+        <Card className="bg-[#12121a] border-[#272738] rounded-md card-shadow">
           <CardHeader className="pb-3 border-b border-[#272738]">
             <CardTitle className="text-sm font-bold text-white">Configure Fine-Tuning Job</CardTitle>
           </CardHeader>
@@ -840,7 +840,7 @@ function FineTuneContent() {
               ? Array.from({ length: 4 }).map((_, i) => <JobSkeleton key={i} />)
               : jobs.length === 0
                 ? (
-                  <div className="flex flex-col items-center justify-center py-16 space-y-4 bg-[#12121a] rounded-xl border border-[#272738]">
+                  <div className="flex flex-col items-center justify-center py-16 space-y-4 bg-[#12121a] rounded-md border border-[#272738]">
                     <div className="w-14 h-14 rounded-lg bg-[#161622] border border-[#272738] flex items-center justify-center">
                       <Cpu className="h-7 w-7 text-[#f26625]" />
                     </div>
@@ -900,7 +900,7 @@ function FineTuneContent() {
                 />
               )
               : (
-                <div className="flex flex-col items-center justify-center h-full min-h-[420px] border border-dashed border-[#272738] bg-[#12121a] rounded-2xl gap-3">
+                <div className="flex flex-col items-center justify-center h-full min-h-[420px] border border-dashed border-[#272738] bg-[#12121a] rounded-md gap-3">
                   <Cpu className="h-10 w-10 text-[#64748b]" />
                   <p className="text-xs text-[#94a3b8] font-mono">
                     Select a job to view details &amp; live training telemetry

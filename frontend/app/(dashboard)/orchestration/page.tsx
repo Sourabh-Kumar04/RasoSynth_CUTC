@@ -435,7 +435,7 @@ export default function OrchestrationPage() {
               { type: 'failover_dispatcher', name: 'Failover Dispatcher', description: 'Handles automatic provider migration and failover', capabilities: ['health_monitoring', 'circuit_breaking'], version: '1.0.0' },
               { type: 'technique_integrator', name: 'Technique Integrator', description: 'Integrates active heuristics from the research loop', capabilities: ['heuristic_tuning', 'loop_optimization'], version: '1.0.0' },
             ]).map((agent: any) => (
-              <Card key={agent.type} className="bg-[#12121a] border-[#272738] rounded-2xl card-shadow hover:border-[#3b3b52] transition-all">
+              <Card key={agent.type} className="bg-[#12121a] border-[#272738] rounded-md card-shadow hover:border-[#3b3b52] transition-all">
                 <CardContent className="p-4 space-y-3">
                   <div className="flex items-start justify-between gap-2">
                     <div className="flex items-center gap-2.5">
@@ -475,7 +475,7 @@ export default function OrchestrationPage() {
         {/* Tab 3: Autonomous Research Loop */}
         <TabsContent value="research" className="space-y-6 mt-0">
           {/* Header control */}
-          <div className="p-5 rounded-2xl bg-[#12121a] border border-[#272738] flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+          <div className="p-5 rounded-md bg-[#12121a] border border-[#272738] flex flex-col sm:flex-row sm:items-center justify-between gap-4">
             <div>
               <div className="flex items-center gap-2 mb-1">
                 <FlaskConical className="w-4 h-4 text-amber-400" />
@@ -514,7 +514,7 @@ export default function OrchestrationPage() {
                 { name: 'Cross-Lingual Indic Alignment', key: 'cross_lingual', desc: 'Bhashini corpus alignment, script normalization, and translation', metric: 'Indic 22 Languages', color: 'text-emerald-400' },
                 { name: 'AST Syntax Sandbox Verification', key: 'ocr_correction', desc: 'Python AST compile checking and execution sandboxing for code SFT', metric: 'AST AST-Checked', color: 'text-cyan-400' },
               ].map(h => (
-                <Card key={h.key} className="bg-[#12121a] border-[#272738] rounded-2xl card-shadow">
+                <Card key={h.key} className="bg-[#12121a] border-[#272738] rounded-md card-shadow">
                   <CardContent className="p-4 space-y-2">
                     <div className="flex items-center justify-between">
                       <span className="text-[10px] font-mono text-[#94a3b8] uppercase">{h.key}</span>
@@ -536,7 +536,7 @@ export default function OrchestrationPage() {
 
           {/* Research Corpus & Recent Discoveries */}
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-            <Card className="bg-[#12121a] border-[#272738] rounded-2xl card-shadow">
+            <Card className="bg-[#12121a] border-[#272738] rounded-md card-shadow">
               <CardHeader className="pb-3 border-b border-[#272738]">
                 <CardTitle className="text-xs font-bold text-white uppercase font-mono tracking-wider flex items-center gap-2">
                   <BookOpen className="w-4 h-4 text-[#f26625]" />
@@ -558,7 +558,7 @@ export default function OrchestrationPage() {
               </CardContent>
             </Card>
 
-            <Card className="bg-[#12121a] border-[#272738] rounded-2xl card-shadow">
+            <Card className="bg-[#12121a] border-[#272738] rounded-md card-shadow">
               <CardHeader className="pb-3 border-b border-[#272738]">
                 <CardTitle className="text-xs font-bold text-white uppercase font-mono tracking-wider flex items-center gap-2">
                   <Zap className="w-4 h-4 text-emerald-400" />

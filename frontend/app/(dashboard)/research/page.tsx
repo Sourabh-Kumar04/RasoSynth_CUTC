@@ -147,7 +147,7 @@ export default function ResearchPage() {
 
       {/* Error */}
       {error && (
-        <Card className="border-rose-300 bg-rose-950/30 border border-rose-500/30 text-rose-300 rounded-2xl">
+        <Card className="border-rose-300 bg-rose-950/30 border border-rose-500/30 text-rose-300 rounded-md">
           <CardContent className="p-3 flex items-center gap-3 text-xs text-rose-300">
             <AlertCircle className="h-4 w-4 shrink-0" />{error}
             <Button variant="ghost" size="sm" className="ml-auto h-7 text-xs rounded-full" onClick={fetchAll}>Retry</Button>
@@ -158,7 +158,7 @@ export default function ResearchPage() {
       {/* Stat cards */}
       {!loading && (
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-          <Card className="bg-[#12121a] border-[#272738] rounded-2xl card-shadow">
+          <Card className="bg-[#12121a] border-[#272738] rounded-md card-shadow">
             <CardContent className="pt-4 pb-4 px-4 flex items-center justify-between">
               <div>
                 <p className="text-xs text-[#94a3b8] font-mono uppercase">Status</p>
@@ -173,7 +173,7 @@ export default function ResearchPage() {
               </div>
             </CardContent>
           </Card>
-          <Card className="bg-[#12121a] border-[#272738] rounded-2xl card-shadow">
+          <Card className="bg-[#12121a] border-[#272738] rounded-md card-shadow">
             <CardContent className="pt-4 pb-4 px-4 flex items-center justify-between">
               <div>
                 <p className="text-xs text-[#94a3b8] font-mono uppercase">Last Run</p>
@@ -188,7 +188,7 @@ export default function ResearchPage() {
               </div>
             </CardContent>
           </Card>
-          <Card className="bg-[#12121a] border-[#272738] rounded-2xl card-shadow">
+          <Card className="bg-[#12121a] border-[#272738] rounded-md card-shadow">
             <CardContent className="pt-4 pb-4 px-4 flex items-center justify-between">
               <div>
                 <p className="text-xs text-[#94a3b8] font-mono uppercase">Techniques</p>
@@ -251,7 +251,7 @@ export default function ResearchPage() {
 
             {/* 4 Metric Cards */}
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-              <Card className="bg-[#12121a] border-[#272738] rounded-2xl">
+              <Card className="bg-[#12121a] border-[#272738] rounded-md">
                 <CardContent className="pt-4 pb-4 px-4 flex items-center justify-between">
                   <div>
                     <p className="text-[10px] text-[#94a3b8] font-mono uppercase">Lexical Diversity (D-2)</p>
@@ -266,7 +266,7 @@ export default function ResearchPage() {
                 </CardContent>
               </Card>
 
-              <Card className="bg-[#12121a] border-[#272738] rounded-2xl">
+              <Card className="bg-[#12121a] border-[#272738] rounded-md">
                 <CardContent className="pt-4 pb-4 px-4 flex items-center justify-between">
                   <div>
                     <p className="text-[10px] text-[#94a3b8] font-mono uppercase">Processing Throughput</p>
@@ -285,7 +285,7 @@ export default function ResearchPage() {
                 </CardContent>
               </Card>
 
-              <Card className="bg-[#12121a] border-[#272738] rounded-2xl">
+              <Card className="bg-[#12121a] border-[#272738] rounded-md">
                 <CardContent className="pt-4 pb-4 px-4 flex items-center justify-between">
                   <div>
                     <p className="text-[10px] text-[#94a3b8] font-mono uppercase">Schema Accuracy</p>
@@ -300,7 +300,7 @@ export default function ResearchPage() {
                 </CardContent>
               </Card>
 
-              <Card className="bg-[#12121a] border-[#272738] rounded-2xl">
+              <Card className="bg-[#12121a] border-[#272738] rounded-md">
                 <CardContent className="pt-4 pb-4 px-4 flex items-center justify-between">
                   <div>
                     <p className="text-[10px] text-[#94a3b8] font-mono uppercase">Cost Reduction vs Human</p>
@@ -321,7 +321,7 @@ export default function ResearchPage() {
             {/* Detailed Latency & Unit Economics Tables */}
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
               {/* Latency & Throughput Profile */}
-              <Card className="bg-[#12121a] border-[#272738] rounded-2xl">
+              <Card className="bg-[#12121a] border-[#272738] rounded-md">
                 <CardHeader className="pb-3 border-b border-[#272738]">
                   <CardTitle className="text-xs font-bold text-white uppercase font-mono tracking-wider flex items-center gap-2">
                     <Zap className="h-4 w-4 text-[#f26625]" />
@@ -357,7 +357,7 @@ export default function ResearchPage() {
               </Card>
 
               {/* Enterprise Unit Economics Simulator */}
-              <Card className="bg-[#12121a] border-[#272738] rounded-2xl">
+              <Card className="bg-[#12121a] border-[#272738] rounded-md">
                 <CardHeader className="pb-3 border-b border-[#272738]">
                   <CardTitle className="text-xs font-bold text-white uppercase font-mono tracking-wider flex items-center gap-2">
                     <DollarSign className="h-4 w-4 text-emerald-400" />
@@ -385,7 +385,7 @@ export default function ResearchPage() {
               </Card>
 
               {/* Empirical Model Evaluation: Before vs. After Fine-Tuning */}
-              <Card className="bg-[#12121a] border-[#272738] rounded-2xl lg:col-span-2">
+              <Card className="bg-[#12121a] border-[#272738] rounded-md lg:col-span-2">
                 <CardHeader className="pb-3 border-b border-[#272738] flex flex-row items-center justify-between">
                   <CardTitle className="text-xs font-bold text-white uppercase font-mono tracking-wider flex items-center gap-2">
                     <TrendingUp className="h-4 w-4 text-[#f26625]" />
@@ -510,7 +510,7 @@ export default function ResearchPage() {
                   color: 'text-amber-300'
                 },
               ].map(h => (
-                <Card key={h.key} className="bg-[#12121a] border-[#272738] rounded-2xl card-shadow">
+                <Card key={h.key} className="bg-[#12121a] border-[#272738] rounded-md card-shadow">
                   <CardContent className="p-4 space-y-3">
                     <div className="flex items-center justify-between">
                       <span className="text-[10px] font-mono text-[#94a3b8] uppercase">{h.key}</span>
@@ -541,7 +541,7 @@ export default function ResearchPage() {
 
           {/* Overview */}
           <TabsContent value="overview" className="mt-4 space-y-3">
-            <Card className="bg-[#12121a] border-[#272738] rounded-2xl card-shadow">
+            <Card className="bg-[#12121a] border-[#272738] rounded-md card-shadow">
               <CardContent className="p-0 divide-y divide-[#272738]">
                 {[
                   {
@@ -587,7 +587,7 @@ export default function ResearchPage() {
 
           {/* Techniques */}
           <TabsContent value="techniques" className="mt-4">
-            <Card className="bg-[#12121a] border-[#272738] rounded-2xl card-shadow">
+            <Card className="bg-[#12121a] border-[#272738] rounded-md card-shadow">
               <CardHeader className="pb-3 border-b border-[#272738]">
                 <CardTitle className="text-xs font-bold text-white uppercase font-mono tracking-wider">
                   Synthesized Techniques &amp; Applied Strategies
@@ -614,7 +614,7 @@ export default function ResearchPage() {
 
           {/* History */}
           <TabsContent value="history" className="mt-4">
-            <Card className="bg-[#12121a] border-[#272738] rounded-2xl card-shadow">
+            <Card className="bg-[#12121a] border-[#272738] rounded-md card-shadow">
               <CardHeader className="pb-3 border-b border-[#272738]">
                 <CardTitle className="text-xs font-bold text-white uppercase font-mono tracking-wider">
                   Literature Corpus &amp; Automated Audit Trail

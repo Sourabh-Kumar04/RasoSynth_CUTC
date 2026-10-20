@@ -121,7 +121,7 @@ export default function QualityDashboardPage() {
       {/* Charts Row */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         <QualityScoreChart />
-        <div className="bg-[#12121a] rounded-xl border border-[#272738] p-6 card-shadow">
+        <div className="bg-[#12121a] rounded-md border border-[#272738] p-6 card-shadow">
           <h3 className="text-sm font-bold text-white mb-4 font-mono uppercase tracking-wider">Metrics &amp; Grounding Controls</h3>
           <ul className="space-y-3 text-sm">
             {[
@@ -151,7 +151,7 @@ export default function QualityDashboardPage() {
           </Badge>
         </div>
 
-        <Card className="border-[#272738] bg-[#12121a] rounded-xl card-shadow overflow-hidden">
+        <Card className="border-[#272738] bg-[#12121a] rounded-md card-shadow overflow-hidden">
           <CardHeader className="pb-3 border-b border-[#272738] bg-[#0e0e14]">
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-2">
@@ -186,7 +186,7 @@ export default function QualityDashboardPage() {
                   value={judgeInstruction}
                   onChange={(e) => setJudgeInstruction(e.target.value)}
                   rows={3}
-                  className="w-full p-2.5 rounded-xl bg-[#0a0a0f] border border-[#272738] text-white focus:outline-none focus:border-[#f26625] text-xs resize-none"
+                  className="w-full p-2.5 rounded-md bg-[#0a0a0f] border border-[#272738] text-white focus:outline-none focus:border-[#f26625] text-xs resize-none"
                 />
               </div>
               <div>
@@ -195,14 +195,14 @@ export default function QualityDashboardPage() {
                   value={judgeResponse}
                   onChange={(e) => setJudgeResponse(e.target.value)}
                   rows={3}
-                  className="w-full p-2.5 rounded-xl bg-[#0a0a0f] border border-[#272738] text-white focus:outline-none focus:border-[#f26625] text-xs resize-none"
+                  className="w-full p-2.5 rounded-md bg-[#0a0a0f] border border-[#272738] text-white focus:outline-none focus:border-[#f26625] text-xs resize-none"
                 />
               </div>
             </div>
 
             {/* Rubric Score Breakdown */}
             {judgeResult && (
-              <div className="p-4 rounded-xl bg-[#0a0a0f] border border-[#272738] space-y-3 animate-fade-in">
+              <div className="p-4 rounded-md bg-[#0a0a0f] border border-[#272738] space-y-3 animate-fade-in">
                 <div className="flex items-center justify-between pb-2 border-b border-[#1c1c28]">
                   <div className="flex items-center gap-2">
                     <CheckCircle2 className="h-4 w-4 text-[#10b981]" />
@@ -269,7 +269,7 @@ export default function QualityDashboardPage() {
           </Button>
         </div>
 
-        <Card className="border-[#272738] bg-[#12121a] rounded-2xl card-shadow overflow-hidden">
+        <Card className="border-[#272738] bg-[#12121a] rounded-md card-shadow overflow-hidden">
           <CardHeader className="pb-3 border-b border-[#272738] bg-[#0e0e14]">
             <div className="grid grid-cols-2 sm:grid-cols-5 gap-3 text-center sm:text-left">
               <div className="p-2 rounded-lg bg-[#161622] border border-[#272738]">
@@ -306,7 +306,7 @@ export default function QualityDashboardPage() {
           <CardContent className="p-5">
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
               {/* 2D Projection Canvas */}
-              <div className="lg:col-span-2 relative bg-[#0a0a0f] border border-[#272738] rounded-xl p-4 flex flex-col items-center justify-center min-h-[340px]">
+              <div className="lg:col-span-2 relative bg-[#0a0a0f] border border-[#272738] rounded-md p-4 flex flex-col items-center justify-center min-h-[340px]">
                 <div className="absolute top-2 left-3 flex items-center gap-2 text-[10px] font-mono text-[#64748b]">
                   <Compass className="h-3 w-3 text-purple-400" />
                   <span>Principal Latent Dimension 1 (X) vs. Dimension 2 (Y)</span>
@@ -416,7 +416,7 @@ export default function QualityDashboardPage() {
                       return (
                         <div
                           key={c.cluster_id}
-                          className="p-2.5 rounded-xl bg-[#0a0a0f] border border-[#272738] flex items-center justify-between"
+                          className="p-2.5 rounded-md bg-[#0a0a0f] border border-[#272738] flex items-center justify-between"
                         >
                           <div className="flex items-center gap-2">
                             <span
@@ -440,7 +440,7 @@ export default function QualityDashboardPage() {
                 </div>
 
                 {/* Point Detail Inspector */}
-                <div className="p-3.5 rounded-xl bg-[#0a0a0f] border border-[#272738]">
+                <div className="p-3.5 rounded-md bg-[#0a0a0f] border border-[#272738]">
                   <div className="flex items-center justify-between mb-2">
                     <span className="text-[10px] font-mono uppercase text-[#94a3b8] flex items-center gap-1">
                       <Info className="h-3 w-3 text-cyan-400" />

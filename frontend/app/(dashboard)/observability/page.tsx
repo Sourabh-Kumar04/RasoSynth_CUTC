@@ -128,7 +128,7 @@ export default function ObservabilityPage() {
 
       {/* Error State */}
       {error && (
-        <Card className="border border-rose-500/30 bg-rose-950/30 text-rose-300 rounded-2xl">
+        <Card className="border border-rose-500/30 bg-rose-950/30 text-rose-300 rounded-md">
           <CardContent className="p-4 flex items-center gap-4">
             <AlertTriangle className="h-5 w-5 text-rose-400" />
             <div className="flex-1">
@@ -144,7 +144,7 @@ export default function ObservabilityPage() {
 
       {/* System Status Cards */}
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
-        <Card className="border-[#272738] bg-[#12121a] rounded-2xl card-shadow">
+        <Card className="border-[#272738] bg-[#12121a] rounded-md card-shadow">
           <CardContent className="p-4">
             <div className="flex items-center justify-between">
               <div>
@@ -159,7 +159,7 @@ export default function ObservabilityPage() {
             </div>
           </CardContent>
         </Card>
-        <Card className="border-[#272738] bg-[#12121a] rounded-2xl card-shadow">
+        <Card className="border-[#272738] bg-[#12121a] rounded-md card-shadow">
           <CardContent className="p-4">
             <div className="flex items-center justify-between">
               <div>
@@ -174,7 +174,7 @@ export default function ObservabilityPage() {
             </div>
           </CardContent>
         </Card>
-        <Card className="border-[#272738] bg-[#12121a] rounded-2xl card-shadow">
+        <Card className="border-[#272738] bg-[#12121a] rounded-md card-shadow">
           <CardContent className="p-4">
             <div className="flex items-center justify-between">
               <div>
@@ -189,7 +189,7 @@ export default function ObservabilityPage() {
             </div>
           </CardContent>
         </Card>
-        <Card className="border-[#272738] bg-[#12121a] rounded-2xl card-shadow">
+        <Card className="border-[#272738] bg-[#12121a] rounded-md card-shadow">
           <CardContent className="p-4">
             <div className="flex items-center justify-between">
               <div>
@@ -218,7 +218,7 @@ export default function ObservabilityPage() {
 
         {/* Overview */}
         <TabsContent value="overview" className="mt-6">
-          <Card className="border-[#272738] bg-[#12121a] rounded-2xl card-shadow">
+          <Card className="border-[#272738] bg-[#12121a] rounded-md card-shadow">
             <CardHeader className="pb-3 border-b border-[#272738]">
               <CardTitle className="text-sm font-bold text-white">System Health Summary</CardTitle>
             </CardHeader>
@@ -260,7 +260,7 @@ export default function ObservabilityPage() {
         <TabsContent value="health" className="mt-6">
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
             <HealthMonitor />
-            <Card className="border-[#272738] bg-[#12121a] rounded-2xl card-shadow">
+            <Card className="border-[#272738] bg-[#12121a] rounded-md card-shadow">
               <CardHeader className="pb-3 border-b border-[#272738]">
                 <CardTitle className="flex items-center gap-2 text-sm font-bold text-[#f26625]">
                   <Activity className="h-4 w-4 text-[#f26625]" />
@@ -289,7 +289,7 @@ export default function ObservabilityPage() {
 
         {/* Metrics Tab */}
         <TabsContent value="metrics" className="mt-6">
-          <Card className="border-[#272738] bg-[#12121a] rounded-2xl card-shadow">
+          <Card className="border-[#272738] bg-[#12121a] rounded-md card-shadow">
             <CardHeader className="pb-3 border-b border-[#272738]">
               <CardTitle className="text-sm font-bold text-[#f26625]">Prometheus Telemetry Stream</CardTitle>
             </CardHeader>
@@ -314,7 +314,7 @@ export default function ObservabilityPage() {
 
         {/* Tokenizer & Indic Efficiency Tab */}
         <TabsContent value="token_efficiency" className="mt-6 space-y-4 font-mono text-xs">
-          <Card className="border-[#272738] bg-[#12121a] rounded-2xl card-shadow">
+          <Card className="border-[#272738] bg-[#12121a] rounded-md card-shadow">
             <CardHeader className="pb-3 border-b border-[#272738]">
               <div className="flex items-center justify-between">
                 <div>
@@ -384,7 +384,7 @@ export default function ObservabilityPage() {
         <TabsContent value="validation" className="mt-6">
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
             <ValidationFeedback />
-            <Card className="border-[#272738] bg-[#12121a] rounded-2xl card-shadow">
+            <Card className="border-[#272738] bg-[#12121a] rounded-md card-shadow">
               <CardHeader className="pb-3 border-b border-[#272738]">
                 <CardTitle className="flex items-center gap-2 text-sm font-bold text-white">
                   <Shield className="h-4 w-4 text-[#f26625]" />

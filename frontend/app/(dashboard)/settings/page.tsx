@@ -102,7 +102,7 @@ export default function SettingsPage() {
 
       {/* Live health banner */}
       <Card className={clsx(
-        'border rounded-2xl card-shadow transition-colors',
+        'border rounded-md card-shadow transition-colors',
         loading ? 'border-[#272738] bg-[#12121a]' :
         infraStatus ? 'border-emerald-500/30 bg-[#12121a]' : 'border-rose-500/30 bg-[#12121a]',
       )}>
@@ -155,7 +155,7 @@ export default function SettingsPage() {
 
         {/* General & Engine */}
         <TabsContent value="general" className="mt-4 space-y-4">
-          <Card className="bg-[#12121a] border-[#272738] rounded-2xl card-shadow">
+          <Card className="bg-[#12121a] border-[#272738] rounded-md card-shadow">
             <CardHeader className="pb-3 border-b border-[#272738]">
               <CardTitle className="text-sm font-bold text-white">Infrastructure Architecture</CardTitle>
               <CardDescription className="text-xs text-[#94a3b8]">Core platform storage engines, distributed queue brokers &amp; caching backends</CardDescription>
@@ -204,7 +204,7 @@ export default function SettingsPage() {
             </CardContent>
           </Card>
 
-          <Card className="bg-[#12121a] border-[#272738] rounded-2xl card-shadow">
+          <Card className="bg-[#12121a] border-[#272738] rounded-md card-shadow">
             <CardHeader className="pb-3 border-b border-[#272738]">
               <CardTitle className="text-sm font-bold text-white">Source-Grounded Engine Standards</CardTitle>
               <CardDescription className="text-xs text-[#94a3b8]">Enforcing authentic retrieval-grounded generation over hallucinated pure synthetic data</CardDescription>
@@ -248,7 +248,7 @@ export default function SettingsPage() {
 
         {/* Providers */}
         <TabsContent value="providers" className="mt-4">
-          <Card className="bg-[#12121a] border-[#272738] rounded-2xl card-shadow">
+          <Card className="bg-[#12121a] border-[#272738] rounded-md card-shadow">
             <CardHeader className="pb-3 border-b border-[#272738]">
               <CardTitle className="text-sm font-bold text-white">Provider API Keys &amp; Gateway Integrations</CardTitle>
               <CardDescription className="text-xs text-[#94a3b8]">Configured through environment variables for automatic failover &amp; model routing</CardDescription>
@@ -279,7 +279,7 @@ export default function SettingsPage() {
 
         {/* Delivery (ADR-002) */}
         <TabsContent value="delivery" className="mt-4">
-          <Card className="bg-[#12121a] border-[#272738] rounded-2xl card-shadow">
+          <Card className="bg-[#12121a] border-[#272738] rounded-md card-shadow">
             <CardHeader className="pb-3 border-b border-[#272738]">
               <CardTitle className="text-sm font-bold text-white">Multi-Destination Delivery &amp; Storage (ADR-002)</CardTitle>
               <CardDescription className="text-xs text-[#94a3b8]">Centralized delivery adapters registered in ServiceContainer for S3, HuggingFace Hub, and Kaggle</CardDescription>
@@ -310,7 +310,7 @@ export default function SettingsPage() {
 
         {/* Observability */}
         <TabsContent value="observability" className="mt-4">
-          <Card className="bg-[#12121a] border-[#272738] rounded-2xl card-shadow">
+          <Card className="bg-[#12121a] border-[#272738] rounded-md card-shadow">
             <CardHeader className="pb-3 border-b border-[#272738]">
               <CardTitle className="text-sm font-bold text-white">Observability &amp; Distributed Tracing</CardTitle>
               <CardDescription className="text-xs text-[#94a3b8]">LangSmith tracing v2, OpenTelemetry metrics, and correlation IDs</CardDescription>
@@ -336,7 +336,7 @@ export default function SettingsPage() {
 
         {/* Security */}
         <TabsContent value="security" className="mt-4">
-          <Card className="bg-[#12121a] border-[#272738] rounded-2xl card-shadow">
+          <Card className="bg-[#12121a] border-[#272738] rounded-md card-shadow">
             <CardHeader className="pb-3 border-b border-[#272738]">
               <CardTitle className="text-sm font-bold text-white">Security &amp; Cryptography Configuration</CardTitle>
               <CardDescription className="text-xs text-[#94a3b8]">Cryptographic signatures, CSRF protection, and identity tokens</CardDescription>
@@ -366,7 +366,7 @@ export default function SettingsPage() {
 
         {/* Limits */}
         <TabsContent value="limits" className="mt-4">
-          <Card className="bg-[#12121a] border-[#272738] rounded-2xl card-shadow">
+          <Card className="bg-[#12121a] border-[#272738] rounded-md card-shadow">
             <CardHeader className="pb-3 border-b border-[#272738]">
               <CardTitle className="text-sm font-bold text-white">System Resource Limits &amp; Rate Caps</CardTitle>
               <CardDescription className="text-xs text-[#94a3b8]">Concurrency bounds, token quotas, and provider throttle limits</CardDescription>
@@ -387,7 +387,7 @@ export default function SettingsPage() {
 
         {/* HITL */}
         <TabsContent value="hitl" className="mt-4">
-          <Card className="bg-[#12121a] border-[#272738] rounded-2xl card-shadow">
+          <Card className="bg-[#12121a] border-[#272738] rounded-md card-shadow">
             <CardHeader className="pb-3 border-b border-[#272738]">
               <CardTitle className="text-sm font-bold text-white">Human-in-the-Loop (HITL) Quality Gate</CardTitle>
               <CardDescription className="text-xs text-[#94a3b8]">Review gate policies, stratified sampling, and auto-resume timeouts</CardDescription>
