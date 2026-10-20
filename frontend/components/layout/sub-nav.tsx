@@ -29,10 +29,10 @@ import { api } from '@/lib/api/client'
 const SUB_NAV_LINKS = [
   { href: '/studio', label: 'Studio Pipeline', icon: FlaskConical },
   { href: '/orchestration', label: 'DAG Visualizer', icon: Workflow },
-  { href: '/datasets', label: 'Dataset Store & DBOM', icon: Database },
+  { href: '/datasets', label: 'Dataset Store', icon: Database },
   { href: '/finetune', label: 'Fine-Tune Studio', icon: Cpu },
   { href: '/research', label: 'Research & Benchmarks', icon: BarChart2 },
-  { href: '/observability', label: 'Telemetry & Traces', icon: Activity },
+  { href: '/observability', label: 'Telemetry', icon: Activity },
   { href: '/review', label: 'HITL Review Queue', icon: ClipboardCheck },
   { href: '/quality', label: 'Quality & Grounding', icon: Sparkles },
 ]

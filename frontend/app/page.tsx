@@ -79,10 +79,6 @@ export default function OverviewDashboardPage() {
           {/* Hero Section: Spacious, Bold, Minimal YC Aesthetic */}
           <div className="flex flex-col md:flex-row md:items-end justify-between gap-6 border-b border-[#22222e] pb-8">
             <div className="space-y-2 max-w-3xl">
-              <div className="inline-flex items-center gap-2 px-2.5 py-0.5 rounded-sm bg-[#f26625]/10 border border-[#f26625]/30 text-[#f26625] text-xs font-mono font-bold tracking-wide">
-                <span className="w-1.5 h-1.5 rounded-full bg-[#f26625] animate-pulse" />
-                SOVEREIGN FOUNDRY · PROOF-CARRIER SYSTEM
-              </div>
               <h1 className="text-3xl sm:text-4xl font-extrabold tracking-tight text-white font-display">
                 Autonomous AI Dataset Synthesis &amp; Fine-Tuning
               </h1>
@@ -92,16 +88,10 @@ export default function OverviewDashboardPage() {
             </div>
 
             <div className="flex items-center gap-3 shrink-0">
-              <Link href="/studio">
-                <Button className="bg-[#f26625] hover:bg-[#de581a] border border-[#ea580c] text-white text-xs font-mono font-bold h-9 px-4 rounded-md shadow-sm glow-yc flex items-center gap-1.5">
-                  <Plus className="w-4 h-4" />
-                  <span>New Dataset</span>
-                </Button>
-              </Link>
               <Link href="/finetune">
-                <Button variant="outline" className="border-[#272738] bg-[#12121a] hover:bg-[#161622] text-[#cbd5e1] text-xs font-mono h-9 px-4 rounded-md">
-                  <Cpu className="w-4 h-4 mr-1.5 text-[#f26625]" />
-                  Fine-Tune Studio
+                <Button className="bg-[#f26625] hover:bg-[#de581a] border border-[#ea580c] text-white text-xs font-mono font-bold h-9 px-4 rounded-md shadow-sm glow-yc flex items-center gap-1.5">
+                  <Cpu className="w-4 h-4 mr-1.5 text-white" />
+                  <span>Fine-Tune Studio</span>
                 </Button>
               </Link>
             </div>
@@ -113,10 +103,6 @@ export default function OverviewDashboardPage() {
               <span className="font-bold text-white uppercase tracking-wider flex items-center gap-2">
                 <Sparkles className="w-4 h-4 text-[#f26625]" />
                 Dataset Specification
-              </span>
-              <span className="text-[#10b981] flex items-center gap-1.5">
-                <span className="w-1.5 h-1.5 rounded-full bg-[#10b981] animate-pulse" />
-                Air-Gapped Sovereign Engine Active
               </span>
             </div>
 
