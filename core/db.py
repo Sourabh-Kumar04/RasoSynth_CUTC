@@ -375,12 +375,12 @@ class DatabaseManager:
                 name=name,
                 type=type,
                 size=size,
-                metadata=metadata,
+                metadata_=metadata,
                 output_path=output_path
             )
             session.add(dataset)
             await self._commit_with_retry(session)
-            _ = (dataset.id, dataset.job_id, dataset.name, dataset.type, dataset.size, dataset.created_at, dataset.output_path)
+            _ = (dataset.id, dataset.job_id, dataset.name, dataset.type, dataset.size, dataset.created_at, dataset.output_path, dataset.metadata_)
             return dataset
 
     async def list_datasets(self, limit: int = 100) -> list[Dataset]:
@@ -392,7 +392,7 @@ class DatabaseManager:
             )
             datasets = list(result.scalars().all())
             for d in datasets:
-                _ = (d.id, d.job_id, d.name, d.type, d.size, d.created_at, d.output_path)
+                _ = (d.id, d.job_id, d.name, d.type, d.size, d.created_at, d.output_path, d.metadata_)
             return datasets
 
     async def get_dataset(self, dataset_id: str) -> Optional[Dataset]:
@@ -400,7 +400,7 @@ class DatabaseManager:
         async with self.session_maker() as session:
             dataset = await session.get(Dataset, dataset_id)
             if dataset:
-                _ = (dataset.id, dataset.job_id, dataset.name, dataset.type, dataset.size, dataset.created_at, dataset.output_path)
+                _ = (dataset.id, dataset.job_id, dataset.name, dataset.type, dataset.size, dataset.created_at, dataset.output_path, dataset.metadata_)
             return dataset
 
     async def get_datasets_by_job(self, job_id: str) -> list[Dataset]:
@@ -412,16 +412,19 @@ class DatabaseManager:
             )
             datasets = list(result.scalars().all())
             for d in datasets:
-                _ = (d.id, d.job_id, d.name, d.type, d.size, d.created_at, d.output_path)
+                _ = (d.id, d.job_id, d.name, d.type, d.size, d.created_at, d.output_path, d.metadata_)
             return datasets
 
     async def create_sample(self, dataset_id: str, data: dict) -> Sample:
         """Create a new sample."""
+        sample_dict = dict(data)
+        if "metadata" in sample_dict and "metadata_" not in sample_dict:
+            sample_dict["metadata_"] = sample_dict.pop("metadata")
         async with self.session_maker() as session:
-            sample = Sample(dataset_id=dataset_id, **data)
+            sample = Sample(dataset_id=dataset_id, **sample_dict)
             session.add(sample)
             await self._commit_with_retry(session)
-            _ = (sample.id, sample.dataset_id, sample.instruction, sample.response, sample.quality_score)
+            _ = (sample.id, sample.dataset_id, sample.instruction, sample.response, sample.quality_score, sample.metadata_)
             return sample
 
     async def get_samples(self, dataset_id: str, limit: int = 1000, offset: int = 0) -> list[Sample]:
@@ -437,7 +440,7 @@ class DatabaseManager:
             )
             samples = list(result.scalars().all())
             for s in samples:
-                _ = (s.id, s.dataset_id, s.instruction, s.response, s.quality_score)
+                _ = (s.id, s.dataset_id, s.instruction, s.response, s.quality_score, s.metadata_)
             return samples
 
     async def create_source(self, url: str, source_type: str, title: str, metadata: dict, license: Optional[str] = None) -> Source:
@@ -819,7 +822,10 @@ class AsyncDB:
         """Create multiple samples for a dataset."""
         samples = []
         async with self.db.session_maker() as session:
-            for sample_data in samples_data:
+            for raw_sample_data in samples_data:
+                sample_data = dict(raw_sample_data)
+                if "metadata" in sample_data and "metadata_" not in sample_data:
+                    sample_data["metadata_"] = sample_data.pop("metadata")
                 sample = Sample(dataset_id=dataset_id, **sample_data)
                 session.add(sample)
                 samples.append(sample)

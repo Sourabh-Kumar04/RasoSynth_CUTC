@@ -8,6 +8,8 @@ References:
 Enhanced orchestrator with intelligent reasoning and constraint handling.
 """
 import asyncio
+import json
+import os
 import logging
 from typing import TypedDict, Annotated, Any, Optional, AsyncGenerator
 from dataclasses import dataclass, field
@@ -1629,17 +1631,42 @@ class DatasetOrchestrator:
                     },
                 }
 
+                # Attach Cryptographic DBOM attestation
+                metadata_dict = {
+                    "export_path": str(export_result.get("dataset", "")),
+                    "balance_report": balance_report,
+                    "provenance": provenance,
+                }
+                try:
+                    from core.export.dbom_attestor import generate_dbom_attestation
+                    dbom_cert = generate_dbom_attestation(
+                        dataset_name=export_config.dataset_name,
+                        samples=[
+                            {
+                                "instruction": getattr(s, "instruction", ""),
+                                "response": getattr(s, "response", ""),
+                                "input": getattr(s, "input", "") or "",
+                            }
+                            for s in samples
+                        ],
+                        domain=str(job_config.get("target_domain", "")),
+                        language=str(job_config.get("language", "en")),
+                    )
+                    metadata_dict["dbom"] = dbom_cert
+                    export_file = str(export_result.get("dataset", ""))
+                    if export_file and os.path.exists(export_file):
+                        with open(f"{export_file}.dbom.json", "w", encoding="utf-8") as f:
+                            json.dump(dbom_cert, f, indent=2)
+                except Exception as dbom_err:
+                    logger.warning("DBOM generation skipped in export node: %s", dbom_err)
+
                 # Create dataset record
                 dataset_record = await self.db.create_dataset(
                     job_id=job_id,
                     name=export_config.dataset_name,
                     type=export_config.format,
                     size=len(samples),
-                    metadata={
-                        "export_path": str(export_result.get("dataset", "")),
-                        "balance_report": balance_report,
-                        "provenance": provenance,
-                    },
+                    metadata=metadata_dict,
                     output_path=str(export_result.get("dataset", ""))
                 )
 
@@ -2172,6 +2199,7 @@ class DatasetOrchestrator:
                 job.samples_filtered = len(filtered_samples)
 
                 final_status = "completed" if constructed_samples else "failed"
+                job.status = JobStatus.COMPLETED if constructed_samples else JobStatus.FAILED
                 if not constructed_samples:
                     final_state.setdefault("errors", []).append(
                         "No usable source-grounded samples were produced. Refine the request or broaden the source constraints."
@@ -2308,6 +2336,10 @@ class DatasetOrchestrator:
         if error:
             job.error = error
             job.status = JobStatus.FAILED
+        elif stage == "completed":
+            job.status = JobStatus.COMPLETED
+        elif stage == "cancelled":
+            job.status = JobStatus.CANCELLED
         for k, v in kwargs.items():
             if hasattr(job, k):
                 setattr(job, k, v)
