@@ -53,6 +53,20 @@ const INDUSTRY_PRESETS = [
     sources: ['AI Kosh', 'OpenML', 'India.gov.in'],
   },
   {
+    id: 'aerospace-airfoil',
+    title: 'Aerospace & Aeroplane Design (FAR Part 25)',
+    domain: 'Aerospace Engineering & Aerodynamics',
+    source: 'NASA Glenn & FAA Library',
+    prompt: 'Synthesize 15,000 multi-stage aeronautical engineering and transonic airfoil design QA dialogues based on NASA supercritical airfoil wind-tunnel data, compressible Navier-Stokes flow regimes, and FAA FAR Part 25 airworthiness certification specifications.',
+    type: 'reasoning',
+    language: 'en',
+    scriptMode: 'native',
+    formalityRegister: 'formal',
+    preservedTerms: ['NACA 0012', 'Mach 0.82', 'FAR §25.107', 'Supercritical Airfoil', 'Lift-to-Drag (L/D)'],
+    size: 15000,
+    sources: ['NASA Technical Reports', 'FAA Regulations', 'AIAA'],
+  },
+  {
     id: 'bhashini-multilingual',
     title: 'Bhashini Indic Multilingual Corpus',
     domain: 'Indic Multilingual (Bhashini)',
@@ -121,6 +135,9 @@ function StudioContent() {
   const [datasetSize, setDatasetSize] = useState(10000)
   const [generationMode, setGenerationMode] = useState<'grounded' | 'synthetic'>('grounded')
   const [isSubmitting, setIsSubmitting] = useState(false)
+  const [isAutoDetecting, setIsAutoDetecting] = useState(false)
+  const [discoveredSources, setDiscoveredSources] = useState<Array<{ name: string; url?: string; source_type?: string }>>([])
+  const [autoDetectNotice, setAutoDetectNotice] = useState<string | null>(null)
   const [optimizationStatus, setOptimizationStatus] = useState<string>('Refined (Saved 42% tokens)')
   const [activePreset, setActivePreset] = useState<string>('aikosh-tax')
   const [idealSamples, setIdealSamples] = useState<Array<{ instruction: string; response: string }>>([])
@@ -130,6 +147,88 @@ function StudioContent() {
   const estLlama3Fertility = isIndicOrHinglish ? (scriptMode === 'romanized' || language === 'hinglish' ? 1.55 : 3.65) : 1.25
   const estSarvamFertility = isIndicOrHinglish ? (scriptMode === 'romanized' || language === 'hinglish' ? 1.32 : 1.28) : 1.24
   const estSavings = Math.round((1 - estSarvamFertility / estLlama3Fertility) * 100)
+
+  // Dynamic entity & technical token extractor (Deterministic syntax pass)
+  const extractSyntacticInvariants = useCallback((text: string): string[] => {
+    const terms = new Set<string>()
+    // 1. Regulatory / statutory citations (Section 16(4), FAR Part 25, Article 21, NACA 0012, etc.)
+    const sectionMatches = text.match(/\b(?:Section|Sec\.|FAR\s*Part|FAR|Article|Rule|Order|NACA|ISO|IEEE)\s*(?:§\s*)?[A-Za-z0-9\(\)\.\-]+/gi) || []
+    sectionMatches.forEach(m => terms.add(m.trim()))
+
+    // 2. Formulas & mathematical / complexity notation
+    const formulaMatches = text.match(/\b(?:O\([A-Za-z0-9\s\+\*\^\log]+\)|Mach\s*\d+(?:\.\d+)?|L\/D|PK\/PD|Navier-Stokes|Reynolds)/gi) || []
+    formulaMatches.forEach(m => terms.add(m.trim()))
+
+    // 3. Quoted terms
+    const quoteMatches = text.match(/["']([^"']{2,40})["']/g) || []
+    quoteMatches.forEach(m => terms.add(m.replace(/["']/g, '').trim()))
+
+    // 4. Uppercase domain acronyms (2 to 6 letters, excluding common stop words)
+    const stopWords = new Set(['AND', 'THE', 'FOR', 'ARE', 'NOT', 'BUT', 'ALL', 'NEW', 'SET', 'OUT', 'CAN', 'GET', 'USE', 'HOW', 'WHY', 'WHO', 'YES', 'NO'])
+    const acronymMatches = text.match(/\b[A-Z]{2,6}(?:-[A-Z0-9]+)?\b/g) || []
+    acronymMatches.forEach(m => {
+      const clean = m.trim()
+      if (!stopWords.has(clean)) terms.add(clean)
+    })
+
+    return Array.from(terms)
+  }, [])
+
+  const handleAutoDetect = useCallback(async () => {
+    const queryText = (prompt || targetDomain).trim()
+    if (!queryText) return
+    setIsAutoDetecting(true)
+    setAutoDetectNotice(null)
+
+    // 1. Immediate syntactic invariants
+    const localTerms = extractSyntacticInvariants(`${targetDomain} ${prompt}`)
+    const currentList = preservedTermsInput
+      .split(',')
+      .map(t => t.trim())
+      .filter(Boolean)
+    const mergedTerms = Array.from(new Set([...currentList, ...localTerms]))
+
+    try {
+      // 2. Dynamic Discovery Pipeline & LLM Intent Extractor API call
+      const previewRes = await api.previewJobSources({
+        query: queryText,
+        max_sources: 6,
+      })
+
+      if (previewRes) {
+        // Collect entities inferred by the LLM
+        const intentEntities: string[] = previewRes.query_plan?.intent?.key_entities || []
+        const dynamicDomain = previewRes.query_plan?.intent?.domain
+        if (dynamicDomain && (!targetDomain || targetDomain === 'Finance & Taxation (AI Kosh)')) {
+          setTargetDomain(dynamicDomain)
+        }
+
+        const allTerms = Array.from(new Set([...mergedTerms, ...intentEntities]))
+        setPreservedTermsInput(allTerms.join(', '))
+
+        if (Array.isArray(previewRes.sources) && previewRes.sources.length > 0) {
+          setDiscoveredSources(previewRes.sources.map((s: any) => ({
+            name: s.name || s.domain || 'Verified Domain Repository',
+            url: s.url,
+            source_type: s.source_type || 'discovery',
+          })))
+        }
+
+        setAutoDetectNotice(
+          `Auto-discovered ${allTerms.length} invariant terms & ${previewRes.sources?.length || 0} authority sources`
+        )
+      } else {
+        setPreservedTermsInput(mergedTerms.join(', '))
+        setAutoDetectNotice(`Extracted ${mergedTerms.length} invariant terms from syntax`)
+      }
+    } catch {
+      // Fallback to robust syntactic extractor
+      setPreservedTermsInput(mergedTerms.join(', '))
+      setAutoDetectNotice(`Extracted ${mergedTerms.length} invariant terms from syntax`)
+    } finally {
+      setIsAutoDetecting(false)
+    }
+  }, [prompt, targetDomain, preservedTermsInput, extractSyntacticInvariants])
 
   // Launch job
   const handleGenerate = async () => {
@@ -214,7 +313,7 @@ function StudioContent() {
           <Button
             onClick={handleGenerate}
             disabled={isSubmitting}
-            className="bg-[#6366f1] hover:bg-[#818cf8] text-white font-mono text-xs font-semibold h-8 px-4 shadow-sm glow-indigo flex items-center gap-2"
+            className="bg-[#f26625] hover:bg-[#de581a] border border-[#ea580c] text-white font-mono text-xs font-bold h-8 px-4 shadow-sm glow-yc flex items-center gap-2 rounded-md"
           >
             {isSubmitting ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Play className="w-3.5 h-3.5 fill-current" />}
             <span>Launch Pipeline ⌘↵</span>
@@ -226,13 +325,13 @@ function StudioContent() {
       <div className="space-y-2">
         <div className="flex items-center justify-between">
           <span className="text-xs font-mono font-bold uppercase tracking-wider text-white flex items-center gap-1.5">
-            <Sparkles className="w-3.5 h-3.5 text-[#818cf8]" />
+            <Sparkles className="w-3.5 h-3.5 text-[#f26625]" />
             1-Click Industry Benchmark Presets
           </span>
           <span className="text-[11px] font-mono text-[#10b981]">Verified Grounded Schemas</span>
         </div>
 
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-3">
           {INDUSTRY_PRESETS.map((preset) => {
             const isSelected = activePreset === preset.id
             return (
@@ -282,14 +381,14 @@ function StudioContent() {
                   }
                 }}
                 className={clsx(
-                  'p-3 rounded-lg border cursor-pointer transition-all space-y-2 relative overflow-hidden',
+                  'p-3 rounded-md border cursor-pointer transition-all space-y-2 relative overflow-hidden',
                   isSelected
-                    ? 'bg-[#161622] border-[#6366f1] shadow-sm glow-indigo'
-                    : 'bg-[#12121a] border-[#272738] hover:border-[#3b3b52] hover:bg-[#161622]/60'
+                    ? 'bg-[#161622] border-[#f26625] shadow-sm glow-yc'
+                    : 'bg-[#12121a] border-[#272738] hover:border-[#f26625]/40 hover:bg-[#161622]/60'
                 )}
               >
                 <div className="flex justify-between items-start">
-                  <span className="text-[10px] font-mono font-bold uppercase text-[#818cf8] truncate">
+                  <span className="text-[10px] font-mono font-bold uppercase text-[#f26625] truncate">
                     {preset.source}
                   </span>
                   <span className="text-[10px] font-mono text-[#10b981] font-semibold">
@@ -300,7 +399,7 @@ function StudioContent() {
                 <p className="text-[11px] text-[#94a3b8] line-clamp-2">{preset.prompt}</p>
                 <div className="flex items-center gap-1 pt-1 text-[10px] font-mono text-[#94a3b8]">
                   {preset.sources.map((s, i) => (
-                    <span key={i} className="px-1.5 py-0.2 rounded bg-[#0e0e13] border border-[#272738]">
+                    <span key={i} className="px-1.5 py-0.2 rounded-sm bg-[#0e0e13] border border-[#272738]">
                       {s}
                     </span>
                   ))}
@@ -315,12 +414,12 @@ function StudioContent() {
       <div className="grid grid-cols-1 xl:grid-cols-12 gap-5">
         
         {/* Left 7 Columns: Intent & Query Optimizer */}
-        <div className="xl:col-span-7 p-4 rounded-lg bg-[#12121a] border border-[#272738] space-y-4">
+        <div className="xl:col-span-7 p-4 rounded-md bg-[#12121a] border border-[#272738] space-y-4">
           <div className="flex items-center justify-between pb-2 border-b border-[#1c1c28]">
             <div className="flex items-center space-x-2">
-              <FlaskConical className="w-4 h-4 text-[#6366f1]" />
+              <FlaskConical className="w-4 h-4 text-[#f26625]" />
               <h3 className="text-xs font-bold font-mono uppercase tracking-wider text-white">
-                Natural Language Intent & Compute Refiner
+                Natural Language Intent &amp; Invariant Discovery
               </h3>
             </div>
             <span className="text-[11px] font-mono text-[#10b981] flex items-center gap-1">
@@ -337,22 +436,44 @@ function StudioContent() {
               <Input
                 value={targetDomain}
                 onChange={(e) => setTargetDomain(e.target.value)}
-                className="bg-[#0a0a0f] border-[#272738] focus:border-[#6366f1] text-xs font-mono text-white"
-                placeholder="e.g. Finance & Taxation (AI Kosh)"
+                className="bg-[#0a0a0f] border-[#272738] focus:border-[#f26625] text-xs font-mono text-white rounded-md"
+                placeholder="e.g. Aerospace Engineering & Aerodynamics or Finance & Taxation"
               />
             </div>
 
             <div>
               <label className="text-[10px] font-mono uppercase text-[#94a3b8] block mb-1">
-                Specification Prompt & Extraction Rules
+                Specification Prompt &amp; Extraction Rules
               </label>
               <textarea
                 value={prompt}
                 onChange={(e) => setPrompt(e.target.value)}
                 rows={5}
-                className="w-full bg-[#0a0a0f] border border-[#272738] focus:border-[#6366f1] rounded-md p-3 text-xs font-mono text-white placeholder:text-[#94a3b8] focus:outline-none transition-colors resize-none"
+                className="w-full bg-[#0a0a0f] border border-[#272738] focus:border-[#f26625] rounded-md p-3 text-xs font-mono text-white placeholder:text-[#94a3b8] focus:outline-none transition-colors resize-none"
                 placeholder="Describe the exact instruction schema, personas, and verification checks..."
               />
+              <div className="flex flex-wrap items-center justify-between gap-2 pt-2">
+                <div className="flex items-center gap-2">
+                  <Button
+                    type="button"
+                    size="sm"
+                    variant="outline"
+                    onClick={handleAutoDetect}
+                    disabled={isAutoDetecting}
+                    className="h-7 px-3 text-xs font-mono font-bold border-[#f26625]/40 text-[#f26625] bg-[#f26625]/10 hover:bg-[#f26625]/20 rounded-md flex items-center gap-1.5 glow-yc transition-all"
+                  >
+                    {isAutoDetecting ? <Loader2 className="w-3.5 h-3.5 animate-spin text-[#f26625]" /> : <Sparkles className="w-3.5 h-3.5 text-[#f26625]" />}
+                    <span>{isAutoDetecting ? 'Discovering Invariants & Sources…' : 'Auto-Detect Terms & Sources (AI)'}</span>
+                  </Button>
+                  {autoDetectNotice && (
+                    <span className="text-[11px] font-mono text-emerald-400 flex items-center gap-1 animate-fade-in">
+                      <Check className="w-3 h-3 text-emerald-400" />
+                      {autoDetectNotice}
+                    </span>
+                  )}
+                </div>
+                <span className="text-[10px] font-mono text-[#94a3b8]">Zero-Mock Live Discovery</span>
+              </div>
             </div>
 
             {/* Few-Shot Ideal Anchor Examples */}
@@ -589,17 +710,75 @@ function StudioContent() {
               )}
 
               {/* Preserved Domain Terms / Glossary */}
-              <div>
-                <label className="text-[10px] font-mono uppercase text-[#94a3b8] block mb-1">
-                  Preserved Domain Terms (Do Not Translate)
-                </label>
+              <div className="space-y-1.5">
+                <div className="flex items-center justify-between">
+                  <label className="text-[10px] font-mono uppercase text-[#94a3b8] block">
+                    Preserved Domain Invariants (Do Not Corrupt)
+                  </label>
+                  <button
+                    type="button"
+                    onClick={handleAutoDetect}
+                    disabled={isAutoDetecting}
+                    className="text-[10px] font-mono text-[#f26625] hover:underline flex items-center gap-1 font-bold"
+                  >
+                    {isAutoDetecting ? <Loader2 className="w-2.5 h-2.5 animate-spin" /> : <Sparkles className="w-2.5 h-2.5" />}
+                    <span>Auto-Extract</span>
+                  </button>
+                </div>
                 <input
                   type="text"
                   value={preservedTermsInput}
                   onChange={(e) => setPreservedTermsInput(e.target.value)}
-                  placeholder="e.g. ITC, GSTR-3B, Challan, TDS, API"
-                  className="w-full bg-[#0a0a0f] border border-[#272738] rounded p-2 text-xs font-mono text-white focus:outline-none placeholder:text-[#55556a]"
+                  placeholder="e.g. NACA 0012, Mach 0.82, Section 16(4), ITC, GSTR-3B, FAR §25"
+                  className="w-full bg-[#0a0a0f] border border-[#272738] focus:border-[#f26625] rounded-md p-2 text-xs font-mono text-white focus:outline-none placeholder:text-[#55556a]"
                 />
+                {preservedTermsInput && (
+                  <div className="flex flex-wrap gap-1 pt-1 max-h-24 overflow-y-auto">
+                    {preservedTermsInput
+                      .split(',')
+                      .map((t) => t.trim())
+                      .filter(Boolean)
+                      .map((term, i) => (
+                        <span
+                          key={i}
+                          className="inline-flex items-center gap-1 px-2 py-0.5 rounded-sm bg-[#161622] border border-[#f26625]/30 text-[#f26625] text-[10px] font-mono font-medium"
+                        >
+                          {term}
+                          <button
+                            type="button"
+                            onClick={() => {
+                              const remaining = preservedTermsInput
+                                .split(',')
+                                .map((t) => t.trim())
+                                .filter((t) => t !== term)
+                              setPreservedTermsInput(remaining.join(', '))
+                            }}
+                            className="hover:text-rose-400 font-bold ml-0.5"
+                          >
+                            ×
+                          </button>
+                        </span>
+                      ))}
+                  </div>
+                )}
+                {discoveredSources.length > 0 && (
+                  <div className="pt-2 border-t border-[#1c1c28] space-y-1">
+                    <span className="text-[10px] font-mono uppercase text-[#94a3b8] block">
+                      Discovered Authoritative Sources ({discoveredSources.length}):
+                    </span>
+                    <div className="flex flex-wrap gap-1">
+                      {discoveredSources.map((s, idx) => (
+                        <span
+                          key={idx}
+                          className="px-1.5 py-0.5 rounded-sm bg-[#0e0e14] border border-[#272738] text-[10px] font-mono text-emerald-400 truncate max-w-[200px]"
+                          title={s.name}
+                        >
+                          {s.name}
+                        </span>
+                      ))}
+                    </div>
+                  </div>
+                )}
               </div>
 
               {/* Regional Dialect & Localization Profile */}

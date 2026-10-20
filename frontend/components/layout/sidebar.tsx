@@ -122,12 +122,12 @@ export function Sidebar() {
                   className={clsx(
                     'flex items-center space-x-2.5 px-2.5 py-1.5 rounded-md text-xs font-medium transition-all group',
                     active
-                      ? 'bg-[#1a1a24] text-white border-l-2 border-[#6366f1] shadow-sm'
+                      ? 'bg-[#1a1a24] text-white border-l-2 border-[#f26625] shadow-sm'
                       : 'text-[#94a3b8] hover:bg-[#161622] hover:text-white'
                   )}
                   title={collapsed ? item.label : undefined}
                 >
-                  <Icon className={clsx('w-4 h-4 shrink-0', active ? 'text-[#818cf8]' : 'text-[#94a3b8] group-hover:text-white')} />
+                  <Icon className={clsx('w-4 h-4 shrink-0', active ? 'text-[#f26625]' : 'text-[#94a3b8] group-hover:text-white')} />
                   {!collapsed && <span className="truncate">{item.label}</span>}
                 </Link>
               )

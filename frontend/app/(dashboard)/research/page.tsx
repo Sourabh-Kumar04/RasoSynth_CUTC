@@ -122,7 +122,7 @@ export default function ResearchPage() {
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-[#272738] pb-4">
         <div>
           <div className="flex items-center gap-2.5 mb-1">
-            <span className="text-[10px] font-mono px-2.5 py-0.5 rounded-full bg-[#161622] border border-[#3b3b52] text-[#6366f1] font-bold uppercase tracking-wider">
+            <span className="text-[10px] font-mono px-2 py-0.5 rounded-sm bg-[#f26625]/10 border border-[#f26625]/30 text-[#f26625] font-bold uppercase tracking-wider">
               Autonomous Synthetics
             </span>
             <h1 className="text-2xl font-bold tracking-tight text-white font-display">
@@ -134,12 +134,12 @@ export default function ResearchPage() {
           </p>
         </div>
         <div className="flex gap-2">
-          <Button variant="default" size="sm" className="bg-[#6366f1] hover:bg-[#4f46e5] text-white rounded-full font-medium text-xs" onClick={handleTrigger} disabled={triggering}>
-            {triggering ? <Loader2 className="h-3.5 w-3.5 animate-spin mr-1 text-emerald-400" /> : <Play className="h-3.5 w-3.5 mr-1 text-emerald-400 fill-current" />}
+          <Button variant="default" size="sm" className="bg-[#f26625] hover:bg-[#de581a] border border-[#ea580c] text-white rounded-md font-mono text-xs font-bold glow-yc" onClick={handleTrigger} disabled={triggering}>
+            {triggering ? <Loader2 className="h-3.5 w-3.5 animate-spin mr-1 text-white" /> : <Play className="h-3.5 w-3.5 mr-1 text-white fill-current" />}
             {triggering ? 'Running…' : 'Run Research'}
           </Button>
-          <Button variant="outline" size="sm" className="rounded-full border-[#3b3b52] text-[#6366f1] hover:bg-[#161622]" onClick={fetchAll} disabled={loading}>
-            <RefreshCw className={clsx('h-3.5 w-3.5 mr-1 text-[#6366f1]', loading && 'animate-spin')} />
+          <Button variant="outline" size="sm" className="rounded-md border-[#272738] text-[#94a3b8] hover:text-white hover:bg-[#161622] font-mono text-xs" onClick={fetchAll} disabled={loading}>
+            <RefreshCw className={clsx('h-3.5 w-3.5 mr-1 text-[#f26625]', loading && 'animate-spin')} />
             Refresh
           </Button>
         </div>
@@ -204,24 +204,24 @@ export default function ResearchPage() {
 
       {loading ? (
         <div className="flex items-center justify-center py-20 text-[#94a3b8] font-mono text-xs gap-2">
-          <Loader2 className="h-5 w-5 animate-spin text-[#6366f1]" /> Loading research data…
+          <Loader2 className="h-5 w-5 animate-spin text-[#f26625]" /> Loading research data…
         </div>
       ) : (
         <Tabs defaultValue="heuristics">
-          <TabsList className="bg-[#161622] rounded-full border border-[#3b3b52]">
-            <TabsTrigger value="heuristics" className="rounded-full">Active Heuristics</TabsTrigger>
-            <TabsTrigger value="benchmarks" className="rounded-full">Quality Benchmarks &amp; ROI</TabsTrigger>
-            <TabsTrigger value="overview" className="rounded-full">Overview</TabsTrigger>
-            <TabsTrigger value="techniques" className="rounded-full">Techniques ({cachedTechniques.length || 4})</TabsTrigger>
-            <TabsTrigger value="history" className="rounded-full">Audit Trail ({history.length || 4})</TabsTrigger>
+          <TabsList className="bg-[#161622] rounded-md border border-[#272738] p-1 h-auto flex flex-wrap gap-1">
+            <TabsTrigger value="heuristics" className="rounded-sm text-xs font-mono data-[state=active]:bg-[#f26625] data-[state=active]:text-white data-[state=active]:glow-yc">Active Heuristics</TabsTrigger>
+            <TabsTrigger value="benchmarks" className="rounded-sm text-xs font-mono data-[state=active]:bg-[#f26625] data-[state=active]:text-white data-[state=active]:glow-yc">Quality Benchmarks &amp; ROI</TabsTrigger>
+            <TabsTrigger value="overview" className="rounded-sm text-xs font-mono data-[state=active]:bg-[#f26625] data-[state=active]:text-white data-[state=active]:glow-yc">Overview</TabsTrigger>
+            <TabsTrigger value="techniques" className="rounded-sm text-xs font-mono data-[state=active]:bg-[#f26625] data-[state=active]:text-white data-[state=active]:glow-yc">Techniques ({cachedTechniques.length || 4})</TabsTrigger>
+            <TabsTrigger value="history" className="rounded-sm text-xs font-mono data-[state=active]:bg-[#f26625] data-[state=active]:text-white data-[state=active]:glow-yc">Audit Trail ({history.length || 4})</TabsTrigger>
           </TabsList>
 
           {/* Quality Benchmarks & ROI */}
           <TabsContent value="benchmarks" className="mt-4 space-y-6">
-            <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 p-4 bg-[#12121a] border border-[#272738] rounded-2xl">
+            <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 p-4 bg-[#12121a] border border-[#272738] rounded-xl">
               <div>
                 <h3 className="text-sm font-bold text-white flex items-center gap-2">
-                  <Gauge className="h-4 w-4 text-[#6366f1]" />
+                  <Gauge className="h-4 w-4 text-[#f26625]" />
                   Empirical Refinery &amp; Performance Benchmarks
                 </h3>
                 <p className="text-xs text-[#94a3b8] mt-0.5">
@@ -233,11 +233,11 @@ export default function ResearchPage() {
                 variant="outline"
                 onClick={runBenchmarkAudit}
                 disabled={benchmarking}
-                className="gap-2 font-mono text-xs rounded-full border-[#3b3b52] hover:bg-[#1f1f2e] shrink-0"
+                className="gap-2 font-mono text-xs rounded-md border-[#272738] hover:border-[#f26625]/40 hover:bg-[#161622] shrink-0 text-white"
               >
                 {benchmarking ? (
                   <>
-                    <Loader2 className="h-3.5 w-3.5 animate-spin text-[#6366f1]" />
+                    <Loader2 className="h-3.5 w-3.5 animate-spin text-[#f26625]" />
                     Running Audit…
                   </>
                 ) : (

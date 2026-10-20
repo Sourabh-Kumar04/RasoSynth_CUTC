@@ -74,19 +74,18 @@ export function TopNav() {
     <>
       <header className="sticky top-0 z-40 w-full border-b border-[#272738] bg-[#0a0a0f]/95 backdrop-blur-md">
         <div className="flex h-14 items-center justify-between px-4 lg:px-6 gap-4">
-          {/* Logo & Brand */}
+          {/* Logo & Brand - YC Style */}
           <div className="flex items-center space-x-3 shrink-0">
             <Link href="/" className="flex items-center space-x-2.5 group">
-              <div className="w-8 h-8 rounded-lg bg-[#161622] border border-[#272738] group-hover:border-[#6366f1] flex items-center justify-center transition-all duration-200 shadow-sm relative overflow-hidden">
-                <div className="absolute inset-0 bg-gradient-to-br from-[#6366f1]/20 to-[#10b981]/20 opacity-0 group-hover:opacity-100 transition-opacity" />
-                <Workflow className="w-4 h-4 text-[#6366f1] group-hover:text-[#818cf8] transition-colors relative z-10" />
+              <div className="w-8 h-8 rounded-md bg-[#f26625] flex items-center justify-center transition-all duration-200 shadow-sm relative overflow-hidden group-hover:bg-[#de581a]">
+                <span className="font-mono font-black text-white text-base tracking-tighter">Y</span>
               </div>
               <div className="flex flex-col">
                 <span className="font-bold text-base tracking-tight text-white font-display leading-none">
-                  RasoSynth<span className="text-[#6366f1]">Tune</span>
+                  RasoSynth<span className="text-[#f26625]">Tune</span>
                 </span>
-                <span className="text-[10px] font-mono text-[#94a3b8] tracking-wider uppercase mt-0.5">
-                  Autonomous Studio
+                <span className="text-[10px] font-mono text-[#f26625] tracking-wider uppercase mt-0.5 font-semibold">
+                  Autonomous Refinery
                 </span>
               </div>
             </Link>
@@ -98,16 +97,16 @@ export function TopNav() {
 
             <Link
               href="/datasets"
-              className="hidden md:inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[10px] font-mono font-medium bg-emerald-950/30 border border-emerald-500/30 text-[#10b981] hover:bg-emerald-950/50 transition-colors"
+              className="hidden md:inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded text-[10px] font-mono font-medium bg-emerald-950/30 border border-emerald-500/30 text-[#10b981] hover:bg-emerald-950/50 transition-colors"
               title="Cryptographic DBOM Attestation Engine Active"
             >
               <ShieldCheck className="w-3 h-3 text-[#10b981]" />
               <span>DBOM Verified</span>
             </Link>
 
-            <span className="hidden xl:inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full text-[10px] font-mono text-[#38bdf8] bg-sky-950/30 border border-sky-500/30">
-              <span className="w-1.5 h-1.5 rounded-full bg-[#38bdf8]" />
-              <span>Air-Gapped Local</span>
+            <span className="hidden xl:inline-flex items-center gap-1.5 px-2 py-0.5 rounded text-[10px] font-mono text-[#f26625] bg-orange-950/30 border border-orange-500/30">
+              <span className="w-1.5 h-1.5 rounded-full bg-[#f26625]" />
+              <span>YC Proof-Carrier</span>
             </span>
           </div>
 
@@ -139,7 +138,7 @@ export function TopNav() {
 
             <Link
               href="/studio"
-              className="inline-flex items-center space-x-1.5 px-3.5 py-1.5 rounded-full bg-[#6366f1] hover:bg-[#4f46e5] text-white text-xs font-medium shadow-sm transition-all active:scale-95 glow-indigo"
+              className="inline-flex items-center space-x-1.5 px-3.5 py-1.5 rounded-md bg-[#f26625] hover:bg-[#de581a] border border-[#ea580c] text-white text-xs font-mono font-bold shadow-sm transition-all active:scale-95 glow-yc"
             >
               <FlaskConical className="w-3.5 h-3.5" />
               <span>New Dataset</span>

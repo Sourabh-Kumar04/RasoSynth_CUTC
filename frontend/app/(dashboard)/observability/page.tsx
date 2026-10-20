@@ -83,7 +83,7 @@ export default function ObservabilityPage() {
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-[#272738] pb-4">
         <div>
           <div className="flex items-center gap-2.5 mb-1">
-            <span className="text-[10px] font-mono px-2.5 py-0.5 rounded-full bg-[#161622] border border-[#3b3b52] text-[#6366f1] font-bold uppercase tracking-wider">
+            <span className="text-[10px] font-mono px-2 py-0.5 rounded-sm bg-[#f26625]/10 border border-[#f26625]/30 text-[#f26625] font-bold uppercase tracking-wider">
               Telemetry &amp; Health
             </span>
             <h1 className="text-2xl font-bold tracking-tight text-white font-display">Observability Center</h1>
@@ -93,15 +93,15 @@ export default function ObservabilityPage() {
           </p>
         </div>
         <div className="flex items-center gap-2">
-          <div className="flex rounded-full border border-[#3b3b52] bg-[#12121a] overflow-hidden p-0.5">
+          <div className="flex rounded-md border border-[#272738] bg-[#12121a] overflow-hidden p-0.5">
             {timeRanges.map((range) => (
               <button
                 key={range.value}
                 onClick={() => setTimeRange(range.value)}
                 className={clsx(
-                  'px-3 py-1 text-xs font-mono font-bold rounded-full transition-colors',
+                  'px-3 py-1 text-xs font-mono font-bold rounded-sm transition-colors',
                   timeRange === range.value
-                    ? 'bg-[#6366f1] text-white shadow-xs'
+                    ? 'bg-[#f26625] text-white shadow-xs glow-yc'
                     : 'hover:bg-[#161622] text-[#94a3b8]'
                 )}
               >
@@ -112,14 +112,14 @@ export default function ObservabilityPage() {
           <Button
             variant="outline"
             size="sm"
-            className="gap-2 rounded-full border-[#3b3b52] text-[#6366f1] hover:bg-[#161622]"
+            className="gap-2 rounded-md border-[#272738] text-[#94a3b8] hover:text-white hover:bg-[#161622] font-mono text-xs"
             onClick={fetchData}
             disabled={loading}
           >
             {loading ? (
-              <Loader2 className="h-4 w-4 animate-spin text-[#6366f1]" />
+              <Loader2 className="h-4 w-4 animate-spin text-[#f26625]" />
             ) : (
-              <RefreshCw className="h-4 w-4 text-[#6366f1]" />
+              <RefreshCw className="h-4 w-4 text-[#f26625]" />
             )}
             Refresh
           </Button>

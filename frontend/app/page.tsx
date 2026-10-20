@@ -107,7 +107,7 @@ export default function OverviewDashboardPage() {
             <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 border-b border-[#272738] pb-5">
               <div>
                 <div className="flex items-center gap-2 mb-1">
-                  <span className="px-2 py-0.5 rounded text-[10px] font-mono font-bold bg-[#1a1a24] border border-[#272738] text-[#10b981] uppercase tracking-wider">
+                  <span className="px-2 py-0.5 rounded text-[10px] font-mono font-bold bg-orange-950/20 border border-orange-500/30 text-[#f26625] uppercase tracking-wider">
                     AUTONOMOUS STUDIO
                   </span>
                   <h1 className="text-xl sm:text-2xl font-bold tracking-tight text-white font-display">
@@ -115,20 +115,20 @@ export default function OverviewDashboardPage() {
                   </h1>
                 </div>
                 <p className="text-xs text-[#94a3b8]">
-                  Grounded multi-source dataset discovery, AST extraction, LangGraph DAG execution, & PEFT/LoRA fine-tuning
+                  Grounded multi-source dataset discovery, AST extraction, LangGraph DAG execution, &amp; PEFT/LoRA fine-tuning
                 </p>
               </div>
 
               <div className="flex items-center gap-2.5">
                 <Link href="/studio">
-                  <Button className="bg-[#6366f1] hover:bg-[#818cf8] text-white text-xs font-mono font-medium shadow-sm glow-indigo flex items-center gap-1.5 h-8">
+                  <Button className="bg-[#f26625] hover:bg-[#de581a] border border-[#ea580c] text-white text-xs font-mono font-bold shadow-sm glow-yc flex items-center gap-1.5 h-8 rounded-md">
                     <FlaskConical className="w-3.5 h-3.5" />
                     <span>Open Dataset Studio</span>
                   </Button>
                 </Link>
                 <Link href="/orchestration">
-                  <Button variant="outline" className="border-[#272738] bg-[#12121a] hover:bg-[#1a1a24] text-white text-xs font-mono h-8">
-                    <Workflow className="w-3.5 h-3.5 mr-1 text-[#818cf8]" />
+                  <Button variant="outline" className="border-[#272738] bg-[#12121a] hover:bg-[#1a1a24] text-white text-xs font-mono h-8 rounded-md">
+                    <Workflow className="w-3.5 h-3.5 mr-1 text-[#f26625]" />
                     Live DAG Trace
                   </Button>
                 </Link>
@@ -343,9 +343,9 @@ export default function OverviewDashboardPage() {
                         }
                       }}
                       className={clsx(
-                        'px-2 py-0.5 rounded text-[11px] transition-all border',
+                        'px-2 py-0.5 rounded text-[11px] font-mono transition-all border',
                         selectedDomain === preset
-                          ? 'bg-[#1a1a24] border-[#6366f1] text-[#818cf8] font-medium'
+                          ? 'bg-orange-950/30 border-[#f26625] text-[#f26625] font-semibold'
                           : 'bg-[#0e0e13] border-[#272738] text-[#94a3b8] hover:text-white hover:border-[#3b3b52]'
                       )}
                     >
@@ -357,7 +357,7 @@ export default function OverviewDashboardPage() {
                 <div className="flex items-center space-x-2">
                   <span className="text-[11px] font-mono text-[#94a3b8]">Est: <strong className="text-[#10b981]">$18.20</strong></span>
                   <Link href={`/studio?prompt=${encodeURIComponent(queryInput)}&domain=${encodeURIComponent(selectedDomain)}`}>
-                    <Button className="bg-[#6366f1] hover:bg-[#818cf8] text-white text-xs font-mono h-7 px-3 flex items-center gap-1">
+                    <Button className="bg-[#f26625] hover:bg-[#de581a] border border-[#ea580c] text-white text-xs font-mono font-bold h-7 px-3 flex items-center gap-1 rounded-md glow-yc">
                       <span>Launch Pipeline</span>
                       <ArrowRight className="w-3 h-3" />
                     </Button>
@@ -731,8 +731,8 @@ export default function OverviewDashboardPage() {
 
                 <div className="pt-2 border-t border-[#1c1c28]">
                   <Link href="/finetune">
-                    <Button className="w-full bg-[#6366f1] hover:bg-[#818cf8] text-white font-mono font-bold text-xs h-8 shadow-sm glow-indigo flex items-center justify-center gap-1.5 rounded-md">
-                      <Play className="w-3.5 h-3.5 fill-current text-[#10b981]" />
+                    <Button className="w-full bg-[#f26625] hover:bg-[#de581a] border border-[#ea580c] text-white font-mono font-bold text-xs h-8 shadow-sm glow-yc flex items-center justify-center gap-1.5 rounded-md">
+                      <Play className="w-3.5 h-3.5 fill-current text-white" />
                       <span>Configure LoRA Training Session</span>
                     </Button>
                   </Link>

@@ -97,7 +97,7 @@ const STATUS_STRIPE: Record<FTJob['status'], string> = {
 
 function StatusPill({ status }: { status: FTJob['status'] }) {
   return (
-    <span className={clsx('inline-flex items-center gap-1 text-[10px] px-2.5 py-0.5 rounded-full border font-mono font-medium shrink-0', STATUS_PILL[status])}>
+    <span className={clsx('inline-flex items-center gap-1.5 text-[10px] px-2 py-0.5 rounded-sm border font-mono font-medium shrink-0', STATUS_PILL[status])}>
       {status === 'running' && (
         <span className="w-1.5 h-1.5 rounded-full bg-[#10b981] animate-pulse" />
       )}
@@ -522,7 +522,7 @@ function FineTuneContent() {
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-[#272738] pb-4">
         <div>
           <div className="flex items-center gap-2.5 mb-1">
-            <span className="text-[10px] font-mono px-2.5 py-0.5 rounded-full bg-[#161622] border border-[#272738] text-[#10b981] font-bold uppercase tracking-wider">
+            <span className="text-[10px] font-mono px-2 py-0.5 rounded-sm bg-[#f26625]/10 border border-[#f26625]/30 text-[#f26625] font-bold uppercase tracking-wider">
               PEFT / LoRA Fine-Tuning
             </span>
             <h1 className="text-2xl font-bold tracking-tight text-white font-display">
@@ -537,7 +537,7 @@ function FineTuneContent() {
           <Button
             variant={tab === 'jobs' ? 'default' : 'outline'}
             size="sm"
-            className={clsx('rounded-full text-xs font-mono', tab === 'jobs' ? 'bg-[#6366f1] text-white hover:bg-[#818cf8]' : 'border-[#272738] text-[#94a3b8] hover:text-white hover:bg-[#161622]')}
+            className={clsx('rounded-md text-xs font-mono font-medium', tab === 'jobs' ? 'bg-[#f26625] text-white hover:bg-[#de581a] border border-[#ea580c] glow-yc' : 'border-[#272738] text-[#94a3b8] hover:text-white hover:bg-[#161622]')}
             onClick={() => setTab('jobs')}
           >
             <List className="h-3.5 w-3.5 mr-1" />Jobs ({jobs.length})
@@ -545,7 +545,7 @@ function FineTuneContent() {
           <Button
             variant={tab === 'new' ? 'default' : 'outline'}
             size="sm"
-            className={clsx('rounded-full text-xs font-mono', tab === 'new' ? 'bg-[#6366f1] text-white hover:bg-[#818cf8]' : 'border-[#272738] text-[#94a3b8] hover:text-white hover:bg-[#161622]')}
+            className={clsx('rounded-md text-xs font-mono font-medium', tab === 'new' ? 'bg-[#f26625] text-white hover:bg-[#de581a] border border-[#ea580c] glow-yc' : 'border-[#272738] text-[#94a3b8] hover:text-white hover:bg-[#161622]')}
             onClick={() => setTab('new')}
           >
             <Plus className="h-3.5 w-3.5 mr-1" />New Job
@@ -563,10 +563,10 @@ function FineTuneContent() {
             { key: 'failed',    label: 'Failed',    stripe: 'border-l-rose-500',    color: 'text-rose-400' },
           ] as const
         ).map(({ key, label, stripe, color }) => (
-          <Card key={key} className={clsx('border-l-4 bg-[#12121a] border-[#272738] rounded-2xl card-shadow', stripe)}>
+          <Card key={key} className={clsx('border-l-4 bg-[#12121a] border-[#272738] rounded-xl card-shadow', stripe)}>
             <CardContent className="pt-4 pb-4 px-4">
               <p className="text-[10px] text-[#94a3b8] font-mono uppercase tracking-wider">{label}</p>
-              <p className={clsx('text-2xl font-bold font-mono mt-0.5', color)}>{counts[key]}</p>
+              <p className={clsx('text-2xl font-bold font-mono mt-0.5 tnum', color)}>{counts[key]}</p>
             </CardContent>
           </Card>
         ))}
@@ -574,68 +574,130 @@ function FineTuneContent() {
 
       {/* ── New job form ── */}
       {tab === 'new' && (
-        <Card className="bg-[#12121a] border-[#272738] rounded-2xl card-shadow">
+        <Card className="bg-[#12121a] border-[#272738] rounded-xl card-shadow">
           <CardHeader className="pb-3 border-b border-[#272738]">
             <CardTitle className="text-sm font-bold text-white">Configure Fine-Tuning Job</CardTitle>
           </CardHeader>
           <CardContent className="p-6">
             <form onSubmit={handleSubmit} className="space-y-4">
               {formError && (
-                <div className="flex items-center gap-2 text-xs text-rose-300 bg-rose-950/20 border border-rose-500/30 rounded-xl px-3 py-2">
+                <div className="flex items-center gap-2 text-xs text-rose-300 bg-rose-950/20 border border-rose-500/30 rounded-md px-3 py-2">
                   <AlertCircle className="h-4 w-4 shrink-0 text-rose-400" />
                   {formError}
                 </div>
               )}
 
-              <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 p-3.5 bg-[#161622] border border-[#272738] rounded-2xl">
-                <div>
-                  <p className="text-xs font-bold text-white flex items-center gap-1.5">
-                    <Sparkles className="h-3.5 w-3.5 text-[#10b981]" />
-                    Flagship Indic GST Benchmark Preset
+              {/* 3 Flagship Benchmark Presets */}
+              <div className="space-y-2 p-3.5 bg-[#0e0e14] border border-[#272738] rounded-md">
+                <div className="flex items-center justify-between pb-1 border-b border-[#1c1c28]">
+                  <p className="text-xs font-bold text-white flex items-center gap-1.5 font-mono">
+                    <Sparkles className="h-3.5 w-3.5 text-[#f26625]" />
+                    1-Click Flagship Benchmark Presets
                   </p>
-                  <p className="text-[11px] text-[#94a3b8]">
-                    Pre-fills with Sarvam-2B, cryptographic GST dataset, ChatML template, and audited LoRA parameters.
-                  </p>
+                  <span className="text-[10px] font-mono text-[#10b981] font-semibold">DBOM Merkle Verified</span>
                 </div>
-                <Button
-                  type="button"
-                  variant="outline"
-                  size="sm"
-                  className="rounded-full text-xs font-mono border-emerald-500/40 text-emerald-400 hover:bg-emerald-950/30 shrink-0"
-                  onClick={() => {
-                    setForm(prev => ({
-                      ...prev,
-                      dataset_path: 'outputs/flagship_indic_gst/flagship_indic_gst_sft.jsonl',
-                      dataset_id: '',
-                      base_model: 'sarvamai/sarvam-2b-v0.5',
-                      output_model_name: 'sarvam-2b-indic-gst-lora',
-                      chat_template: 'chatml',
-                      lora_r: 16,
-                      lora_alpha: 32,
-                      num_train_epochs: 3,
-                      per_device_train_batch_size: 4,
-                      gradient_accumulation_steps: 4,
-                      learning_rate: 0.0002,
-                    }))
-                    toast('Loaded Flagship Indic GST fine-tuning preset', 'success')
-                  }}
-                >
-                  <Zap className="h-3 w-3 mr-1 text-emerald-400" />
-                  Load Preset
-                </Button>
+
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-2.5 pt-1">
+                  {/* Preset 1: Indic GST */}
+                  <div
+                    onClick={() => {
+                      setForm(prev => ({
+                        ...prev,
+                        dataset_path: 'outputs/flagship_indic_gst/flagship_indic_gst_sft.jsonl',
+                        dataset_id: '',
+                        base_model: 'sarvamai/sarvam-2b-v0.5',
+                        output_model_name: 'sarvam-2b-indic-gst-lora',
+                        chat_template: 'chatml',
+                        lora_r: 16,
+                        lora_alpha: 32,
+                        num_train_epochs: 3,
+                        per_device_train_batch_size: 4,
+                        gradient_accumulation_steps: 4,
+                        learning_rate: 0.0002,
+                      }))
+                      toast('Loaded Flagship Indic GST fine-tuning preset', 'success')
+                    }}
+                    className="p-2.5 rounded-md border border-[#272738] bg-[#12121a] hover:border-[#f26625]/50 hover:bg-[#161622] cursor-pointer transition-all space-y-1"
+                  >
+                    <div className="flex items-center justify-between">
+                      <span className="text-[10px] font-mono font-bold text-[#f26625]">AI Kosh / GST</span>
+                      <Zap className="h-3 w-3 text-[#f26625]" />
+                    </div>
+                    <p className="text-xs font-semibold text-white">Indic GST Benchmark</p>
+                    <p className="text-[10px] text-[#94a3b8] font-mono">Sarvam-2B · ChatML · +537% chrF</p>
+                  </div>
+
+                  {/* Preset 2: Clinical Medical Reasoning */}
+                  <div
+                    onClick={() => {
+                      setForm(prev => ({
+                        ...prev,
+                        dataset_path: 'outputs/flagship_clinical_reasoning/clinical_reasoning_sft.jsonl',
+                        dataset_id: '',
+                        base_model: 'sarvamai/sarvam-2b-v0.5',
+                        output_model_name: 'sarvam-2b-clinical-reasoning-lora',
+                        chat_template: 'chatml',
+                        lora_r: 16,
+                        lora_alpha: 32,
+                        num_train_epochs: 3,
+                        per_device_train_batch_size: 4,
+                        gradient_accumulation_steps: 4,
+                        learning_rate: 0.00015,
+                      }))
+                      toast('Loaded Flagship Clinical Reasoning preset', 'success')
+                    }}
+                    className="p-2.5 rounded-md border border-[#272738] bg-[#12121a] hover:border-[#f26625]/50 hover:bg-[#161622] cursor-pointer transition-all space-y-1"
+                  >
+                    <div className="flex items-center justify-between">
+                      <span className="text-[10px] font-mono font-bold text-emerald-400">Clinical PubMed</span>
+                      <Zap className="h-3 w-3 text-emerald-400" />
+                    </div>
+                    <p className="text-xs font-semibold text-white">Clinical Reasoning</p>
+                    <p className="text-[10px] text-[#94a3b8] font-mono">Differential Dx · 100% Contraindication</p>
+                  </div>
+
+                  {/* Preset 3: Corporate Law & Tax */}
+                  <div
+                    onClick={() => {
+                      setForm(prev => ({
+                        ...prev,
+                        dataset_path: 'outputs/flagship_corporate_law/corporate_law_sft.jsonl',
+                        dataset_id: '',
+                        base_model: 'sarvamai/sarvam-2b-v0.5',
+                        output_model_name: 'sarvam-2b-corporate-law-lora',
+                        chat_template: 'chatml',
+                        lora_r: 16,
+                        lora_alpha: 32,
+                        num_train_epochs: 3,
+                        per_device_train_batch_size: 4,
+                        gradient_accumulation_steps: 4,
+                        learning_rate: 0.0002,
+                      }))
+                      toast('Loaded Flagship Corporate Law preset', 'success')
+                    }}
+                    className="p-2.5 rounded-md border border-[#272738] bg-[#12121a] hover:border-[#f26625]/50 hover:bg-[#161622] cursor-pointer transition-all space-y-1"
+                  >
+                    <div className="flex items-center justify-between">
+                      <span className="text-[10px] font-mono font-bold text-cyan-400">ITAT &amp; MCA</span>
+                      <Zap className="h-3 w-3 text-cyan-400" />
+                    </div>
+                    <p className="text-xs font-semibold text-white">Corporate Law QA</p>
+                    <p className="text-[10px] text-[#94a3b8] font-mono">Sec 16(4) · Statutory Grounding</p>
+                  </div>
+                </div>
               </div>
 
               <Section title="Dataset Source">
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                   <div>
                     <label className="text-[10px] mb-1 block font-bold font-mono uppercase text-[#94a3b8]">JSONL file path</label>
-                    <Input placeholder="outputs/my-dataset.jsonl" className="rounded-full border-[#272738] bg-[#0a0a0f] text-white focus:border-[#6366f1] text-xs font-mono"
+                    <Input placeholder="outputs/my-dataset.jsonl" className="rounded-md border-[#272738] bg-[#0a0a0f] text-white focus:border-[#f26625] text-xs font-mono"
                       value={form.dataset_path}
                       onChange={e => f('dataset_path', e.target.value)} />
                   </div>
                   <div>
                     <label className="text-[10px] mb-1 block font-bold font-mono uppercase text-[#94a3b8]">Or Dataset ID (from DB)</label>
-                    <Input placeholder="17487774-1b8e-..." className="rounded-full border-[#272738] bg-[#0a0a0f] text-white focus:border-[#6366f1] text-xs font-mono"
+                    <Input placeholder="17487774-1b8e-..." className="rounded-md border-[#272738] bg-[#0a0a0f] text-white focus:border-[#f26625] text-xs font-mono"
                       value={form.dataset_id}
                       onChange={e => f('dataset_id', e.target.value)} />
                   </div>
@@ -648,7 +710,7 @@ function FineTuneContent() {
                     <label className="text-[10px] mb-1 block font-bold font-mono uppercase text-[#94a3b8]">Model Architecture</label>
                     <Select value={form.base_model}
                       onValueChange={v => f('base_model', v)}>
-                      <SelectTrigger className="rounded-full border-[#272738] bg-[#0a0a0f] text-white text-xs font-mono"><SelectValue /></SelectTrigger>
+                      <SelectTrigger className="rounded-md border-[#272738] bg-[#0a0a0f] text-white text-xs font-mono"><SelectValue /></SelectTrigger>
                       <SelectContent className="bg-[#12121a] border-[#272738] text-white text-xs font-mono">
                         {models.map(m => (
                           <SelectItem key={m.id} value={m.id}>
@@ -660,7 +722,7 @@ function FineTuneContent() {
                   </div>
                   <div>
                     <label className="text-[10px] mb-1 block font-bold font-mono uppercase text-[#94a3b8]">Output model tag</label>
-                    <Input placeholder="my-finetuned-model" className="rounded-full border-[#272738] bg-[#0a0a0f] text-white focus:border-[#6366f1] text-xs font-mono"
+                    <Input placeholder="my-finetuned-model" className="rounded-md border-[#272738] bg-[#0a0a0f] text-white focus:border-[#f26625] text-xs font-mono"
                       value={form.output_model_name}
                       onChange={e => f('output_model_name', e.target.value)} />
                   </div>
@@ -668,7 +730,7 @@ function FineTuneContent() {
                     <label className="text-[10px] mb-1 block font-bold font-mono uppercase text-[#94a3b8]">Chat template</label>
                     <Select value={form.chat_template}
                       onValueChange={v => f('chat_template', v)}>
-                      <SelectTrigger className="rounded-full border-[#272738] bg-[#0a0a0f] text-white text-xs font-mono"><SelectValue /></SelectTrigger>
+                      <SelectTrigger className="rounded-md border-[#272738] bg-[#0a0a0f] text-white text-xs font-mono"><SelectValue /></SelectTrigger>
                       <SelectContent className="bg-[#12121a] border-[#272738] text-white text-xs font-mono">
                         <SelectItem value="alpaca">Alpaca</SelectItem>
                         <SelectItem value="sharegpt">ShareGPT</SelectItem>
@@ -697,7 +759,7 @@ function FineTuneContent() {
                       </label>
                       <Input
                         type="number"
-                        className="rounded-full border-[#272738] bg-[#0a0a0f] text-white focus:border-[#6366f1] text-xs font-mono"
+                        className="rounded-md border-[#272738] bg-[#0a0a0f] text-white focus:border-[#f26625] text-xs font-mono"
                         step={isInt ? 1 : 0.00001}
                         value={(form as Record<string, unknown>)[key] as number}
                         onChange={e => f(
@@ -739,13 +801,13 @@ function FineTuneContent() {
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                     <div>
                       <label className="text-[10px] mb-1 block font-bold font-mono uppercase text-[#94a3b8]">HF Token</label>
-                      <Input type="password" placeholder="hf_..." className="rounded-full border-[#272738] bg-[#0a0a0f] text-white focus:border-[#6366f1] text-xs font-mono"
+                      <Input type="password" placeholder="hf_..." className="rounded-md border-[#272738] bg-[#0a0a0f] text-white focus:border-[#f26625] text-xs font-mono"
                         value={form.hf_token}
                         onChange={e => f('hf_token', e.target.value)} />
                     </div>
                     <div>
                       <label className="text-[10px] mb-1 block font-bold font-mono uppercase text-[#94a3b8]">Org / Namespace (optional)</label>
-                      <Input placeholder="my-org" className="rounded-full border-[#272738] bg-[#0a0a0f] text-white focus:border-[#6366f1] text-xs font-mono"
+                      <Input placeholder="my-org" className="rounded-md border-[#272738] bg-[#0a0a0f] text-white focus:border-[#f26625] text-xs font-mono"
                         value={form.hf_org}
                         onChange={e => f('hf_org', e.target.value)} />
                     </div>
@@ -756,12 +818,12 @@ function FineTuneContent() {
               <Button
                 type="submit"
                 disabled={submitting}
-                className="w-full bg-[#6366f1] hover:bg-[#818cf8] text-white rounded-full font-mono text-xs font-semibold h-9 shadow-sm glow-indigo flex items-center justify-center gap-2"
+                className="w-full bg-[#f26625] hover:bg-[#de581a] border border-[#ea580c] text-white rounded-md font-mono text-xs font-bold h-9 shadow-sm glow-yc flex items-center justify-center gap-2 transition-colors"
               >
                 {submitting ? (
                   <><Loader2 className="h-4 w-4 animate-spin text-white mr-2" />Starting Session…</>
                 ) : (
-                  <><Play className="h-4 w-4 fill-current mr-2 text-[#10b981]" />Execute PEFT / LoRA Training Session</>
+                  <><Play className="h-4 w-4 fill-current mr-2 text-white" />Execute PEFT / LoRA Training Session</>
                 )}
               </Button>
             </form>
@@ -778,13 +840,13 @@ function FineTuneContent() {
               ? Array.from({ length: 4 }).map((_, i) => <JobSkeleton key={i} />)
               : jobs.length === 0
                 ? (
-                  <div className="flex flex-col items-center justify-center py-16 space-y-4 bg-[#12121a] rounded-2xl border border-[#272738]">
-                    <div className="w-14 h-14 rounded-2xl bg-[#161622] border border-[#272738] flex items-center justify-center">
-                      <Cpu className="h-7 w-7 text-[#6366f1]" />
+                  <div className="flex flex-col items-center justify-center py-16 space-y-4 bg-[#12121a] rounded-xl border border-[#272738]">
+                    <div className="w-14 h-14 rounded-lg bg-[#161622] border border-[#272738] flex items-center justify-center">
+                      <Cpu className="h-7 w-7 text-[#f26625]" />
                     </div>
                     <p className="text-xs text-[#94a3b8] font-mono">No fine-tuning sessions recorded</p>
-                    <Button size="sm" className="bg-[#6366f1] hover:bg-[#818cf8] text-white rounded-full font-mono text-xs" onClick={() => setTab('new')}>
-                      <Plus className="h-3.5 w-3.5 mr-1 text-[#10b981]" />Create first job
+                    <Button size="sm" className="bg-[#f26625] hover:bg-[#de581a] border border-[#ea580c] text-white rounded-md font-mono text-xs glow-yc" onClick={() => setTab('new')}>
+                      <Plus className="h-3.5 w-3.5 mr-1 text-white" />Create first job
                     </Button>
                   </div>
                 )
@@ -793,11 +855,11 @@ function FineTuneContent() {
                     key={job.id}
                     onClick={() => handleSelectJob(job)}
                     className={clsx(
-                      'border-l-4 rounded-xl p-3.5 cursor-pointer transition-all',
+                      'border-l-4 rounded-lg p-3.5 cursor-pointer transition-all',
                       'bg-[#12121a] border border-[#272738] card-shadow',
                       'hover:border-[#3b3b52] hover:bg-[#0a0a0f]',
                       STATUS_STRIPE[job.status],
-                      selectedJob?.id === job.id && 'border-[#6366f1] bg-[#161622]/60',
+                      selectedJob?.id === job.id && 'border-[#f26625] bg-[#161622]/90 shadow-sm',
                     )}
                   >
                     <div className="flex items-start justify-between gap-2">
