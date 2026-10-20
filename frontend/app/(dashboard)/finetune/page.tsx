@@ -323,7 +323,7 @@ function FineTuneContent() {
   const [form, setForm] = useState({
     dataset_path: '',
     dataset_id: datasetParam,
-    base_model: 'HuggingFaceTB/SmolLM2-1.7B-Instruct',
+    base_model: 'sarvamai/sarvam-2b-v0.5',
     output_model_name: datasetParam ? `finetune-${datasetParam.slice(0, 8)}` : '',
     lora_r: 16, lora_alpha: 32,
     num_train_epochs: 3, per_device_train_batch_size: 4,

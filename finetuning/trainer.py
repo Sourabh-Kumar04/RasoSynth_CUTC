@@ -569,6 +569,10 @@ class _ProgressCallback:
 # ── Supported model catalogue ─────────────────────────────────────────────────
 
 SUPPORTED_MODELS: list[dict] = [
+    {"id": "sarvamai/sarvam-2b-v0.5", "name": "Sarvam 2B Indic (Sarvam AI)", "family": "sarvam", "params": "2B", "recommended_template": "chatml", "requires_gpu": False},
+    {"id": "meta-llama/Meta-Llama-3.1-8B-Instruct", "name": "Meta Llama 3.1 8B Instruct", "family": "llama3.1", "params": "8B", "recommended_template": "llama3", "requires_gpu": True},
+    {"id": "google/gemma-2-2b-it", "name": "Gemma 2 2B Instruct", "family": "gemma2", "params": "2B", "recommended_template": "chatml", "requires_gpu": False},
+    {"id": "ai4bharat/Airavata", "name": "Airavata Indic Llama 7B (AI4Bharat)", "family": "llama", "params": "7B", "recommended_template": "alpaca", "requires_gpu": True},
     {"id": "unsloth/llama-3-8b", "name": "Llama 3 8B (Unsloth)", "family": "llama3", "params": "8B", "recommended_template": "llama3", "requires_gpu": True},
     {"id": "unsloth/llama-3-8b-Instruct", "name": "Llama 3 8B Instruct (Unsloth)", "family": "llama3", "params": "8B", "recommended_template": "llama3", "requires_gpu": True},
     {"id": "unsloth/mistral-7b-v0.3", "name": "Mistral 7B v0.3 (Unsloth)", "family": "mistral", "params": "7B", "recommended_template": "chatml", "requires_gpu": True},
