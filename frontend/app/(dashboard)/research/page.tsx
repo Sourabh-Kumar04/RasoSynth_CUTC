@@ -236,6 +236,27 @@ export default function ResearchPage() {
                   params: status?.active_heuristics?.ocr_correction || { ast_check: true, sandbox_timeout_sec: 5 },
                   color: 'text-cyan-400'
                 },
+                {
+                  key: 'curriculum_learning',
+                  name: 'Pedagogical Curriculum Sorting',
+                  desc: 'Staged difficulty sequencing (Tier 1-2 Foundations -> Tier 3-4 -> Tier 5) with anti-forgetting replay buffer',
+                  params: status?.active_heuristics?.curriculum_learning || { mode: 'staged_curriculum', replay_ratio: 0.15 },
+                  color: 'text-indigo-400'
+                },
+                {
+                  key: 'benchmark_contamination_guard',
+                  name: 'Benchmark Contamination & Leakage Audit',
+                  desc: 'N-gram cryptographic canary verification against IndicGLUE, MMLU-Hindi, GSM8K, and ARC',
+                  params: status?.active_heuristics?.benchmark_guard || { ngram_size: 8, similarity_threshold: 0.50 },
+                  color: 'text-rose-400'
+                },
+                {
+                  key: 'adversarial_red_teaming',
+                  name: 'Adversarial Safety & Statutory Jailbreak Probes',
+                  desc: 'Proactive red-teaming for tax fraud, fake GST invoicing, and transliterated vernacular attacks',
+                  params: status?.active_heuristics?.adversarial || { probe_categories: 4, compliance_check: true },
+                  color: 'text-amber-300'
+                },
               ].map(h => (
                 <Card key={h.key} className="bg-[#12121a] border-[#272738] rounded-2xl card-shadow">
                   <CardContent className="p-4 space-y-3">
