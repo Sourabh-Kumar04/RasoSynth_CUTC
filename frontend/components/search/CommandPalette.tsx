@@ -186,10 +186,10 @@ export function CommandPalette({
 
   return (
     <div className="fixed inset-0 z-[100] flex items-start justify-center pt-20 p-4 bg-black/60 backdrop-blur-xs animate-fade-in">
-      <div className="w-full max-w-lg bg-[#12121a] border border-[#272738] rounded-3xl shadow-2xl overflow-hidden flex flex-col">
+      <div className="w-full max-w-lg bg-[#12121a] border border-[#272738] rounded-xl shadow-2xl overflow-hidden flex flex-col">
         {/* Search Header Input */}
         <div className="flex items-center gap-3 p-4 border-b border-[#272738] bg-[#0a0a0f]">
-          <Search className="h-4 w-4 text-[#6366f1] shrink-0" />
+          <Search className="h-4 w-4 text-[#f26625] shrink-0" />
           <input
             ref={inputRef}
             type="text"
@@ -203,7 +203,7 @@ export function CommandPalette({
           />
           <button
             onClick={() => onOpenChange(false)}
-            className="text-[#94a3b8] hover:text-[#f8fafc] p-1 rounded-full hover:bg-[#161622]"
+            className="text-[#94a3b8] hover:text-[#f8fafc] p-1 rounded-md hover:bg-[#161622]"
           >
             <X className="h-4 w-4" />
           </button>
@@ -228,14 +228,14 @@ export function CommandPalette({
                     onOpenChange(false)
                   }}
                   onMouseEnter={() => setSelectedIndex(idx)}
-                  className={`flex items-center justify-between p-3 rounded-2xl cursor-pointer transition-all ${
-                    isSelected ? 'bg-[#6366f1] text-white shadow-xs' : 'hover:bg-[#161622] text-[#f8fafc]'
+                  className={`flex items-center justify-between p-3 rounded-lg cursor-pointer transition-all ${
+                    isSelected ? 'bg-[#f26625] text-white shadow-xs glow-yc' : 'hover:bg-[#161622] text-[#f8fafc]'
                   }`}
                 >
                   <div className="flex items-center gap-3 min-w-0">
                     <div
-                      className={`h-8 w-8 rounded-xl flex items-center justify-center shrink-0 ${
-                        isSelected ? 'bg-white/20 text-white' : 'bg-[#161622] text-[#6366f1]'
+                      className={`h-8 w-8 rounded-md flex items-center justify-center shrink-0 ${
+                        isSelected ? 'bg-white/20 text-white' : 'bg-[#161622] text-[#f26625]'
                       }`}
                     >
                       <Icon className="h-4 w-4" />
