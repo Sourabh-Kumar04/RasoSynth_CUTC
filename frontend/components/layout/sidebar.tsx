@@ -163,7 +163,7 @@ export function Sidebar() {
                           </span>
                           <span className={clsx(
                             'text-[9px] font-mono uppercase px-1 py-0.2 rounded',
-                            isRunning && 'bg-[#6366f1]/20 text-[#818cf8]',
+                            isRunning && 'bg-[#f26625]/20 text-[#f26625]',
                             isCompleted && 'bg-[#10b981]/20 text-[#10b981]',
                             !isRunning && !isCompleted && 'bg-[#f59e0b]/20 text-[#f59e0b]'
                           )}>

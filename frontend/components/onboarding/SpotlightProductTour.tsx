@@ -315,7 +315,7 @@ export function SpotlightProductTour() {
         <div className="bg-[#161622] text-white p-4 flex items-center justify-between border-b border-[#272738]">
           <div className="flex items-center gap-2.5">
             <div className="h-8 w-8 rounded-xl bg-[#12121a] flex items-center justify-center border border-[#3b3b52]">
-              <StepIcon className="h-4 w-4 text-[#6366f1]" />
+              <StepIcon className="h-4 w-4 text-[#f26625]" />
             </div>
             <div>
               <span className="text-[10px] font-mono uppercase tracking-wider text-[#10b981] font-bold">
@@ -348,7 +348,7 @@ export function SpotlightProductTour() {
         {/* Step Body */}
         <div className="p-4 space-y-3 bg-[#12121a]">
           <div className="flex items-center justify-between">
-            <Badge variant="outline" className="text-[10px] font-mono rounded-full border-[#3b3b52] bg-[#0a0a0f] text-[#6366f1]">
+            <Badge variant="outline" className="text-[10px] font-mono rounded-full border-[#3b3b52] bg-[#0a0a0f] text-[#f26625]">
               {step.badgeText}
             </Badge>
             <span className="text-[10px] font-mono text-[#94a3b8] truncate max-w-[200px]">{step.subtitle}</span>
@@ -366,7 +366,7 @@ export function SpotlightProductTour() {
                 key={idx}
                 onClick={() => updateStepIndex(idx)}
                 className={`h-2 rounded-full transition-all ${
-                  idx === currentStepIndex ? 'w-5 bg-[#6366f1]' : 'w-1.5 bg-[#3b3b52] hover:bg-[#64748b]'
+                  idx === currentStepIndex ? 'w-5 bg-[#f26625]' : 'w-1.5 bg-[#3b3b52] hover:bg-[#64748b]'
                 }`}
               />
             ))}
@@ -379,7 +379,7 @@ export function SpotlightProductTour() {
               size="sm"
               disabled={currentStepIndex === 0}
               onClick={handlePrev}
-              className="h-7 px-2.5 text-xs border-[#3b3b52] text-[#6366f1] rounded-full disabled:opacity-40"
+              className="h-7 px-2.5 text-xs border-[#3b3b52] text-[#f26625] rounded-full disabled:opacity-40"
             >
               <ChevronLeft className="h-3.5 w-3.5 mr-0.5" />
               <span>Back</span>
@@ -388,7 +388,7 @@ export function SpotlightProductTour() {
             <Button
               size="sm"
               onClick={handleNext}
-              className="h-7 px-3.5 text-xs bg-[#6366f1] hover:bg-[#4f46e5] text-white rounded-full font-medium shadow-xs"
+              className="h-7 px-3.5 text-xs bg-[#f26625] hover:bg-[#de581a] text-white rounded-full font-medium shadow-xs"
             >
               <span>{isLastStep ? 'Finish' : 'Next'}</span>
               {!isLastStep && <ChevronRight className="h-3.5 w-3.5 ml-0.5" />}

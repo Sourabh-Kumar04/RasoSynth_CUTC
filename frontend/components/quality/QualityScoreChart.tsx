@@ -24,7 +24,7 @@ export default function QualityScoreChart() {
   if (loading) {
     return (
       <div className="bg-[#12121a] rounded-2xl border border-[#272738] p-4 flex items-center gap-2 text-[#94a3b8] font-mono text-xs">
-        <Loader2 className="h-4 w-4 animate-spin text-[#6366f1]" /> Loading distribution…
+        <Loader2 className="h-4 w-4 animate-spin text-[#f26625]" /> Loading distribution…
       </div>
     );
   }
@@ -49,7 +49,7 @@ export default function QualityScoreChart() {
         {histogram.map((val, i) => (
           <div
             key={i}
-            className="flex-1 bg-[#6366f1] rounded-t transition-all hover:bg-[#818cf8]"
+            className="flex-1 bg-[#f26625] rounded-t transition-all hover:bg-[#f26625]"
             style={{ height: `${(val / maxBucket) * 100}%`, minHeight: val > 0 ? "3px" : "0" }}
             title={`${i * 10}–${(i + 1) * 10}%: ${val} samples`}
           />
@@ -65,7 +65,7 @@ export default function QualityScoreChart() {
       <div className="grid grid-cols-4 gap-2 text-center text-xs font-mono">
         {[
           { label: "Excellent", value: distribution.excellent, color: "text-[#10b981]" },
-          { label: "Good",      value: distribution.good,      color: "text-[#818cf8]" },
+          { label: "Good",      value: distribution.good,      color: "text-[#f26625]" },
           { label: "Fair",      value: distribution.fair,      color: "text-amber-400" },
           { label: "Poor",      value: distribution.poor,      color: "text-rose-400"  },
         ].map(({ label, value, color }) => (

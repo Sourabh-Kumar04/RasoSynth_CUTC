@@ -24,7 +24,7 @@ export default function QualityOverviewCards() {
   if (loading) {
     return (
       <div className="flex items-center gap-2 p-4 text-[#94a3b8] font-mono text-xs">
-        <Loader2 className="h-4 w-4 animate-spin text-[#6366f1]" /> Loading quality overview…
+        <Loader2 className="h-4 w-4 animate-spin text-[#f26625]" /> Loading quality overview…
       </div>
     );
   }
@@ -45,7 +45,7 @@ export default function QualityOverviewCards() {
            : data.average_quality > 0.4 ? "text-amber-400" : "text-rose-400",
     },
     { label: "Total Datasets", value: data.total_jobs.toString(), color: "text-white" },
-    { label: "Samples Reviewed", value: data.total_samples_reviewed.toLocaleString(), color: "text-[#818cf8]" },
+    { label: "Samples Reviewed", value: data.total_samples_reviewed.toLocaleString(), color: "text-[#f26625]" },
     {
       label: "Approval Rate",
       value: data.approval_rate + "%",

@@ -560,7 +560,7 @@ export default function DatasetsPage() {
       {isLoading && datasets.length === 0 && (
         <Card className="border-[#272738] bg-[#12121a] rounded-2xl">
           <CardContent className="p-12 flex flex-col items-center justify-center">
-            <Loader2 className="h-8 w-8 animate-spin text-[#6366f1] mb-4" />
+            <Loader2 className="h-8 w-8 animate-spin text-[#f26625] mb-4" />
             <p className="text-sm text-[#94a3b8] font-mono">Fetching active dataset jobs...</p>
           </CardContent>
         </Card>
@@ -572,7 +572,7 @@ export default function DatasetsPage() {
           <Card className="border-[#272738] bg-[#12121a] hover:border-[#3b3b52] transition-all rounded-2xl card-shadow">
             <CardContent className="p-4 flex items-center gap-4">
               <div className="h-10 w-10 rounded-xl bg-[#161622] border border-[#272738] flex items-center justify-center">
-                <Database className="h-5 w-5 text-[#6366f1]" />
+                <Database className="h-5 w-5 text-[#f26625]" />
               </div>
               <div>
                 <p className="text-[10px] text-[#94a3b8] font-mono uppercase tracking-wider">Total Datasets</p>
@@ -596,7 +596,7 @@ export default function DatasetsPage() {
           <Card className="border-[#272738] bg-[#12121a] hover:border-[#3b3b52] transition-all rounded-2xl card-shadow">
             <CardContent className="p-4 flex items-center gap-4">
               <div className="h-10 w-10 rounded-xl bg-[#161622] border border-[#272738] flex items-center justify-center">
-                <Layers className="h-5 w-5 text-indigo-400" />
+                <Layers className="h-5 w-5 text-[#f26625]" />
               </div>
               <div>
                 <p className="text-[10px] text-[#94a3b8] font-mono uppercase tracking-wider">Total Records</p>
@@ -676,10 +676,10 @@ export default function DatasetsPage() {
                 <Button
                   size="sm"
                   variant="outline"
-                  className="flex-1 h-7 text-[10px] font-mono rounded-full border-[#272738] text-white hover:bg-[#161622] hover:border-indigo-500/30"
+                  className="flex-1 h-7 text-[10px] font-mono rounded-full border-[#272738] text-white hover:bg-[#161622] hover:border-[#f26625]/30"
                   onClick={() => handleViewHfCard(flagship.id, flagship.name)}
                 >
-                  <ExternalLink className="h-3 w-3 mr-1 text-[#6366f1]" />
+                  <ExternalLink className="h-3 w-3 mr-1 text-[#f26625]" />
                   HF Card
                 </Button>
                 <Button
@@ -795,7 +795,7 @@ export default function DatasetsPage() {
                     <TableCell>
                       <div className="flex items-center gap-3">
                         <div className="h-8 w-8 rounded-xl bg-[#161622] border border-[#272738] flex items-center justify-center shrink-0">
-                          <Database className="h-4 w-4 text-[#6366f1]" />
+                          <Database className="h-4 w-4 text-[#f26625]" />
                         </div>
                         <div>
                           <p className="font-semibold text-xs text-white truncate max-w-[220px]">{dataset.name}</p>
@@ -810,7 +810,7 @@ export default function DatasetsPage() {
                       </div>
                     </TableCell>
                     <TableCell>
-                      <Badge variant="outline" className="font-mono text-[10px] bg-[#0a0a0f] border-[#272738] text-indigo-300 rounded-full">
+                      <Badge variant="outline" className="font-mono text-[10px] bg-[#0a0a0f] border-[#272738] text-[#f26625] rounded-full">
                         {dataset.format}
                       </Badge>
                     </TableCell>
@@ -884,7 +884,7 @@ export default function DatasetsPage() {
                           title="Export & Download"
                         >
                           {downloadingIds.has(dataset.id) ? (
-                            <Loader2 className="h-3.5 w-3.5 animate-spin text-[#6366f1]" />
+                            <Loader2 className="h-3.5 w-3.5 animate-spin text-[#f26625]" />
                           ) : (
                             <Download className="h-3.5 w-3.5 text-[#10b981]" />
                           )}
@@ -894,17 +894,17 @@ export default function DatasetsPage() {
                             <Button
                               variant="ghost"
                               size="sm"
-                              className="h-8 text-xs px-2.5 rounded-full text-indigo-400 hover:text-white hover:bg-[#161622] font-mono"
+                              className="h-8 text-xs px-2.5 rounded-full text-[#f26625] hover:text-white hover:bg-[#161622] font-mono"
                               onClick={() => handleViewHfCard(dataset.id, dataset.name)}
                               title="Generate Hugging Face Dataset Card (README.md)"
                             >
-                              <FileText className="h-3.5 w-3.5 text-[#818cf8] mr-1" />
+                              <FileText className="h-3.5 w-3.5 text-[#f26625] mr-1" />
                               HF Card
                             </Button>
                             <Button
                               variant="ghost"
                               size="sm"
-                              className="h-8 text-xs px-2.5 rounded-full text-indigo-400 hover:text-white hover:bg-[#161622] font-mono"
+                              className="h-8 text-xs px-2.5 rounded-full text-[#f26625] hover:text-white hover:bg-[#161622] font-mono"
                               onClick={() => router.push(`/finetune?dataset=${dataset.id}`)}
                               title="1-Click Launch Fine-Tune"
                             >
@@ -929,7 +929,7 @@ export default function DatasetsPage() {
           <CardHeader className="pb-3 border-b border-[#272738]">
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-2">
-                <Database className="h-4 w-4 text-[#6366f1]" />
+                <Database className="h-4 w-4 text-[#f26625]" />
                 <CardTitle className="text-base font-bold text-white">{selected.name}</CardTitle>
                 <span className="text-[10px] font-mono px-2 py-0.5 rounded-full bg-[#0a0a0f] border border-[#272738] text-[#94a3b8]">
                   ID: {selected.id}
@@ -958,7 +958,7 @@ export default function DatasetsPage() {
                         className={clsx(
                           'flex items-center justify-center w-7 h-7 rounded-full text-xs font-medium',
                           isCompleted && 'bg-emerald-950/40 text-[#10b981] border border-emerald-500/30',
-                          isCurrent && selected.status !== 'ready' ? 'bg-[#6366f1] text-white' : 'bg-[#161622] text-[#94a3b8] border border-[#272738]',
+                          isCurrent && selected.status !== 'ready' ? 'bg-[#f26625] text-white' : 'bg-[#161622] text-[#94a3b8] border border-[#272738]',
                           !isCompleted && !isCurrent && 'bg-[#0a0a0f] text-[#64748b] border border-[#272738]'
                         )}
                       >
@@ -994,7 +994,7 @@ export default function DatasetsPage() {
               </div>
               <div>
                 <p className="text-[10px] text-[#94a3b8] font-mono uppercase">Delivery Spec</p>
-                <p className="text-xs font-mono text-indigo-300 mt-1">ADR-002 Compliant</p>
+                <p className="text-xs font-mono text-[#f26625] mt-1">ADR-002 Compliant</p>
               </div>
             </div>
 
@@ -1022,7 +1022,7 @@ export default function DatasetsPage() {
                     </div>
                     <div className="rounded-xl border border-[#272738] bg-[#0a0a0f] p-3">
                       <p className="text-[10px] uppercase font-mono text-[#94a3b8]">HITL Review Coverage</p>
-                      <p className="text-lg font-bold font-mono text-indigo-300 mt-0.5">
+                      <p className="text-lg font-bold font-mono text-[#f26625] mt-0.5">
                         {datasetSummary.human_review?.enabled ? `${datasetSummary.human_review.total} items` : 'Stratified Auto'}
                       </p>
                       {datasetSummary.human_review?.enabled && (
@@ -1043,7 +1043,7 @@ export default function DatasetsPage() {
 
                   {datasetSummary.provenance && (
                     <details className="rounded-xl border border-[#272738] bg-[#0a0a0f] p-3">
-                      <summary className="cursor-pointer text-xs font-bold text-white hover:text-indigo-300 transition-colors">
+                      <summary className="cursor-pointer text-xs font-bold text-white hover:text-[#f26625] transition-colors">
                         Inspect Detailed Grounding Provenance
                       </summary>
                       <div className="mt-3 space-y-2 text-xs text-[#94a3b8]">
@@ -1172,7 +1172,7 @@ export default function DatasetsPage() {
 
               {recordsLoading ? (
                 <div className="p-8 flex items-center justify-center bg-[#0a0a0f] rounded-xl border border-[#272738]">
-                  <Loader2 className="h-5 w-5 animate-spin text-[#6366f1] mr-2" />
+                  <Loader2 className="h-5 w-5 animate-spin text-[#f26625] mr-2" />
                   <span className="text-xs text-[#94a3b8] font-mono">Loading preview records...</span>
                 </div>
               ) : recordsError ? (
@@ -1196,12 +1196,12 @@ export default function DatasetsPage() {
                             </Badge>
                           )}
                           {rec.metadata?.regional_dialect && rec.metadata.regional_dialect !== 'standard' && (
-                            <Badge variant="outline" className="text-[9px] px-1.5 py-0 font-mono rounded-full border-[#272738] text-indigo-300">
+                            <Badge variant="outline" className="text-[9px] px-1.5 py-0 font-mono rounded-full border-[#272738] text-[#f26625]">
                               {rec.metadata.regional_dialect}
                             </Badge>
                           )}
                           {rec.metadata?.parallel_en && (
-                            <Badge variant="outline" className="text-[9px] px-1.5 py-0 font-mono rounded-full border-indigo-900/40 text-indigo-300 bg-indigo-950/20">
+                            <Badge variant="outline" className="text-[9px] px-1.5 py-0 font-mono rounded-full border-[#f26625]/40 text-[#f26625] bg-[#f26625]/10">
                               Bitext
                             </Badge>
                           )}
@@ -1211,7 +1211,7 @@ export default function DatasetsPage() {
                             </Badge>
                           )}
                           {rec.difficulty_tier !== undefined && (
-                            <Badge variant="outline" className="text-[9px] px-1.5 py-0 font-mono rounded-full border-[#272738] text-indigo-300">
+                            <Badge variant="outline" className="text-[9px] px-1.5 py-0 font-mono rounded-full border-[#272738] text-[#f26625]">
                               Tier {rec.difficulty_tier}
                             </Badge>
                           )}
@@ -1219,7 +1219,7 @@ export default function DatasetsPage() {
                       </div>
                       {rec.instruction || rec.prompt ? (
                         <div className="space-y-1">
-                          <p className="text-[10px] font-mono font-bold uppercase tracking-wider text-indigo-400">Prompt / Instruction:</p>
+                          <p className="text-[10px] font-mono font-bold uppercase tracking-wider text-[#f26625]">Prompt / Instruction:</p>
                           <p className="bg-[#0a0a0f] p-3 rounded-lg text-[#f1f5f9] max-w-full overflow-x-auto whitespace-pre-wrap font-sans text-xs leading-relaxed border border-[#272738]">
                             {rec.instruction || rec.prompt}
                           </p>
@@ -1244,9 +1244,9 @@ export default function DatasetsPage() {
                       {rec.metadata?.parallel_en && (
                         <div className="space-y-1 pt-1 border-t border-[#272738]">
                           <div className="flex items-center justify-between">
-                            <p className="text-[10px] font-mono font-bold uppercase tracking-wider text-indigo-400">Parallel English Bitext:</p>
+                            <p className="text-[10px] font-mono font-bold uppercase tracking-wider text-[#f26625]">Parallel English Bitext:</p>
                             {rec.metadata.fidelity_metrics?.chrf_score && (
-                              <span className="text-[9px] font-mono text-indigo-300">
+                              <span className="text-[9px] font-mono text-[#f26625]">
                                 chrF++: {rec.metadata.fidelity_metrics.chrf_score}%
                               </span>
                             )}
@@ -1296,11 +1296,11 @@ export default function DatasetsPage() {
                   <Button
                     variant="outline"
                     size="sm"
-                    className="gap-2 border-[#272738] text-indigo-300 hover:text-white hover:bg-[#161622] rounded-full px-4 font-mono text-xs"
+                    className="gap-2 border-[#272738] text-[#f26625] hover:text-white hover:bg-[#161622] rounded-full px-4 font-mono text-xs"
                     onClick={() => handleViewHfCard(selected.id, selected.name)}
                     title="View & Export Hugging Face Dataset Card"
                   >
-                    <FileText className="h-3.5 w-3.5 text-[#818cf8]" />
+                    <FileText className="h-3.5 w-3.5 text-[#f26625]" />
                     HF Dataset Card
                   </Button>
 
@@ -1354,7 +1354,7 @@ export default function DatasetsPage() {
 
                   <Button
                     size="sm"
-                    className="gap-2 bg-[#6366f1] hover:bg-[#818cf8] text-white rounded-full px-5 font-mono text-xs font-semibold shadow-sm glow-indigo"
+                    className="gap-2 bg-[#f26625] hover:bg-[#f26625] text-white rounded-full px-5 font-mono text-xs font-semibold shadow-sm glow-yc"
                     disabled={downloadingIds.has(selected.id)}
                     onClick={() =>
                       handleDownload(selected.id, downloadFormat[selected.id] || 'jsonl')
@@ -1387,12 +1387,12 @@ export default function DatasetsPage() {
             <div className="flex items-center justify-between px-5 py-4 border-b border-[#272738] bg-[#0e0e14]">
               <div className="flex items-center gap-2.5">
                 <div className="p-1.5 rounded-lg bg-[#1e1b4b] border border-[#3730a3]">
-                  <FileText className="h-4 w-4 text-[#818cf8]" />
+                  <FileText className="h-4 w-4 text-[#f26625]" />
                 </div>
                 <div>
                   <h3 className="text-sm font-bold text-white font-mono flex items-center gap-2">
                     Hugging Face Dataset Card (README.md)
-                    <Badge variant="outline" className="text-[10px] bg-indigo-950/40 text-indigo-300 border-indigo-700/50">
+                    <Badge variant="outline" className="text-[10px] bg-[#f26625]/10 text-[#f26625] border-[#f26625]/50">
                       Hub Compliant
                     </Badge>
                   </h3>
@@ -1417,7 +1417,7 @@ export default function DatasetsPage() {
                     </>
                   ) : (
                     <>
-                      <Copy className="h-3.5 w-3.5 text-[#818cf8]" />
+                      <Copy className="h-3.5 w-3.5 text-[#f26625]" />
                       Copy README
                     </>
                   )}
@@ -1437,7 +1437,7 @@ export default function DatasetsPage() {
             <div className="p-5 overflow-y-auto flex-1 font-mono text-xs bg-[#0a0a0f]">
               {hfCardLoading ? (
                 <div className="flex flex-col items-center justify-center py-16 space-y-3">
-                  <Loader2 className="h-8 w-8 animate-spin text-[#6366f1]" />
+                  <Loader2 className="h-8 w-8 animate-spin text-[#f26625]" />
                   <p className="text-xs text-[#94a3b8]">Synthesizing Hugging Face Card with YAML frontmatter...</p>
                 </div>
               ) : (

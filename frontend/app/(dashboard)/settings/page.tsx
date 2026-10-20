@@ -23,7 +23,7 @@ interface HealthStatus {
 
 const PROVIDERS_CONFIG = [
   { name: 'AI Kosh (IndiaAI / Bhashini)', env: 'AIKOSH_API_KEY',   letter: 'AK', color: 'text-[#10b981] bg-[#10b981]/10 border-emerald-500/30' },
-  { name: 'Google Gemini',              env: 'GOOGLE_API_KEY',    letter: 'G',  color: 'text-[#6366f1] bg-[#6366f1]/10 border-indigo-500/30' },
+  { name: 'Google Gemini',              env: 'GOOGLE_API_KEY',    letter: 'G',  color: 'text-[#f26625] bg-[#f26625]/10 border-indigo-500/30' },
   { name: 'NVIDIA NIM',                 env: 'NVIDIA_API_KEY',    letter: 'N',  color: 'text-[#10b981] bg-[#10b981]/10 border-emerald-500/30' },
   { name: 'Anthropic Claude',           env: 'ANTHROPIC_API_KEY', letter: 'A',  color: 'text-[#f59e0b] bg-[#f59e0b]/10 border-amber-500/30' },
   { name: 'OpenAI',                     env: 'OPENAI_API_KEY',    letter: 'O',  color: 'text-emerald-400 bg-emerald-500/10 border-emerald-500/30' },
@@ -109,7 +109,7 @@ export default function SettingsPage() {
         <CardContent className="p-4 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
           <div className="flex items-center gap-3">
             {loading ? (
-              <Loader2 className="h-5 w-5 animate-spin text-[#6366f1]" />
+              <Loader2 className="h-5 w-5 animate-spin text-[#f26625]" />
             ) : infraStatus ? (
               <CheckCircle2 className="h-5 w-5 text-[#10b981]" />
             ) : (
@@ -136,7 +136,7 @@ export default function SettingsPage() {
           </div>
           <a href={docsUrl} target="_blank" rel="noopener noreferrer">
             <Button variant="outline" size="sm" className="h-7 text-xs rounded-full border-[#272738] text-[#94a3b8] hover:text-white hover:bg-[#161622] hover:border-[#3b3b52]">
-              <ExternalLink className="h-3 w-3 mr-1 text-[#6366f1]" />API Reference
+              <ExternalLink className="h-3 w-3 mr-1 text-[#f26625]" />API Reference
             </Button>
           </a>
         </CardContent>
@@ -186,7 +186,7 @@ export default function SettingsPage() {
                 <div key={label} className="flex items-center justify-between px-5 py-3.5">
                   <div className="flex items-center gap-3.5">
                     <div className="h-9 w-9 rounded-xl bg-[#161622] border border-[#272738] flex items-center justify-center">
-                      <Icon className="h-4.5 w-4.5 text-[#6366f1]" />
+                      <Icon className="h-4.5 w-4.5 text-[#f26625]" />
                     </div>
                     <div>
                       <p className="text-xs font-bold text-white flex items-center gap-2">
@@ -294,7 +294,7 @@ export default function SettingsPage() {
                 <div key={env} className="flex items-center justify-between px-5 py-3.5">
                   <div className="flex items-center gap-3.5">
                     <div className="h-9 w-9 rounded-xl bg-[#161622] border border-[#272738] flex items-center justify-center">
-                      <Icon className="h-4.5 w-4.5 text-[#6366f1]" />
+                      <Icon className="h-4.5 w-4.5 text-[#f26625]" />
                     </div>
                     <div>
                       <p className="text-xs font-bold text-white">{label}</p>
@@ -350,7 +350,7 @@ export default function SettingsPage() {
                 <div key={env} className="flex items-center justify-between px-5 py-3.5">
                   <div className="flex items-center gap-3.5">
                     <div className="h-9 w-9 rounded-xl bg-[#161622] border border-[#272738] flex items-center justify-center">
-                      <Icon className="h-4.5 w-4.5 text-[#6366f1]" />
+                      <Icon className="h-4.5 w-4.5 text-[#f26625]" />
                     </div>
                     <div>
                       <p className="text-xs font-bold text-white">{label}</p>

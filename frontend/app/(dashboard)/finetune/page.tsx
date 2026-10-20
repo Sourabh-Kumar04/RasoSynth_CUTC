@@ -259,10 +259,10 @@ function DetailPane({ job, logs, lossHistory, onCancel, onCopy, onReconnect, log
 
           {job.output_path && (
             <div className="flex items-center gap-2">
-              <code className="text-xs font-mono bg-[#0a0a0f] text-indigo-300 px-2 py-0.5 rounded-lg border border-[#272738] truncate max-w-[260px]">
+              <code className="text-xs font-mono bg-[#0a0a0f] text-[#f26625] px-2 py-0.5 rounded-md border border-[#272738] truncate max-w-[260px]">
                 {job.output_path}
               </code>
-              <Button variant="ghost" size="icon" className="h-6 w-6 shrink-0 rounded-full text-[#94a3b8] hover:text-white"
+              <Button variant="ghost" size="icon" className="h-6 w-6 shrink-0 rounded-md text-[#94a3b8] hover:text-white"
                 onClick={() => onCopy(job.output_path!)}>
                 <Copy className="h-3 w-3" />
               </Button>
@@ -271,12 +271,12 @@ function DetailPane({ job, logs, lossHistory, onCancel, onCopy, onReconnect, log
         </CardContent>
       </Card>
 
-      <Card className="bg-[#12121a] border-[#272738] rounded-2xl card-shadow">
+      <Card className="bg-[#12121a] border-[#272738] rounded-md card-shadow">
         <CardHeader className="pb-2 border-b border-[#272738]">
           <div className="flex items-center justify-between">
             <CardTitle className="text-sm font-bold text-white">Training Execution Log</CardTitle>
             {job.status === 'running' && (
-              <Button variant="ghost" size="sm" className="h-7 text-xs rounded-full text-[#6366f1] hover:bg-[#161622]"
+              <Button variant="ghost" size="sm" className="h-7 text-xs rounded-md text-[#f26625] hover:bg-[#161622]"
                 onClick={() => onReconnect(job.id)}>
                 <RefreshCw className="h-3 w-3 mr-1" />Reconnect
               </Button>
@@ -919,7 +919,7 @@ export default function FineTunePage() {
     <Suspense
       fallback={
         <div className="flex items-center justify-center min-h-[60vh]">
-          <Loader2 className="h-8 w-8 animate-spin text-[#6366f1]" />
+          <Loader2 className="h-8 w-8 animate-spin text-[#f26625]" />
         </div>
       }
     >

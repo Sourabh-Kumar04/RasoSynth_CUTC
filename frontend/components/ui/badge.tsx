@@ -55,9 +55,9 @@ const StatusBadge = ({
   const colorClass = statusColors[status as keyof typeof statusColors] || 'bg-slate-400'
 
   return (
-    <div className={clsx('inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-[#161622] border border-[#3b3b52]', className)}>
+    <div className={clsx('inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-sm bg-[#161622] border border-[#272738]', className)}>
       <span className={clsx('h-2 w-2 rounded-full', colorClass)} />
-      <span className="text-[11px] font-mono font-medium text-[#6366f1] capitalize">{label || status}</span>
+      <span className="text-[11px] font-mono font-medium text-[#f26625] capitalize">{label || status}</span>
     </div>
   )
 }

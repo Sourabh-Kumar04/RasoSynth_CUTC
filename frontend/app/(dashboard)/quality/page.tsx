@@ -186,7 +186,7 @@ export default function QualityDashboardPage() {
                   value={judgeInstruction}
                   onChange={(e) => setJudgeInstruction(e.target.value)}
                   rows={3}
-                  className="w-full p-2.5 rounded-xl bg-[#0a0a0f] border border-[#272738] text-white focus:outline-none focus:border-[#6366f1] text-xs resize-none"
+                  className="w-full p-2.5 rounded-xl bg-[#0a0a0f] border border-[#272738] text-white focus:outline-none focus:border-[#f26625] text-xs resize-none"
                 />
               </div>
               <div>
@@ -195,7 +195,7 @@ export default function QualityDashboardPage() {
                   value={judgeResponse}
                   onChange={(e) => setJudgeResponse(e.target.value)}
                   rows={3}
-                  className="w-full p-2.5 rounded-xl bg-[#0a0a0f] border border-[#272738] text-white focus:outline-none focus:border-[#6366f1] text-xs resize-none"
+                  className="w-full p-2.5 rounded-xl bg-[#0a0a0f] border border-[#272738] text-white focus:outline-none focus:border-[#f26625] text-xs resize-none"
                 />
               </div>
             </div>
@@ -319,7 +319,7 @@ export default function QualityDashboardPage() {
 
                   {/* Centroids */}
                   {densityResult?.clusters?.map((c: any, idx: number) => {
-                    const colors = ["#6366f1", "#10b981", "#f59e0b", "#ec4899"];
+                    const colors = ["#f26625", "#10b981", "#f59e0b", "#ec4899"];
                     const color = colors[idx % colors.length];
                     return (
                       <g key={`cent-${c.cluster_id}`}>
@@ -343,7 +343,7 @@ export default function QualityDashboardPage() {
 
                   {/* Points */}
                   {densityResult?.points?.map((pt: any) => {
-                    const colors = ["#6366f1", "#10b981", "#f59e0b", "#ec4899"];
+                    const colors = ["#f26625", "#10b981", "#f59e0b", "#ec4899"];
                     const color = colors[pt.cluster_id % colors.length];
                     const isSelected = selectedPoint?.id === pt.id;
 
@@ -411,7 +411,7 @@ export default function QualityDashboardPage() {
                   </h4>
                   <div className="space-y-2">
                     {densityResult?.clusters?.map((c: any, idx: number) => {
-                      const colors = ["#6366f1", "#10b981", "#f59e0b", "#ec4899"];
+                      const colors = ["#f26625", "#10b981", "#f59e0b", "#ec4899"];
                       const color = colors[idx % colors.length];
                       return (
                         <div

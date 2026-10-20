@@ -149,7 +149,7 @@ export default function ObservabilityPage() {
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-xs text-[#94a3b8] font-mono uppercase">System Status</p>
-                <p className="text-xl font-bold font-mono text-[#6366f1] capitalize mt-0.5">
+                <p className="text-xl font-bold font-mono text-[#f26625] capitalize mt-0.5">
                   {health?.status || 'healthy'}
                 </p>
               </div>
@@ -164,12 +164,12 @@ export default function ObservabilityPage() {
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-xs text-[#94a3b8] font-mono uppercase">Database</p>
-                <p className="text-xl font-bold font-mono text-[#6366f1] mt-0.5">
+                <p className="text-xl font-bold font-mono text-[#f26625] mt-0.5">
                   {health?.database !== false ? 'Connected' : 'Disconnected'}
                 </p>
               </div>
               <div className="h-10 w-10 rounded-xl bg-[#161622] border border-[#3b3b52] flex items-center justify-center">
-                <Database className="h-5 w-5 text-[#6366f1]" />
+                <Database className="h-5 w-5 text-[#f26625]" />
               </div>
             </div>
           </CardContent>
@@ -179,12 +179,12 @@ export default function ObservabilityPage() {
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-xs text-[#94a3b8] font-mono uppercase">Redis Cache</p>
-                <p className="text-xl font-bold font-mono text-[#6366f1] mt-0.5">
+                <p className="text-xl font-bold font-mono text-[#f26625] mt-0.5">
                   {health?.redis !== false ? 'Connected' : 'Disconnected'}
                 </p>
               </div>
               <div className="h-10 w-10 rounded-xl bg-[#161622] border border-[#3b3b52] flex items-center justify-center">
-                <Server className="h-5 w-5 text-[#6366f1]" />
+                <Server className="h-5 w-5 text-[#f26625]" />
               </div>
             </div>
           </CardContent>
@@ -194,7 +194,7 @@ export default function ObservabilityPage() {
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-xs text-[#94a3b8] font-mono uppercase">Services</p>
-                <p className="text-xl font-bold font-mono text-[#6366f1] mt-0.5">
+                <p className="text-xl font-bold font-mono text-[#f26625] mt-0.5">
                   2/2 Online
                 </p>
               </div>
@@ -226,7 +226,7 @@ export default function ObservabilityPage() {
               <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
                 <div className="flex items-center justify-between p-3.5 rounded-xl bg-[#0a0a0f] border border-[#272738]">
                   <div className="flex items-center gap-3">
-                    <Database className="h-4 w-4 text-[#818cf8]" />
+                    <Database className="h-4 w-4 text-[#f26625]" />
                     <span className="text-xs font-bold text-white">PostgreSQL Database</span>
                   </div>
                   <span className="text-[10px] font-mono font-bold px-2.5 py-0.5 rounded-full bg-emerald-950/40 text-emerald-400 border border-emerald-500/30">
@@ -235,7 +235,7 @@ export default function ObservabilityPage() {
                 </div>
                 <div className="flex items-center justify-between p-3.5 rounded-xl bg-[#0a0a0f] border border-[#272738]">
                   <div className="flex items-center gap-3">
-                    <Server className="h-4 w-4 text-[#818cf8]" />
+                    <Server className="h-4 w-4 text-[#f26625]" />
                     <span className="text-xs font-bold text-white">Redis In-Memory Cache</span>
                   </div>
                   <span className="text-[10px] font-mono font-bold px-2.5 py-0.5 rounded-full bg-emerald-950/40 text-emerald-400 border border-emerald-500/30">
@@ -262,8 +262,8 @@ export default function ObservabilityPage() {
             <HealthMonitor />
             <Card className="border-[#272738] bg-[#12121a] rounded-2xl card-shadow">
               <CardHeader className="pb-3 border-b border-[#272738]">
-                <CardTitle className="flex items-center gap-2 text-sm font-bold text-[#6366f1]">
-                  <Activity className="h-4 w-4 text-[#6366f1]" />
+                <CardTitle className="flex items-center gap-2 text-sm font-bold text-[#f26625]">
+                  <Activity className="h-4 w-4 text-[#f26625]" />
                   System Information
                 </CardTitle>
               </CardHeader>
@@ -277,7 +277,7 @@ export default function ObservabilityPage() {
                   </div>
                   <div className="p-3 border border-[#272738] bg-[#0a0a0f] rounded-xl flex items-center justify-between">
                     <span className="text-xs text-[#94a3b8]">Last Updated</span>
-                    <span className="font-mono text-xs font-bold text-[#6366f1]">
+                    <span className="font-mono text-xs font-bold text-[#f26625]">
                       {new Date().toLocaleTimeString()}
                     </span>
                   </div>
@@ -291,12 +291,12 @@ export default function ObservabilityPage() {
         <TabsContent value="metrics" className="mt-6">
           <Card className="border-[#272738] bg-[#12121a] rounded-2xl card-shadow">
             <CardHeader className="pb-3 border-b border-[#272738]">
-              <CardTitle className="text-sm font-bold text-[#6366f1]">Prometheus Telemetry Stream</CardTitle>
+              <CardTitle className="text-sm font-bold text-[#f26625]">Prometheus Telemetry Stream</CardTitle>
             </CardHeader>
             <CardContent className="p-4">
               {metricsText ? (
                 <ScrollArea className="h-[400px] bg-[#0a0a0f] p-3 rounded-xl border border-[#272738]">
-                  <pre className="text-[11px] font-mono text-[#6366f1] whitespace-pre-wrap">
+                  <pre className="text-[11px] font-mono text-[#f26625] whitespace-pre-wrap">
                     {metricsText.slice(0, 5000)}
                     {metricsText.length > 5000 && '... (truncated)'}
                   </pre>
@@ -304,7 +304,7 @@ export default function ObservabilityPage() {
               ) : (
                 <div className="p-12 text-center text-[#94a3b8] bg-[#0a0a0f] rounded-xl border border-[#272738]">
                   <Activity className="h-10 w-10 mx-auto mb-3 text-[#64748b]" />
-                  <p className="text-xs font-mono font-bold text-[#6366f1]">Live Metrics Ready</p>
+                  <p className="text-xs font-mono font-bold text-[#f26625]">Live Metrics Ready</p>
                   <p className="text-[11px] font-mono mt-1">Metrics available at /metrics endpoint</p>
                 </div>
               )}
@@ -387,7 +387,7 @@ export default function ObservabilityPage() {
             <Card className="border-[#272738] bg-[#12121a] rounded-2xl card-shadow">
               <CardHeader className="pb-3 border-b border-[#272738]">
                 <CardTitle className="flex items-center gap-2 text-sm font-bold text-white">
-                  <Shield className="h-4 w-4 text-[#6366f1]" />
+                  <Shield className="h-4 w-4 text-[#f26625]" />
                   Security Features
                 </CardTitle>
               </CardHeader>

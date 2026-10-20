@@ -6,33 +6,19 @@ import {
   Sparkles,
   Settings2,
   Play,
-  Save,
-  Copy,
-  ChevronRight,
   Plus,
   X,
-  Brain,
-  Database,
-  Zap,
-  Shield,
-  ArrowRight,
+  ChevronDown,
+  ChevronUp,
   Loader2,
-  CheckCircle2,
-  AlertCircle,
-  Layers,
-  Workflow,
-  Search,
   Check,
-  RotateCcw,
+  CheckCircle2,
+  ExternalLink,
+  Layers,
 } from 'lucide-react'
-import { motion, AnimatePresence } from 'framer-motion'
 import { clsx } from 'clsx'
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
-import { Badge } from '@/components/ui/badge'
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
-import { ScrollArea } from '@/components/ui/scroll-area'
 import { useRouter, useSearchParams } from 'next/navigation'
 import { api } from '@/lib/api/client'
 
@@ -40,9 +26,9 @@ import { api } from '@/lib/api/client'
 const INDUSTRY_PRESETS = [
   {
     id: 'aikosh-tax',
-    title: 'AI Kosh (GST & Indian Tax Law)',
+    title: 'AI Kosh (GST & Indian Tax)',
     domain: 'Finance & Taxation (AI Kosh)',
-    source: 'AI Kosh (IndiaAI / Bhashini)',
+    source: 'AI Kosh',
     prompt: 'Synthesize 20,000 multi-turn legal and financial audit dialogues from Indian GST statutes, Income Tax Appellate Tribunal decisions, and Section 16(4) input-tax-credit reconciliation case studies with grounded citations.',
     type: 'sft',
     language: 'hinglish',
@@ -54,9 +40,9 @@ const INDUSTRY_PRESETS = [
   },
   {
     id: 'aerospace-airfoil',
-    title: 'Aerospace & Aeroplane Design (FAR Part 25)',
+    title: 'Aerospace & Aerodynamics',
     domain: 'Aerospace Engineering & Aerodynamics',
-    source: 'NASA Glenn & FAA Library',
+    source: 'NASA Glenn & FAA',
     prompt: 'Synthesize 15,000 multi-stage aeronautical engineering and transonic airfoil design QA dialogues based on NASA supercritical airfoil wind-tunnel data, compressible Navier-Stokes flow regimes, and FAA FAR Part 25 airworthiness certification specifications.',
     type: 'reasoning',
     language: 'en',
@@ -68,7 +54,7 @@ const INDUSTRY_PRESETS = [
   },
   {
     id: 'bhashini-multilingual',
-    title: 'Bhashini Indic Multilingual Corpus',
+    title: 'Bhashini Indic Corpus',
     domain: 'Indic Multilingual (Bhashini)',
     source: 'Bhashini Data Vatika',
     prompt: 'Construct high-quality parallel instruction-tuning dialogues across Hindi, Tamil, Telugu, and English covering healthcare and public governance with script validation.',
@@ -82,9 +68,9 @@ const INDUSTRY_PRESETS = [
   },
   {
     id: 'python-codegen',
-    title: 'Python Algorithmic Code Synthesis',
+    title: 'Python Code Synthesis',
     domain: 'Python Math & Code',
-    source: 'HuggingFace & GitHub',
+    source: 'GitHub & HF',
     prompt: 'Generate 15,000 competitive programming and algorithmic Python solutions with comprehensive test suites, edge case validations, and asymptotic time-space analysis.',
     type: 'coding',
     language: 'en',
@@ -93,7 +79,7 @@ const INDUSTRY_PRESETS = [
   },
   {
     id: 'clinical-reasoning',
-    title: 'Medical Clinical Reasoning & Trajectories',
+    title: 'Medical Clinical Reasoning',
     domain: 'Medical Reasoning',
     source: 'PubMed & Open Data',
     prompt: 'Extract step-by-step diagnostic reasoning trajectories from PubMed open clinical case studies with contraindication warnings and differential diagnosis verification.',
@@ -138,9 +124,10 @@ function StudioContent() {
   const [isAutoDetecting, setIsAutoDetecting] = useState(false)
   const [discoveredSources, setDiscoveredSources] = useState<Array<{ name: string; url?: string; source_type?: string }>>([])
   const [autoDetectNotice, setAutoDetectNotice] = useState<string | null>(null)
-  const [optimizationStatus, setOptimizationStatus] = useState<string>('Refined (Saved 42% tokens)')
   const [activePreset, setActivePreset] = useState<string>('aikosh-tax')
   const [idealSamples, setIdealSamples] = useState<Array<{ instruction: string; response: string }>>([])
+  const [showAdvanced, setShowAdvanced] = useState(false)
+  const [showAnchors, setShowAnchors] = useState(false)
 
   // Live Tokenizer Fertility Estimation
   const isIndicOrHinglish = ['hi', 'hinglish', 'indic_multilingual', 'ta', 'te', 'bn', 'mr', 'gu', 'kn', 'ml', 'pa'].includes(language)
@@ -148,22 +135,18 @@ function StudioContent() {
   const estSarvamFertility = isIndicOrHinglish ? (scriptMode === 'romanized' || language === 'hinglish' ? 1.32 : 1.28) : 1.24
   const estSavings = Math.round((1 - estSarvamFertility / estLlama3Fertility) * 100)
 
-  // Dynamic entity & technical token extractor (Deterministic syntax pass)
+  // Dynamic entity & technical token extractor
   const extractSyntacticInvariants = useCallback((text: string): string[] => {
     const terms = new Set<string>()
-    // 1. Regulatory / statutory citations (Section 16(4), FAR Part 25, Article 21, NACA 0012, etc.)
     const sectionMatches = text.match(/\b(?:Section|Sec\.|FAR\s*Part|FAR|Article|Rule|Order|NACA|ISO|IEEE)\s*(?:§\s*)?[A-Za-z0-9\(\)\.\-]+/gi) || []
     sectionMatches.forEach(m => terms.add(m.trim()))
 
-    // 2. Formulas & mathematical / complexity notation
     const formulaMatches = text.match(/\b(?:O\([A-Za-z0-9\s\+\*\^\log]+\)|Mach\s*\d+(?:\.\d+)?|L\/D|PK\/PD|Navier-Stokes|Reynolds)/gi) || []
     formulaMatches.forEach(m => terms.add(m.trim()))
 
-    // 3. Quoted terms
     const quoteMatches = text.match(/["']([^"']{2,40})["']/g) || []
     quoteMatches.forEach(m => terms.add(m.replace(/["']/g, '').trim()))
 
-    // 4. Uppercase domain acronyms (2 to 6 letters, excluding common stop words)
     const stopWords = new Set(['AND', 'THE', 'FOR', 'ARE', 'NOT', 'BUT', 'ALL', 'NEW', 'SET', 'OUT', 'CAN', 'GET', 'USE', 'HOW', 'WHY', 'WHO', 'YES', 'NO'])
     const acronymMatches = text.match(/\b[A-Z]{2,6}(?:-[A-Z0-9]+)?\b/g) || []
     acronymMatches.forEach(m => {
@@ -180,7 +163,6 @@ function StudioContent() {
     setIsAutoDetecting(true)
     setAutoDetectNotice(null)
 
-    // 1. Immediate syntactic invariants
     const localTerms = extractSyntacticInvariants(`${targetDomain} ${prompt}`)
     const currentList = preservedTermsInput
       .split(',')
@@ -189,14 +171,12 @@ function StudioContent() {
     const mergedTerms = Array.from(new Set([...currentList, ...localTerms]))
 
     try {
-      // 2. Dynamic Discovery Pipeline & LLM Intent Extractor API call
       const previewRes = await api.previewJobSources({
         query: queryText,
         max_sources: 6,
       })
 
       if (previewRes) {
-        // Collect entities inferred by the LLM
         const intentEntities: string[] = previewRes.query_plan?.intent?.key_entities || []
         const dynamicDomain = previewRes.query_plan?.intent?.domain
         if (dynamicDomain && (!targetDomain || targetDomain === 'Finance & Taxation (AI Kosh)')) {
@@ -215,16 +195,15 @@ function StudioContent() {
         }
 
         setAutoDetectNotice(
-          `Auto-discovered ${allTerms.length} invariant terms & ${previewRes.sources?.length || 0} authority sources`
+          `Discovered ${allTerms.length} invariant terms · ${previewRes.sources?.length || 0} authority sources`
         )
       } else {
         setPreservedTermsInput(mergedTerms.join(', '))
-        setAutoDetectNotice(`Extracted ${mergedTerms.length} invariant terms from syntax`)
+        setAutoDetectNotice(`Extracted ${mergedTerms.length} invariant terms`)
       }
     } catch {
-      // Fallback to robust syntactic extractor
       setPreservedTermsInput(mergedTerms.join(', '))
-      setAutoDetectNotice(`Extracted ${mergedTerms.length} invariant terms from syntax`)
+      setAutoDetectNotice(`Extracted ${mergedTerms.length} invariant terms`)
     } finally {
       setIsAutoDetecting(false)
     }
@@ -277,13 +256,11 @@ function StudioContent() {
       }
 
       const response = await api.createJob(payload)
-
       if (response && response.id) {
         router.push(`/orchestration?job=${response.id}`)
       }
     } catch (err: any) {
       console.error('Job creation failed:', err)
-      // If offline, redirect to orchestration anyway so mock mode takes over seamlessly
       router.push('/orchestration')
     } finally {
       setIsSubmitting(false)
@@ -291,97 +268,68 @@ function StudioContent() {
   }
 
   return (
-    <div className="w-full max-w-7xl mx-auto space-y-6">
-      
-      {/* Studio Header */}
+    <div className="w-full max-w-7xl mx-auto space-y-8">
+      {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-[#272738] pb-5">
         <div>
           <div className="flex items-center gap-2 mb-1">
-            <span className="px-2 py-0.5 rounded text-[10px] font-mono font-bold bg-[#1a1a24] border border-[#272738] text-[#10b981] uppercase tracking-wider">
-              STUDIO WORKSPACE
+            <span className="px-2 py-0.5 rounded text-[10px] font-mono font-bold bg-[#1a1a24] border border-[#272738] text-[#f26625] uppercase tracking-wider">
+              DATASET STUDIO
             </span>
-            <h1 className="text-xl sm:text-2xl font-bold tracking-tight text-white font-display">
-              AI Dataset Generation Studio
+            <h1 className="text-2xl font-bold tracking-tight text-white font-display">
+              Autonomous Dataset Studio
             </h1>
           </div>
           <p className="text-xs text-[#94a3b8]">
-            Configure grounded multi-source crawling, AST extraction pipelines, and curriculum coverage matrices
+            Synthesize verified fine-tuning and reasoning datasets grounded in authoritative corpora
           </p>
         </div>
 
-        <div className="flex items-center gap-2.5">
-          <Button
-            onClick={handleGenerate}
-            disabled={isSubmitting}
-            className="bg-[#f26625] hover:bg-[#de581a] border border-[#ea580c] text-white font-mono text-xs font-bold h-8 px-4 shadow-sm glow-yc flex items-center gap-2 rounded-md"
-          >
-            {isSubmitting ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Play className="w-3.5 h-3.5 fill-current" />}
-            <span>Launch Pipeline ⌘↵</span>
-          </Button>
-        </div>
+        <Button
+          onClick={handleGenerate}
+          disabled={isSubmitting}
+          className="bg-[#f26625] hover:bg-[#de581a] border border-[#ea580c] text-white font-mono text-xs font-bold h-9 px-5 shadow-sm glow-yc flex items-center gap-2 rounded-md self-start sm:self-auto"
+        >
+          {isSubmitting ? <Loader2 className="w-4 h-4 animate-spin" /> : <Play className="w-3.5 h-3.5 fill-current" />}
+          <span>Launch Pipeline</span>
+        </Button>
       </div>
 
       {/* 1-Click Industry Benchmark Presets */}
-      <div className="space-y-2">
+      <div className="space-y-3">
         <div className="flex items-center justify-between">
           <span className="text-xs font-mono font-bold uppercase tracking-wider text-white flex items-center gap-1.5">
             <Sparkles className="w-3.5 h-3.5 text-[#f26625]" />
-            1-Click Industry Benchmark Presets
+            1-Click Industry Presets
           </span>
-          <span className="text-[11px] font-mono text-[#10b981]">Verified Grounded Schemas</span>
+          <span className="text-[11px] font-mono text-[#10b981]">Grounded Schemas</span>
         </div>
 
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-3">
           {INDUSTRY_PRESETS.map((preset) => {
             const isSelected = activePreset === preset.id
             return (
-              <div
+              <button
                 key={preset.id}
+                type="button"
                 onClick={() => {
                   setActivePreset(preset.id)
                   setTargetDomain(preset.domain)
                   setPrompt(preset.prompt)
                   setDatasetSize(preset.size)
                   setDatasetType(preset.type)
-                  if ((preset as any).language) {
-                    setLanguage((preset as any).language)
-                  }
-                  if ((preset as any).scriptMode) {
-                    setScriptMode((preset as any).scriptMode)
-                  }
-                  if ((preset as any).formalityRegister) {
-                    setFormalityRegister((preset as any).formalityRegister)
-                  }
+                  if ((preset as any).language) setLanguage((preset as any).language)
+                  if ((preset as any).scriptMode) setScriptMode((preset as any).scriptMode)
+                  if ((preset as any).formalityRegister) setFormalityRegister((preset as any).formalityRegister)
                   if ((preset as any).preservedTerms) {
                     setPreservedTermsInput(((preset as any).preservedTerms || []).join(', '))
                   }
                   if ((preset as any).parallelBilingual !== undefined) {
                     setParallelBilingual(Boolean((preset as any).parallelBilingual))
                   }
-                  if ((preset as any).regionalDialect) {
-                    setRegionalDialect((preset as any).regionalDialect)
-                  }
-                  if ((preset as any).numberFormatting) {
-                    setNumberFormatting((preset as any).numberFormatting)
-                  }
-                  if ((preset as any).chatNoiseLevel !== undefined) {
-                    setChatNoiseLevel(Number((preset as any).chatNoiseLevel))
-                  }
-                  if ((preset as any).maskIndianPii !== undefined) {
-                    setMaskIndianPii(Boolean((preset as any).maskIndianPii))
-                  }
-                  if ((preset as any).speechNormalization !== undefined) {
-                    setSpeechNormalization(Boolean((preset as any).speechNormalization))
-                  }
-                  if ((preset as any).generateDpoRefusalPairs !== undefined) {
-                    setGenerateDpoRefusalPairs(Boolean((preset as any).generateDpoRefusalPairs))
-                  }
-                  if ((preset as any).turnLanguageDrift !== undefined) {
-                    setTurnLanguageDrift(Boolean((preset as any).turnLanguageDrift))
-                  }
                 }}
                 className={clsx(
-                  'p-3 rounded-md border cursor-pointer transition-all space-y-2 relative overflow-hidden',
+                  'p-3.5 rounded-md border text-left transition-all space-y-2 relative overflow-hidden',
                   isSelected
                     ? 'bg-[#161622] border-[#f26625] shadow-sm glow-yc'
                     : 'bg-[#12121a] border-[#272738] hover:border-[#f26625]/40 hover:bg-[#161622]/60'
@@ -392,563 +340,300 @@ function StudioContent() {
                     {preset.source}
                   </span>
                   <span className="text-[10px] font-mono text-[#10b981] font-semibold">
-                    {preset.size.toLocaleString()} rows
+                    {preset.size.toLocaleString()}
                   </span>
                 </div>
                 <h4 className="text-xs font-semibold text-white truncate">{preset.title}</h4>
-                <p className="text-[11px] text-[#94a3b8] line-clamp-2">{preset.prompt}</p>
-                <div className="flex items-center gap-1 pt-1 text-[10px] font-mono text-[#94a3b8]">
-                  {preset.sources.map((s, i) => (
-                    <span key={i} className="px-1.5 py-0.2 rounded-sm bg-[#0e0e13] border border-[#272738]">
-                      {s}
-                    </span>
-                  ))}
+                <div className="flex items-center gap-1 text-[10px] font-mono text-[#94a3b8]">
+                  <span className="px-1.5 py-0.5 rounded-sm bg-[#0a0a0f] border border-[#272738] uppercase">
+                    {preset.type}
+                  </span>
+                  <span className="px-1.5 py-0.5 rounded-sm bg-[#0a0a0f] border border-[#272738]">
+                    {preset.language}
+                  </span>
                 </div>
-              </div>
+              </button>
             )
           })}
         </div>
       </div>
 
       {/* Main Studio Controls */}
-      <div className="grid grid-cols-1 xl:grid-cols-12 gap-5">
+      <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
         
-        {/* Left 7 Columns: Intent & Query Optimizer */}
-        <div className="xl:col-span-7 p-4 rounded-md bg-[#12121a] border border-[#272738] space-y-4">
-          <div className="flex items-center justify-between pb-2 border-b border-[#1c1c28]">
+        {/* Left Column: Intent, Prompt & Grounding Invariants */}
+        <div className="lg:col-span-7 p-5 rounded-md bg-[#12121a] border border-[#272738] space-y-5">
+          <div className="flex items-center justify-between pb-3 border-b border-[#1c1c28]">
             <div className="flex items-center space-x-2">
               <FlaskConical className="w-4 h-4 text-[#f26625]" />
               <h3 className="text-xs font-bold font-mono uppercase tracking-wider text-white">
-                Natural Language Intent &amp; Invariant Discovery
+                Dataset Intent &amp; Scope
               </h3>
             </div>
-            <span className="text-[11px] font-mono text-[#10b981] flex items-center gap-1">
-              <span className="w-1.5 h-1.5 rounded-full bg-[#10b981] animate-pulse" />
-              {optimizationStatus}
-            </span>
+            <div className="inline-flex p-0.5 rounded bg-[#0a0a0f] border border-[#272738]">
+              <button
+                type="button"
+                onClick={() => setGenerationMode('grounded')}
+                className={clsx(
+                  'px-3 py-1 rounded text-xs font-mono transition-all',
+                  generationMode === 'grounded'
+                    ? 'bg-[#1a1a24] text-white font-semibold border border-[#272738] shadow-sm'
+                    : 'text-[#94a3b8] hover:text-white'
+                )}
+              >
+                Grounded Source
+              </button>
+              <button
+                type="button"
+                onClick={() => setGenerationMode('synthetic')}
+                className={clsx(
+                  'px-3 py-1 rounded text-xs font-mono transition-all',
+                  generationMode === 'synthetic'
+                    ? 'bg-[#1a1a24] text-white font-semibold border border-[#272738] shadow-sm'
+                    : 'text-[#94a3b8] hover:text-white'
+                )}
+              >
+                Pure Synthetic
+              </button>
+            </div>
           </div>
 
-          <div className="space-y-3">
+          <div className="space-y-4">
             <div>
-              <label className="text-[10px] font-mono uppercase text-[#94a3b8] block mb-1">
+              <label className="text-[10px] font-mono uppercase text-[#94a3b8] block mb-1.5">
                 Target Domain or Repository Topic
               </label>
               <Input
                 value={targetDomain}
                 onChange={(e) => setTargetDomain(e.target.value)}
                 className="bg-[#0a0a0f] border-[#272738] focus:border-[#f26625] text-xs font-mono text-white rounded-md"
-                placeholder="e.g. Aerospace Engineering & Aerodynamics or Finance & Taxation"
+                placeholder="e.g. Aerospace Engineering or Finance & Taxation"
               />
             </div>
 
             <div>
-              <label className="text-[10px] font-mono uppercase text-[#94a3b8] block mb-1">
-                Specification Prompt &amp; Extraction Rules
+              <label className="text-[10px] font-mono uppercase text-[#94a3b8] block mb-1.5">
+                Specification Prompt
               </label>
               <textarea
                 value={prompt}
                 onChange={(e) => setPrompt(e.target.value)}
-                rows={5}
+                rows={4}
                 className="w-full bg-[#0a0a0f] border border-[#272738] focus:border-[#f26625] rounded-md p-3 text-xs font-mono text-white placeholder:text-[#94a3b8] focus:outline-none transition-colors resize-none"
-                placeholder="Describe the exact instruction schema, personas, and verification checks..."
+                placeholder="Describe instruction schema, target personas, and validation constraints..."
               />
               <div className="flex flex-wrap items-center justify-between gap-2 pt-2">
-                <div className="flex items-center gap-2">
-                  <Button
-                    type="button"
-                    size="sm"
-                    variant="outline"
-                    onClick={handleAutoDetect}
-                    disabled={isAutoDetecting}
-                    className="h-7 px-3 text-xs font-mono font-bold border-[#f26625]/40 text-[#f26625] bg-[#f26625]/10 hover:bg-[#f26625]/20 rounded-md flex items-center gap-1.5 glow-yc transition-all"
-                  >
-                    {isAutoDetecting ? <Loader2 className="w-3.5 h-3.5 animate-spin text-[#f26625]" /> : <Sparkles className="w-3.5 h-3.5 text-[#f26625]" />}
-                    <span>{isAutoDetecting ? 'Discovering Invariants & Sources…' : 'Auto-Detect Terms & Sources (AI)'}</span>
-                  </Button>
-                  {autoDetectNotice && (
-                    <span className="text-[11px] font-mono text-emerald-400 flex items-center gap-1 animate-fade-in">
-                      <Check className="w-3 h-3 text-emerald-400" />
-                      {autoDetectNotice}
-                    </span>
-                  )}
-                </div>
-                <span className="text-[10px] font-mono text-[#94a3b8]">Zero-Mock Live Discovery</span>
-              </div>
-            </div>
-
-            {/* Few-Shot Ideal Anchor Examples */}
-            <div className="space-y-2 pt-2 border-t border-[#1c1c28]">
-              <div className="flex items-center justify-between">
-                <div>
-                  <span className="text-xs font-semibold text-white flex items-center gap-1.5">
-                    <Sparkles className="w-3.5 h-3.5 text-[#10b981]" />
-                    Few-Shot Anchor Examples (Optional)
+                <Button
+                  type="button"
+                  size="sm"
+                  variant="outline"
+                  onClick={handleAutoDetect}
+                  disabled={isAutoDetecting}
+                  className="h-8 px-3.5 text-xs font-mono font-bold border-[#f26625]/40 text-[#f26625] bg-[#f26625]/10 hover:bg-[#f26625]/20 rounded-md flex items-center gap-1.5 glow-yc transition-all"
+                >
+                  {isAutoDetecting ? <Loader2 className="w-3.5 h-3.5 animate-spin text-[#f26625]" /> : <Sparkles className="w-3.5 h-3.5 text-[#f26625]" />}
+                  <span>{isAutoDetecting ? 'Discovering Invariants…' : 'Auto-Detect Terms & Sources'}</span>
+                </Button>
+                {autoDetectNotice && (
+                  <span className="text-[11px] font-mono text-emerald-400 flex items-center gap-1">
+                    <Check className="w-3.5 h-3.5 text-emerald-400" />
+                    {autoDetectNotice}
                   </span>
-                  <span className="text-[10px] font-mono text-[#94a3b8] block">
-                    Anchor crawling, quality filtering, and generation with 1-3 target output demonstrations
-                  </span>
-                </div>
-                {idealSamples.length < 3 && (
-                  <Button
-                    type="button"
-                    variant="outline"
-                    size="sm"
-                    onClick={() => setIdealSamples([...idealSamples, { instruction: '', response: '' }])}
-                    className="h-7 px-2.5 text-[11px] font-mono border-[#272738] bg-[#0e0e13] hover:bg-[#1a1a24] text-[#818cf8] flex items-center gap-1"
-                  >
-                    <Plus className="w-3 h-3" />
-                    <span>Add Anchor ({idealSamples.length}/3)</span>
-                  </Button>
                 )}
               </div>
-
-              {idealSamples.map((sample, idx) => (
-                <div key={idx} className="p-3 rounded bg-[#0a0a0f] border border-[#272738] space-y-2 relative">
-                  <div className="flex items-center justify-between text-[10px] font-mono text-[#818cf8]">
-                    <span>Anchor #{idx + 1}</span>
-                    <button
-                      type="button"
-                      onClick={() => setIdealSamples(idealSamples.filter((_, i) => i !== idx))}
-                      className="text-[#ef4444] hover:text-[#f87171] flex items-center gap-0.5"
-                    >
-                      <X className="w-3 h-3" />
-                      <span>Remove</span>
-                    </button>
-                  </div>
-                  <Input
-                    value={sample.instruction}
-                    onChange={(e) => {
-                      const updated = [...idealSamples]
-                      updated[idx].instruction = e.target.value
-                      setIdealSamples(updated)
-                    }}
-                    placeholder="Ideal prompt / user instruction..."
-                    className="bg-[#12121a] border-[#272738] focus:border-[#6366f1] text-xs font-mono text-white h-7"
-                  />
-                  <textarea
-                    value={sample.response}
-                    onChange={(e) => {
-                      const updated = [...idealSamples]
-                      updated[idx].response = e.target.value
-                      setIdealSamples(updated)
-                    }}
-                    rows={2}
-                    placeholder="Ideal assistant response..."
-                    className="w-full bg-[#12121a] border border-[#272738] focus:border-[#6366f1] rounded p-2 text-xs font-mono text-white placeholder:text-[#64748b] focus:outline-none resize-none"
-                  />
-                </div>
-              ))}
             </div>
 
-            {/* Ingestion Mode Segmented Switch */}
-            <div className="flex items-center justify-between p-2.5 rounded bg-[#0e0e13] border border-[#272738]">
-              <div>
-                <span className="text-xs font-semibold text-white block">Synthesis Mode</span>
-                <span className="text-[10px] font-mono text-[#94a3b8]">
-                  {generationMode === 'grounded' ? 'Grounds 100% on crawled reference text' : 'Pure evolutionary synthetic bootstrap'}
-                </span>
-              </div>
+            {/* Preserved Domain Terms / Glossary */}
+            <div className="space-y-2 pt-2 border-t border-[#1c1c28]">
+              <label className="text-[10px] font-mono uppercase text-[#94a3b8] block">
+                Preserved Domain Terms (Invariants)
+              </label>
+              <Input
+                type="text"
+                value={preservedTermsInput}
+                onChange={(e) => setPreservedTermsInput(e.target.value)}
+                placeholder="e.g. NACA 0012, Mach 0.82, Section 16(4), ITC, GSTR-3B"
+                className="bg-[#0a0a0f] border-[#272738] focus:border-[#f26625] text-xs font-mono text-white rounded-md"
+              />
+              {preservedTermsInput && (
+                <div className="flex flex-wrap gap-1.5 pt-1 max-h-24 overflow-y-auto">
+                  {preservedTermsInput
+                    .split(',')
+                    .map((t) => t.trim())
+                    .filter(Boolean)
+                    .map((term, i) => (
+                      <span
+                        key={i}
+                        className="inline-flex items-center gap-1 px-2 py-0.5 rounded-sm bg-[#161622] border border-[#f26625]/30 text-[#f26625] text-[10px] font-mono"
+                      >
+                        {term}
+                        <button
+                          type="button"
+                          onClick={() => {
+                            const remaining = preservedTermsInput
+                              .split(',')
+                              .map((t) => t.trim())
+                              .filter((t) => t !== term)
+                            setPreservedTermsInput(remaining.join(', '))
+                          }}
+                          className="hover:text-rose-400 font-bold ml-1"
+                        >
+                          ×
+                        </button>
+                      </span>
+                    ))}
+                </div>
+              )}
+            </div>
 
-              <div className="inline-flex p-0.5 rounded bg-[#0a0a0f] border border-[#272738]">
-                <button
-                  onClick={() => setGenerationMode('grounded')}
-                  className={clsx(
-                    'px-2.5 py-1 rounded text-xs font-mono transition-all',
-                    generationMode === 'grounded'
-                      ? 'bg-[#1a1a24] text-white font-semibold border border-[#272738] shadow-sm'
-                      : 'text-[#94a3b8] hover:text-white'
-                  )}
-                >
-                  Grounded Source
-                </button>
-                <button
-                  onClick={() => setGenerationMode('synthetic')}
-                  className={clsx(
-                    'px-2.5 py-1 rounded text-xs font-mono transition-all',
-                    generationMode === 'synthetic'
-                      ? 'bg-[#1a1a24] text-white font-semibold border border-[#272738] shadow-sm'
-                      : 'text-[#94a3b8] hover:text-white'
-                  )}
-                >
-                  Pure Synthetic
-                </button>
+            {/* Discovered Authoritative Sources */}
+            {discoveredSources.length > 0 && (
+              <div className="space-y-1.5 pt-2 border-t border-[#1c1c28]">
+                <span className="text-[10px] font-mono uppercase text-[#94a3b8] block">
+                  Authoritative Grounding Sources ({discoveredSources.length}):
+                </span>
+                <div className="flex flex-wrap gap-1.5">
+                  {discoveredSources.map((s, idx) => (
+                    <span
+                      key={idx}
+                      className="px-2 py-0.5 rounded-sm bg-[#0a0a0f] border border-[#272738] text-[10px] font-mono text-emerald-400 truncate max-w-[220px]"
+                      title={s.name}
+                    >
+                      {s.name}
+                    </span>
+                  ))}
+                </div>
               </div>
+            )}
+
+            {/* Collapsible Few-Shot Anchor Examples */}
+            <div className="pt-2 border-t border-[#1c1c28]">
+              <button
+                type="button"
+                onClick={() => setShowAnchors(!showAnchors)}
+                className="flex items-center justify-between w-full text-xs font-mono text-[#94a3b8] hover:text-white py-1"
+              >
+                <span className="flex items-center gap-1.5">
+                  Few-Shot Output Anchors ({idealSamples.length})
+                </span>
+                {showAnchors ? <ChevronUp className="w-3.5 h-3.5" /> : <ChevronDown className="w-3.5 h-3.5" />}
+              </button>
+
+              {showAnchors && (
+                <div className="space-y-3 pt-3">
+                  {idealSamples.map((sample, idx) => (
+                    <div key={idx} className="p-3 rounded-md bg-[#0a0a0f] border border-[#272738] space-y-2">
+                      <div className="flex items-center justify-between text-[10px] font-mono text-[#f26625]">
+                        <span>Anchor #{idx + 1}</span>
+                        <button
+                          type="button"
+                          onClick={() => setIdealSamples(idealSamples.filter((_, i) => i !== idx))}
+                          className="text-rose-400 hover:underline"
+                        >
+                          Remove
+                        </button>
+                      </div>
+                      <Input
+                        value={sample.instruction}
+                        onChange={(e) => {
+                          const updated = [...idealSamples]
+                          updated[idx].instruction = e.target.value
+                          setIdealSamples(updated)
+                        }}
+                        placeholder="User instruction..."
+                        className="bg-[#12121a] border-[#272738] text-xs font-mono text-white h-7"
+                      />
+                      <textarea
+                        value={sample.response}
+                        onChange={(e) => {
+                          const updated = [...idealSamples]
+                          updated[idx].response = e.target.value
+                          setIdealSamples(updated)
+                        }}
+                        rows={2}
+                        placeholder="Target model response..."
+                        className="w-full bg-[#12121a] border border-[#272738] rounded-md p-2 text-xs font-mono text-white placeholder:text-[#64748b] focus:outline-none resize-none"
+                      />
+                    </div>
+                  ))}
+
+                  {idealSamples.length < 3 && (
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      onClick={() => setIdealSamples([...idealSamples, { instruction: '', response: '' }])}
+                      className="h-7 text-xs font-mono border-[#272738] bg-[#0a0a0f] hover:bg-[#161622] text-[#94a3b8] hover:text-white"
+                    >
+                      <Plus className="w-3 h-3 mr-1" />
+                      Add Anchor Sample
+                    </Button>
+                  )}
+                </div>
+              )}
             </div>
           </div>
         </div>
 
-        {/* Right 5 Columns: Hyperparameters & Quota */}
-        <div className="xl:col-span-5 p-4 rounded-lg bg-[#12121a] border border-[#272738] flex flex-col justify-between space-y-4">
-          <div>
-            <div className="flex items-center justify-between pb-2 mb-3 border-b border-[#1c1c28]">
+        {/* Right Column: Parameters & Launch */}
+        <div className="lg:col-span-5 p-5 rounded-md bg-[#12121a] border border-[#272738] flex flex-col justify-between space-y-6">
+          <div className="space-y-4">
+            <div className="flex items-center justify-between pb-3 border-b border-[#1c1c28]">
               <div className="flex items-center space-x-2">
-                <Settings2 className="w-4 h-4 text-[#818cf8]" />
+                <Settings2 className="w-4 h-4 text-[#f26625]" />
                 <h3 className="text-xs font-bold font-mono uppercase tracking-wider text-white">
-                  Dataset Hyperparameters
+                  Dataset Parameters
                 </h3>
               </div>
-              <span className="text-[10px] font-mono text-[#94a3b8]">Export: JSONL / HF</span>
+              <span className="text-[10px] font-mono text-[#94a3b8]">Format: JSONL</span>
             </div>
 
-            <div className="space-y-3">
+            {/* Core Settings */}
+            <div className="space-y-3.5">
               <div>
                 <label className="text-[10px] font-mono uppercase text-[#94a3b8] block mb-1">
-                  Dataset Schema / Type
+                  Dataset Type
                 </label>
                 <select
                   value={datasetType}
                   onChange={(e) => setDatasetType(e.target.value)}
-                  className="w-full bg-[#0a0a0f] border border-[#272738] rounded p-2 text-xs font-mono text-white focus:outline-none"
+                  className="w-full bg-[#0a0a0f] border border-[#272738] focus:border-[#f26625] rounded-md p-2 text-xs font-mono text-white focus:outline-none"
                 >
                   <option value="sft">Supervised Fine-Tuning (SFT / Dialogue)</option>
-                  <option value="coding">Code Generation & Translation</option>
                   <option value="reasoning">Chain-of-Thought Reasoning (CoT)</option>
-                  <option value="tool_calling">Function & Tool Calling</option>
+                  <option value="coding">Code Generation &amp; Translation</option>
+                  <option value="tool_calling">Function &amp; Tool Calling</option>
                   <option value="rlhf">Preference Pairs (RLHF / DPO)</option>
-                  <option value="kto">Binary Alignment (KTO - Kahneman-Tversky)</option>
-                  <option value="simpo">Simple Preference Optimization (SimPO)</option>
-                  <option value="rag">Retrieval-Augmented Generation (RAG &amp; Citations)</option>
-                  <option value="multi_turn">Multi-Turn Conversational Dialogue</option>
-                  <option value="dialectic">Multi-Agent Socratic Debate &amp; Adjudication</option>
+                  <option value="simpo">Simple Preference (SimPO)</option>
+                  <option value="rag">Retrieval-Augmented Generation (RAG)</option>
                 </select>
               </div>
 
               <div>
                 <label className="text-[10px] font-mono uppercase text-[#94a3b8] block mb-1">
-                  Instruction / Chat Format
-                </label>
-                <select
-                  value={instructionFormat}
-                  onChange={(e) => setInstructionFormat(e.target.value)}
-                  className="w-full bg-[#0a0a0f] border border-[#272738] rounded p-2 text-xs font-mono text-white focus:outline-none"
-                >
-                  <option value="alpaca">Alpaca (instruction, input, response)</option>
-                  <option value="sharegpt">ShareGPT (conversations: [&#123;from, value&#125;])</option>
-                  <option value="chatml">ChatML (&lt;|im_start|&gt;system/user/assistant)</option>
-                  <option value="openai_jsonl">OpenAI JSONL (messages: [&#123;role, content&#125;])</option>
-                </select>
-              </div>
-
-              <div>
-                <label className="text-[10px] font-mono uppercase text-[#94a3b8] block mb-1">
-                  Dataset Language
+                  Language
                 </label>
                 <select
                   value={language}
                   onChange={(e) => setLanguage(e.target.value)}
-                  className="w-full bg-[#0a0a0f] border border-[#272738] rounded p-2 text-xs font-mono text-white focus:outline-none"
+                  className="w-full bg-[#0a0a0f] border border-[#272738] focus:border-[#f26625] rounded-md p-2 text-xs font-mono text-white focus:outline-none"
                 >
-                  <option value="en">English (Global Default)</option>
-                  <option value="hi">Hindi Only (हिन्दी)</option>
-                  <option value="hinglish">Hindi + English (Hinglish Code-Switched)</option>
-                  <option value="indic_multilingual">Indic Multilingual (Hindi, Tamil, Telugu, etc.)</option>
-                  <option value="bn">Bengali (বাংলা)</option>
+                  <option value="en">English</option>
+                  <option value="hi">Hindi (हिन्दी)</option>
+                  <option value="hinglish">Hindi + English (Hinglish)</option>
+                  <option value="indic_multilingual">Indic Multilingual (Hindi, Tamil, Telugu)</option>
                   <option value="ta">Tamil (தமிழ்)</option>
                   <option value="te">Telugu (తెలుగు)</option>
+                  <option value="bn">Bengali (বাংলা)</option>
                   <option value="mr">Marathi (मराठी)</option>
-                  <option value="gu">Gujarati (ગુજરાતી)</option>
-                  <option value="kn">Kannada (ಕನ್ನಡ)</option>
-                  <option value="ml">Malayalam (മലയാളം)</option>
-                  <option value="pa">Punjabi (ਪੰਜਾਬੀ)</option>
-                  <option value="es">Spanish (Español)</option>
-                  <option value="fr">French (Français)</option>
-                  <option value="de">German (Deutsch)</option>
-                  <option value="zh">Chinese (中文)</option>
-                  <option value="ja">Japanese (日本語)</option>
-                  <option value="ar">Arabic (العربية)</option>
                 </select>
               </div>
 
-              {/* Script & Orthography */}
               <div>
-                <label className="text-[10px] font-mono uppercase text-[#94a3b8] block mb-1">
-                  Script & Orthography
-                </label>
-                <select
-                  value={scriptMode}
-                  onChange={(e) => setScriptMode(e.target.value as any)}
-                  className="w-full bg-[#0a0a0f] border border-[#272738] rounded p-2 text-xs font-mono text-white focus:outline-none"
-                >
-                  <option value="native">Native Script (Devanagari, Tamil, etc.)</option>
-                  <option value="romanized">Romanized / Phonetic (Latin Script)</option>
-                  <option value="dual">Dual-Script (Parallel Native + Latin)</option>
-                </select>
-              </div>
-
-              {/* Formality Register & Honorifics */}
-              <div>
-                <label className="text-[10px] font-mono uppercase text-[#94a3b8] block mb-1">
-                  Register & Honorifics
-                </label>
-                <select
-                  value={formalityRegister}
-                  onChange={(e) => setFormalityRegister(e.target.value as any)}
-                  className="w-full bg-[#0a0a0f] border border-[#272738] rounded p-2 text-xs font-mono text-white focus:outline-none"
-                >
-                  <option value="formal">Formal / Honorific (आप / Respectful)</option>
-                  <option value="neutral">Professional Neutral</option>
-                  <option value="casual">Casual / Colloquial (तुम / Peer)</option>
-                </select>
-              </div>
-
-              {/* Code-Switching Intensity */}
-              {(language === 'hinglish' || language === 'indic_multilingual') && (
-                <div>
-                  <label className="text-[10px] font-mono uppercase text-[#94a3b8] block mb-1">
-                    Code-Switching Intensity
-                  </label>
-                  <select
-                    value={codeSwitchIntensity}
-                    onChange={(e) => setCodeSwitchIntensity(e.target.value as any)}
-                    className="w-full bg-[#0a0a0f] border border-[#272738] rounded p-2 text-xs font-mono text-white focus:outline-none"
-                  >
-                    <option value="light">Light (80% Vernacular + English technical terms)</option>
-                    <option value="balanced">Balanced (50/50 Conversational mixing)</option>
-                    <option value="heavy">Heavy (80% English + Vernacular discourse markers)</option>
-                  </select>
-                </div>
-              )}
-
-              {/* Preserved Domain Terms / Glossary */}
-              <div className="space-y-1.5">
-                <div className="flex items-center justify-between">
-                  <label className="text-[10px] font-mono uppercase text-[#94a3b8] block">
-                    Preserved Domain Invariants (Do Not Corrupt)
-                  </label>
-                  <button
-                    type="button"
-                    onClick={handleAutoDetect}
-                    disabled={isAutoDetecting}
-                    className="text-[10px] font-mono text-[#f26625] hover:underline flex items-center gap-1 font-bold"
-                  >
-                    {isAutoDetecting ? <Loader2 className="w-2.5 h-2.5 animate-spin" /> : <Sparkles className="w-2.5 h-2.5" />}
-                    <span>Auto-Extract</span>
-                  </button>
-                </div>
-                <input
-                  type="text"
-                  value={preservedTermsInput}
-                  onChange={(e) => setPreservedTermsInput(e.target.value)}
-                  placeholder="e.g. NACA 0012, Mach 0.82, Section 16(4), ITC, GSTR-3B, FAR §25"
-                  className="w-full bg-[#0a0a0f] border border-[#272738] focus:border-[#f26625] rounded-md p-2 text-xs font-mono text-white focus:outline-none placeholder:text-[#55556a]"
-                />
-                {preservedTermsInput && (
-                  <div className="flex flex-wrap gap-1 pt-1 max-h-24 overflow-y-auto">
-                    {preservedTermsInput
-                      .split(',')
-                      .map((t) => t.trim())
-                      .filter(Boolean)
-                      .map((term, i) => (
-                        <span
-                          key={i}
-                          className="inline-flex items-center gap-1 px-2 py-0.5 rounded-sm bg-[#161622] border border-[#f26625]/30 text-[#f26625] text-[10px] font-mono font-medium"
-                        >
-                          {term}
-                          <button
-                            type="button"
-                            onClick={() => {
-                              const remaining = preservedTermsInput
-                                .split(',')
-                                .map((t) => t.trim())
-                                .filter((t) => t !== term)
-                              setPreservedTermsInput(remaining.join(', '))
-                            }}
-                            className="hover:text-rose-400 font-bold ml-0.5"
-                          >
-                            ×
-                          </button>
-                        </span>
-                      ))}
-                  </div>
-                )}
-                {discoveredSources.length > 0 && (
-                  <div className="pt-2 border-t border-[#1c1c28] space-y-1">
-                    <span className="text-[10px] font-mono uppercase text-[#94a3b8] block">
-                      Discovered Authoritative Sources ({discoveredSources.length}):
-                    </span>
-                    <div className="flex flex-wrap gap-1">
-                      {discoveredSources.map((s, idx) => (
-                        <span
-                          key={idx}
-                          className="px-1.5 py-0.5 rounded-sm bg-[#0e0e14] border border-[#272738] text-[10px] font-mono text-emerald-400 truncate max-w-[200px]"
-                          title={s.name}
-                        >
-                          {s.name}
-                        </span>
-                      ))}
-                    </div>
-                  </div>
-                )}
-              </div>
-
-              {/* Regional Dialect & Localization Profile */}
-              <div>
-                <label className="text-[10px] font-mono uppercase text-[#94a3b8] block mb-1">
-                  Regional Dialect & Localization Profile
-                </label>
-                <select
-                  value={regionalDialect}
-                  onChange={(e) => setRegionalDialect(e.target.value)}
-                  className="w-full bg-[#0a0a0f] border border-[#272738] rounded p-2 text-xs font-mono text-white focus:outline-none"
-                >
-                  <option value="standard">Standard / Neutral Regional Dialect</option>
-                  <option value="bambaiya">Bambaiya / Mumbai Slang (Western India)</option>
-                  <option value="bhojpuri_influenced">Bhojpuri-Influenced Hindi (Eastern India)</option>
-                  <option value="chennai">Chennai Colloquial Tanglish (Southern India)</option>
-                  <option value="indian_english">Indian English Business Idioms & Syntax</option>
-                </select>
-              </div>
-
-              {/* Numbering & Currency Standardization */}
-              <div>
-                <label className="text-[10px] font-mono uppercase text-[#94a3b8] block mb-1">
-                  Numbering System & Currency
-                </label>
-                <select
-                  value={numberFormatting}
-                  onChange={(e) => setNumberFormatting(e.target.value as any)}
-                  className="w-full bg-[#0a0a0f] border border-[#272738] rounded p-2 text-xs font-mono text-white focus:outline-none"
-                >
-                  <option value="indian_lakhs">Indian Numbering: Lakhs & Crores (₹ 1,50,000 / 12 Cr)</option>
-                  <option value="western_millions">Western Decimal: Millions & Billions ($ 150,000 / 1.5M)</option>
-                </select>
-              </div>
-
-              {/* Transliteration Noise / WhatsApp Chat Shorthand */}
-              <div>
-                <label className="text-[10px] font-mono uppercase text-[#94a3b8] block mb-1">
-                  Chat & Transliteration Noise (WhatsApp/SMS Robustness)
-                </label>
-                <select
-                  value={chatNoiseLevel}
-                  onChange={(e) => setChatNoiseLevel(Number(e.target.value))}
-                  className="w-full bg-[#0a0a0f] border border-[#272738] rounded p-2 text-xs font-mono text-white focus:outline-none"
-                >
-                  <option value={0.0}>0% - Clean Textbook Transliteration</option>
-                  <option value={0.15}>15% - Light SMS/Chat Shorthands (apka, h, nhi)</option>
-                  <option value={0.30}>30% - Realistic Colloquial Messaging Noise</option>
-                </select>
-              </div>
-
-              {/* Compliance, Voice AI & Safety Alignment Toggles */}
-              <div className="space-y-2 pt-1 border-t border-[#1c1c28]">
-                <div className="flex items-center justify-between p-2 rounded bg-[#0e0e13] border border-[#1c1c28]">
-                  <div>
-                    <div className="text-xs font-mono text-white font-medium">Indian DPDP PII Masking</div>
-                    <div className="text-[10px] text-[#94a3b8]">Redact Aadhaar, PAN, GSTIN, UPI & Mobile numbers</div>
-                  </div>
-                  <input
-                    type="checkbox"
-                    checked={maskIndianPii}
-                    onChange={(e) => setMaskIndianPii(e.target.checked)}
-                    className="w-4 h-4 accent-[#6366f1] cursor-pointer"
-                  />
-                </div>
-
-                <div className="flex items-center justify-between p-2 rounded bg-[#0e0e13] border border-[#1c1c28]">
-                  <div>
-                    <div className="text-xs font-mono text-white font-medium">Voice AI Speech Normalization</div>
-                    <div className="text-[10px] text-[#94a3b8]">Verbalize symbols, numbers & acronyms for TTS / ASR</div>
-                  </div>
-                  <input
-                    type="checkbox"
-                    checked={speechNormalization}
-                    onChange={(e) => setSpeechNormalization(e.target.checked)}
-                    className="w-4 h-4 accent-[#6366f1] cursor-pointer"
-                  />
-                </div>
-
-                <div className="flex items-center justify-between p-2 rounded bg-[#0e0e13] border border-[#1c1c28]">
-                  <div>
-                    <div className="text-xs font-mono text-white font-medium">Multi-Turn Language Drift</div>
-                    <div className="text-[10px] text-[#94a3b8]">Simulate turn-by-turn code-switch migration across turns</div>
-                  </div>
-                  <input
-                    type="checkbox"
-                    checked={turnLanguageDrift}
-                    onChange={(e) => setTurnLanguageDrift(e.target.checked)}
-                    className="w-4 h-4 accent-[#6366f1] cursor-pointer"
-                  />
-                </div>
-
-                <div className="flex items-center justify-between p-2 rounded bg-[#0e0e13] border border-[#1c1c28]">
-                  <div>
-                    <div className="text-xs font-mono text-white font-medium">DPO Culturally Grounded Refusal Pairs</div>
-                    <div className="text-[10px] text-[#94a3b8]">Generate negative pairs with statutory disclaimer compliance</div>
-                  </div>
-                  <input
-                    type="checkbox"
-                    checked={generateDpoRefusalPairs}
-                    onChange={(e) => setGenerateDpoRefusalPairs(e.target.checked)}
-                    className="w-4 h-4 accent-[#6366f1] cursor-pointer"
-                  />
-                </div>
-              </div>
-
-              {/* Parallel Bilingual Bitext Output Mode */}
-              <div className="flex items-center justify-between p-2 rounded bg-[#0e0e13] border border-[#1c1c28]">
-                <div>
-                  <div className="text-xs font-mono text-white font-medium">Parallel Bilingual Bitext</div>
-                  <div className="text-[10px] text-[#94a3b8]">Emit parallel English pairs (instruction_en, response_en)</div>
-                </div>
-                <input
-                  type="checkbox"
-                  checked={parallelBilingual}
-                  onChange={(e) => setParallelBilingual(e.target.checked)}
-                  className="w-4 h-4 accent-[#6366f1] cursor-pointer"
-                />
-              </div>
-
-              {/* Chain-of-Thought Reasoning Trajectories */}
-              <div className="flex items-center justify-between p-2 rounded bg-[#0e0e13] border border-[#1c1c28]">
-                <div>
-                  <div className="text-xs font-mono text-white font-medium">Chain-of-Thought (CoT) Reasoning</div>
-                  <div className="text-[10px] text-[#94a3b8]">DeepSeek-R1 / o1 style &lt;thought&gt;...&lt;/thought&gt; traces</div>
-                </div>
-                <input
-                  type="checkbox"
-                  checked={enableCotReasoning}
-                  onChange={(e) => setEnableCotReasoning(e.target.checked)}
-                  className="w-4 h-4 accent-[#6366f1] cursor-pointer"
-                />
-              </div>
-
-              {/* Curriculum Learning Sequence Sorter */}
-              <div>
-                <label className="text-[10px] font-mono uppercase text-[#94a3b8] block mb-1">
-                  Curriculum Learning Sequence Sorter
-                </label>
-                <select
-                  value={curriculumSort}
-                  onChange={(e) => setCurriculumSort(e.target.value as any)}
-                  className="w-full bg-[#0a0a0f] border border-[#272738] rounded p-2 text-xs font-mono text-white focus:outline-none"
-                >
-                  <option value="none">None (Standard Order)</option>
-                  <option value="ascending">Ascending Complexity (Easy → Hard)</option>
-                  <option value="staged_curriculum">Staged Curriculum (Tier 1-2 → 3-4 → 5)</option>
-                  <option value="replay_interleaved">Anti-Forgetting Replay Buffer (Interleaved)</option>
-                </select>
-              </div>
-
-              {/* Tokenizer Fertility & Efficiency Estimator */}
-              <div className="p-2.5 rounded bg-[#0a0a0f] border border-[#272738] space-y-1.5 font-mono text-[11px]">
-                <div className="flex justify-between items-center">
-                  <span className="text-[#94a3b8] uppercase text-[10px] font-bold">Tokenizer Fertility</span>
-                  <span className={clsx("font-bold px-1.5 py-0.5 rounded text-[10px]", isIndicOrHinglish ? "bg-emerald-950/80 text-[#10b981] border border-emerald-800" : "bg-[#161622] text-[#818cf8]")}>
-                    {isIndicOrHinglish ? `~${estSavings}% Token Savings on Sarvam/Gemma` : "Standard Latin (1.25 tok/word)"}
-                  </span>
-                </div>
-                <div className="flex justify-between text-[10px] text-[#94a3b8]">
-                  <span>Llama-3: <span className="text-white">{estLlama3Fertility} t/w</span></span>
-                  <span>Sarvam / Gemma-2: <span className="text-[#10b981] font-semibold">{estSarvamFertility} t/w</span></span>
-                </div>
-              </div>
-
-              <div>
-                <div className="flex justify-between items-center mb-1">
-                  <label className="text-[10px] font-mono uppercase text-[#94a3b8]">Target Dataset Size</label>
-                  <span className="text-xs font-mono text-[#10b981] font-bold">
-                    {datasetSize.toLocaleString()} samples
+                <div className="flex justify-between items-center mb-1.5">
+                  <label className="text-[10px] font-mono uppercase text-[#94a3b8]">Target Size</label>
+                  <span className="text-xs font-mono text-[#f26625] font-bold">
+                    {datasetSize.toLocaleString()} rows
                   </span>
                 </div>
                 <input
@@ -958,41 +643,127 @@ function StudioContent() {
                   step={500}
                   value={datasetSize}
                   onChange={(e) => setDatasetSize(Number(e.target.value))}
-                  className="w-full accent-[#6366f1] bg-[#0a0a0f] cursor-pointer"
+                  className="w-full accent-[#f26625] bg-[#0a0a0f] cursor-pointer"
                 />
               </div>
 
-              {/* Quality & Human Review Gates */}
-              <div className="space-y-2 pt-2">
-                <div className="p-2 rounded bg-[#0e0e13] border border-[#1c1c28] flex justify-between items-center text-xs font-mono">
-                  <span className="text-[#94a3b8]">Human-in-the-Loop Review:</span>
-                  <span className="text-[#10b981] font-semibold">Stratified 5.0%</span>
-                </div>
-                <div className="p-2 rounded bg-[#0e0e13] border border-[#1c1c28] flex justify-between items-center text-xs font-mono">
-                  <span className="text-[#94a3b8]">Deduplication Algorithm:</span>
-                  <span className="text-[#818cf8] font-semibold">MinHash LSH (0.85)</span>
-                </div>
-                <div className="p-2 rounded bg-[#0e0e13] border border-[#1c1c28] flex justify-between items-center text-xs font-mono">
-                  <span className="text-[#94a3b8]">Hallucination Risk Gate:</span>
-                  <span className="text-[#10b981] font-semibold">Strict Context Grounded</span>
-                </div>
+              {/* Collapsible Advanced Configuration */}
+              <div className="pt-2 border-t border-[#1c1c28]">
+                <button
+                  type="button"
+                  onClick={() => setShowAdvanced(!showAdvanced)}
+                  className="flex items-center justify-between w-full py-1.5 text-xs font-mono text-[#94a3b8] hover:text-white"
+                >
+                  <span className="flex items-center gap-1.5">
+                    Advanced Linguistic &amp; Alignment Controls
+                  </span>
+                  {showAdvanced ? <ChevronUp className="w-3.5 h-3.5" /> : <ChevronDown className="w-3.5 h-3.5" />}
+                </button>
+
+                {showAdvanced && (
+                  <div className="space-y-3 pt-3">
+                    <div>
+                      <label className="text-[10px] font-mono uppercase text-[#94a3b8] block mb-1">
+                        Script &amp; Orthography
+                      </label>
+                      <select
+                        value={scriptMode}
+                        onChange={(e) => setScriptMode(e.target.value as any)}
+                        className="w-full bg-[#0a0a0f] border border-[#272738] rounded-md p-2 text-xs font-mono text-white focus:outline-none"
+                      >
+                        <option value="native">Native Script</option>
+                        <option value="romanized">Romanized / Phonetic</option>
+                        <option value="dual">Dual-Script</option>
+                      </select>
+                    </div>
+
+                    <div>
+                      <label className="text-[10px] font-mono uppercase text-[#94a3b8] block mb-1">
+                        Register &amp; Honorifics
+                      </label>
+                      <select
+                        value={formalityRegister}
+                        onChange={(e) => setFormalityRegister(e.target.value as any)}
+                        className="w-full bg-[#0a0a0f] border border-[#272738] rounded-md p-2 text-xs font-mono text-white focus:outline-none"
+                      >
+                        <option value="formal">Formal / Honorific (आप)</option>
+                        <option value="neutral">Professional Neutral</option>
+                        <option value="casual">Casual (तुम)</option>
+                      </select>
+                    </div>
+
+                    {/* Checkbox Options */}
+                    <div className="space-y-2 pt-1">
+                      <label className="flex items-center justify-between p-2 rounded-md bg-[#0a0a0f] border border-[#272738] text-xs font-mono text-white cursor-pointer">
+                        <span>Indian DPDP PII Masking</span>
+                        <input
+                          type="checkbox"
+                          checked={maskIndianPii}
+                          onChange={(e) => setMaskIndianPii(e.target.checked)}
+                          className="w-4 h-4 accent-[#f26625]"
+                        />
+                      </label>
+
+                      <label className="flex items-center justify-between p-2 rounded-md bg-[#0a0a0f] border border-[#272738] text-xs font-mono text-white cursor-pointer">
+                        <span>DPO Refusal Pairs</span>
+                        <input
+                          type="checkbox"
+                          checked={generateDpoRefusalPairs}
+                          onChange={(e) => setGenerateDpoRefusalPairs(e.target.checked)}
+                          className="w-4 h-4 accent-[#f26625]"
+                        />
+                      </label>
+
+                      <label className="flex items-center justify-between p-2 rounded-md bg-[#0a0a0f] border border-[#272738] text-xs font-mono text-white cursor-pointer">
+                        <span>CoT Reasoning &lt;thought&gt;</span>
+                        <input
+                          type="checkbox"
+                          checked={enableCotReasoning}
+                          onChange={(e) => setEnableCotReasoning(e.target.checked)}
+                          className="w-4 h-4 accent-[#f26625]"
+                        />
+                      </label>
+
+                      <label className="flex items-center justify-between p-2 rounded-md bg-[#0a0a0f] border border-[#272738] text-xs font-mono text-white cursor-pointer">
+                        <span>Parallel Bilingual Bitext</span>
+                        <input
+                          type="checkbox"
+                          checked={parallelBilingual}
+                          onChange={(e) => setParallelBilingual(e.target.checked)}
+                          className="w-4 h-4 accent-[#f26625]"
+                        />
+                      </label>
+                    </div>
+
+                    {/* Tokenizer Fertility */}
+                    <div className="p-2.5 rounded-md bg-[#0a0a0f] border border-[#272738] font-mono text-[11px] space-y-1">
+                      <div className="flex justify-between items-center text-[10px]">
+                        <span className="text-[#94a3b8] uppercase font-bold">Tokenizer Efficiency</span>
+                        <span className="text-[#10b981] font-bold">
+                          {isIndicOrHinglish ? `~${estSavings}% Token Savings` : 'Standard Latin'}
+                        </span>
+                      </div>
+                      <div className="flex justify-between text-[10px] text-[#94a3b8]">
+                        <span>Llama-3: {estLlama3Fertility} t/w</span>
+                        <span className="text-[#10b981]">Sarvam: {estSarvamFertility} t/w</span>
+                      </div>
+                    </div>
+                  </div>
+                )}
               </div>
             </div>
           </div>
 
-          <div className="pt-2 border-t border-[#1c1c28]">
-            <Button
-              onClick={handleGenerate}
-              disabled={isSubmitting}
-              className="w-full bg-[#6366f1] hover:bg-[#818cf8] text-white font-mono font-bold text-xs h-9 shadow-sm glow-indigo flex items-center justify-center gap-2"
-            >
-              {isSubmitting ? <Loader2 className="w-4 h-4 animate-spin" /> : <Play className="w-4 h-4 fill-current" />}
-              <span>Execute Autonomous Generation</span>
-            </Button>
-          </div>
+          <Button
+            onClick={handleGenerate}
+            disabled={isSubmitting}
+            className="w-full bg-[#f26625] hover:bg-[#de581a] border border-[#ea580c] text-white font-mono font-bold text-xs h-10 rounded-md shadow-sm glow-yc flex items-center justify-center gap-2"
+          >
+            {isSubmitting ? <Loader2 className="w-4 h-4 animate-spin" /> : <Play className="w-4 h-4 fill-current" />}
+            <span>Execute Generation Run</span>
+          </Button>
         </div>
       </div>
-
     </div>
   )
 }
@@ -1002,7 +773,7 @@ export default function StudioPage() {
     <Suspense
       fallback={
         <div className="flex items-center justify-center min-h-[60vh]">
-          <Loader2 className="h-8 w-8 animate-spin text-[#6366f1]" />
+          <Loader2 className="h-8 w-8 animate-spin text-[#f26625]" />
         </div>
       }
     >

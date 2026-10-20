@@ -251,14 +251,14 @@ export default function ProvidersPage() {
           ) : providers.length === 0 ? (
             <div className="flex flex-col items-center justify-center py-20 gap-3 text-[#94a3b8] bg-[#12121a] rounded-2xl border border-[#272738]">
               <Server className="h-10 w-10 text-[#64748b]" />
-              <p className="text-xs font-mono">No providers configured. Add API keys to <code className="bg-[#161622] text-[#6366f1] px-1.5 py-0.5 rounded">.env</code></p>
-              <Button variant="outline" size="sm" className="rounded-full border-[#3b3b52] text-[#6366f1]" onClick={fetchAll}><RefreshCw className="h-3.5 w-3.5 mr-1" />Retry</Button>
+              <p className="text-xs font-mono">No providers configured. Add API keys to <code className="bg-[#161622] text-[#f26625] px-1.5 py-0.5 rounded">.env</code></p>
+              <Button variant="outline" size="sm" className="rounded-full border-[#3b3b52] text-[#f26625]" onClick={fetchAll}><RefreshCw className="h-3.5 w-3.5 mr-1" />Retry</Button>
             </div>
           ) : (
             <>
               <div className="flex items-center gap-3">
                 <Select value={filter} onValueChange={setFilter}>
-                  <SelectTrigger className="w-36 h-8 text-xs rounded-full border-[#3b3b52] bg-[#12121a] text-[#6366f1]"><SelectValue /></SelectTrigger>
+                  <SelectTrigger className="w-36 h-8 text-xs rounded-full border-[#3b3b52] bg-[#12121a] text-[#f26625]"><SelectValue /></SelectTrigger>
                   <SelectContent>
                     <SelectItem value="all">All ({providers.length})</SelectItem>
                     <SelectItem value="healthy">Healthy</SelectItem>
@@ -275,22 +275,22 @@ export default function ProvidersPage() {
                     <CardContent className="p-4 space-y-3">
                       <div className="flex items-start justify-between gap-2">
                         <div className="flex items-center gap-2.5">
-                          <div className="h-9 w-9 rounded-xl bg-[#161622] border border-[#3b3b52] flex items-center justify-center text-xs font-bold font-mono text-[#6366f1] shrink-0">
+                          <div className="h-9 w-9 rounded-xl bg-[#161622] border border-[#3b3b52] flex items-center justify-center text-xs font-bold font-mono text-[#f26625] shrink-0">
                             {p.name.slice(0, 2).toUpperCase()}
                           </div>
                           <div className="min-w-0">
-                            <p className="text-xs font-bold text-[#6366f1] truncate">{p.name.replace(/_/g, ' ')}</p>
+                            <p className="text-xs font-bold text-[#f26625] truncate">{p.name.replace(/_/g, ' ')}</p>
                             <p className={clsx('text-[11px] font-mono uppercase', statusVariant(p.status))}>{p.status}</p>
                           </div>
                         </div>
                         <Button
                           variant="ghost" size="sm"
-                          className="h-7 text-xs rounded-full border border-[#3b3b52] text-[#6366f1] hover:bg-[#161622] shrink-0"
+                          className="h-7 text-xs rounded-full border border-[#3b3b52] text-[#f26625] hover:bg-[#161622] shrink-0"
                           disabled={testing === p.name}
                           onClick={() => handleTest(p.name)}
                         >
                           {testing === p.name
-                            ? <Loader2 className="h-3 w-3 animate-spin text-[#6366f1]" />
+                            ? <Loader2 className="h-3 w-3 animate-spin text-[#f26625]" />
                             : <><Play className="h-3 w-3 mr-1 text-emerald-600 fill-current" />Test</>}
                         </Button>
                       </div>
@@ -298,19 +298,19 @@ export default function ProvidersPage() {
                       <div className="grid grid-cols-2 gap-x-4 gap-y-1.5 text-xs bg-[#0a0a0f] p-3 rounded-xl border border-[#272738]">
                         <div className="flex justify-between">
                           <span className="text-[#94a3b8] font-mono text-[11px]">Latency</span>
-                          <span className="font-mono text-xs font-bold text-[#6366f1]">{p.latency_ms ? `${p.latency_ms}ms` : '—'}</span>
+                          <span className="font-mono text-xs font-bold text-[#f26625]">{p.latency_ms ? `${p.latency_ms}ms` : '—'}</span>
                         </div>
                         <div className="flex justify-between">
                           <span className="text-[#94a3b8] font-mono text-[11px]">Success</span>
-                          <span className="font-mono text-xs font-bold text-[#6366f1]">{p.success_rate != null ? `${(p.success_rate * 100).toFixed(1)}%` : '—'}</span>
+                          <span className="font-mono text-xs font-bold text-[#f26625]">{p.success_rate != null ? `${(p.success_rate * 100).toFixed(1)}%` : '—'}</span>
                         </div>
                         <div className="flex justify-between">
                           <span className="text-[#94a3b8] font-mono text-[11px]">Requests</span>
-                          <span className="font-mono text-xs text-[#6366f1]">{p.requests_today?.toLocaleString() ?? '—'}</span>
+                          <span className="font-mono text-xs text-[#f26625]">{p.requests_today?.toLocaleString() ?? '—'}</span>
                         </div>
                         <div className="flex justify-between">
                           <span className="text-[#94a3b8] font-mono text-[11px]">Cost today</span>
-                          <span className="font-mono text-xs text-[#6366f1]">{p.cost_today_usd != null ? `$${p.cost_today_usd.toFixed(4)}` : '—'}</span>
+                          <span className="font-mono text-xs text-[#f26625]">{p.cost_today_usd != null ? `$${p.cost_today_usd.toFixed(4)}` : '—'}</span>
                         </div>
                       </div>
 
@@ -334,12 +334,12 @@ export default function ProvidersPage() {
         {/* Latency chart */}
         <TabsContent value="latency" className="mt-4">
           <Card className="bg-[#12121a] border-[#272738] rounded-2xl card-shadow">
-            <CardHeader className="pb-3 border-b border-[#272738]"><CardTitle className="text-sm font-bold text-[#6366f1]">Provider Latency (ms)</CardTitle></CardHeader>
+            <CardHeader className="pb-3 border-b border-[#272738]"><CardTitle className="text-sm font-bold text-[#f26625]">Provider Latency (ms)</CardTitle></CardHeader>
             <CardContent className="p-4">
               {latencyData.length === 0 ? (
                 <div className="flex flex-col items-center justify-center h-48 text-[#94a3b8] font-mono gap-2 bg-[#0a0a0f] rounded-xl border border-[#272738]">
                   <Clock className="h-8 w-8 text-[#64748b]" />
-                  <p className="text-xs font-bold text-[#6366f1]">No latency data — run a dataset job first</p>
+                  <p className="text-xs font-bold text-[#f26625]">No latency data — run a dataset job first</p>
                 </div>
               ) : (
                 <ResponsiveContainer width="100%" height={280}>
@@ -353,7 +353,7 @@ export default function ProvidersPage() {
                     />
                     <Bar dataKey="latency" radius={[6, 6, 0, 0]}>
                       {latencyData.map((entry, i) => (
-                        <Cell key={i} fill={entry.latency! > 1000 ? '#E11D48' : entry.latency! > 500 ? '#D97706' : '#6366f1'} />
+                        <Cell key={i} fill={entry.latency! > 1000 ? '#E11D48' : entry.latency! > 500 ? '#D97706' : '#f26625'} />
                       ))}
                     </Bar>
                   </BarChart>
@@ -366,18 +366,18 @@ export default function ProvidersPage() {
         {/* Circuit breakers */}
         <TabsContent value="circuit-breakers" className="mt-4">
           <Card className="bg-[#12121a] border-[#272738] rounded-2xl card-shadow">
-            <CardHeader className="pb-3 border-b border-[#272738]"><CardTitle className="text-sm font-bold text-[#6366f1]">Circuit Breaker States</CardTitle></CardHeader>
+            <CardHeader className="pb-3 border-b border-[#272738]"><CardTitle className="text-sm font-bold text-[#f26625]">Circuit Breaker States</CardTitle></CardHeader>
             <CardContent className="p-4">
               {Object.keys(circuitBreakers).length === 0 ? (
                 <div className="flex flex-col items-center justify-center h-32 text-[#94a3b8] font-mono gap-2 bg-[#0a0a0f] rounded-xl border border-[#272738]">
                   <ShieldAlert className="h-8 w-8 text-[#64748b]" />
-                  <p className="text-xs font-bold text-[#6366f1]">No circuit breaker data available</p>
+                  <p className="text-xs font-bold text-[#f26625]">No circuit breaker data available</p>
                 </div>
               ) : (
                 <div className="space-y-2">
                   {Object.entries(circuitBreakers).map(([name, state]) => (
                     <div key={name} className="flex items-center justify-between p-3 rounded-xl bg-[#0a0a0f] border border-[#272738]">
-                      <span className="text-xs font-bold text-[#6366f1]">{name.replace(/_/g, ' ')}</span>
+                      <span className="text-xs font-bold text-[#f26625]">{name.replace(/_/g, ' ')}</span>
                       <span className={clsx(
                         'text-[10px] font-mono font-bold px-2.5 py-0.5 rounded-full border',
                         state === 'closed' && 'bg-emerald-950/40 text-emerald-400 border-emerald-500/30',
@@ -402,7 +402,7 @@ export default function ProvidersPage() {
             <Card className="bg-[#12121a] border-[#272738] rounded-2xl card-shadow">
               <CardHeader className="pb-3 border-b border-[#272738]">
                 <div className="flex items-center gap-2">
-                  <ArrowRightLeft className="h-4 w-4 text-[#6366f1]" />
+                  <ArrowRightLeft className="h-4 w-4 text-[#f26625]" />
                   <CardTitle className="text-sm font-bold text-white">Manual Provider Hot-Switcher (ADR-001)</CardTitle>
                 </div>
                 <p className="text-xs text-[#94a3b8] mt-1 font-mono">
@@ -418,7 +418,7 @@ export default function ProvidersPage() {
                       placeholder="e.g. medical-sft-v1-verified or UUID"
                       value={switchJobId}
                       onChange={e => setSwitchJobId(e.target.value)}
-                      className="w-full h-9 px-3 rounded-lg bg-[#0a0a0f] border border-[#272738] text-xs font-mono text-white placeholder-[#64748b] focus:outline-none focus:border-[#6366f1]"
+                      className="w-full h-9 px-3 rounded-lg bg-[#0a0a0f] border border-[#272738] text-xs font-mono text-white placeholder-[#64748b] focus:outline-none focus:border-[#f26625]"
                     />
                   </div>
 
@@ -445,7 +445,7 @@ export default function ProvidersPage() {
                       id="ckpt-switch"
                       checked={switchCheckpoint}
                       onChange={e => setSwitchCheckpoint(e.target.checked)}
-                      className="rounded border-[#272738] text-[#6366f1] focus:ring-0"
+                      className="rounded border-[#272738] text-[#f26625] focus:ring-0"
                     />
                     <label htmlFor="ckpt-switch" className="cursor-pointer">
                       Persist pipeline state checkpoint before switching
@@ -455,7 +455,7 @@ export default function ProvidersPage() {
                   <Button
                     type="submit"
                     disabled={switching}
-                    className="w-full rounded-xl bg-[#6366f1] hover:bg-[#4f46e5] text-white text-xs font-bold font-mono h-9"
+                    className="w-full rounded-xl bg-[#f26625] hover:bg-[#de581a] text-white text-xs font-bold font-mono h-9"
                   >
                     {switching ? <Loader2 className="h-3.5 w-3.5 animate-spin mr-1.5" /> : <ArrowRightLeft className="h-3.5 w-3.5 mr-1.5" />}
                     Hot-Switch Active Provider
@@ -525,7 +525,7 @@ export default function ProvidersPage() {
             <CardHeader className="pb-3 border-b border-[#272738] flex flex-row items-center justify-between">
               <div>
                 <CardTitle className="text-sm font-bold text-white flex items-center gap-2">
-                  <History className="h-4 w-4 text-[#6366f1]" />
+                  <History className="h-4 w-4 text-[#f26625]" />
                   Provider Migration &amp; Failover History
                 </CardTitle>
                 <p className="text-xs text-[#94a3b8] mt-0.5 font-mono">
@@ -567,7 +567,7 @@ export default function ProvidersPage() {
                             <span className="text-emerald-400 font-semibold">{m.to_provider}</span>
                           </td>
                           <td className="py-2.5 text-[#94a3b8]">{m.failure_type || 'manual_switch'}</td>
-                          <td className="py-2.5 text-[#6366f1]">{m.checkpoint_id || 'ckpt-auto'}</td>
+                          <td className="py-2.5 text-[#f26625]">{m.checkpoint_id || 'ckpt-auto'}</td>
                           <td className="py-2.5">
                             <span className={clsx(
                               'text-[10px] px-2 py-0.5 rounded-full font-bold uppercase border',

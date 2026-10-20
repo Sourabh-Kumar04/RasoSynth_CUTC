@@ -162,14 +162,14 @@ export default function ResearchPage() {
             <CardContent className="pt-4 pb-4 px-4 flex items-center justify-between">
               <div>
                 <p className="text-xs text-[#94a3b8] font-mono uppercase">Status</p>
-                <p className={clsx('text-xl font-bold font-mono capitalize mt-0.5 text-[#6366f1]')}>
+                <p className={clsx('text-xl font-bold font-mono capitalize mt-0.5 text-[#f26625]')}>
                   {status?.status ?? 'active'}
                 </p>
               </div>
               <div className="h-9 w-9 rounded-xl bg-[#161622] border border-[#3b3b52] flex items-center justify-center">
                 {status?.status === 'running'
-                  ? <Loader2 className="h-4.5 w-4.5 text-[#6366f1] animate-spin" />
-                  : <Beaker className="h-4.5 w-4.5 text-[#6366f1]" />}
+                  ? <Loader2 className="h-4.5 w-4.5 text-[#f26625] animate-spin" />
+                  : <Beaker className="h-4.5 w-4.5 text-[#f26625]" />}
               </div>
             </CardContent>
           </Card>
@@ -177,14 +177,14 @@ export default function ResearchPage() {
             <CardContent className="pt-4 pb-4 px-4 flex items-center justify-between">
               <div>
                 <p className="text-xs text-[#94a3b8] font-mono uppercase">Last Run</p>
-                <p className="text-lg font-bold font-mono text-[#6366f1] mt-0.5">
+                <p className="text-lg font-bold font-mono text-[#f26625] mt-0.5">
                   {status?.last_research
                     ? new Date(status.last_research).toLocaleDateString()
                     : 'Today'}
                 </p>
               </div>
               <div className="h-9 w-9 rounded-xl bg-[#161622] border border-[#3b3b52] flex items-center justify-center">
-                <Clock className="h-4.5 w-4.5 text-[#6366f1]" />
+                <Clock className="h-4.5 w-4.5 text-[#f26625]" />
               </div>
             </CardContent>
           </Card>
@@ -192,7 +192,7 @@ export default function ResearchPage() {
             <CardContent className="pt-4 pb-4 px-4 flex items-center justify-between">
               <div>
                 <p className="text-xs text-[#94a3b8] font-mono uppercase">Techniques</p>
-                <p className="text-xl font-bold font-mono text-[#6366f1] mt-0.5">{cachedTechniques.length + techEntries.length || 12}</p>
+                <p className="text-xl font-bold font-mono text-[#f26625] mt-0.5">{cachedTechniques.length + techEntries.length || 12}</p>
               </div>
               <div className="h-9 w-9 rounded-xl bg-[#161622] border border-[#3b3b52] flex items-center justify-center">
                 <Target className="h-4.5 w-4.5 text-emerald-600" />
@@ -270,7 +270,7 @@ export default function ResearchPage() {
                 <CardContent className="pt-4 pb-4 px-4 flex items-center justify-between">
                   <div>
                     <p className="text-[10px] text-[#94a3b8] font-mono uppercase">Processing Throughput</p>
-                    <p className="text-xl font-bold font-mono text-[#6366f1] mt-0.5">
+                    <p className="text-xl font-bold font-mono text-[#f26625] mt-0.5">
                       {benchmarks?.results?.benchmark_latency?.throughput_samples_per_sec
                         ? `${Math.round(benchmarks.results.benchmark_latency.throughput_samples_per_sec).toLocaleString()} /s`
                         : '302,570 /s'}
@@ -280,7 +280,7 @@ export default function ResearchPage() {
                     </span>
                   </div>
                   <div className="h-9 w-9 rounded-xl bg-[#161622] border border-[#3b3b52] flex items-center justify-center">
-                    <Zap className="h-4.5 w-4.5 text-[#6366f1]" />
+                    <Zap className="h-4.5 w-4.5 text-[#f26625]" />
                   </div>
                 </CardContent>
               </Card>
@@ -324,7 +324,7 @@ export default function ResearchPage() {
               <Card className="bg-[#12121a] border-[#272738] rounded-2xl">
                 <CardHeader className="pb-3 border-b border-[#272738]">
                   <CardTitle className="text-xs font-bold text-white uppercase font-mono tracking-wider flex items-center gap-2">
-                    <Zap className="h-4 w-4 text-[#6366f1]" />
+                    <Zap className="h-4 w-4 text-[#f26625]" />
                     Engine Latency &amp; Cryptographic Profile
                   </CardTitle>
                 </CardHeader>
@@ -388,7 +388,7 @@ export default function ResearchPage() {
               <Card className="bg-[#12121a] border-[#272738] rounded-2xl lg:col-span-2">
                 <CardHeader className="pb-3 border-b border-[#272738] flex flex-row items-center justify-between">
                   <CardTitle className="text-xs font-bold text-white uppercase font-mono tracking-wider flex items-center gap-2">
-                    <TrendingUp className="h-4 w-4 text-[#6366f1]" />
+                    <TrendingUp className="h-4 w-4 text-[#f26625]" />
                     Empirical Fine-Tuning Accuracy Delta (Sarvam-2B Indic GST QA)
                   </CardTitle>
                   <Badge variant="outline" className="text-[10px] font-mono border-emerald-500/40 text-emerald-400 bg-emerald-950/20">
@@ -412,8 +412,8 @@ export default function ResearchPage() {
                     <div className="p-3 bg-[#0d0d14] rounded-xl border border-[#272738]">
                       <p className="text-[10px] font-mono text-[#94a3b8] uppercase">Exact Match</p>
                       <p className="text-xs font-mono text-[#64748b] mt-0.5 line-through">0.0%</p>
-                      <p className="text-lg font-bold font-mono text-[#818cf8]">40.0%</p>
-                      <span className="text-[9px] font-mono text-[#818cf8]/90 font-bold">+40.0% Absolute</span>
+                      <p className="text-lg font-bold font-mono text-[#f26625]">40.0%</p>
+                      <span className="text-[9px] font-mono text-[#f26625]/90 font-bold">+40.0% Absolute</span>
                     </div>
                     <div className="p-3 bg-[#0d0d14] rounded-xl border border-[#272738]">
                       <p className="text-[10px] font-mono text-[#94a3b8] uppercase">Citation Fidelity</p>
@@ -458,7 +458,7 @@ export default function ResearchPage() {
                   name: 'Perplexity & Fluency Filtering',
                   desc: 'Perplexity cutoff threshold with length penalty normalization to reject low-signal crawls',
                   params: status?.active_heuristics?.perplexity_filtering || { max_perplexity: 45.0, length_penalty: 1.2 },
-                  color: 'text-[#6366f1]'
+                  color: 'text-[#f26625]'
                 },
                 {
                   key: 'self_instruct',
@@ -472,7 +472,7 @@ export default function ResearchPage() {
                   name: 'Evolutionary Prompt Mutation',
                   desc: 'PromptBreeder genetic operators for mutation, fitness selection, and multi-turn reasoning',
                   params: status?.active_heuristics?.evolutionary_prompting || { mutation_rate: 0.4, generations: 5 },
-                  color: 'text-[#818cf8]'
+                  color: 'text-[#f26625]'
                 },
                 {
                   key: 'cross_lingual',
@@ -567,7 +567,7 @@ export default function ResearchPage() {
                     <div className="flex items-center gap-3.5">
                       <div className={clsx('h-9 w-9 rounded-xl flex items-center justify-center border border-[#3b3b52]',
                         ok ? 'bg-[#161622]' : 'bg-[#0a0a0f]')}>
-                        <Icon className={clsx('h-4.5 w-4.5', ok ? 'text-[#6366f1]' : 'text-[#64748b]')} />
+                        <Icon className={clsx('h-4.5 w-4.5', ok ? 'text-[#f26625]' : 'text-[#64748b]')} />
                       </div>
                       <div>
                         <p className="text-xs font-bold text-white">{label}</p>
@@ -602,7 +602,7 @@ export default function ResearchPage() {
                 ]).map((t, i) => (
                   <div key={i} className="flex items-center justify-between px-5 py-3.5">
                     <div className="flex items-center gap-3">
-                      <Sparkles className="h-4 w-4 text-[#6366f1] shrink-0" />
+                      <Sparkles className="h-4 w-4 text-[#f26625] shrink-0" />
                       <span className="text-xs font-mono font-bold text-white">{t}</span>
                     </div>
                     <CheckCircle2 className="h-4 w-4 text-emerald-400 shrink-0" />
@@ -628,7 +628,7 @@ export default function ResearchPage() {
                   'HuggingFace Hub: Fine-tuning datasets quality metrics and license terms',
                 ]).map((entry, i) => (
                   <div key={i} className="flex items-center gap-3 px-5 py-3.5">
-                    <Clock className="h-4 w-4 text-[#818cf8] shrink-0" />
+                    <Clock className="h-4 w-4 text-[#f26625] shrink-0" />
                     <span className="text-xs font-mono text-[#94a3b8]">{entry}</span>
                   </div>
                 ))}

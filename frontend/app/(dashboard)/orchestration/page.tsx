@@ -277,7 +277,7 @@ export default function OrchestrationPage() {
                 </div>
                 <div className="p-2 rounded bg-[#0a0a0f] border border-[#272738]">
                   <span className="text-[#94a3b8] text-[10px] block">Total Cost Accrued</span>
-                  <span className="text-[#818cf8] font-bold">${(selectedJob.cost_usd || 0.041).toFixed(3)}</span>
+                  <span className="text-[#f26625] font-bold">${(selectedJob.cost_usd || 0.041).toFixed(3)}</span>
                 </div>
                 <div className="p-2 rounded bg-[#0a0a0f] border border-[#272738]">
                   <span className="text-[#94a3b8] text-[10px] block">Pipeline Progress</span>
@@ -332,7 +332,7 @@ export default function OrchestrationPage() {
                         <td className="py-2.5">
                           <span className={clsx(
                             'px-2 py-0.5 rounded text-[10px] font-mono uppercase font-semibold',
-                            job.status === 'running' && 'bg-[#6366f1]/20 text-[#818cf8] border border-[#6366f1]/40',
+                            job.status === 'running' && 'bg-[#f26625]/20 text-[#f26625] border border-[#f26625]/40',
                             job.status === 'completed' && 'bg-[#10b981]/20 text-[#10b981] border border-[#10b981]/40',
                             job.status === 'failed' && 'bg-[#f43f5e]/20 text-[#f43f5e] border border-[#f43f5e]/40',
                             job.status !== 'running' && job.status !== 'completed' && job.status !== 'failed' && 'bg-[#f59e0b]/20 text-[#f59e0b]'
@@ -348,7 +348,7 @@ export default function OrchestrationPage() {
                               e.stopPropagation()
                               setSelectedJob(job)
                             }}
-                            className="px-2 py-0.5 rounded bg-[#1a1a24] hover:bg-[#222230] text-[#818cf8] text-[10px] border border-[#272738]"
+                            className="px-2 py-0.5 rounded-md bg-[#161622] hover:bg-[#20202e] text-[#f26625] hover:text-white text-[10px] border border-[#272738] transition-colors"
                           >
                             Inspect DAG
                           </button>
@@ -366,43 +366,43 @@ export default function OrchestrationPage() {
         <TabsContent value="agents" className="space-y-6 mt-0">
           {/* Summary stats */}
           <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
-            <Card className="bg-[#12121a] border-[#272738] rounded-2xl card-shadow">
+            <Card className="bg-[#12121a] border-[#272738] rounded-md card-shadow">
               <CardContent className="pt-4 pb-4 px-4 flex items-center justify-between">
                 <div>
                   <p className="text-xs text-[#94a3b8] font-mono uppercase">Registered Agents</p>
                   <p className="text-2xl font-bold font-mono mt-0.5 text-white">{agents.length || 13}</p>
                 </div>
-                <div className="h-9 w-9 rounded-xl flex items-center justify-center border border-[#3b3b52] bg-[#161622] text-[#6366f1]">
+                <div className="h-9 w-9 rounded-md flex items-center justify-center border border-[#272738] bg-[#161622] text-[#f26625]">
                   <Users className="h-4.5 w-4.5" />
                 </div>
               </CardContent>
             </Card>
 
-            <Card className="bg-[#12121a] border-[#272738] rounded-2xl card-shadow">
+            <Card className="bg-[#12121a] border-[#272738] rounded-md card-shadow">
               <CardContent className="pt-4 pb-4 px-4 flex items-center justify-between">
                 <div>
                   <p className="text-xs text-[#94a3b8] font-mono uppercase">Active Instances</p>
                   <p className="text-2xl font-bold font-mono mt-0.5 text-[#10b981]">{agentStats?.active_instances ?? 5}</p>
                 </div>
-                <div className="h-9 w-9 rounded-xl flex items-center justify-center border border-[#3b3b52] bg-[#161622] text-[#10b981]">
+                <div className="h-9 w-9 rounded-md flex items-center justify-center border border-[#272738] bg-[#161622] text-[#10b981]">
                   <Bot className="h-4.5 w-4.5" />
                 </div>
               </CardContent>
             </Card>
 
-            <Card className="bg-[#12121a] border-[#272738] rounded-2xl card-shadow">
+            <Card className="bg-[#12121a] border-[#272738] rounded-md card-shadow">
               <CardContent className="pt-4 pb-4 px-4 flex items-center justify-between">
                 <div>
                   <p className="text-xs text-[#94a3b8] font-mono uppercase">Architecture</p>
                   <p className="text-xs font-bold font-mono mt-1.5 text-white">LangGraph DAG</p>
                 </div>
-                <div className="h-9 w-9 rounded-xl flex items-center justify-center border border-[#3b3b52] bg-[#161622] text-[#818cf8]">
+                <div className="h-9 w-9 rounded-md flex items-center justify-center border border-[#272738] bg-[#161622] text-[#f26625]">
                   <GitMerge className="h-4.5 w-4.5" />
                 </div>
               </CardContent>
             </Card>
 
-            <Card className="bg-[#12121a] border-[#272738] rounded-2xl card-shadow">
+            <Card className="bg-[#12121a] border-[#272738] rounded-md card-shadow">
               <CardContent className="pt-4 pb-4 px-4 flex items-center justify-between">
                 <div>
                   <p className="text-xs text-[#94a3b8] font-mono uppercase">Society Status</p>
@@ -460,7 +460,7 @@ export default function OrchestrationPage() {
                     <p className="text-[10px] font-mono text-[#64748b] uppercase mb-1.5">Capabilities</p>
                     <div className="flex flex-wrap gap-1.5">
                       {(agent.capabilities || []).map((cap: string) => (
-                        <span key={cap} className="text-[10px] font-mono px-2 py-0.5 rounded bg-[#161622] text-[#818cf8] border border-[#272738]">
+                        <span key={cap} className="text-[10px] font-mono px-2 py-0.5 rounded bg-[#161622] text-[#f26625] border border-[#272738]">
                           {cap.replace(/_/g, ' ')}
                         </span>
                       ))}
@@ -501,16 +501,16 @@ export default function OrchestrationPage() {
           {/* Active Heuristics Grid */}
           <div className="space-y-3">
             <h4 className="text-xs font-bold font-mono uppercase text-white tracking-wider flex items-center gap-2">
-              <Sparkles className="w-3.5 h-3.5 text-[#6366f1]" />
+              <Sparkles className="w-3.5 h-3.5 text-[#f26625]" />
               Active Heuristic Configurations (TechniqueIntegrator)
             </h4>
 
             <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-4">
               {[
                 { name: 'MinHash LSH De-duplication', key: 'minhash_dedup', desc: 'Jaccard similarity threshold with 128 hash permutation bands', metric: 'Threshold: 0.85', color: 'text-[#10b981]' },
-                { name: 'Perplexity & Fluency Filtering', key: 'perplexity_filtering', desc: 'N-gram language model scoring with length penalty', metric: 'Max PPL: 45.0', color: 'text-[#6366f1]' },
+                { name: 'Perplexity & Fluency Filtering', key: 'perplexity_filtering', desc: 'N-gram language model scoring with length penalty', metric: 'Max PPL: 45.0', color: 'text-[#f26625]' },
                 { name: 'Self-Instruct Prompt Diversification', key: 'self_instruct', desc: 'Evolutionary instruction expansion and constraint deepening', metric: 'Depth Tier: 4', color: 'text-amber-400' },
-                { name: 'Evolutionary Prompt Mutation', key: 'evolutionary_prompting', desc: 'Multi-turn reasoning and domain-deepened constraint mutation', metric: 'Temp: 0.8', color: 'text-[#818cf8]' },
+                { name: 'Evolutionary Prompt Mutation', key: 'evolutionary_prompting', desc: 'Multi-turn reasoning and domain-deepened constraint mutation', metric: 'Temp: 0.8', color: 'text-[#f26625]' },
                 { name: 'Cross-Lingual Indic Alignment', key: 'cross_lingual', desc: 'Bhashini corpus alignment, script normalization, and translation', metric: 'Indic 22 Languages', color: 'text-emerald-400' },
                 { name: 'AST Syntax Sandbox Verification', key: 'ocr_correction', desc: 'Python AST compile checking and execution sandboxing for code SFT', metric: 'AST AST-Checked', color: 'text-cyan-400' },
               ].map(h => (
@@ -539,7 +539,7 @@ export default function OrchestrationPage() {
             <Card className="bg-[#12121a] border-[#272738] rounded-2xl card-shadow">
               <CardHeader className="pb-3 border-b border-[#272738]">
                 <CardTitle className="text-xs font-bold text-white uppercase font-mono tracking-wider flex items-center gap-2">
-                  <BookOpen className="w-4 h-4 text-[#818cf8]" />
+                  <BookOpen className="w-4 h-4 text-[#f26625]" />
                   Scanned Research Literature &amp; Corpora
                 </CardTitle>
               </CardHeader>
@@ -551,7 +551,7 @@ export default function OrchestrationPage() {
                   'HuggingFace Hub: Fine-tuning datasets quality metrics and license terms',
                 ]).map((item: string, idx: number) => (
                   <div key={idx} className="p-2.5 rounded-lg bg-[#0a0a0f] border border-[#272738] text-[#94a3b8] flex items-center gap-2">
-                    <Search className="w-3.5 h-3.5 text-[#6366f1] shrink-0" />
+                    <Search className="w-3.5 h-3.5 text-[#f26625] shrink-0" />
                     <span className="truncate">{item}</span>
                   </div>
                 ))}

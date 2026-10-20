@@ -117,7 +117,7 @@ export function InteractiveProductTour() {
           setIsDismissed(false)
           setIsExpanded(true)
         }}
-        className="fixed bottom-4 right-4 z-[90] flex items-center gap-2 bg-[#6366f1] text-white px-3.5 py-2 rounded-full shadow-2xl border border-emerald-500/30 text-xs font-mono font-bold hover:scale-105 transition-transform"
+        className="fixed bottom-4 right-4 z-[90] flex items-center gap-2 bg-[#f26625] text-white px-3.5 py-2 rounded-full shadow-2xl border border-emerald-500/30 text-xs font-mono font-bold hover:scale-105 transition-transform"
       >
         <Sparkles className="h-4 w-4 text-emerald-400 fill-current animate-pulse" />
         <span>Interactive Product Tour</span>
@@ -129,7 +129,7 @@ export function InteractiveProductTour() {
     return (
       <button
         onClick={() => setIsExpanded(true)}
-        className="fixed bottom-4 right-4 z-[90] flex items-center gap-2 bg-[#6366f1] text-white px-3.5 py-2 rounded-full shadow-2xl border border-emerald-500/30 text-xs font-mono font-bold hover:scale-105 transition-transform"
+        className="fixed bottom-4 right-4 z-[90] flex items-center gap-2 bg-[#f26625] text-white px-3.5 py-2 rounded-full shadow-2xl border border-emerald-500/30 text-xs font-mono font-bold hover:scale-105 transition-transform"
       >
         <Sparkles className="h-4 w-4 text-emerald-400 fill-current" />
         <span>Product Tour ({currentStepIndex + 1}/5)</span>
@@ -146,7 +146,7 @@ export function InteractiveProductTour() {
       <div className="bg-[#161622] text-white p-4 flex items-center justify-between border-b border-[#272738]">
         <div className="flex items-center gap-2.5">
           <div className="h-8 w-8 rounded-xl bg-[#12121a] flex items-center justify-center border border-[#3b3b52]">
-            <Icon className="h-4 w-4 text-[#6366f1]" />
+            <Icon className="h-4 w-4 text-[#f26625]" />
           </div>
           <div>
             <div className="flex items-center gap-2">
@@ -177,7 +177,7 @@ export function InteractiveProductTour() {
 
       {/* Tour Content */}
       <div className="p-4 space-y-3.5 bg-[#12121a]">
-        <Badge variant="outline" className="text-[10px] font-mono rounded-full border-[#3b3b52] bg-[#0a0a0f] text-[#6366f1]">
+        <Badge variant="outline" className="text-[10px] font-mono rounded-full border-[#3b3b52] bg-[#0a0a0f] text-[#f26625]">
           {step.badgeText}
         </Badge>
         <p className="text-xs text-[#94a3b8] leading-relaxed">{step.description}</p>
@@ -185,7 +185,7 @@ export function InteractiveProductTour() {
         {/* Live Interactive Action Button */}
         <Button
           size="sm"
-          className="w-full justify-center gap-2 bg-[#6366f1] hover:bg-[#4f46e5] text-white text-xs font-medium rounded-full shadow-xs py-2"
+          className="w-full justify-center gap-2 bg-[#f26625] hover:bg-[#de581a] text-white text-xs font-medium rounded-full shadow-xs py-2"
           onClick={() => handleRunAction(step.actionHref)}
         >
           <span>{step.actionLabel}</span>
@@ -201,7 +201,7 @@ export function InteractiveProductTour() {
               key={idx}
               onClick={() => setCurrentStepIndex(idx)}
               className={`h-1.5 rounded-full transition-all ${
-                idx === currentStepIndex ? 'w-5 bg-[#6366f1]' : 'w-1.5 bg-[#3b3b52] hover:bg-[#64748b]'
+                idx === currentStepIndex ? 'w-5 bg-[#f26625]' : 'w-1.5 bg-[#3b3b52] hover:bg-[#64748b]'
               }`}
             />
           ))}
@@ -213,7 +213,7 @@ export function InteractiveProductTour() {
             size="sm"
             disabled={currentStepIndex === 0}
             onClick={() => setCurrentStepIndex((c) => c - 1)}
-            className="h-7 px-2 text-[11px] border-[#3b3b52] text-[#6366f1] rounded-full disabled:opacity-40"
+            className="h-7 px-2 text-[11px] border-[#3b3b52] text-[#f26625] rounded-full disabled:opacity-40"
           >
             <ChevronLeft className="h-3 w-3" />
             <span>Prev</span>
@@ -223,7 +223,7 @@ export function InteractiveProductTour() {
             <Button
               size="sm"
               onClick={() => setCurrentStepIndex((c) => c + 1)}
-              className="h-7 px-3 text-[11px] bg-[#6366f1] hover:bg-[#4f46e5] text-white rounded-full font-medium"
+              className="h-7 px-3 text-[11px] bg-[#f26625] hover:bg-[#de581a] text-white rounded-full font-medium"
             >
               <span>Next</span>
               <ChevronRight className="h-3 w-3" />

@@ -28,7 +28,7 @@ export default function SourceQualityTable() {
   if (loading) {
     return (
       <div className="flex items-center gap-2 p-6 text-[#94a3b8] font-mono text-xs bg-[#12121a] rounded-2xl border border-[#272738]">
-        <Loader2 className="h-4 w-4 animate-spin text-[#6366f1]" /> Loading source breakdown…
+        <Loader2 className="h-4 w-4 animate-spin text-[#f26625]" /> Loading source breakdown…
       </div>
     );
   }
@@ -62,7 +62,7 @@ export default function SourceQualityTable() {
               const pct = (item.avg_quality * 100).toFixed(1);
               const tier =
                 item.avg_quality >= 0.8 ? { label: "Excellent", cls: "bg-emerald-950/40 text-emerald-400 border-emerald-500/30" }
-              : item.avg_quality >= 0.6 ? { label: "Good",      cls: "bg-indigo-950/40 text-[#818cf8] border-indigo-500/30" }
+              : item.avg_quality >= 0.6 ? { label: "Good",      cls: "bg-indigo-950/40 text-[#f26625] border-indigo-500/30" }
               :                           { label: "Needs Review", cls: "bg-rose-950/40 text-rose-400 border-rose-500/30" };
 
               return (

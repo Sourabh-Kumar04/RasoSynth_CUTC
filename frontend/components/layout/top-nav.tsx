@@ -166,11 +166,11 @@ export function TopNav() {
                   href={item.href}
                   onClick={() => setMobileMenuOpen(false)}
                   className={clsx(
-                    'flex items-center space-x-2.5 px-3 py-2 rounded-lg text-xs font-medium transition-colors',
-                    active ? 'bg-[#161622] text-[#818cf8]' : 'text-[#94a3b8] hover:text-white hover:bg-[#161622]'
+                    'flex items-center space-x-2.5 px-3 py-2 rounded-md text-xs font-medium transition-colors',
+                    active ? 'bg-[#161622] text-[#f26625] border-l-2 border-[#f26625]' : 'text-[#94a3b8] hover:text-white hover:bg-[#161622]'
                   )}
                 >
-                  <Icon className={clsx('w-4 h-4', active ? 'text-[#6366f1]' : 'text-[#94a3b8]')} />
+                  <Icon className={clsx('w-4 h-4', active ? 'text-[#f26625]' : 'text-[#94a3b8]')} />
                   <span>{item.label}</span>
                 </Link>
               )
