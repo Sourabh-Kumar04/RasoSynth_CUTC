@@ -3243,6 +3243,20 @@ async def tool_audit_contamination(request: dict = Body(...)):
     return report
 
 
+@app.post("/tools/evaluate-rag", tags=["Tools"])
+async def tool_evaluate_rag(request: dict = Body(...)):
+    """Evaluate grounding faithfulness, attribution, and citation coverage of a RAG response."""
+    from core.generation.rag_synthesizer import evaluate_rag_faithfulness
+    response = str(request.get("response", ""))
+    positive_contexts = request.get("positive_contexts") or []
+    if not isinstance(positive_contexts, list):
+        positive_contexts = [str(positive_contexts)]
+    return evaluate_rag_faithfulness(
+        response=response,
+        positive_contexts=[str(c) for c in positive_contexts],
+    )
+
+
 @app.get("/", tags=["Root"])
 async def root():
     """Root endpoint."""

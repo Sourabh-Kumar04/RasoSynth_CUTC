@@ -698,6 +698,70 @@ def test_frontier_preference_adversarial_contamination_and_recipes():
     assert "llamafactory-cli train" in recipe_result["content"]
 
 
+def test_rag_synthesis_and_faithfulness():
+    """Verify multi-hop RAG synthesis, citation formatting, and faithfulness evaluation."""
+    from core.generation.rag_synthesizer import (
+        build_rag_prompt_directive,
+        format_rag_sample,
+        evaluate_rag_faithfulness,
+    )
+
+    # 1. Directive generation
+    dir_with_neg = build_rag_prompt_directive(include_hard_negatives=True)
+    assert "hard_negatives" in dir_with_neg
+    assert "positive_contexts" in dir_with_neg
+
+    dir_no_neg = build_rag_prompt_directive(include_hard_negatives=False)
+    assert "hard_negatives" not in dir_no_neg
+
+    # 2. Sample formatting with citations and hard negatives
+    sample = format_rag_sample(
+        query="Under Section 80C, what is the maximum deduction allowed for EPF and PPF?",
+        positive_contexts=[
+            "Section 80C of the Income Tax Act allows deductions up to Rs. 1,50,000 per financial year.",
+            "Eligible investments under 80C include Employee Provident Fund (EPF) and Public Provident Fund (PPF).",
+        ],
+        hard_negatives=[
+            "Section 80D allows deductions for health insurance premiums up to Rs. 25,000.",
+        ],
+        grounded_response="Under Section 80C, the cumulative deduction limit is Rs. 1,50,000 [1], which includes investments in both EPF and PPF [2].",
+        domain="taxation",
+    )
+
+    assert sample["instruction"].startswith("Under Section 80C")
+    assert len(sample["positive_contexts"]) == 2
+    assert len(sample["hard_negatives"]) == 1
+    assert len(sample["contexts"]) == 3  # 2 positive + 1 negative
+    assert len(sample["citations"]) == 2
+    assert sample["citations"][0]["citation_id"] == 1
+    assert sample["citations"][1]["citation_id"] == 2
+    assert sample["metadata"]["type"] == "multi_hop_rag"
+    assert sample["metadata"]["citation_count"] == 2
+
+    # 3. Faithfulness evaluation
+    faithful_eval = evaluate_rag_faithfulness(
+        response="Under Section 80C of the Income Tax Act deductions up to Rs 1,50,000 per financial year [1].",
+        positive_contexts=["Section 80C of the Income Tax Act allows deductions up to Rs. 1,50,000 per financial year."],
+    )
+    assert faithful_eval["status"] == "grounded"
+    assert faithful_eval["has_citations"] is True
+    assert faithful_eval["faithfulness_score"] >= 0.70
+
+    empty_eval = evaluate_rag_faithfulness(
+        response="",
+        positive_contexts=[],
+    )
+    assert empty_eval["status"] == "unfaithful"
+    assert empty_eval["faithfulness_score"] == 0.0
+
+    unsupported_eval = evaluate_rag_faithfulness(
+        response="Completely unrelated extraterrestrial galaxy travel mechanics.",
+        positive_contexts=["Section 80C of the Income Tax Act allows deductions up to Rs. 1,50,000."],
+    )
+    assert unsupported_eval["status"] == "unsupported"
+
+
+
 
 
 

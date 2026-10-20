@@ -486,6 +486,7 @@ function StudioContent() {
                   <option value="rlhf">Preference Pairs (RLHF / DPO)</option>
                   <option value="kto">Binary Alignment (KTO - Kahneman-Tversky)</option>
                   <option value="simpo">Simple Preference Optimization (SimPO)</option>
+                  <option value="rag">Retrieval-Augmented Generation (RAG &amp; Citations)</option>
                 </select>
               </div>
 

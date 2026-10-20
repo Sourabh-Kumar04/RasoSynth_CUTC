@@ -13,6 +13,7 @@ from core.metrics.fidelity import evaluate_fidelity
 from core.generation.cot_synthesizer import build_cot_prompt_directive, extract_thought_and_solution
 from core.generation.tool_caller import build_tool_calling_system_prompt, DEFAULT_FINANCE_TOOLS
 from core.generation.preference_synthesizer import build_preference_directive
+from core.generation.rag_synthesizer import build_rag_prompt_directive, format_rag_sample, evaluate_rag_faithfulness
 from core.curriculum.curriculum_sorter import sort_by_curriculum
 
 logger = logging.getLogger(__name__)
@@ -351,6 +352,10 @@ class SeedlessGenerator:
         if ds_type in ("kto", "simpo"):
             pref_prompt = "\n" + build_preference_directive(ds_type)
 
+        rag_prompt = ""
+        if ds_type == "rag":
+            rag_prompt = "\n" + build_rag_prompt_directive(include_hard_negatives=True)
+
         system_prompt = (
             f"You are an expert dataset generator specializing in the '{plan.domain}' domain. "
             f"Your objective: {plan.objective}.\n"
@@ -365,6 +370,7 @@ class SeedlessGenerator:
             f"{lang_rule}"
             f"{tool_prompt}"
             f"{pref_prompt}"
+            f"{rag_prompt}"
         )
 
         user_message = (
@@ -493,6 +499,15 @@ class SeedlessGenerator:
                             "chosen_word_count": c_len,
                             "rejected_word_count": r_len,
                             "length_ratio": round(c_len / max(r_len, 1), 2),
+                        }
+                    elif ds_type == "rag":
+                        pos_ctx = data.get("positive_contexts") or []
+                        neg_ctx = data.get("hard_negatives") or []
+                        citations = data.get("citations") or []
+                        meta["rag"] = {
+                            "positive_contexts": pos_ctx,
+                            "hard_negatives": neg_ctx,
+                            "citations": citations,
                         }
 
                     if data.get("instruction_en") and data.get("response_en"):

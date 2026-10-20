@@ -654,6 +654,18 @@ class APIClient {
     })
   }
 
+  async evaluateRagFaithfulness(payload: { response: string; positive_contexts: string[] }) {
+    return this.request<{
+      faithfulness_score: number
+      citation_coverage: number
+      has_citations: boolean
+      status: string
+    }>('/tools/evaluate-rag', {
+      method: 'POST',
+      body: JSON.stringify(payload),
+    })
+  }
+
   // === Download API ===
   // Download a dataset with format selection - returns a Blob for file saving
   async downloadDataset(id: string, format: string = 'jsonl'): Promise<Blob> {
