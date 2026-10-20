@@ -3464,6 +3464,19 @@ async def tool_shard_dataset(request: dict = Body(...)):
     )
 
 
+@app.get("/benchmarks/quality", tags=["Research"])
+async def get_quality_benchmarks():
+    """Run comprehensive quality, throughput latency, and unit economic benchmarks."""
+    from research.quality_benchmark import QualityBenchmark
+    benchmark = QualityBenchmark()
+    results = await benchmark.run_all()
+    markdown_report = benchmark.generate_report(results)
+    return {
+        "benchmark_data": results,
+        "markdown_report": markdown_report,
+    }
+
+
 @app.get("/", tags=["Root"])
 async def root():
     """Root endpoint."""

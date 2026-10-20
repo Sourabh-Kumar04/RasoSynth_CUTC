@@ -525,6 +525,10 @@ class APIClient {
     return this.request<any>('/research/status')
   }
 
+  async getQualityBenchmarks() {
+    return this.request<any>('/benchmarks/quality')
+  }
+
   // === Adaptability API ===
   async analyzeAdaptability(constraints: any) {
     return this.request<any>('/adaptability', {
