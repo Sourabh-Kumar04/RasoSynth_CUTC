@@ -845,6 +845,88 @@ def test_multi_turn_synthesis_and_coherence():
     assert any("alternation" in iss for iss in coh_bad["issues"])
 
 
+def test_best_of_n_consensus_and_preference_generation():
+    """Verify Best-of-N candidate parsing, majority voting consensus, and preference extraction."""
+    from core.curation.best_of_n import (
+        normalize_canonical_answer,
+        score_reasoning_trajectory,
+        filter_best_of_n,
+    )
+
+    assert normalize_canonical_answer("₹45,000.00") == "45000"
+    assert normalize_canonical_answer("Rs. 18%") == "18"
+    assert normalize_canonical_answer("Paris.") == "paris"
+
+    score_structured = score_reasoning_trajectory(
+        thought="Step 1: Calculate 18% of 250000 = 45000. Step 2: Add to principal = 295000.",
+        solution="Total is 295000."
+    )
+    score_unstructured = score_reasoning_trajectory(thought="just did it", solution="295000")
+    assert score_structured > score_unstructured
+
+    # Best-of-N Rejection Sampling on candidate traces
+    candidates = [
+        "<thought>Pehle step 1 calculate karo: 100 * 0.18 = 18. Isliye total answer 18 hoga.</thought>Answer: ₹18",
+        "<thought>Step 1: multiply 100 by 18 percent. 100 * 18 / 100 = 18.</thought>Total GST is 18.",
+        "<thought>Guessed it wrong, maybe 28%.</thought>Answer: 28.",
+    ]
+
+    bon_result = filter_best_of_n(
+        instruction="Calculate 18% GST on Rs. 100",
+        candidates=candidates,
+        domain="taxation",
+    )
+
+    assert bon_result["status"] == "consensus_reached"
+    assert bon_result["target_answer"] == "18"
+    assert bon_result["consensus_rate"] >= 0.66
+    assert bon_result["total_candidates"] == 3
+    assert "₹18" in bon_result["chosen_response"] or "18" in bon_result["chosen_response"]
+    assert len(bon_result["rejected_responses"]) >= 1
+    assert "28" in bon_result["rejected_responses"][0]
+
+    pref = bon_result["preference_pair"]
+    assert pref is not None
+    assert "chosen" in pref
+    assert "rejected" in pref
+    assert pref["instruction"] == "Calculate 18% GST on Rs. 100"
+
+
+def test_representation_balancer():
+    """Verify regional geographic zoning, urbanicity classification, and parity scoring."""
+    from core.curation.representation_balancer import (
+        audit_sample_representation,
+        audit_dataset_representation,
+    )
+
+    sample_south = audit_sample_representation("Tax filing assistance for startup in Bengaluru, Karnataka by Priya.")
+    assert "south" in sample_south["zones"]
+    assert sample_south["setting"] == "tier_1_metro"
+    assert sample_south["gender_indicator"] == "female"
+
+    sample_rural = audit_sample_representation("Kisan credit card scheme for farmer in gaon mandi by Ramesh.")
+    assert sample_rural["setting"] == "rural_gramin"
+
+    dataset = [
+        {"instruction": "Startup GST registration in Bengaluru, Karnataka", "response": "Visit portal."},
+        {"instruction": "Property tax filing in Chennai, Tamil Nadu", "response": "Pay municipal tax."},
+        {"instruction": "Textile trade challan in Surat, Gujarat", "response": "Generate challan."},
+        {"instruction": "Kisan mandi subsidy application in UP gaon", "response": "Apply at panchayat."},
+        {"instruction": "Jute mill dispute resolution in Kolkata, West Bengal", "response": "File appeal."},
+    ]
+
+    audit = audit_dataset_representation(dataset)
+    assert audit["total_samples"] == 5
+    assert 0.0 <= audit["representation_parity_score"] <= 1.0
+    assert "south" in audit["zone_distribution"]
+    assert "west" in audit["zone_distribution"]
+    assert "east" in audit["zone_distribution"]
+    assert "north" in audit["zone_distribution"]
+    assert "tier_1_metro" in audit["setting_distribution"]
+    assert len(audit["recommendations"]) >= 1
+
+
+
 
 
 

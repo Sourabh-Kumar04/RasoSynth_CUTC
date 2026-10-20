@@ -712,6 +712,50 @@ class APIClient {
     })
   }
 
+  async filterBestOfN(payload: { instruction: string; candidates: string[]; reference_answer?: string; domain?: string }) {
+    return this.request<{
+      instruction: string
+      status: string
+      consensus_rate: number
+      total_candidates: number
+      target_answer: string
+      chosen_response: string
+      chosen_trajectory_score: number
+      rejected_responses: string[]
+      preference_pair?: {
+        instruction: string
+        chosen: string
+        rejected: string
+        metadata: any
+      }
+      candidate_summary: Array<{
+        id: number
+        canonical_answer: string
+        trajectory_score: number
+        is_chosen: boolean
+      }>
+    }>('/tools/best-of-n', {
+      method: 'POST',
+      body: JSON.stringify(payload),
+    })
+  }
+
+  async auditRepresentation(payload: { samples: any[] }) {
+    return this.request<{
+      total_samples: number
+      representation_parity_score: number
+      status: string
+      zone_distribution: Record<string, { count: number; percentage: number }>
+      setting_distribution: Record<string, { count: number; percentage: number }>
+      gender_distribution: Record<string, number>
+      underrepresented_zones: string[]
+      recommendations: string[]
+    }>('/tools/audit-representation', {
+      method: 'POST',
+      body: JSON.stringify(payload),
+    })
+  }
+
   // === Download API ===
   // Download a dataset with format selection - returns a Blob for file saving
   async downloadDataset(id: string, format: string = 'jsonl'): Promise<Blob> {

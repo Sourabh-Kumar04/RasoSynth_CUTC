@@ -3278,6 +3278,34 @@ async def tool_evaluate_dialogue(request: dict = Body(...)):
     return evaluate_dialogue_coherence(turns=turns)
 
 
+@app.post("/tools/best-of-n", tags=["Tools"])
+async def tool_best_of_n(request: dict = Body(...)):
+    """Perform Best-of-N rejection sampling and consensus filtering."""
+    from core.curation.best_of_n import filter_best_of_n
+    instruction = str(request.get("instruction", ""))
+    candidates = request.get("candidates") or []
+    ref_ans = request.get("reference_answer")
+    domain = request.get("domain")
+    if not candidates:
+        raise HTTPException(status_code=400, detail="Field 'candidates' must be a non-empty list of candidate strings.")
+    return filter_best_of_n(
+        instruction=instruction,
+        candidates=[str(c) for c in candidates],
+        reference_answer=str(ref_ans) if ref_ans else None,
+        domain=str(domain) if domain else None,
+    )
+
+
+@app.post("/tools/audit-representation", tags=["Tools"])
+async def tool_audit_representation(request: dict = Body(...)):
+    """Audit geographic distribution, urbanicity balance, and demographic parity."""
+    from core.curation.representation_balancer import audit_dataset_representation
+    samples = request.get("samples") or []
+    if not samples:
+        raise HTTPException(status_code=400, detail="Field 'samples' must be a non-empty list of records.")
+    return audit_dataset_representation(samples=samples)
+
+
 @app.get("/", tags=["Root"])
 async def root():
     """Root endpoint."""
