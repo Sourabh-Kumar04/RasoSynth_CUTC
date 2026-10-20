@@ -583,6 +583,7 @@ class TestWorkflow6FastAPIEndpointsRegression:
         assert data["tuned_model"]["citation_accuracy_pct"] == 100.0
 
     def test_get_dataset_dbom_flagship(self, client):
+        # 1. Indic GST
         res = client.get("/datasets/flagship_indic_gst/dbom")
         assert res.status_code == 200
         data = res.json()
@@ -592,6 +593,25 @@ class TestWorkflow6FastAPIEndpointsRegression:
         assert data["dbom"]["certificate_id"].startswith("DBOM-")
         assert len(data["dbom"]["merkle_root_hash"]) == 64
         assert "Data Nutrition & Provenance Label" in data["nutrition_label_md"]
+
+        # 2. Clinical Reasoning
+        res_clin = client.get("/datasets/flagship_clinical/dbom")
+        assert res_clin.status_code == 200
+        data_clin = res_clin.json()
+        assert data_clin["job_id"] == "flagship_clinical"
+        assert len(data_clin["dbom"]["merkle_root_hash"]) == 64
+
+        # 3. Corporate Law
+        res_corp = client.get("/datasets/flagship_corporate_law/dbom")
+        assert res_corp.status_code == 200
+        data_corp = res_corp.json()
+        assert data_corp["job_id"] == "flagship_corporate_law"
+        assert len(data_corp["dbom"]["merkle_root_hash"]) == 64
+
+        # 4. Hugging Face Card for flagship
+        res_card = client.get("/datasets/flagship_indic_gst/huggingface-card")
+        assert res_card.status_code == 200
+        assert "Indic GST" in res_card.json()["content"]
 
     def test_get_dbom_badge_svg(self, client):
         res = client.get("/badges/dbom/flagship_indic_gst.svg")

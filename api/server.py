@@ -2283,6 +2283,41 @@ async def export_dataset(dataset_id: str, request: dict = None):
 @app.get("/jobs/{job_id}/records", tags=["Jobs"])
 async def get_job_records(job_id: str, limit: int = 10):
     """Get sample records from datasets belonging to a job."""
+    from pathlib import Path
+    import json
+
+    # Direct resolution for pre-synthesized flagship datasets
+    flagship_files = {
+        "flagship": Path("outputs/flagship_indic_gst/flagship_indic_gst_sft.jsonl"),
+        "flagship_indic_gst": Path("outputs/flagship_indic_gst/flagship_indic_gst_sft.jsonl"),
+        "flagship_clinical": Path("outputs/flagship_clinical/flagship_clinical_sft.jsonl"),
+        "flagship_corporate_law": Path("outputs/flagship_corporate_law/flagship_corporate_law_sft.jsonl"),
+    }
+    target_file = flagship_files.get(job_id.lower())
+    if target_file and target_file.exists():
+        flagship_records = []
+        with open(target_file, "r", encoding="utf-8") as f:
+            for idx, line in enumerate(f):
+                if line.strip():
+                    item = json.loads(line)
+                    flagship_records.append({
+                        "id": f"{job_id}-{idx}",
+                        "dataset_id": job_id,
+                        "instruction": item.get("instruction", ""),
+                        "response": item.get("response", ""),
+                        "input": item.get("input", ""),
+                        "quality_score": item.get("quality_score", 0.99),
+                        "difficulty_tier": item.get("difficulty_tier", 3),
+                        "created_at": "2026-10-20T12:00:00Z",
+                    })
+                if len(flagship_records) >= limit:
+                    break
+        return {
+            "records": flagship_records,
+            "count": len(flagship_records),
+            "message": None,
+        }
+
     if not db:
         raise HTTPException(status_code=503, detail="Database not available")
 
@@ -3057,8 +3092,24 @@ async def tool_evaluate_rubric(request: dict = Body(...)):
 @app.get("/datasets/{job_id}/huggingface-card", tags=["Datasets"])
 async def get_dataset_huggingface_card(job_id: str):
     """Generate Hugging Face Dataset Card (README.md) with YAML frontmatter."""
+    from pathlib import Path
     from core.export.huggingface_exporter import generate_hf_dataset_card
     from core.tokenizer_metrics import estimate_tokenizer_fertility
+
+    # Check for flagship datasets pre-packaged cards
+    flagship_cards = {
+        "flagship": Path("outputs/flagship_indic_gst/README.md"),
+        "flagship_indic_gst": Path("outputs/flagship_indic_gst/README.md"),
+        "flagship_clinical": Path("outputs/flagship_clinical/README.md"),
+        "flagship_corporate_law": Path("outputs/flagship_corporate_law/README.md"),
+    }
+    target_card = flagship_cards.get(job_id.lower())
+    if target_card and target_card.exists():
+        return {
+            "job_id": job_id,
+            "filename": "README.md",
+            "content": target_card.read_text(encoding="utf-8"),
+        }
 
     job = await db.get_job(job_id) if db else None
     domain = (job.target_domain if job else None) or f"Dataset {job_id[:8]}"
@@ -3189,9 +3240,17 @@ async def get_dataset_training_recipe(
         else:
             base_model = "meta-llama/Meta-Llama-3.1-8B-Instruct"
 
+    flagship_dirs = {
+        "flagship": "outputs/flagship_indic_gst/flagship_indic_gst_sft.jsonl",
+        "flagship_indic_gst": "outputs/flagship_indic_gst/flagship_indic_gst_sft.jsonl",
+        "flagship_clinical": "outputs/flagship_clinical/flagship_clinical_sft.jsonl",
+        "flagship_corporate_law": "outputs/flagship_corporate_law/flagship_corporate_law_sft.jsonl",
+    }
+    dataset_file = flagship_dirs.get(job_id.lower(), f"dataset-{job_id[:8]}.jsonl")
+
     recipe = generate_training_recipe(
         framework=framework,
-        dataset_path=f"dataset-{job_id[:8]}.jsonl",
+        dataset_path=dataset_file,
         base_model=base_model,
         dataset_type=dataset_type,
     )
@@ -3209,10 +3268,17 @@ async def get_dataset_dbom(job_id: str):
     import json
     from core.export.dbom_attestor import generate_dbom_attestation, generate_nutrition_label_markdown
 
-    # Check for flagship pre-attested release
-    if job_id.lower() in ("flagship", "flagship_indic_gst", "indic_gst", "flagship_indic"):
-        flagship_dbom = Path("outputs/flagship_indic_gst/flagship_indic_gst_sft.dbom.json")
-        flagship_nut = Path("outputs/flagship_indic_gst/flagship_indic_gst_sft.nutrition.md")
+    # Check for flagship pre-attested releases
+    flagship_paths = {
+        "flagship": ("outputs/flagship_indic_gst/flagship_indic_gst_sft.dbom.json", "outputs/flagship_indic_gst/flagship_indic_gst_sft.nutrition.md"),
+        "flagship_indic_gst": ("outputs/flagship_indic_gst/flagship_indic_gst_sft.dbom.json", "outputs/flagship_indic_gst/flagship_indic_gst_sft.nutrition.md"),
+        "flagship_clinical": ("outputs/flagship_clinical/flagship_clinical_sft.dbom.json", "outputs/flagship_clinical/flagship_clinical_sft.nutrition.md"),
+        "flagship_corporate_law": ("outputs/flagship_corporate_law/flagship_corporate_law_sft.dbom.json", "outputs/flagship_corporate_law/flagship_corporate_law_sft.nutrition.md"),
+    }
+    if job_id.lower() in flagship_paths:
+        dbom_p, nut_p = flagship_paths[job_id.lower()]
+        flagship_dbom = Path(dbom_p)
+        flagship_nut = Path(nut_p)
         if flagship_dbom.exists():
             with open(flagship_dbom, "r", encoding="utf-8") as f:
                 dbom = json.load(f)

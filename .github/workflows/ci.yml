@@ -46,8 +46,10 @@ jobs:
           python cli.py --help
           python main.py --help
           python cli.py generate --domain "Indian Taxation & GST" --size 3 --output-dir outputs/ci_test
+          python cli.py generate --domain "Air-Gapped Sovereign AI" --size 2 --engine vllm --output-dir outputs/ci_test_vllm
           python cli.py audit --dataset outputs/ci_test/dataset_distillation_3.jsonl
           python cli.py recipe --framework axolotl --dataset outputs/ci_test/dataset_distillation_3.jsonl
+          python cli.py publish --dataset-dir outputs/ci_test --repo-id rasosynthtune/ci-test-v1 --dry-run
 
   frontend-build:
     name: Next.js 14 Production Build
