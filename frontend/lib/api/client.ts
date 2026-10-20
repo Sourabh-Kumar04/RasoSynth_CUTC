@@ -633,6 +633,27 @@ class APIClient {
     })
   }
 
+  async evaluateRubric(payload: {
+    instruction: string
+    response: string
+    reference_context?: string
+    language?: string
+    formality_register?: string
+  }) {
+    return this.request<{
+      groundedness: number
+      authenticity: number
+      domain_correctness: number
+      safety_tone: number
+      conciseness: number
+      overall_score: number
+      rating: string
+    }>('/tools/evaluate-rubric', {
+      method: 'POST',
+      body: JSON.stringify(payload),
+    })
+  }
+
   // === Download API ===
   // Download a dataset with format selection - returns a Blob for file saving
   async downloadDataset(id: string, format: string = 'jsonl'): Promise<Blob> {
