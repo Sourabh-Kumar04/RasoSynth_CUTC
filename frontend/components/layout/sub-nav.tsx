@@ -77,9 +77,10 @@ export function SubNav() {
       <div className="w-full max-w-[1600px] mx-auto px-4 sm:px-6 lg:px-8 flex items-center justify-between gap-4 h-11">
         
         {/* Left Section: Compact Horizontal Cluster Badge */}
-        <div className="flex items-center gap-2 px-2.5 py-1 rounded-md bg-[#12121a] border border-[#272738] shrink-0 text-[11px] font-mono">
+        <div className="flex items-center gap-1.5 sm:gap-2 px-2 sm:px-2.5 py-1 rounded-md bg-[#12121a] border border-[#272738] shrink-0 text-[11px] font-mono">
           <span className="w-2 h-2 rounded-full bg-[#10b981] animate-pulse shrink-0" />
-          <span className="font-bold text-white uppercase tracking-wider">CLUSTER-ALPHA</span>
+          <span className="font-bold text-white uppercase tracking-wider hidden sm:inline">CLUSTER-ALPHA</span>
+          <span className="font-bold text-white uppercase tracking-wider sm:hidden">ALPHA</span>
           <span className="text-[#3b3b52] hidden sm:inline">|</span>
           <span className="text-[#cbd5e1] hidden sm:inline">Sarvam-2B</span>
           <span className="text-[#3b3b52] hidden md:inline">|</span>
