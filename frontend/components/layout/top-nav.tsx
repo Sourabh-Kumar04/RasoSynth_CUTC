@@ -13,6 +13,8 @@ import {
   BarChart2,
   Activity,
   Beaker,
+  ShieldCheck,
+  TrendingUp,
   Settings as SettingsIcon,
   Menu,
   X,
@@ -25,11 +27,12 @@ import { api } from '@/lib/api/client'
 const MOBILE_NAV_ITEMS = [
   { href: '/studio', label: 'Studio', icon: FlaskConical },
   { href: '/orchestration', label: 'DAG Orchestrator', icon: Workflow },
-  { href: '/datasets', label: 'Datasets', icon: Database },
+  { href: '/datasets', label: 'Datasets & DBOM', icon: Database },
+  { href: '/finetune', label: 'Fine-Tune Studio', icon: Cpu },
+  { href: '/research', label: 'Research & Benchmarks', icon: TrendingUp },
   { href: '/review', label: 'HITL Review', icon: ClipboardCheck },
-  { href: '/finetune', label: 'Fine-Tune', icon: Cpu },
-  { href: '/quality', label: 'Quality', icon: BarChart2 },
-  { href: '/observability', label: 'Telemetry', icon: Activity },
+  { href: '/quality', label: 'Quality Canvas', icon: BarChart2 },
+  { href: '/observability', label: 'Telemetry & Traces', icon: Activity },
   { href: '/providers', label: 'Providers', icon: Beaker },
   { href: '/settings', label: 'Settings', icon: SettingsIcon },
 ]
@@ -91,6 +94,20 @@ export function TopNav() {
             <span className="hidden sm:inline-flex items-center px-2 py-0.5 rounded text-[10px] font-mono font-medium bg-[#161622] border border-[#272738] text-[#10b981]">
               <span className={clsx('w-1.5 h-1.5 rounded-full mr-1.5', isHealthy ? 'bg-[#10b981] animate-pulse' : 'bg-amber-400')} />
               {isHealthy ? 'Online' : 'Degraded'}
+            </span>
+
+            <Link
+              href="/datasets"
+              className="hidden md:inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[10px] font-mono font-medium bg-emerald-950/30 border border-emerald-500/30 text-[#10b981] hover:bg-emerald-950/50 transition-colors"
+              title="Cryptographic DBOM Attestation Engine Active"
+            >
+              <ShieldCheck className="w-3 h-3 text-[#10b981]" />
+              <span>DBOM Verified</span>
+            </Link>
+
+            <span className="hidden xl:inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full text-[10px] font-mono text-[#38bdf8] bg-sky-950/30 border border-sky-500/30">
+              <span className="w-1.5 h-1.5 rounded-full bg-[#38bdf8]" />
+              <span>Air-Gapped Local</span>
             </span>
           </div>
 

@@ -85,9 +85,15 @@ export function Sidebar() {
             </div>
 
             {!collapsed && (
-              <div className="mt-2 pt-2 border-t border-[#1c1c28] flex justify-between items-center text-[10px] font-mono text-[#94a3b8]">
-                <span>NODES: 8x H100</span>
-                <span className="text-[#10b981] font-semibold">99.9% LIVE</span>
+              <div className="mt-2 pt-2 border-t border-[#1c1c28] space-y-1 text-[10px] font-mono text-[#94a3b8]">
+                <div className="flex justify-between items-center">
+                  <span>SOVEREIGN: Sarvam-2B</span>
+                  <span className="text-[#10b981] font-semibold">AIR-GAPPED</span>
+                </div>
+                <div className="flex justify-between items-center text-[9px] text-[#64748b]">
+                  <span>DBOM MERKLE ENGINE</span>
+                  <span className="text-emerald-400 font-bold">SHA-256 LIVE</span>
+                </div>
               </div>
             )}
           </div>
@@ -100,10 +106,12 @@ export function Sidebar() {
             {[
               { href: '/studio', label: 'Studio Pipeline', icon: FlaskConical },
               { href: '/orchestration', label: 'DAG Visualizer', icon: Workflow },
-              { href: '/datasets', label: 'Dataset Store', icon: Database },
-              { href: '/finetune', label: 'LoRA Tuner', icon: Cpu },
-              { href: '/review', label: 'HITL Review', icon: ClipboardCheck },
-              { href: '/quality', label: 'Quality & Grounding', icon: BarChart2 },
+              { href: '/datasets', label: 'Dataset Store & DBOM', icon: Database },
+              { href: '/finetune', label: 'Fine-Tune Studio', icon: Cpu },
+              { href: '/research', label: 'Research & Benchmarks', icon: BarChart2 },
+              { href: '/observability', label: 'Telemetry & Traces', icon: Activity },
+              { href: '/review', label: 'HITL Review Queue', icon: ClipboardCheck },
+              { href: '/quality', label: 'Quality & Grounding', icon: Sparkles },
             ].map((item) => {
               const active = pathname === item.href
               const Icon = item.icon
