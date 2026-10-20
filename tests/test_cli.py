@@ -150,3 +150,49 @@ def test_cli_benchmark_json():
     assert "benchmark_generation_quality" in results
     assert "benchmark_latency" in results
     assert "benchmark_cost_efficiency" in results
+
+
+def test_cli_generate_modes_and_parquet():
+    """Verify `rasosynthtune generate` supports agentic_cot mode and Apache Parquet export."""
+    with tempfile.TemporaryDirectory() as tmp_dir:
+        gen_res = subprocess.run(
+            [
+                PYTHON_EXEC,
+                CLI_SCRIPT,
+                "generate",
+                "--domain",
+                "Machine Learning Systems",
+                "--size",
+                "4",
+                "--mode",
+                "agentic_cot",
+                "--format",
+                "parquet",
+                "--output-dir",
+                tmp_dir,
+            ],
+            capture_output=True,
+            text=True,
+            check=True,
+        )
+        assert "[OK] Synthesized 4 samples" in gen_res.stdout
+        parquet_path = Path(tmp_dir) / "dataset_agentic_cot_4.parquet"
+        dbom_path = Path(tmp_dir) / "dataset_agentic_cot_4.dbom.json"
+        assert parquet_path.exists()
+        assert dbom_path.exists()
+
+        # Audit the Parquet dataset
+        audit_res = subprocess.run(
+            [
+                PYTHON_EXEC,
+                CLI_SCRIPT,
+                "audit",
+                "--dataset",
+                str(parquet_path),
+            ],
+            capture_output=True,
+            text=True,
+            check=True,
+        )
+        assert "PASSED - Cryptographically Intact" in audit_res.stdout
+        assert "Total Samples Loaded: 4" in audit_res.stdout
