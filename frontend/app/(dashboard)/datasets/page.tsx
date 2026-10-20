@@ -524,17 +524,17 @@ export default function DatasetsPage() {
             variant="outline"
             size="sm"
             onClick={fetchJobs}
-            className="rounded-full border-[#272738] text-white hover:bg-[#161622] h-8 text-xs font-mono"
+            className="rounded-md border-[#272738] text-white hover:bg-[#161622] h-8 text-xs font-mono"
           >
-            <RefreshCw className="h-3 w-3 mr-1.5 text-[#6366f1]" />
+            <RefreshCw className="h-3 w-3 mr-1.5 text-[#f26625]" />
             Refresh
           </Button>
           <Button
             size="sm"
-            className="gap-2 bg-[#6366f1] hover:bg-[#818cf8] text-white font-mono text-xs font-semibold h-8 px-4 rounded-full shadow-sm glow-indigo"
+            className="gap-2 bg-[#f26625] hover:bg-[#de581a] border border-[#ea580c] text-white font-mono text-xs font-bold h-8 px-4 rounded-md shadow-sm glow-yc"
             onClick={() => router.push('/studio')}
           >
-            <Plus className="h-3.5 w-3.5 text-[#10b981]" />
+            <Plus className="h-3.5 w-3.5 text-white" />
             New Dataset Workflow
           </Button>
         </div>
@@ -705,12 +705,12 @@ export default function DatasetsPage() {
             placeholder="Search datasets by topic or ID..."
             value={search}
             onChange={(e) => setSearch(e.target.value)}
-            className="pl-10 rounded-full border-[#272738] bg-[#0a0a0f] text-white focus:border-[#6366f1] placeholder:text-[#64748b] text-xs font-mono w-full"
+            className="pl-10 rounded-md border-[#272738] bg-[#0a0a0f] text-white focus:border-[#f26625] placeholder:text-[#64748b] text-xs font-mono w-full"
           />
         </div>
 
         <Select value={modalityFilter} onValueChange={setModalityFilter}>
-          <SelectTrigger className="w-full sm:w-36 rounded-full border-[#272738] bg-[#0a0a0f] text-white text-xs font-mono">
+          <SelectTrigger className="w-full sm:w-36 rounded-md border-[#272738] bg-[#0a0a0f] text-white text-xs font-mono">
             <SelectValue placeholder="Modality" />
           </SelectTrigger>
           <SelectContent className="bg-[#12121a] border-[#272738] text-white text-xs">
@@ -723,7 +723,7 @@ export default function DatasetsPage() {
         </Select>
 
         <Select value={statusFilter} onValueChange={setStatusFilter}>
-          <SelectTrigger className="w-full sm:w-32 rounded-full border-[#272738] bg-[#0a0a0f] text-white text-xs font-mono">
+          <SelectTrigger className="w-full sm:w-32 rounded-md border-[#272738] bg-[#0a0a0f] text-white text-xs font-mono">
             <SelectValue placeholder="Status" />
           </SelectTrigger>
           <SelectContent className="bg-[#12121a] border-[#272738] text-white text-xs">
@@ -734,7 +734,7 @@ export default function DatasetsPage() {
         </Select>
 
         <Select value={sortBy} onValueChange={(v: any) => setSortBy(v)}>
-          <SelectTrigger className="w-full sm:w-36 rounded-full border-[#272738] bg-[#0a0a0f] text-white text-xs font-mono">
+          <SelectTrigger className="w-full sm:w-36 rounded-md border-[#272738] bg-[#0a0a0f] text-white text-xs font-mono">
             <SelectValue placeholder="Sort by" />
           </SelectTrigger>
           <SelectContent className="bg-[#12121a] border-[#272738] text-white text-xs">
@@ -748,14 +748,14 @@ export default function DatasetsPage() {
 
       {/* Empty State */}
       {!isLoading && datasets.length === 0 && !error && (
-        <Card className="border-[#272738] bg-[#12121a] rounded-2xl">
+        <Card className="border-[#272738] bg-[#12121a] rounded-xl">
           <CardContent className="p-12 flex flex-col items-center justify-center">
             <Database className="h-12 w-12 text-[#64748b] mb-4" />
             <h3 className="text-lg font-bold text-white mb-2">No datasets yet</h3>
             <p className="text-xs text-[#94a3b8] mb-6 text-center max-w-md">
               Describe the dataset you need in the Studio. Discover authentic source repositories, review grounded samples, and export to multi-destination targets.
             </p>
-            <Button className="gap-2 bg-[#6366f1] hover:bg-[#818cf8] text-white rounded-full font-mono text-xs px-5" onClick={() => router.push('/studio')}>
+            <Button className="gap-2 bg-[#f26625] hover:bg-[#de581a] border border-[#ea580c] text-white rounded-md font-mono text-xs px-5 font-bold glow-yc" onClick={() => router.push('/studio')}>
               <Plus className="h-4 w-4" />
               Create Your First Dataset
             </Button>

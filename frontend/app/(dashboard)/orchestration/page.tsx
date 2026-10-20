@@ -124,7 +124,7 @@ export default function OrchestrationPage() {
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-[#272738] pb-5">
         <div>
           <div className="flex items-center gap-2 mb-1">
-            <span className="px-2 py-0.5 rounded text-[10px] font-mono font-bold bg-[#1a1a24] border border-[#272738] text-[#10b981] uppercase tracking-wider">
+            <span className="px-2 py-0.5 rounded-sm text-[10px] font-mono font-bold bg-[#f26625]/10 border border-[#f26625]/30 text-[#f26625] uppercase tracking-wider">
               WORKFLOW ORCHESTRATOR
             </span>
             <h1 className="text-xl sm:text-2xl font-bold tracking-tight text-white font-display">
@@ -150,9 +150,9 @@ export default function OrchestrationPage() {
           <Button
             onClick={fetchJobs}
             variant="outline"
-            className="border-[#272738] bg-[#12121a] hover:bg-[#1a1a24] text-white text-xs font-mono h-8"
+            className="border-[#272738] bg-[#12121a] hover:bg-[#161622] text-[#94a3b8] hover:text-white text-xs font-mono h-8 rounded-md"
           >
-            <RefreshCw className="w-3.5 h-3.5 mr-1 text-[#818cf8]" />
+            <RefreshCw className="w-3.5 h-3.5 mr-1 text-[#f26625]" />
             Refresh
           </Button>
         </div>
@@ -160,7 +160,7 @@ export default function OrchestrationPage() {
 
       {/* Research Loop Toast */}
       {researchToast && (
-        <div className="fixed bottom-4 right-4 z-50 flex items-center gap-2 px-4 py-2.5 rounded-full border border-emerald-500/30 bg-emerald-950/80 text-emerald-400 text-xs font-mono font-semibold shadow-xl animate-fade-in">
+        <div className="fixed bottom-4 right-4 z-50 flex items-center gap-2 px-4 py-2.5 rounded-md border border-emerald-500/30 bg-emerald-950/80 text-emerald-400 text-xs font-mono font-semibold shadow-xl animate-fade-in">
           <CheckCircle2 className="w-4 h-4 shrink-0" />
           {researchToast}
         </div>
@@ -168,17 +168,17 @@ export default function OrchestrationPage() {
 
       {/* Tabs Navigation */}
       <Tabs value={activeTab} onValueChange={(v) => setActiveTab(v as any)} className="w-full space-y-6">
-        <TabsList className="bg-[#161622] rounded-full border border-[#3b3b52] p-1">
-          <TabsTrigger value="dag" className="rounded-full text-xs font-mono flex items-center gap-1.5">
-            <Workflow className="w-3.5 h-3.5 text-[#818cf8]" />
+        <TabsList className="bg-[#161622] rounded-md border border-[#272738] p-1 flex flex-wrap gap-1 h-auto">
+          <TabsTrigger value="dag" className="rounded-sm text-xs font-mono flex items-center gap-1.5 data-[state=active]:bg-[#f26625] data-[state=active]:text-white data-[state=active]:glow-yc">
+            <Workflow className="w-3.5 h-3.5" />
             Pipeline DAG Execution
           </TabsTrigger>
-          <TabsTrigger value="agents" className="rounded-full text-xs font-mono flex items-center gap-1.5">
-            <Users className="w-3.5 h-3.5 text-[#10b981]" />
+          <TabsTrigger value="agents" className="rounded-sm text-xs font-mono flex items-center gap-1.5 data-[state=active]:bg-[#f26625] data-[state=active]:text-white data-[state=active]:glow-yc">
+            <Users className="w-3.5 h-3.5" />
             Multi-Agent Society ({agents.length || 13})
           </TabsTrigger>
-          <TabsTrigger value="research" className="rounded-full text-xs font-mono flex items-center gap-1.5">
-            <FlaskConical className="w-3.5 h-3.5 text-amber-400" />
+          <TabsTrigger value="research" className="rounded-sm text-xs font-mono flex items-center gap-1.5 data-[state=active]:bg-[#f26625] data-[state=active]:text-white data-[state=active]:glow-yc">
+            <FlaskConical className="w-3.5 h-3.5" />
             Autonomous Research Loop
           </TabsTrigger>
         </TabsList>
@@ -186,10 +186,10 @@ export default function OrchestrationPage() {
         {/* Tab 1: Pipeline DAG View */}
         <TabsContent value="dag" className="space-y-6 mt-0">
           {/* Main DAG Visualizer Card */}
-          <div className="p-5 rounded-lg bg-[#12121a] border border-[#272738] space-y-4 relative overflow-hidden">
+          <div className="p-5 rounded-md bg-[#12121a] border border-[#272738] space-y-4 relative overflow-hidden">
             <div className="flex flex-wrap items-center justify-between pb-3 border-b border-[#1c1c28] gap-2">
               <div className="flex items-center space-x-2">
-                <Workflow className="w-4 h-4 text-[#818cf8]" />
+                <Workflow className="w-4 h-4 text-[#f26625]" />
                 <h3 className="text-xs font-bold font-mono uppercase tracking-wider text-white">
                   Active Pipeline Execution DAG
                 </h3>
@@ -226,16 +226,16 @@ export default function OrchestrationPage() {
                       <motion.div
                         whileHover={{ scale: 1.03 }}
                         className={clsx(
-                          'w-36 p-3 rounded-lg border transition-all',
+                          'w-36 p-3 rounded-md border transition-all',
                           isCurrent
-                            ? 'bg-[#161622] border-[#6366f1] shadow-sm glow-indigo'
+                            ? 'bg-[#161622] border-[#f26625] shadow-sm glow-yc'
                             : isPast
                             ? 'bg-[#12121a] border-[#10b981]/50'
                             : 'bg-[#0e0e13] border-[#272738] opacity-60'
                         )}
                       >
                         <div className="flex items-center justify-between mb-1.5">
-                          <span className="text-[10px] font-mono font-bold text-[#818cf8]">
+                          <span className="text-[10px] font-mono font-bold text-[#f26625]">
                             NODE 0{i + 1}
                           </span>
                           <span className={clsx(

@@ -395,15 +395,15 @@ export default function ReviewPage() {
           </p>
         </div>
         <div className="flex gap-2 flex-wrap">
-          <Button variant="outline" size="sm" className="rounded-full border-[#272738] text-white hover:bg-[#161622] font-mono text-xs" onClick={exportApproved}>
+          <Button variant="outline" size="sm" className="rounded-md border-[#272738] text-white hover:bg-[#161622] font-mono text-xs" onClick={exportApproved}>
             <Download className="h-3.5 w-3.5 mr-1 text-[#10b981]" />Export Approved JSONL
           </Button>
-          <Button variant="outline" size="sm" className="rounded-full border-[#272738] text-white hover:bg-[#161622] font-mono text-xs" onClick={async () => {
+          <Button variant="outline" size="sm" className="rounded-md border-[#272738] text-[#94a3b8] hover:text-white hover:bg-[#161622] font-mono text-xs" onClick={async () => {
             setLoading(true)
             await Promise.all([fetchStats(), fetchQueue(), fetchPaused()])
             setLoading(false)
           }} disabled={loading}>
-            <RefreshCw className={clsx('h-3.5 w-3.5 mr-1 text-[#6366f1]', loading && 'animate-spin')} />
+            <RefreshCw className={clsx('h-3.5 w-3.5 mr-1 text-[#f26625]', loading && 'animate-spin')} />
             Refresh
           </Button>
         </div>
@@ -515,10 +515,10 @@ export default function ReviewPage() {
             <SelectItem value="flagged">Flagged</SelectItem>
           </SelectContent>
         </Select>
-        <Input placeholder="Filter by Job ID" className="w-52 h-8 text-xs rounded-full border-[#272738] bg-[#0a0a0f] text-white font-mono focus:border-[#6366f1]"
+        <Input placeholder="Filter by Job ID" className="w-52 h-8 text-xs rounded-md border-[#272738] bg-[#0a0a0f] text-white font-mono focus:border-[#f26625]"
           value={jobFilter} onChange={e => { setJobFilter(e.target.value); setPage(1) }} />
         {jobFilter && (
-          <Button variant="outline" size="sm" className="h-8 rounded-full border-[#272738] text-white hover:bg-[#161622] font-mono text-xs"
+          <Button variant="outline" size="sm" className="h-8 rounded-md border-[#272738] text-white hover:bg-[#161622] font-mono text-xs"
             onClick={() => resumeJob(jobFilter)}>
             <Play className="h-3.5 w-3.5 mr-1 fill-current text-[#10b981]" />Resume Job
           </Button>
@@ -564,7 +564,7 @@ export default function ReviewPage() {
                           'border-l-4 rounded-xl p-3.5 cursor-pointer transition-all group',
                           'bg-[#12121a] border border-[#272738] card-shadow hover:border-[#3b3b52] hover:bg-[#0a0a0f]',
                           STATUS_STRIPE[item.review_status],
-                          selected?.id === item.id && 'border-[#6366f1] bg-[#161622]/60',
+                          selected?.id === item.id && 'border-[#f26625] bg-[#161622]/80 shadow-sm',
                         )}
                         onClick={() => selectItem(item)}
                       >
@@ -760,11 +760,11 @@ function DetailPane({
           </div>
           {editing
             ? <textarea
-                className="w-full bg-[#0a0a0f] border border-[#272738] rounded-xl p-3 text-xs text-white min-h-[72px] resize-y focus:outline-none focus:border-[#6366f1] font-mono"
+                className="w-full bg-[#0a0a0f] border border-[#272738] rounded-md p-3 text-xs text-white min-h-[72px] resize-y focus:outline-none focus:border-[#f26625] font-mono"
                 value={editInstruction}
                 onChange={e => onEditInst(e.target.value)}
               />
-            : <div className="bg-[#0a0a0f] rounded-xl p-3 text-xs text-white border border-[#272738] whitespace-pre-wrap leading-relaxed max-h-28 overflow-y-auto font-sans">
+            : <div className="bg-[#0a0a0f] rounded-md p-3 text-xs text-white border border-[#272738] whitespace-pre-wrap leading-relaxed max-h-28 overflow-y-auto font-sans">
                 {item.instruction}
               </div>
           }
@@ -782,7 +782,7 @@ function DetailPane({
           </div>
           {editing
             ? <textarea
-                className="w-full bg-[#0a0a0f] border border-[#272738] rounded-xl p-3 text-xs text-white min-h-[100px] resize-y focus:outline-none focus:border-[#6366f1] font-mono"
+                className="w-full bg-[#0a0a0f] border border-[#272738] rounded-md p-3 text-xs text-white min-h-[100px] resize-y focus:outline-none focus:border-[#f26625] font-mono"
                 value={editResponse}
                 onChange={e => onEditResp(e.target.value)}
               />

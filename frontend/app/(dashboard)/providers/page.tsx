@@ -193,7 +193,7 @@ export default function ProvidersPage() {
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-[#272738] pb-4">
         <div>
           <div className="flex items-center gap-2.5 mb-1">
-            <span className="text-[10px] font-mono px-2.5 py-0.5 rounded-full bg-[#161622] border border-[#3b3b52] text-[#6366f1] font-bold uppercase tracking-wider">
+            <span className="text-[10px] font-mono px-2 py-0.5 rounded-sm bg-[#f26625]/10 border border-[#f26625]/30 text-[#f26625] font-bold uppercase tracking-wider">
               LLM &amp; API Router
             </span>
             <h1 className="text-2xl font-bold tracking-tight text-white font-display">
@@ -204,8 +204,8 @@ export default function ProvidersPage() {
             Live health telemetry, latency profiles, and cost routing for AI model providers
           </p>
         </div>
-        <Button variant="outline" size="sm" className="rounded-full border-[#3b3b52] text-[#6366f1] hover:bg-[#161622]" onClick={fetchAll} disabled={loading}>
-          <RefreshCw className={clsx('h-3.5 w-3.5 mr-1 text-[#6366f1]', loading && 'animate-spin')} />
+        <Button variant="outline" size="sm" className="rounded-md border-[#272738] text-[#94a3b8] hover:text-white hover:bg-[#161622] font-mono text-xs" onClick={fetchAll} disabled={loading}>
+          <RefreshCw className={clsx('h-3.5 w-3.5 mr-1 text-[#f26625]', loading && 'animate-spin')} />
           Refresh
         </Button>
       </div>
@@ -215,17 +215,17 @@ export default function ProvidersPage() {
         <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
           {[
             { label: 'Active', value: `${activeCount}/${providers.length}`, icon: CheckCircle2, color: 'text-emerald-400', bg: 'bg-[#161622]' },
-            { label: 'Avg Latency', value: avgLatency ? `${avgLatency}ms` : '—', icon: Clock, color: 'text-[#6366f1]', bg: 'bg-[#161622]' },
-            { label: 'Cost Today', value: `$${totalCost.toFixed(3)}`, icon: DollarSign, color: 'text-[#6366f1]', bg: 'bg-[#161622]' },
+            { label: 'Avg Latency', value: avgLatency ? `${avgLatency}ms` : '—', icon: Clock, color: 'text-[#f26625]', bg: 'bg-[#161622]' },
+            { label: 'Cost Today', value: `$${totalCost.toFixed(3)}`, icon: DollarSign, color: 'text-[#f26625]', bg: 'bg-[#161622]' },
             { label: 'CB Open', value: cbOpen, icon: ShieldAlert, color: cbOpen > 0 ? 'text-rose-400' : 'text-emerald-400', bg: cbOpen > 0 ? 'bg-rose-950/40' : 'bg-[#161622]' },
           ].map(({ label, value, icon: Icon, color, bg }) => (
-            <Card key={label} className="bg-[#12121a] border-[#272738] rounded-2xl card-shadow">
+            <Card key={label} className="bg-[#12121a] border-[#272738] rounded-xl card-shadow">
               <CardContent className="pt-4 pb-4 px-4 flex items-center justify-between">
                 <div>
                   <p className="text-xs text-[#94a3b8] font-mono uppercase">{label}</p>
-                  <p className={clsx('text-2xl font-bold font-mono mt-0.5', color)}>{value}</p>
+                  <p className={clsx('text-2xl font-bold font-mono mt-0.5 tnum', color)}>{value}</p>
                 </div>
-                <div className={clsx('h-9 w-9 rounded-xl flex items-center justify-center border border-[#3b3b52]', bg)}>
+                <div className={clsx('h-9 w-9 rounded-lg flex items-center justify-center border border-[#272738]', bg)}>
                   <Icon className={clsx('h-4.5 w-4.5', color)} />
                 </div>
               </CardContent>
@@ -235,18 +235,18 @@ export default function ProvidersPage() {
       )}
 
       <Tabs defaultValue="providers">
-        <TabsList className="bg-[#161622] rounded-full border border-[#3b3b52]">
-          <TabsTrigger value="providers" className="rounded-full">Providers</TabsTrigger>
-          <TabsTrigger value="latency" className="rounded-full">Latency Profile</TabsTrigger>
-          <TabsTrigger value="circuit-breakers" className="rounded-full">Circuit Breakers</TabsTrigger>
-          <TabsTrigger value="failover" className="rounded-full">Failover &amp; Hot-Switch</TabsTrigger>
+        <TabsList className="bg-[#161622] rounded-md border border-[#272738] p-1 flex flex-wrap gap-1 h-auto">
+          <TabsTrigger value="providers" className="rounded-sm text-xs font-mono data-[state=active]:bg-[#f26625] data-[state=active]:text-white data-[state=active]:glow-yc">Providers</TabsTrigger>
+          <TabsTrigger value="latency" className="rounded-sm text-xs font-mono data-[state=active]:bg-[#f26625] data-[state=active]:text-white data-[state=active]:glow-yc">Latency Profile</TabsTrigger>
+          <TabsTrigger value="circuit-breakers" className="rounded-sm text-xs font-mono data-[state=active]:bg-[#f26625] data-[state=active]:text-white data-[state=active]:glow-yc">Circuit Breakers</TabsTrigger>
+          <TabsTrigger value="failover" className="rounded-sm text-xs font-mono data-[state=active]:bg-[#f26625] data-[state=active]:text-white data-[state=active]:glow-yc">Failover &amp; Hot-Switch</TabsTrigger>
         </TabsList>
 
         {/* Providers tab */}
         <TabsContent value="providers" className="mt-4 space-y-3">
           {loading ? (
             <div className="flex items-center justify-center py-20 text-[#94a3b8] font-mono text-xs gap-2">
-              <Loader2 className="h-5 w-5 animate-spin text-[#6366f1]" /> Loading providers…
+              <Loader2 className="h-5 w-5 animate-spin text-[#f26625]" /> Loading providers…
             </div>
           ) : providers.length === 0 ? (
             <div className="flex flex-col items-center justify-center py-20 gap-3 text-[#94a3b8] bg-[#12121a] rounded-2xl border border-[#272738]">

@@ -83,7 +83,7 @@ export default function SettingsPage() {
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-[#272738] pb-4">
         <div>
           <div className="flex items-center gap-2.5 mb-1">
-            <span className="text-[10px] font-mono px-2.5 py-0.5 rounded-full bg-[#161622] border border-[#3b3b52] text-[#6366f1] font-bold uppercase tracking-wider">
+            <span className="text-[10px] font-mono px-2 py-0.5 rounded-sm bg-[#f26625]/10 border border-[#f26625]/30 text-[#f26625] font-bold uppercase tracking-wider">
               System Control
             </span>
             <h1 className="text-2xl font-bold tracking-tight text-white font-display">
@@ -94,8 +94,8 @@ export default function SettingsPage() {
             Platform runtime configuration, API provider keys, ADR architecture standards &amp; resource boundaries
           </p>
         </div>
-        <Button variant="outline" size="sm" className="rounded-full border-[#272738] text-white hover:bg-[#161622] hover:border-[#3b3b52]" onClick={refresh} disabled={refreshing || loading}>
-          <RefreshCw className={clsx('h-3.5 w-3.5 mr-1 text-[#6366f1]', (refreshing || loading) && 'animate-spin')} />
+        <Button variant="outline" size="sm" className="rounded-md border-[#272738] text-white hover:bg-[#161622] hover:border-[#3b3b52] font-mono text-xs" onClick={refresh} disabled={refreshing || loading}>
+          <RefreshCw className={clsx('h-3.5 w-3.5 mr-1 text-[#f26625]', (refreshing || loading) && 'animate-spin')} />
           Refresh Status
         </Button>
       </div>
@@ -143,14 +143,14 @@ export default function SettingsPage() {
       </Card>
 
       <Tabs defaultValue="general">
-        <TabsList className="bg-[#161622] rounded-full border border-[#272738] p-1 flex flex-wrap gap-1">
-          <TabsTrigger value="general" className="rounded-full text-xs data-[state=active]:bg-[#6366f1] data-[state=active]:text-white">General &amp; Engine</TabsTrigger>
-          <TabsTrigger value="providers" className="rounded-full text-xs data-[state=active]:bg-[#6366f1] data-[state=active]:text-white">Providers</TabsTrigger>
-          <TabsTrigger value="delivery" className="rounded-full text-xs data-[state=active]:bg-[#6366f1] data-[state=active]:text-white">Delivery (ADR-002)</TabsTrigger>
-          <TabsTrigger value="observability" className="rounded-full text-xs data-[state=active]:bg-[#6366f1] data-[state=active]:text-white">Observability</TabsTrigger>
-          <TabsTrigger value="security" className="rounded-full text-xs data-[state=active]:bg-[#6366f1] data-[state=active]:text-white">Security</TabsTrigger>
-          <TabsTrigger value="limits" className="rounded-full text-xs data-[state=active]:bg-[#6366f1] data-[state=active]:text-white">Limits &amp; Caps</TabsTrigger>
-          <TabsTrigger value="hitl" className="rounded-full text-xs data-[state=active]:bg-[#6366f1] data-[state=active]:text-white">HITL Gate</TabsTrigger>
+        <TabsList className="bg-[#161622] rounded-md border border-[#272738] p-1 flex flex-wrap gap-1 h-auto">
+          <TabsTrigger value="general" className="rounded-sm text-xs font-mono data-[state=active]:bg-[#f26625] data-[state=active]:text-white data-[state=active]:glow-yc">General &amp; Engine</TabsTrigger>
+          <TabsTrigger value="providers" className="rounded-sm text-xs font-mono data-[state=active]:bg-[#f26625] data-[state=active]:text-white data-[state=active]:glow-yc">Providers</TabsTrigger>
+          <TabsTrigger value="delivery" className="rounded-sm text-xs font-mono data-[state=active]:bg-[#f26625] data-[state=active]:text-white data-[state=active]:glow-yc">Delivery (ADR-002)</TabsTrigger>
+          <TabsTrigger value="observability" className="rounded-sm text-xs font-mono data-[state=active]:bg-[#f26625] data-[state=active]:text-white data-[state=active]:glow-yc">Observability</TabsTrigger>
+          <TabsTrigger value="security" className="rounded-sm text-xs font-mono data-[state=active]:bg-[#f26625] data-[state=active]:text-white data-[state=active]:glow-yc">Security</TabsTrigger>
+          <TabsTrigger value="limits" className="rounded-sm text-xs font-mono data-[state=active]:bg-[#f26625] data-[state=active]:text-white data-[state=active]:glow-yc">Limits &amp; Caps</TabsTrigger>
+          <TabsTrigger value="hitl" className="rounded-sm text-xs font-mono data-[state=active]:bg-[#f26625] data-[state=active]:text-white data-[state=active]:glow-yc">HITL Gate</TabsTrigger>
         </TabsList>
 
         {/* General & Engine */}

@@ -97,11 +97,11 @@ export default function QualityDashboardPage() {
       {/* Header */}
       <div className="border-b border-[#272738] pb-4">
         <div className="flex items-center gap-2.5 mb-1">
-          <span className="text-[10px] font-mono px-2.5 py-0.5 rounded-full bg-[#161622] border border-[#3b3b52] text-[#6366f1] font-bold uppercase tracking-wider">
+          <span className="text-[10px] font-mono px-2 py-0.5 rounded-sm bg-[#f26625]/10 border border-[#f26625]/30 text-[#f26625] font-bold uppercase tracking-wider">
             Quality Intelligence
           </span>
           <h1 className="text-2xl font-bold tracking-tight text-white font-display flex items-center gap-2">
-            <BarChart2 className="h-5 w-5 text-[#6366f1]" />
+            <BarChart2 className="h-5 w-5 text-[#f26625]" />
             Dataset Quality Studio
           </h1>
         </div>
@@ -121,7 +121,7 @@ export default function QualityDashboardPage() {
       {/* Charts Row */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         <QualityScoreChart />
-        <div className="bg-[#12121a] rounded-2xl border border-[#272738] p-6 card-shadow">
+        <div className="bg-[#12121a] rounded-xl border border-[#272738] p-6 card-shadow">
           <h3 className="text-sm font-bold text-white mb-4 font-mono uppercase tracking-wider">Metrics &amp; Grounding Controls</h3>
           <ul className="space-y-3 text-sm">
             {[
@@ -131,7 +131,7 @@ export default function QualityDashboardPage() {
               ["Semantic Scoring",       "LLM Judge + heuristic fallback (perplexity & length)"],
               ["Human Review Gate",      "Stratified sampling, approve, reject, edit in HITL queue"],
             ].map(([label, detail]) => (
-              <li key={label} className="flex items-start justify-between gap-4 p-2.5 rounded-xl bg-[#0a0a0f] border border-[#272738]">
+              <li key={label} className="flex items-start justify-between gap-4 p-2.5 rounded-md bg-[#0a0a0f] border border-[#272738]">
                 <span className="text-white font-bold text-xs">{label}</span>
                 <span className="text-[#94a3b8] text-xs font-mono text-right">{detail}</span>
               </li>
@@ -146,23 +146,23 @@ export default function QualityDashboardPage() {
           <h2 className="text-xs font-mono font-bold uppercase tracking-wider text-[#94a3b8]">
             Automated LLM-as-a-Judge Multi-Dimensional Rubric
           </h2>
-          <Badge variant="outline" className="text-[10px] border-[#272738] text-cyan-300 font-mono">
+          <Badge variant="outline" className="text-[10px] border-[#272738] text-cyan-300 font-mono rounded-sm">
             5-Dimension MT-Bench Rubric
           </Badge>
         </div>
 
-        <Card className="border-[#272738] bg-[#12121a] rounded-2xl card-shadow overflow-hidden">
+        <Card className="border-[#272738] bg-[#12121a] rounded-xl card-shadow overflow-hidden">
           <CardHeader className="pb-3 border-b border-[#272738] bg-[#0e0e14]">
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-2">
-                <Sparkles className="h-4 w-4 text-[#818cf8]" />
+                <Sparkles className="h-4 w-4 text-[#f26625]" />
                 <CardTitle className="text-sm font-bold text-white font-mono">Sample Quality Jury</CardTitle>
               </div>
               <Button
                 size="sm"
                 onClick={handleRunJudge}
                 disabled={judgeLoading}
-                className="h-8 gap-1.5 text-xs font-mono rounded-full bg-[#6366f1] hover:bg-indigo-600 text-white"
+                className="h-8 gap-1.5 text-xs font-mono rounded-md bg-[#f26625] hover:bg-[#de581a] border border-[#ea580c] text-white font-bold glow-yc"
               >
                 {judgeLoading ? (
                   <>
