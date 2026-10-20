@@ -4,7 +4,7 @@ import { useState, useEffect, useRef, useCallback, useMemo, Suspense } from 'rea
 import {
   Cpu, Play, Square, RefreshCw, ExternalLink,
   List, Plus, ChevronDown, ChevronUp, Copy,
-  CheckCircle2, AlertCircle, Loader2, X, Zap,
+  CheckCircle2, AlertCircle, Loader2, X, Zap, Sparkles,
 } from 'lucide-react'
 import { clsx } from 'clsx'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
@@ -586,6 +586,44 @@ function FineTuneContent() {
                   {formError}
                 </div>
               )}
+
+              <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 p-3.5 bg-[#161622] border border-[#272738] rounded-2xl">
+                <div>
+                  <p className="text-xs font-bold text-white flex items-center gap-1.5">
+                    <Sparkles className="h-3.5 w-3.5 text-[#10b981]" />
+                    Flagship Indic GST Benchmark Preset
+                  </p>
+                  <p className="text-[11px] text-[#94a3b8]">
+                    Pre-fills with Sarvam-2B, cryptographic GST dataset, ChatML template, and audited LoRA parameters.
+                  </p>
+                </div>
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  className="rounded-full text-xs font-mono border-emerald-500/40 text-emerald-400 hover:bg-emerald-950/30 shrink-0"
+                  onClick={() => {
+                    setForm(prev => ({
+                      ...prev,
+                      dataset_path: 'outputs/flagship_indic_gst/flagship_indic_gst_sft.jsonl',
+                      dataset_id: '',
+                      base_model: 'sarvamai/sarvam-2b-v0.5',
+                      output_model_name: 'sarvam-2b-indic-gst-lora',
+                      chat_template: 'chatml',
+                      lora_r: 16,
+                      lora_alpha: 32,
+                      num_train_epochs: 3,
+                      per_device_train_batch_size: 4,
+                      gradient_accumulation_steps: 4,
+                      learning_rate: 0.0002,
+                    }))
+                    toast('Loaded Flagship Indic GST fine-tuning preset', 'success')
+                  }}
+                >
+                  <Zap className="h-3 w-3 mr-1 text-emerald-400" />
+                  Load Preset
+                </Button>
+              </div>
 
               <Section title="Dataset Source">
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
