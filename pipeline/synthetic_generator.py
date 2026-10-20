@@ -10,6 +10,9 @@ from core.validation.indian_pii import detect_indian_pii, mask_indian_pii
 from core.normalization.indian_numerical import format_indian_number, standardize_currency_text, verbalize_for_speech
 from core.augmentation.transliteration_noise import inject_chat_noise
 from core.metrics.fidelity import evaluate_fidelity
+from core.generation.cot_synthesizer import build_cot_prompt_directive, extract_thought_and_solution
+from core.generation.tool_caller import build_tool_calling_system_prompt, DEFAULT_FINANCE_TOOLS
+from core.curriculum.curriculum_sorter import sort_by_curriculum
 
 logger = logging.getLogger(__name__)
 
@@ -111,6 +114,7 @@ def _build_language_instruction(
     generate_dpo_refusal_pairs: bool = False,
     speech_normalization: bool = False,
     turn_language_drift: bool = False,
+    enable_cot_reasoning: bool = False,
 ) -> str:
     """Build comprehensive language, script, register, glossary, dialect, and numerical rules for synthetic prompt generation."""
     lang = (language or "en").lower().strip()
@@ -265,6 +269,10 @@ def _build_language_instruction(
             "13. DPO Contrastive Pair: Output a JSON with 'instruction', 'response' (chosen helpful response with statutory disclaimers), and 'rejected_response' (flawed, hallucinated, or ungrounded response lacking required safety disclaimers)."
         )
 
+    # 10. Chain-of-Thought (CoT) Reasoning Directive
+    if enable_cot_reasoning:
+        rules.append(f"14. {build_cot_prompt_directive(language=language)}")
+
     return "\n".join(rules)
 
 
@@ -329,7 +337,14 @@ class SeedlessGenerator:
             generate_dpo_refusal_pairs=self.config.get("generate_dpo_refusal_pairs", False),
             speech_normalization=self.config.get("speech_normalization", False),
             turn_language_drift=self.config.get("turn_language_drift", False),
+            enable_cot_reasoning=self.config.get("enable_cot_reasoning", False),
         )
+
+        tool_prompt = ""
+        if str(self.config.get("dataset_type", "")).lower() == "tool_calling":
+            tools = self.config.get("tools_definition") or DEFAULT_FINANCE_TOOLS
+            tool_prompt = "\n" + build_tool_calling_system_prompt(tools)
+
         system_prompt = (
             f"You are an expert dataset generator specializing in the '{plan.domain}' domain. "
             f"Your objective: {plan.objective}.\n"
@@ -342,6 +357,7 @@ class SeedlessGenerator:
             "3. Output ONLY a JSON object with keys: instruction, response, input (null).\n"
             "4. Do not include markdown wrappers, fences, or text outside the JSON.\n"
             f"{lang_rule}"
+            f"{tool_prompt}"
         )
 
         user_message = (
@@ -438,8 +454,17 @@ class SeedlessGenerator:
                         "mask_indian_pii": self.config.get("mask_indian_pii", True),
                         "generate_dpo_refusal_pairs": self.config.get("generate_dpo_refusal_pairs", False),
                         "turn_language_drift": self.config.get("turn_language_drift", False),
+                        "enable_cot_reasoning": self.config.get("enable_cot_reasoning", False),
+                        "curriculum_sort": self.config.get("curriculum_sort", "none"),
                         "pii_detected": pii_found,
                     }
+
+                    thought_trace, _ = extract_thought_and_solution(resp_text)
+                    if thought_trace:
+                        meta["thought_trajectory"] = thought_trace
+
+                    if data.get("tool_calls"):
+                        meta["tool_calls"] = data.get("tool_calls")
 
                     if data.get("rejected_response"):
                         rejected_text = str(data.get("rejected_response"))

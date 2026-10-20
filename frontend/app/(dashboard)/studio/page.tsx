@@ -114,6 +114,8 @@ function StudioContent() {
   const [speechNormalization, setSpeechNormalization] = useState<boolean>(false)
   const [generateDpoRefusalPairs, setGenerateDpoRefusalPairs] = useState<boolean>(false)
   const [turnLanguageDrift, setTurnLanguageDrift] = useState<boolean>(false)
+  const [enableCotReasoning, setEnableCotReasoning] = useState<boolean>(false)
+  const [curriculumSort, setCurriculumSort] = useState<'none' | 'ascending' | 'staged_curriculum' | 'replay_interleaved'>('none')
   const [preservedTermsInput, setPreservedTermsInput] = useState<string>('')
   const [parallelBilingual, setParallelBilingual] = useState<boolean>(false)
   const [datasetSize, setDatasetSize] = useState(10000)
@@ -161,6 +163,8 @@ function StudioContent() {
         speech_normalization: speechNormalization,
         generate_dpo_refusal_pairs: generateDpoRefusalPairs,
         turn_language_drift: turnLanguageDrift,
+        enable_cot_reasoning: enableCotReasoning,
+        curriculum_sort: curriculumSort,
         preserved_terms: preservedTerms,
         parallel_bilingual: parallelBilingual,
         dataset_size: datasetSize,
@@ -709,6 +713,37 @@ function StudioContent() {
                   onChange={(e) => setParallelBilingual(e.target.checked)}
                   className="w-4 h-4 accent-[#6366f1] cursor-pointer"
                 />
+              </div>
+
+              {/* Chain-of-Thought Reasoning Trajectories */}
+              <div className="flex items-center justify-between p-2 rounded bg-[#0e0e13] border border-[#1c1c28]">
+                <div>
+                  <div className="text-xs font-mono text-white font-medium">Chain-of-Thought (CoT) Reasoning</div>
+                  <div className="text-[10px] text-[#94a3b8]">DeepSeek-R1 / o1 style &lt;thought&gt;...&lt;/thought&gt; traces</div>
+                </div>
+                <input
+                  type="checkbox"
+                  checked={enableCotReasoning}
+                  onChange={(e) => setEnableCotReasoning(e.target.checked)}
+                  className="w-4 h-4 accent-[#6366f1] cursor-pointer"
+                />
+              </div>
+
+              {/* Curriculum Learning Sequence Sorter */}
+              <div>
+                <label className="text-[10px] font-mono uppercase text-[#94a3b8] block mb-1">
+                  Curriculum Learning Sequence Sorter
+                </label>
+                <select
+                  value={curriculumSort}
+                  onChange={(e) => setCurriculumSort(e.target.value as any)}
+                  className="w-full bg-[#0a0a0f] border border-[#272738] rounded p-2 text-xs font-mono text-white focus:outline-none"
+                >
+                  <option value="none">None (Standard Order)</option>
+                  <option value="ascending">Ascending Complexity (Easy → Hard)</option>
+                  <option value="staged_curriculum">Staged Curriculum (Tier 1-2 → 3-4 → 5)</option>
+                  <option value="replay_interleaved">Anti-Forgetting Replay Buffer (Interleaved)</option>
+                </select>
               </div>
 
               {/* Tokenizer Fertility & Efficiency Estimator */}

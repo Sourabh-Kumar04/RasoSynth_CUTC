@@ -21,6 +21,8 @@ import {
   ExternalLink,
   Sparkles,
   RefreshCw,
+  Copy,
+  Check,
 } from 'lucide-react'
 import { clsx } from 'clsx'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
@@ -132,6 +134,36 @@ export default function DatasetsPage() {
   // Download state
   const [downloadFormat, setDownloadFormat] = useState<Record<string, string>>({})
   const [downloadingIds, setDownloadingIds] = useState<Set<string>>(new Set())
+
+  // Hugging Face Dataset Card modal state
+  const [hfCardModalOpen, setHfCardModalOpen] = useState(false)
+  const [hfCardContent, setHfCardContent] = useState<string>('')
+  const [hfCardLoading, setHfCardLoading] = useState(false)
+  const [hfCardCopied, setHfCardCopied] = useState(false)
+  const [hfCardDomain, setHfCardDomain] = useState<string>('')
+
+  const handleViewHfCard = async (jobId: string, name: string) => {
+    setHfCardModalOpen(true)
+    setHfCardLoading(true)
+    setHfCardCopied(false)
+    setHfCardDomain(name)
+    try {
+      const res = await api.getHuggingFaceCard(jobId)
+      setHfCardContent(res.content || '')
+    } catch (e: any) {
+      console.error('Failed to load HF Card:', e)
+      setHfCardContent('# Error loading Hugging Face Card\n' + (e.message || 'Unknown error'))
+    } finally {
+      setHfCardLoading(false)
+    }
+  }
+
+  const handleCopyHfCard = () => {
+    if (!hfCardContent) return
+    navigator.clipboard.writeText(hfCardContent)
+    setHfCardCopied(true)
+    setTimeout(() => setHfCardCopied(false), 2000)
+  }
 
   // API state
   const [datasets, setDatasets] = useState<any[]>([])
@@ -554,16 +586,28 @@ export default function DatasetsPage() {
                           )}
                         </Button>
                         {dataset.status === 'ready' && (
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            className="h-8 text-xs px-2.5 rounded-full text-indigo-400 hover:text-white hover:bg-[#161622] font-mono"
-                            onClick={() => router.push(`/finetune?dataset=${dataset.id}`)}
-                            title="1-Click Launch Fine-Tune"
-                          >
-                            <Zap className="h-3.5 w-3.5 text-amber-400 mr-1" />
-                            Tune
-                          </Button>
+                          <>
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              className="h-8 text-xs px-2.5 rounded-full text-indigo-400 hover:text-white hover:bg-[#161622] font-mono"
+                              onClick={() => handleViewHfCard(dataset.id, dataset.name)}
+                              title="Generate Hugging Face Dataset Card (README.md)"
+                            >
+                              <FileText className="h-3.5 w-3.5 text-[#818cf8] mr-1" />
+                              HF Card
+                            </Button>
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              className="h-8 text-xs px-2.5 rounded-full text-indigo-400 hover:text-white hover:bg-[#161622] font-mono"
+                              onClick={() => router.push(`/finetune?dataset=${dataset.id}`)}
+                              title="1-Click Launch Fine-Tune"
+                            >
+                              <Zap className="h-3.5 w-3.5 text-amber-400 mr-1" />
+                              Tune
+                            </Button>
+                          </>
                         )}
                       </div>
                     </TableCell>
@@ -866,6 +910,17 @@ export default function DatasetsPage() {
                   <Button
                     variant="outline"
                     size="sm"
+                    className="gap-2 border-[#272738] text-indigo-300 hover:text-white hover:bg-[#161622] rounded-full px-4 font-mono text-xs"
+                    onClick={() => handleViewHfCard(selected.id, selected.name)}
+                    title="View & Export Hugging Face Dataset Card"
+                  >
+                    <FileText className="h-3.5 w-3.5 text-[#818cf8]" />
+                    HF Dataset Card
+                  </Button>
+
+                  <Button
+                    variant="outline"
+                    size="sm"
                     className="gap-2 border-[#272738] text-white hover:bg-[#161622] rounded-full px-4 font-mono text-xs"
                     onClick={() => router.push(`/finetune?dataset=${selected.id}`)}
                   >
@@ -898,6 +953,92 @@ export default function DatasetsPage() {
             )}
           </CardContent>
         </Card>
+      )}
+
+      {/* Hugging Face Dataset Card Modal */}
+      {hfCardModalOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/70 backdrop-blur-sm animate-fade-in">
+          <div className="relative w-full max-w-4xl max-h-[85vh] flex flex-col bg-[#12121a] border border-[#272738] rounded-2xl shadow-2xl overflow-hidden">
+            {/* Modal Header */}
+            <div className="flex items-center justify-between px-5 py-4 border-b border-[#272738] bg-[#0e0e14]">
+              <div className="flex items-center gap-2.5">
+                <div className="p-1.5 rounded-lg bg-[#1e1b4b] border border-[#3730a3]">
+                  <FileText className="h-4 w-4 text-[#818cf8]" />
+                </div>
+                <div>
+                  <h3 className="text-sm font-bold text-white font-mono flex items-center gap-2">
+                    Hugging Face Dataset Card (README.md)
+                    <Badge variant="outline" className="text-[10px] bg-indigo-950/40 text-indigo-300 border-indigo-700/50">
+                      Hub Compliant
+                    </Badge>
+                  </h3>
+                  <p className="text-[11px] text-[#94a3b8]">
+                    Generated YAML frontmatter &amp; dataset documentation for {hfCardDomain}
+                  </p>
+                </div>
+              </div>
+
+              <div className="flex items-center gap-2">
+                <Button
+                  size="sm"
+                  variant="outline"
+                  onClick={handleCopyHfCard}
+                  disabled={hfCardLoading || !hfCardContent}
+                  className="h-8 gap-1.5 text-xs font-mono rounded-full border-[#272738] bg-[#161622] text-white hover:bg-[#20202e]"
+                >
+                  {hfCardCopied ? (
+                    <>
+                      <Check className="h-3.5 w-3.5 text-[#10b981]" />
+                      Copied!
+                    </>
+                  ) : (
+                    <>
+                      <Copy className="h-3.5 w-3.5 text-[#818cf8]" />
+                      Copy README
+                    </>
+                  )}
+                </Button>
+                <Button
+                  size="icon"
+                  variant="ghost"
+                  onClick={() => setHfCardModalOpen(false)}
+                  className="h-8 w-8 rounded-full text-[#94a3b8] hover:text-white hover:bg-[#1a1a26]"
+                >
+                  <X className="h-4 w-4" />
+                </Button>
+              </div>
+            </div>
+
+            {/* Modal Body */}
+            <div className="p-5 overflow-y-auto flex-1 font-mono text-xs bg-[#0a0a0f]">
+              {hfCardLoading ? (
+                <div className="flex flex-col items-center justify-center py-16 space-y-3">
+                  <Loader2 className="h-8 w-8 animate-spin text-[#6366f1]" />
+                  <p className="text-xs text-[#94a3b8]">Synthesizing Hugging Face Card with YAML frontmatter...</p>
+                </div>
+              ) : (
+                <pre className="p-4 rounded-xl bg-[#0d0d14] border border-[#272738] text-[#e2e8f0] overflow-x-auto whitespace-pre-wrap leading-relaxed select-all">
+                  {hfCardContent}
+                </pre>
+              )}
+            </div>
+
+            {/* Modal Footer */}
+            <div className="px-5 py-3 border-t border-[#272738] bg-[#0e0e14] flex items-center justify-between">
+              <span className="text-[10px] text-[#64748b] font-mono">
+                Ready for direct upload to Hugging Face Hub (huggingface.co/datasets)
+              </span>
+              <Button
+                size="sm"
+                variant="ghost"
+                onClick={() => setHfCardModalOpen(false)}
+                className="text-xs font-mono text-[#94a3b8] hover:text-white"
+              >
+                Close
+              </Button>
+            </div>
+          </div>
+        </div>
       )}
     </div>
   )

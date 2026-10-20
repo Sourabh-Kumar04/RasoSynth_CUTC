@@ -3036,6 +3036,66 @@ async def tool_evaluate_fidelity(request: dict = Body(...)):
     return evaluate_fidelity(original_text=ref, back_translated_text=hyp)
 
 
+@app.post("/tools/evaluate-rubric", tags=["Tools"])
+async def tool_evaluate_rubric(request: dict = Body(...)):
+    """Evaluate synthetic sample against 5-dimensional LLM-as-a-Judge quality rubric."""
+    from core.evaluation.llm_judge import evaluate_sample_rubric
+    inst = str(request.get("instruction", ""))
+    resp = str(request.get("response", ""))
+    ref = request.get("reference_context")
+    lang = str(request.get("language", "en"))
+    reg = str(request.get("formality_register", "formal"))
+    return evaluate_sample_rubric(
+        instruction=inst,
+        response=resp,
+        reference_context=ref,
+        language=lang,
+        formality_register=reg,
+    )
+
+
+@app.get("/datasets/{job_id}/huggingface-card", tags=["Datasets"])
+async def get_dataset_huggingface_card(job_id: str):
+    """Generate Hugging Face Dataset Card (README.md) with YAML frontmatter."""
+    from core.export.huggingface_exporter import generate_hf_dataset_card
+    from core.tokenizer_metrics import estimate_tokenizer_fertility
+
+    job = await db.get_job(job_id) if db else None
+    domain = (job.target_domain if job else None) or f"Dataset {job_id[:8]}"
+    dataset_type = (job.dataset_type if job else None) or "sft"
+    sample_count = (job.samples_generated if job else 0) or 1000
+
+    config = (job.config or {}) if job and hasattr(job, "config") else {}
+    lang = config.get("language", "en")
+    script = config.get("script_mode", "native")
+    has_dpo = bool(config.get("generate_dpo_refusal_pairs", False) or dataset_type == "rlhf")
+    has_tool = bool(dataset_type == "tool_calling")
+    has_bitext = bool(config.get("parallel_bilingual", False))
+
+    fertility = estimate_tokenizer_fertility(lang, script)
+    savings = fertility.get("potential_token_savings_pct", 0.0)
+
+    card_markdown = generate_hf_dataset_card(
+        dataset_name=domain,
+        domain=domain,
+        sample_count=sample_count,
+        language=lang,
+        script_mode=script,
+        dataset_type=dataset_type,
+        license_type="apache-2.0",
+        has_dpo=has_dpo,
+        has_tool_calling=has_tool,
+        has_bitext=has_bitext,
+        tokenizer_savings_pct=savings,
+    )
+
+    return {
+        "job_id": job_id,
+        "filename": "README.md",
+        "content": card_markdown,
+    }
+
+
 @app.get("/", tags=["Root"])
 async def root():
     """Root endpoint."""

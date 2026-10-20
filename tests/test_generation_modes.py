@@ -476,5 +476,116 @@ async def test_indian_pii_numerical_chat_noise_and_fidelity():
     assert "fidelity_metrics" in sample.metadata
 
 
+@pytest.mark.asyncio
+async def test_cot_reasoning_tool_calling_curriculum_and_hf_card():
+    """Verify CoT reasoning trajectory, vernacular tool-calling, curriculum sorter, HF dataset card, and LLM judge."""
+    from core.generation.cot_synthesizer import (
+        build_cot_prompt_directive,
+        extract_thought_and_solution,
+        wrap_with_thought,
+    )
+    from core.generation.tool_caller import (
+        DEFAULT_FINANCE_TOOLS,
+        build_tool_calling_system_prompt,
+        format_tool_calling_sample,
+    )
+    from core.curriculum.curriculum_sorter import (
+        sort_by_curriculum,
+        estimate_sample_complexity,
+    )
+    from core.export.huggingface_exporter import generate_hf_dataset_card
+    from core.evaluation.llm_judge import evaluate_sample_rubric
+
+    # 1. Test CoT Prompt Directive & Extraction
+    directive_hi = build_cot_prompt_directive("hi")
+    assert "<thought>" in directive_hi
+    assert "</thought>" in directive_hi
+
+    sample_raw = "<thought>Pehle annual turnover calculate karenge: 50L + 20L = 70L. Fir 18% GST apply karenge.</thought>Aapka total GST payable ₹12,60,000 banta hai."
+    thought, answer = extract_thought_and_solution(sample_raw)
+    assert "Pehle annual turnover calculate karenge" in thought
+    assert "₹12,60,000" in answer
+
+    wrapped = wrap_with_thought("Step 1 -> Step 2", "Final answer")
+    assert wrapped == "<thought>\nStep 1 -> Step 2\n</thought>\n\nFinal answer"
+
+    # 2. Test Tool Calling Prompt and Sample Format
+    tool_prompt = build_tool_calling_system_prompt(DEFAULT_FINANCE_TOOLS)
+    assert "check_itc_balance" in tool_prompt
+    assert "generate_gst_challan" in tool_prompt
+    assert "INSTRUCTIONS:" in tool_prompt
+
+    tool_sample = format_tool_calling_sample(
+        instruction="Mera 28% slab par GST challan bana do",
+        tool_calls=[{"name": "generate_gst_challan", "arguments": {"gstin": "27AAPFU0939F1ZV", "cgst_amount": 14000, "sgst_amount": 14000, "payment_mode": "upi"}}],
+        assistant_thought="Taxpayer needs PMT-06 challan generation for ₹28,000 tax liability."
+    )
+    assert tool_sample["tool_calls"][0]["name"] == "generate_gst_challan"
+    assert tool_sample["tool_calls"][0]["arguments"]["gstin"] == "27AAPFU0939F1ZV"
+    assert "tool_calls" in tool_sample["response"]
+
+    # 3. Test Curriculum Complexity Estimation & Sorters
+    samples = [
+        {"instruction": "What is GST?", "response": "Goods and Services Tax."}, # short/simple -> low tier
+        {
+            "instruction": "Step by step procedure to file GSTR-3B with reverse charge mechanism and input tax credit reconciliation under section 16(4) of CGST act.",
+            "response": "<thought>Examine CGST Act Section 16(4). Analyze ITC eligibility deadlines and calculate debit note reconciliations.</thought>Detailed comprehensive analysis with multiple clauses...",
+            "metadata": {"complexity_tier": 5}
+        },
+        {"instruction": "TDS rate for contractor payments under 194C?", "response": "1% for individual/HUF and 2% for others."},
+    ]
+
+    # Complexity estimation
+    score_simple = estimate_sample_complexity(samples[0])
+    score_complex = estimate_sample_complexity(samples[1])
+    assert score_complex > score_simple
+
+    # Ascending sort
+    sorted_asc = sort_by_curriculum(samples, mode="ascending")
+    assert sorted_asc[0]["instruction"] == "What is GST?"
+
+    # Staged curriculum sort
+    sorted_staged = sort_by_curriculum(samples, mode="staged_curriculum")
+    assert len(sorted_staged) == len(samples)
+
+    # Replay interleaved sort
+    sorted_replay = sort_by_curriculum(samples, mode="replay_interleaved", replay_ratio=0.33)
+    assert len(sorted_replay) >= len(samples)
+
+    # 4. Test Hugging Face Dataset Card Generation
+    card = generate_hf_dataset_card(
+        dataset_name="Indic-Tax-Instruct-50K",
+        domain="Indian Taxation & Finance",
+        sample_count=50000,
+        language="hinglish",
+        script_mode="romanized",
+        dataset_type="sft",
+        license_type="apache-2.0",
+        has_dpo=True,
+        has_tool_calling=True,
+        has_bitext=True,
+        tokenizer_savings_pct=42.5,
+    )
+    assert card.startswith("---")
+    assert "language:\n- hi\n- en" in card
+    assert "tool-calling" in card
+    assert "license: apache-2.0" in card
+    assert "load_dataset" in card
+    assert "42%" in card
+
+    # 5. Test LLM-as-a-Judge Multi-Dimensional Rubric
+    rubric_result = evaluate_sample_rubric(
+        instruction="Aap ₹2,50,000 par 18% GST calculate karke bataiye kripya.",
+        response="<thought>250000 * 0.18 = 45000</thought>Aapka ₹2,50,000 par 18% GST ₹45,000 hoga. Kul yog ₹2,95,000 banega.",
+        language="hinglish",
+        formality_register="formal",
+    )
+    assert rubric_result["groundedness"] > 0.8
+    assert rubric_result["authenticity"] > 0.8
+    assert rubric_result["domain_correctness"] > 0.8
+    assert rubric_result["overall_score"] > 0.8
+    assert rubric_result["rating"] in ["excellent", "proficient"]
+
+
 
 

@@ -576,6 +576,10 @@ class APIClient {
     return this.request<any>(`/jobs/${jobId}/summary`)
   }
 
+  async getHuggingFaceCard(jobId: string) {
+    return this.request<{ job_id: string; filename: string; content: string }>(`/datasets/${jobId}/huggingface-card`)
+  }
+
   // === Download API ===
   // Download a dataset with format selection - returns a Blob for file saving
   async downloadDataset(id: string, format: string = 'jsonl'): Promise<Blob> {

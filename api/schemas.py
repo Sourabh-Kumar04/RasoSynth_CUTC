@@ -143,6 +143,18 @@ class JobRequest(BaseModel):
         default=False,
         description="Simulate realistic turn-by-turn language code-switch migration across multi-turn dialogues"
     )
+    enable_cot_reasoning: bool = Field(
+        default=False,
+        description="Synthesize explicit <thought>...</thought> reasoning traces (DeepSeek-R1 / OpenAI o1 style)"
+    )
+    curriculum_sort: Literal["none", "ascending", "staged_curriculum", "replay_interleaved"] = Field(
+        default="none",
+        description="Curriculum learning training sequence: none | ascending | staged_curriculum | replay_interleaved"
+    )
+    tools_definition: list[dict[str, Any]] = Field(
+        default_factory=list,
+        description="List of tool/function schemas for tool-calling dataset generation"
+    )
     region_restrictions: list[str] = Field(default_factory=list)
     allowed_domains: list[str] = Field(default_factory=list)
     blocked_domains: list[str] = Field(default_factory=list)
