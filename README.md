@@ -2,6 +2,16 @@
 
 > **Autonomous AI Dataset Synthesis & Fine-Tuning Platform**
 
+[![Live Production](https://img.shields.io/badge/Live_Production-rasosynthtune--indiaai.vercel.app-f26625?style=flat&logo=vercel)](https://rasosynthtune-indiaai.vercel.app)
+[![Mirror](https://img.shields.io/badge/Mirror-rasosynthtune.vercel.app-000000?style=flat&logo=vercel)](https://rasosynthtune.vercel.app)
+[![CI Gate](https://github.com/Sourabh-Kumar04/RasoSynth_CUTC/actions/workflows/ci.yml/badge.svg)](https://github.com/Sourabh-Kumar04/RasoSynth_CUTC/actions/workflows/ci.yml)
+[![Design System](https://img.shields.io/badge/UI_Design-YC_Stitch_Proof--Carrying-f26625?style=flat)](https://rasosynthtune-indiaai.vercel.app)
+
+**Live Production Deployments:**
+- **Primary Production URL:** [https://rasosynthtune-indiaai.vercel.app](https://rasosynthtune-indiaai.vercel.app)
+- **Production Mirror:** [https://rasosynthtune.vercel.app](https://rasosynthtune.vercel.app)
+- **Edge Deployment:** [https://rasosynthtune-indiaai-brown.vercel.app](https://rasosynthtune-indiaai-brown.vercel.app)
+
 RasoSynthTune is a production-ready system that autonomously discovers, extracts, filters, and constructs high-quality fine-tuning datasets — then fine-tunes open-source models on them, all through a single unified platform.
 
 ## Architecture
