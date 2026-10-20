@@ -666,6 +666,52 @@ class APIClient {
     })
   }
 
+  async analyzeSemanticDensity(payload: { samples: any[]; k_clusters?: number }) {
+    return this.request<{
+      total_samples: number
+      diversity_entropy: number
+      semantic_coverage_pct: number
+      clusters: Array<{
+        cluster_id: number
+        label: string
+        sample_count: number
+        percentage: number
+        centroid: [number, number]
+        top_terms: string[]
+      }>
+      points: Array<{
+        id: string | number
+        x: number
+        y: number
+        cluster_id: number
+        cluster_label: string
+        is_outlier: boolean
+        is_redundant: boolean
+        instruction_snippet: string
+        domain: string
+      }>
+      outlier_count: number
+      redundancy_count: number
+    }>('/tools/semantic-density', {
+      method: 'POST',
+      body: JSON.stringify(payload),
+    })
+  }
+
+  async evaluateDialogue(payload: { turns: Array<{ role: string; content: string }> }) {
+    return this.request<{
+      is_coherent: boolean
+      coherence_score: number
+      user_turns: number
+      assistant_turns: number
+      total_turns: number
+      issues: string[]
+    }>('/tools/evaluate-dialogue', {
+      method: 'POST',
+      body: JSON.stringify(payload),
+    })
+  }
+
   // === Download API ===
   // Download a dataset with format selection - returns a Blob for file saving
   async downloadDataset(id: string, format: string = 'jsonl'): Promise<Blob> {

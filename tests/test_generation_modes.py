@@ -761,6 +761,91 @@ def test_rag_synthesis_and_faithfulness():
     assert unsupported_eval["status"] == "unsupported"
 
 
+def test_semantic_diversity_and_clustering():
+    """Verify TF-IDF SVD projection, K-means clustering, and entropy computation."""
+    from core.curation.diversity_mapper import (
+        tokenize_text,
+        build_tfidf_matrix,
+        reduce_dimension_2d,
+        analyze_semantic_diversity,
+    )
+
+    tokens = tokenize_text("Calculate 18% GST on Rs. 2,50,000 for invoice #123")
+    assert "calculate" in tokens
+    assert "gst" in tokens
+    assert "invoice" in tokens
+
+    samples = [
+        {"instruction": "Calculate 18% GST on consulting invoice", "response": "GST is Rs. 18,000.", "domain": "Taxation"},
+        {"instruction": "Input Tax Credit rules under Section 16", "response": "Invoice is mandatory.", "domain": "Taxation"},
+        {"instruction": "What is the penalty for late GSTR-3B filing?", "response": "Rs. 50 per day.", "domain": "Compliance"},
+        {"instruction": "Appeal before First Appellate Authority for GST notice", "response": "File Form GST APL-01.", "domain": "Compliance"},
+        {"instruction": "Section 80C deductions for EPF and PPF deposits", "response": "Up to Rs. 1.5 Lakhs.", "domain": "Income Tax"},
+        {"instruction": "Demurrage charges on sea container customs detention", "response": "Port terminal charges.", "domain": "Logistics"},
+    ]
+
+    report = analyze_semantic_diversity(samples, k_clusters=3)
+    assert report["total_samples"] == 6
+    assert 0.0 <= report["diversity_entropy"] <= 1.0
+    assert len(report["clusters"]) == 3
+    assert len(report["points"]) == 6
+    for pt in report["points"]:
+        assert 10.0 <= pt["x"] <= 90.0
+        assert 10.0 <= pt["y"] <= 90.0
+        assert "cluster_label" in pt
+        assert "is_outlier" in pt
+
+
+def test_multi_turn_synthesis_and_coherence():
+    """Verify multi-turn dialogue generation directive, format serialization, and coherence checking."""
+    from core.generation.multi_turn_synthesizer import (
+        build_multi_turn_directive,
+        format_multi_turn_sample,
+        evaluate_dialogue_coherence,
+    )
+
+    directive = build_multi_turn_directive(num_turns=4, language="hinglish")
+    assert "MULTI-TURN CONVERSATIONAL DIALOGUE SPECIFICATION" in directive
+    assert "at least 4 alternating turns" in directive
+
+    turns = [
+        {"role": "user", "content": "Mera ITC claim mismatch aa raha hai GSTR-2B se."},
+        {"role": "assistant", "content": "GSTR-2B mein invoice reflect nahi hone par aap supplier se verify karein."},
+        {"role": "user", "content": "Agar supplier ne quarterly file kiya ho tab kya karein?"},
+        {"role": "assistant", "content": "Quarterly filers ke liye IFF upload check karein Rule 36(4) ke tehat."},
+    ]
+
+    # Format into ShareGPT
+    sg_sample = format_multi_turn_sample(turns, format_type="sharegpt")
+    assert "conversations" in sg_sample
+    assert len(sg_sample["conversations"]) == 4
+    assert sg_sample["conversations"][0]["from"] == "human"
+    assert sg_sample["conversations"][1]["from"] == "gpt"
+
+    # Format into OpenAI
+    oai_sample = format_multi_turn_sample(turns, format_type="openai")
+    assert "messages" in oai_sample
+    assert len(oai_sample["messages"]) == 4
+    assert oai_sample["messages"][0]["role"] == "user"
+    assert oai_sample["messages"][1]["role"] == "assistant"
+
+    # Coherence evaluation
+    coh_good = evaluate_dialogue_coherence(turns)
+    assert coh_good["is_coherent"] is True
+    assert coh_good["coherence_score"] >= 0.70
+    assert coh_good["user_turns"] == 2
+    assert coh_good["assistant_turns"] == 2
+
+    broken_turns = [
+        {"role": "user", "content": "Hello"},
+        {"role": "user", "content": "Are you there?"},
+    ]
+    coh_bad = evaluate_dialogue_coherence(broken_turns)
+    assert coh_bad["is_coherent"] is False
+    assert any("alternation" in iss for iss in coh_bad["issues"])
+
+
+
 
 
 

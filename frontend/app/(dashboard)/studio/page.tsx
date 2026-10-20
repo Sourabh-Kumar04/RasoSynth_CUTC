@@ -487,6 +487,7 @@ function StudioContent() {
                   <option value="kto">Binary Alignment (KTO - Kahneman-Tversky)</option>
                   <option value="simpo">Simple Preference Optimization (SimPO)</option>
                   <option value="rag">Retrieval-Augmented Generation (RAG &amp; Citations)</option>
+                  <option value="multi_turn">Multi-Turn Conversational Dialogue</option>
                 </select>
               </div>
 

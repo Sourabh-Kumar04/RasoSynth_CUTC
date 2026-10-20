@@ -14,6 +14,7 @@ from core.generation.cot_synthesizer import build_cot_prompt_directive, extract_
 from core.generation.tool_caller import build_tool_calling_system_prompt, DEFAULT_FINANCE_TOOLS
 from core.generation.preference_synthesizer import build_preference_directive
 from core.generation.rag_synthesizer import build_rag_prompt_directive, format_rag_sample, evaluate_rag_faithfulness
+from core.generation.multi_turn_synthesizer import build_multi_turn_directive, format_multi_turn_sample, evaluate_dialogue_coherence
 from core.curriculum.curriculum_sorter import sort_by_curriculum
 
 logger = logging.getLogger(__name__)
@@ -356,6 +357,10 @@ class SeedlessGenerator:
         if ds_type == "rag":
             rag_prompt = "\n" + build_rag_prompt_directive(include_hard_negatives=True)
 
+        multi_turn_prompt = ""
+        if ds_type == "multi_turn":
+            multi_turn_prompt = "\n" + build_multi_turn_directive(num_turns=4, language=lang)
+
         system_prompt = (
             f"You are an expert dataset generator specializing in the '{plan.domain}' domain. "
             f"Your objective: {plan.objective}.\n"
@@ -371,6 +376,7 @@ class SeedlessGenerator:
             f"{tool_prompt}"
             f"{pref_prompt}"
             f"{rag_prompt}"
+            f"{multi_turn_prompt}"
         )
 
         user_message = (
@@ -508,6 +514,14 @@ class SeedlessGenerator:
                             "positive_contexts": pos_ctx,
                             "hard_negatives": neg_ctx,
                             "citations": citations,
+                        }
+                    elif ds_type == "multi_turn":
+                        raw_turns = data.get("turns") or []
+                        coherence = evaluate_dialogue_coherence(raw_turns)
+                        meta["multi_turn"] = {
+                            "turn_count": len(raw_turns),
+                            "coherence": coherence,
+                            "turns": raw_turns,
                         }
 
                     if data.get("instruction_en") and data.get("response_en"):

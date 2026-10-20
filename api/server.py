@@ -3257,6 +3257,27 @@ async def tool_evaluate_rag(request: dict = Body(...)):
     )
 
 
+@app.post("/tools/semantic-density", tags=["Tools"])
+async def tool_semantic_density(request: dict = Body(...)):
+    """Analyze dataset semantic density, 2D topic clusters, entropy, and outliers."""
+    from core.curation.diversity_mapper import analyze_semantic_diversity
+    samples = request.get("samples") or []
+    k_clusters = int(request.get("k_clusters", 4))
+    if not samples:
+        raise HTTPException(status_code=400, detail="Field 'samples' must be a non-empty list of records.")
+    return analyze_semantic_diversity(samples=samples, k_clusters=k_clusters)
+
+
+@app.post("/tools/evaluate-dialogue", tags=["Tools"])
+async def tool_evaluate_dialogue(request: dict = Body(...)):
+    """Evaluate structural integrity, alternation, and turn balance of a dialogue."""
+    from core.generation.multi_turn_synthesizer import evaluate_dialogue_coherence
+    turns = request.get("turns") or []
+    if not isinstance(turns, list):
+        raise HTTPException(status_code=400, detail="Field 'turns' must be a list of turn objects.")
+    return evaluate_dialogue_coherence(turns=turns)
+
+
 @app.get("/", tags=["Root"])
 async def root():
     """Root endpoint."""
