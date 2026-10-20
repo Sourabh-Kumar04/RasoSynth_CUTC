@@ -580,6 +580,59 @@ class APIClient {
     return this.request<{ job_id: string; filename: string; content: string }>(`/datasets/${jobId}/huggingface-card`)
   }
 
+  async publishToHuggingFace(jobId: string, payload: { repo_id: string; hf_token?: string; private?: boolean }) {
+    return this.request<{
+      success: boolean
+      repo_id: string
+      repo_url: string
+      sample_count: number
+      files_uploaded: string[]
+    }>(`/datasets/${jobId}/publish-huggingface`, {
+      method: 'POST',
+      body: JSON.stringify(payload),
+    })
+  }
+
+  async getTrainingRecipe(jobId: string, framework: string = 'unsloth', baseModel?: string) {
+    return this.request<{
+      job_id: string
+      base_model: string
+      framework: string
+      filename: string
+      content: string
+      launch_command: string
+    }>(`/datasets/${jobId}/training-recipe`, {
+      params: { framework, ...(baseModel ? { base_model: baseModel } : {}) },
+    })
+  }
+
+  async generateAdversarialProbes(payload: { domain?: string; categories?: string[]; language?: string; sample_count?: number }) {
+    return this.request<{
+      domain: string
+      probe_count: number
+      probes: any[]
+    }>('/tools/generate-adversarial-probes', {
+      method: 'POST',
+      body: JSON.stringify(payload),
+    })
+  }
+
+  async auditContamination(payload: { samples: any[]; benchmarks?: string[]; similarity_threshold?: number }) {
+    return this.request<{
+      status: string
+      total_samples_audited: number
+      clean_samples_count: number
+      contaminated_samples_count: number
+      contamination_rate_pct: number
+      benchmarks_checked: string[]
+      audit_certificate_id: string
+      contaminated_records: any[]
+    }>('/tools/audit-contamination', {
+      method: 'POST',
+      body: JSON.stringify(payload),
+    })
+  }
+
   // === Download API ===
   // Download a dataset with format selection - returns a Blob for file saving
   async downloadDataset(id: string, format: string = 'jsonl'): Promise<Blob> {

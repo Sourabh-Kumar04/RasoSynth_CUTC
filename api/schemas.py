@@ -9,6 +9,8 @@ class DatasetType(str, Enum):
     SFT = "sft"
     RAG = "rag"
     RLHF = "rlhf"
+    KTO = "kto"
+    SIMPO = "simpo"
     CLASSIFICATION = "classification"
     CODING = "coding"
     REASONING = "reasoning"

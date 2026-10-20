@@ -484,6 +484,8 @@ function StudioContent() {
                   <option value="reasoning">Chain-of-Thought Reasoning (CoT)</option>
                   <option value="tool_calling">Function & Tool Calling</option>
                   <option value="rlhf">Preference Pairs (RLHF / DPO)</option>
+                  <option value="kto">Binary Alignment (KTO - Kahneman-Tversky)</option>
+                  <option value="simpo">Simple Preference Optimization (SimPO)</option>
                 </select>
               </div>
 

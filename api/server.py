@@ -3096,6 +3096,153 @@ async def get_dataset_huggingface_card(job_id: str):
     }
 
 
+@app.post("/datasets/{job_id}/publish-huggingface", tags=["Datasets"])
+async def publish_dataset_to_huggingface_hub(job_id: str, request: dict = Body(...)):
+    """Publish dataset and README card directly to Hugging Face Hub."""
+    from core.export.hf_hub_publisher import publish_dataset_to_hf_hub
+    from core.export.huggingface_exporter import generate_hf_dataset_card
+    from core.tokenizer_metrics import estimate_tokenizer_fertility
+
+    repo_id = str(request.get("repo_id", "")).strip()
+    if not repo_id:
+        raise HTTPException(status_code=400, detail="Missing required field 'repo_id' (e.g. 'username/dataset-name')")
+
+    hf_token = request.get("hf_token")
+    private = bool(request.get("private", False))
+
+    job = await db.get_job(job_id) if db else None
+    domain = (job.target_domain if job else None) or f"Dataset {job_id[:8]}"
+    dataset_type = (job.dataset_type if job else None) or "sft"
+    sample_count = (job.samples_generated if job else 0) or 1000
+
+    config = (job.config or {}) if job and hasattr(job, "config") else {}
+    lang = config.get("language", "en")
+    script = config.get("script_mode", "native")
+    has_dpo = bool(config.get("generate_dpo_refusal_pairs", False) or dataset_type in ("rlhf", "dpo", "simpo"))
+    has_tool = bool(dataset_type == "tool_calling")
+    has_bitext = bool(config.get("parallel_bilingual", False))
+
+    fertility = estimate_tokenizer_fertility(lang, script)
+    savings = fertility.get("potential_token_savings_pct", 0.0)
+
+    readme_content = generate_hf_dataset_card(
+        dataset_name=domain,
+        domain=domain,
+        sample_count=sample_count,
+        language=lang,
+        script_mode=script,
+        dataset_type=dataset_type,
+        license_type="apache-2.0",
+        has_dpo=has_dpo,
+        has_tool_calling=has_tool,
+        has_bitext=has_bitext,
+        tokenizer_savings_pct=savings,
+    )
+
+    # Fetch samples from db
+    samples = []
+    if db:
+        datasets = await db.get_datasets_by_job(job_id)
+        for ds in datasets:
+            ds_samples = await db.get_samples(ds["id"], limit=1000)
+            for s in ds_samples:
+                samples.append({
+                    "instruction": s.get("instruction", ""),
+                    "response": s.get("response", ""),
+                    "input": s.get("input", None),
+                    "difficulty_tier": s.get("difficulty_tier", 3),
+                })
+    if not samples:
+        samples = [{"instruction": f"Sample prompt for {domain}", "response": f"Sample response for {domain}"}]
+
+    try:
+        result = publish_dataset_to_hf_hub(
+            repo_id=repo_id,
+            readme_content=readme_content,
+            samples=samples,
+            hf_token=hf_token,
+            private=private,
+        )
+        return result
+    except Exception as e:
+        logger.error(f"Hugging Face publication failed: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@app.get("/datasets/{job_id}/training-recipe", tags=["Datasets"])
+async def get_dataset_training_recipe(
+    job_id: str,
+    framework: str = "unsloth",
+    base_model: Optional[str] = None,
+):
+    """Generate fine-tuning recipe and launch scripts (Unsloth, Axolotl, LLaMA-Factory)."""
+    from core.training.recipe_generator import generate_training_recipe
+
+    job = await db.get_job(job_id) if db else None
+    dataset_type = (job.dataset_type if job else None) or "sft"
+    config = (job.config or {}) if job and hasattr(job, "config") else {}
+    lang = config.get("language", "en")
+
+    if not base_model:
+        if lang in ("hi", "hinglish", "indic_multilingual", "ta", "te", "bn", "mr"):
+            base_model = "sarvamai/sarvam-2b-v0.5"
+        else:
+            base_model = "meta-llama/Meta-Llama-3.1-8B-Instruct"
+
+    recipe = generate_training_recipe(
+        framework=framework,
+        dataset_path=f"dataset-{job_id[:8]}.jsonl",
+        base_model=base_model,
+        dataset_type=dataset_type,
+    )
+    return {
+        "job_id": job_id,
+        "base_model": base_model,
+        **recipe,
+    }
+
+
+@app.post("/tools/generate-adversarial-probes", tags=["Tools"])
+async def tool_generate_adversarial_probes(request: dict = Body(...)):
+    """Generate domain-specific adversarial stress test probes."""
+    from core.safety.adversarial_generator import generate_adversarial_probes
+    domain = str(request.get("domain", "taxation"))
+    categories = request.get("categories")
+    language = str(request.get("language", "hinglish"))
+    sample_count = int(request.get("sample_count", 5))
+
+    probes = generate_adversarial_probes(
+        domain=domain,
+        categories=categories,
+        language=language,
+        sample_count=sample_count,
+    )
+    return {
+        "domain": domain,
+        "probe_count": len(probes),
+        "probes": probes,
+    }
+
+
+@app.post("/tools/audit-contamination", tags=["Tools"])
+async def tool_audit_contamination(request: dict = Body(...)):
+    """Audit dataset samples against standard Indic & global LLM evaluation benchmarks."""
+    from core.evaluation.contamination_checker import check_dataset_contamination
+    samples = request.get("samples") or []
+    benchmarks = request.get("benchmarks")
+    threshold = float(request.get("similarity_threshold", 0.50))
+
+    if not samples:
+        raise HTTPException(status_code=400, detail="Field 'samples' must be a non-empty list of records.")
+
+    report = check_dataset_contamination(
+        samples=samples,
+        benchmarks=benchmarks,
+        similarity_threshold=threshold,
+    )
+    return report
+
+
 @app.get("/", tags=["Root"])
 async def root():
     """Root endpoint."""

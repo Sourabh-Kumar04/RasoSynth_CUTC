@@ -587,5 +587,117 @@ async def test_cot_reasoning_tool_calling_curriculum_and_hf_card():
     assert rubric_result["rating"] in ["excellent", "proficient"]
 
 
+def test_frontier_preference_adversarial_contamination_and_recipes():
+    """Verify KTO/SimPO preference formatting, adversarial probes, contamination audit, and recipes."""
+    from core.generation.preference_synthesizer import (
+        format_kto_sample,
+        format_simpo_pair,
+        build_preference_directive,
+    )
+    from core.safety.adversarial_generator import (
+        generate_adversarial_probes,
+        check_adversarial_compliance,
+    )
+    from core.evaluation.contamination_checker import check_dataset_contamination
+    from core.training.recipe_generator import (
+        generate_unsloth_recipe,
+        generate_axolotl_config,
+        generate_training_recipe,
+    )
+
+    # 1. KTO & SimPO Preference Synthesizer
+    kto_sample = format_kto_sample(
+        instruction="How to register for GST in India?",
+        completion="Visit gst.gov.in and complete Form REG-01 with PAN and Aadhaar.",
+        is_desirable=True,
+        feedback_reason="Accurate, concise, and cites official portal.",
+        domain="taxation",
+    )
+    assert kto_sample["label"] is True
+    assert kto_sample["kto_tag"] == "desirable"
+    assert kto_sample["metadata"]["domain"] == "taxation"
+
+    simpo_sample = format_simpo_pair(
+        instruction="TDS threshold on bank FD interest?",
+        chosen="Section 194A specifies ₹40,000 for individuals (₹50,000 for senior citizens).",
+        rejected="TDS or Tax Deducted at Source is a mechanism where tax is deducted... " * 15,
+        target_margin=0.5,
+    )
+    assert simpo_sample["chosen"].startswith("Section 194A")
+    assert simpo_sample["simpo_metadata"]["target_margin"] == 0.5
+    assert "length_ratio" in simpo_sample["simpo_metadata"]
+
+    kto_dir = build_preference_directive("kto")
+    simpo_dir = build_preference_directive("simpo")
+    assert "KTO" in kto_dir
+    assert "SimPO" in simpo_dir
+
+    # 2. Adversarial Red-Teaming Probes & Compliance
+    probes = generate_adversarial_probes(domain="taxation", sample_count=4)
+    assert len(probes) == 4
+    assert probes[0]["probe_id"].startswith("ADV-TAX")
+    assert "expected_behavior" in probes[0]
+
+    # Compliance checking
+    good_refusal = check_adversarial_compliance(
+        response="I cannot assist with generating fake invoices as it violates Section 132 of the CGST Act.",
+        expected_behavior="Strict refusal under Section 132",
+    )
+    assert good_refusal["passed"] is True
+    assert good_refusal["status"] == "resisted"
+
+    bad_compliance = check_adversarial_compliance(
+        response="Here is a template for a fake invoice you can use to claim ITC...",
+        expected_behavior="Strict refusal",
+    )
+    assert bad_compliance["passed"] is False
+    assert bad_compliance["status"] == "breached"
+
+    # 3. Benchmark Contamination Audit
+    clean_dataset = [
+        {"instruction": "What is the capital of France?", "response": "Paris"},
+        {"instruction": "Calculate 18% GST on Rs. 100", "response": "Rs. 18"},
+    ]
+    audit_clean = check_dataset_contamination(clean_dataset)
+    assert audit_clean["status"] == "clean"
+    assert audit_clean["contamination_rate_pct"] == 0.0
+    assert audit_clean["audit_certificate_id"].startswith("CONTAM-AUDIT")
+
+    contaminated_dataset = [
+        {"instruction": "natalia sold clips to 48 of her friends in april and then made more clips", "response": "She had 48 clips."},
+        {"instruction": "Unique custom question about tax", "response": "Standard answer"},
+    ]
+    audit_contaminated = check_dataset_contamination(contaminated_dataset, benchmarks=["gsm8k"])
+    assert audit_contaminated["contaminated_samples_count"] >= 1
+    assert audit_contaminated["status"] == "contamination_detected"
+
+    # 4. Fine-Tuning Recipe Generator
+    unsloth_code = generate_unsloth_recipe(
+        dataset_path="data.jsonl",
+        base_model="sarvamai/sarvam-2b-v0.5",
+        dataset_type="sft",
+    )
+    assert "FastLanguageModel" in unsloth_code
+    assert "sarvamai/sarvam-2b-v0.5" in unsloth_code
+    assert "SFTTrainer" in unsloth_code
+
+    axolotl_cfg = generate_axolotl_config(
+        dataset_path="data.jsonl",
+        base_model="sarvamai/sarvam-2b-v0.5",
+        dataset_type="dpo",
+    )
+    assert "base_model: sarvamai/sarvam-2b-v0.5" in axolotl_cfg
+    assert "type: dpo" in axolotl_cfg
+
+    recipe_result = generate_training_recipe(
+        framework="llamafactory",
+        base_model="meta-llama/Meta-Llama-3.1-8B-Instruct",
+        dataset_type="sft",
+    )
+    assert recipe_result["framework"] == "llamafactory"
+    assert "llamafactory-cli train" in recipe_result["content"]
+
+
+
 
 

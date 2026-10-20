@@ -12,6 +12,7 @@ from core.augmentation.transliteration_noise import inject_chat_noise
 from core.metrics.fidelity import evaluate_fidelity
 from core.generation.cot_synthesizer import build_cot_prompt_directive, extract_thought_and_solution
 from core.generation.tool_caller import build_tool_calling_system_prompt, DEFAULT_FINANCE_TOOLS
+from core.generation.preference_synthesizer import build_preference_directive
 from core.curriculum.curriculum_sorter import sort_by_curriculum
 
 logger = logging.getLogger(__name__)
@@ -341,9 +342,14 @@ class SeedlessGenerator:
         )
 
         tool_prompt = ""
-        if str(self.config.get("dataset_type", "")).lower() == "tool_calling":
+        ds_type = str(self.config.get("dataset_type", "")).lower()
+        if ds_type == "tool_calling":
             tools = self.config.get("tools_definition") or DEFAULT_FINANCE_TOOLS
             tool_prompt = "\n" + build_tool_calling_system_prompt(tools)
+
+        pref_prompt = ""
+        if ds_type in ("kto", "simpo"):
+            pref_prompt = "\n" + build_preference_directive(ds_type)
 
         system_prompt = (
             f"You are an expert dataset generator specializing in the '{plan.domain}' domain. "
@@ -358,6 +364,7 @@ class SeedlessGenerator:
             "4. Do not include markdown wrappers, fences, or text outside the JSON.\n"
             f"{lang_rule}"
             f"{tool_prompt}"
+            f"{pref_prompt}"
         )
 
         user_message = (
@@ -471,6 +478,22 @@ class SeedlessGenerator:
                         if self.config.get("mask_indian_pii", True):
                             rejected_text = mask_indian_pii(rejected_text, replacement_mode="redact")
                         meta["rejected_response"] = rejected_text
+
+                    if ds_type == "kto":
+                        meta["kto"] = {
+                            "label": data.get("kto_label", True),
+                            "feedback_reason": data.get("feedback_reason", "Statutory accuracy and alignment"),
+                        }
+                    elif ds_type == "simpo":
+                        c_len = len(resp_text.split())
+                        rej = str(data.get("rejected_response", "") or "")
+                        r_len = len(rej.split())
+                        meta["simpo"] = {
+                            "target_margin": 0.5,
+                            "chosen_word_count": c_len,
+                            "rejected_word_count": r_len,
+                            "length_ratio": round(c_len / max(r_len, 1), 2),
+                        }
 
                     if data.get("instruction_en") and data.get("response_en"):
                         meta["parallel_en"] = {

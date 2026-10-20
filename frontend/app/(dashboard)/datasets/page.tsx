@@ -23,6 +23,10 @@ import {
   RefreshCw,
   Copy,
   Check,
+  UploadCloud,
+  Terminal,
+  ShieldCheck,
+  AlertTriangle,
 } from 'lucide-react'
 import { clsx } from 'clsx'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
@@ -163,6 +167,99 @@ export default function DatasetsPage() {
     navigator.clipboard.writeText(hfCardContent)
     setHfCardCopied(true)
     setTimeout(() => setHfCardCopied(false), 2000)
+  }
+
+  // Hugging Face Hub Direct Publish state
+  const [hfPublishModalOpen, setHfPublishModalOpen] = useState(false)
+  const [hfRepoId, setHfRepoId] = useState('')
+  const [hfToken, setHfToken] = useState('')
+  const [hfPrivate, setHfPrivate] = useState(false)
+  const [hfPublishLoading, setHfPublishLoading] = useState(false)
+  const [hfPublishResult, setHfPublishResult] = useState<any | null>(null)
+  const [hfPublishError, setHfPublishError] = useState<string | null>(null)
+
+  const handlePublishToHub = async () => {
+    if (!selectedDataset || !hfRepoId.trim()) return
+    setHfPublishLoading(true)
+    setHfPublishError(null)
+    setHfPublishResult(null)
+    try {
+      const res = await api.publishToHuggingFace(selectedDataset, {
+        repo_id: hfRepoId.trim(),
+        hf_token: hfToken.trim() || undefined,
+        private: hfPrivate,
+      })
+      setHfPublishResult(res)
+    } catch (e: any) {
+      console.error('Failed to publish to Hugging Face Hub:', e)
+      setHfPublishError(e.message || 'Failed to publish to Hugging Face Hub')
+    } finally {
+      setHfPublishLoading(false)
+    }
+  }
+
+  // Fine-Tuning Recipe Generator state
+  const [recipeModalOpen, setRecipeModalOpen] = useState(false)
+  const [recipeFramework, setRecipeFramework] = useState<'unsloth' | 'axolotl' | 'llamafactory'>('unsloth')
+  const [recipeModel, setRecipeModel] = useState<string>('')
+  const [recipeData, setRecipeData] = useState<any | null>(null)
+  const [recipeLoading, setRecipeLoading] = useState(false)
+  const [recipeCopied, setRecipeCopied] = useState(false)
+  const [recipeCmdCopied, setRecipeCmdCopied] = useState(false)
+
+  const handleFetchRecipe = async (jobId: string, framework: string = recipeFramework, model?: string) => {
+    setRecipeLoading(true)
+    try {
+      const res = await api.getTrainingRecipe(jobId, framework, model || recipeModel || undefined)
+      setRecipeData(res)
+    } catch (e: any) {
+      console.error('Failed to fetch training recipe:', e)
+    } finally {
+      setRecipeLoading(false)
+    }
+  }
+
+  const handleOpenRecipeModal = (jobId: string) => {
+    setRecipeModalOpen(true)
+    setRecipeCopied(false)
+    setRecipeCmdCopied(false)
+    handleFetchRecipe(jobId, recipeFramework)
+  }
+
+  // Contamination & Adversarial state
+  const [contaminationReport, setContaminationReport] = useState<any | null>(null)
+  const [contaminationLoading, setContaminationLoading] = useState(false)
+  const [adversarialProbes, setAdversarialProbes] = useState<any[] | null>(null)
+  const [adversarialLoading, setAdversarialLoading] = useState(false)
+
+  const handleAuditContamination = async () => {
+    if (!records || records.length === 0) return
+    setContaminationLoading(true)
+    try {
+      const res = await api.auditContamination({
+        samples: records.map((r: any) => ({ instruction: r.instruction, response: r.response })),
+      })
+      setContaminationReport(res)
+    } catch (e: any) {
+      console.error('Contamination audit failed:', e)
+    } finally {
+      setContaminationLoading(false)
+    }
+  }
+
+  const handleGenerateAdversarial = async (domain: string) => {
+    setAdversarialLoading(true)
+    try {
+      const res = await api.generateAdversarialProbes({
+        domain: domain || 'taxation',
+        sample_count: 5,
+      })
+      setAdversarialProbes(res.probes || [])
+    } catch (e: any) {
+      console.error('Adversarial probe generation failed:', e)
+    } finally {
+      setAdversarialLoading(false)
+    }
   }
 
   // API state
@@ -773,6 +870,88 @@ export default function DatasetsPage() {
               )}
             </div>
 
+            {/* Frontier Safety & Contamination Audit Controls */}
+            <div className="space-y-3 border-t border-[#272738] pt-4">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-xs font-bold font-mono uppercase tracking-wider text-white">
+                    Post-Training Safeguards &amp; Contamination Audit
+                  </p>
+                  <p className="text-[10px] text-[#94a3b8]">
+                    Verify zero test-set leakage against IndicGLUE/MMLU and evaluate statutory adversarial resilience
+                  </p>
+                </div>
+                <div className="flex items-center gap-2">
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="h-7 text-[11px] font-mono border-[#272738] text-emerald-400 hover:text-white hover:bg-[#161622] rounded-full px-3"
+                    onClick={handleAuditContamination}
+                    disabled={contaminationLoading || records.length === 0}
+                  >
+                    {contaminationLoading ? (
+                      <Loader2 className="h-3 w-3 animate-spin mr-1" />
+                    ) : (
+                      <ShieldCheck className="h-3 w-3 mr-1" />
+                    )}
+                    Audit Leakage
+                  </Button>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="h-7 text-[11px] font-mono border-[#272738] text-amber-400 hover:text-white hover:bg-[#161622] rounded-full px-3"
+                    onClick={() => handleGenerateAdversarial(selected.name)}
+                    disabled={adversarialLoading}
+                  >
+                    {adversarialLoading ? (
+                      <Loader2 className="h-3 w-3 animate-spin mr-1" />
+                    ) : (
+                      <AlertTriangle className="h-3 w-3 mr-1" />
+                    )}
+                    Red-Team Probes
+                  </Button>
+                </div>
+              </div>
+
+              {contaminationReport && (
+                <div className="p-3 bg-[#0a0a0f] border border-[#272738] rounded-xl flex items-center justify-between font-mono text-xs">
+                  <div className="flex items-center gap-2">
+                    <span className={clsx("h-2.5 w-2.5 rounded-full", contaminationReport.status === 'clean' ? 'bg-[#10b981]' : 'bg-rose-500')} />
+                    <span className="text-white font-bold">
+                      {contaminationReport.status === 'clean' ? '0% Benchmark Leakage' : `${contaminationReport.contamination_rate_pct}% Leakage Flagged`}
+                    </span>
+                    <span className="text-[10px] text-[#94a3b8]">
+                      ({contaminationReport.total_samples_audited} samples audited against IndicGLUE, MMLU, GSM8K)
+                    </span>
+                  </div>
+                  <Badge variant="outline" className="text-[10px] border-[#272738] text-emerald-400">
+                    Cert: {contaminationReport.audit_certificate_id}
+                  </Badge>
+                </div>
+              )}
+
+              {adversarialProbes && (
+                <div className="p-3 bg-[#0a0a0f] border border-[#272738] rounded-xl space-y-2 font-mono text-xs">
+                  <div className="flex items-center justify-between pb-1 border-b border-[#1c1c28]">
+                    <span className="text-[#94a3b8] text-[10px] uppercase font-bold">Generated Adversarial Safety Probes</span>
+                    <span className="text-amber-400 text-[10px]">{adversarialProbes.length} stress tests synthesized</span>
+                  </div>
+                  <div className="space-y-1.5 max-h-36 overflow-y-auto">
+                    {adversarialProbes.map((probe: any, idx: number) => (
+                      <div key={idx} className="p-2 rounded bg-[#12121a] border border-[#1c1c28] text-[11px] space-y-1">
+                        <div className="flex items-center justify-between text-[10px]">
+                          <span className="text-amber-300 font-bold uppercase">{probe.category}</span>
+                          <span className="text-[#94a3b8]">{probe.probe_id}</span>
+                        </div>
+                        <p className="text-slate-200">{probe.instruction}</p>
+                        <p className="text-[10px] text-emerald-400">Expected: {probe.expected_behavior}</p>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+            </div>
+
             {/* Records Preview */}
             <div className="space-y-3 border-t border-[#272738] pt-4">
               <div className="flex items-center justify-between">
@@ -921,6 +1100,33 @@ export default function DatasetsPage() {
                   <Button
                     variant="outline"
                     size="sm"
+                    className="gap-2 border-[#272738] text-emerald-400 hover:text-white hover:bg-[#161622] rounded-full px-4 font-mono text-xs"
+                    onClick={() => {
+                      setHfRepoId(`username/${selected.name.toLowerCase().replace(/[^a-z0-9_-]/g, '-')}`)
+                      setHfPublishResult(null)
+                      setHfPublishError(null)
+                      setHfPublishModalOpen(true)
+                    }}
+                    title="Publish directly to Hugging Face Hub"
+                  >
+                    <UploadCloud className="h-3.5 w-3.5 text-[#10b981]" />
+                    Publish to Hub
+                  </Button>
+
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="gap-2 border-[#272738] text-cyan-300 hover:text-white hover:bg-[#161622] rounded-full px-4 font-mono text-xs"
+                    onClick={() => handleOpenRecipeModal(selected.id)}
+                    title="Generate Fine-Tuning Scripts (Unsloth / Axolotl / LLaMA-Factory)"
+                  >
+                    <Terminal className="h-3.5 w-3.5 text-cyan-400" />
+                    Training Recipe
+                  </Button>
+
+                  <Button
+                    variant="outline"
+                    size="sm"
                     className="gap-2 border-[#272738] text-white hover:bg-[#161622] rounded-full px-4 font-mono text-xs"
                     onClick={() => router.push(`/finetune?dataset=${selected.id}`)}
                   >
@@ -1034,6 +1240,216 @@ export default function DatasetsPage() {
                 onClick={() => setHfCardModalOpen(false)}
                 className="text-xs font-mono text-[#94a3b8] hover:text-white"
               >
+                Close
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Hugging Face Hub Direct Publish Modal */}
+      {hfPublishModalOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/70 backdrop-blur-sm animate-fade-in">
+          <div className="relative w-full max-w-lg bg-[#12121a] border border-[#272738] rounded-2xl shadow-2xl overflow-hidden font-mono">
+            {/* Header */}
+            <div className="flex items-center justify-between px-5 py-4 border-b border-[#272738] bg-[#0e0e14]">
+              <div className="flex items-center gap-2">
+                <UploadCloud className="h-4 w-4 text-[#10b981]" />
+                <h3 className="text-sm font-bold text-white">Publish to Hugging Face Hub</h3>
+              </div>
+              <Button size="icon" variant="ghost" onClick={() => setHfPublishModalOpen(false)} className="h-8 w-8 text-[#94a3b8] hover:text-white">
+                <X className="h-4 w-4" />
+              </Button>
+            </div>
+
+            {/* Body */}
+            <div className="p-5 space-y-4 text-xs">
+              <div>
+                <label className="text-[10px] text-[#94a3b8] uppercase block mb-1">Target Repository ID (username/dataset-name)</label>
+                <Input
+                  value={hfRepoId}
+                  onChange={(e) => setHfRepoId(e.target.value)}
+                  placeholder="e.g. your-org/indic-tax-instruct"
+                  className="bg-[#0a0a0f] border-[#272738] text-white text-xs h-8"
+                />
+              </div>
+
+              <div>
+                <label className="text-[10px] text-[#94a3b8] uppercase block mb-1">HF User Access Token (Write permission)</label>
+                <Input
+                  type="password"
+                  value={hfToken}
+                  onChange={(e) => setHfToken(e.target.value)}
+                  placeholder="hf_... (leave empty to use server HF_TOKEN)"
+                  className="bg-[#0a0a0f] border-[#272738] text-white text-xs h-8"
+                />
+              </div>
+
+              <div className="flex items-center justify-between p-2.5 rounded bg-[#0a0a0f] border border-[#272738]">
+                <span className="text-xs text-white">Make Repository Private</span>
+                <input
+                  type="checkbox"
+                  checked={hfPrivate}
+                  onChange={(e) => setHfPrivate(e.target.checked)}
+                  className="w-4 h-4 accent-[#10b981] cursor-pointer"
+                />
+              </div>
+
+              {hfPublishError && (
+                <div className="p-3 rounded bg-rose-950/30 border border-rose-500/40 text-rose-300 text-xs">
+                  {hfPublishError}
+                </div>
+              )}
+
+              {hfPublishResult && (
+                <div className="p-3.5 rounded bg-emerald-950/30 border border-emerald-500/40 text-emerald-300 space-y-1.5">
+                  <div className="font-bold flex items-center gap-1.5">
+                    <CheckCircle2 className="h-4 w-4 text-[#10b981]" />
+                    Dataset Published Successfully!
+                  </div>
+                  <p className="text-[11px] text-[#94a3b8]">Uploaded {hfPublishResult.sample_count} samples and README dataset card.</p>
+                  <a
+                    href={hfPublishResult.repo_url}
+                    target="_blank"
+                    rel="noreferrer"
+                    className="inline-flex items-center gap-1 text-xs text-[#10b981] hover:underline font-bold mt-1"
+                  >
+                    Open on Hugging Face Hub <ExternalLink className="h-3 w-3" />
+                  </a>
+                </div>
+              )}
+            </div>
+
+            {/* Footer */}
+            <div className="px-5 py-3 border-t border-[#272738] bg-[#0e0e14] flex items-center justify-end gap-2">
+              <Button size="sm" variant="ghost" onClick={() => setHfPublishModalOpen(false)} className="text-xs text-[#94a3b8]">
+                Cancel
+              </Button>
+              <Button
+                size="sm"
+                onClick={handlePublishToHub}
+                disabled={hfPublishLoading || !hfRepoId.trim()}
+                className="bg-[#10b981] hover:bg-emerald-600 text-black font-bold text-xs"
+              >
+                {hfPublishLoading ? (
+                  <>
+                    <Loader2 className="h-3.5 w-3.5 animate-spin mr-1.5" />
+                    Publishing...
+                  </>
+                ) : (
+                  <>
+                    <UploadCloud className="h-3.5 w-3.5 mr-1.5" />
+                    Push to Hub
+                  </>
+                )}
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Fine-Tuning Recipe Generator Modal */}
+      {recipeModalOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/70 backdrop-blur-sm animate-fade-in">
+          <div className="relative w-full max-w-4xl max-h-[85vh] flex flex-col bg-[#12121a] border border-[#272738] rounded-2xl shadow-2xl overflow-hidden font-mono">
+            {/* Header */}
+            <div className="flex items-center justify-between px-5 py-4 border-b border-[#272738] bg-[#0e0e14]">
+              <div className="flex items-center gap-2.5">
+                <div className="p-1.5 rounded-lg bg-cyan-950/40 border border-cyan-800">
+                  <Terminal className="h-4 w-4 text-cyan-400" />
+                </div>
+                <div>
+                  <h3 className="text-sm font-bold text-white">Fine-Tuning Recipe &amp; Launch Scripts</h3>
+                  <p className="text-[11px] text-[#94a3b8]">Production configurations matching dataset format and base tokenizer</p>
+                </div>
+              </div>
+
+              <div className="flex items-center gap-2">
+                <Button
+                  size="sm"
+                  variant="outline"
+                  onClick={() => {
+                    if (recipeData?.content) {
+                      navigator.clipboard.writeText(recipeData.content)
+                      setRecipeCopied(true)
+                      setTimeout(() => setRecipeCopied(false), 2000)
+                    }
+                  }}
+                  className="h-8 gap-1 text-xs border-[#272738] bg-[#161622] text-white hover:bg-[#20202e]"
+                >
+                  {recipeCopied ? <Check className="h-3.5 w-3.5 text-[#10b981]" /> : <Copy className="h-3.5 w-3.5 text-cyan-400" />}
+                  {recipeCopied ? 'Copied Script!' : 'Copy Script'}
+                </Button>
+                <Button size="icon" variant="ghost" onClick={() => setRecipeModalOpen(false)} className="h-8 w-8 text-[#94a3b8] hover:text-white">
+                  <X className="h-4 w-4" />
+                </Button>
+              </div>
+            </div>
+
+            {/* Controls Bar */}
+            <div className="flex flex-wrap items-center justify-between gap-3 px-5 py-3 border-b border-[#272738] bg-[#0a0a0f]">
+              <div className="flex items-center gap-2">
+                <span className="text-[11px] text-[#94a3b8]">Framework:</span>
+                {(['unsloth', 'axolotl', 'llamafactory'] as const).map((fw) => (
+                  <button
+                    key={fw}
+                    onClick={() => {
+                      setRecipeFramework(fw)
+                      if (selectedDataset) handleFetchRecipe(selectedDataset, fw)
+                    }}
+                    className={clsx(
+                      'px-2.5 py-1 rounded text-xs transition-colors',
+                      recipeFramework === fw
+                        ? 'bg-cyan-950/80 text-cyan-300 border border-cyan-700/60 font-bold'
+                        : 'text-[#94a3b8] hover:text-white bg-[#12121a] border border-[#272738]'
+                    )}
+                  >
+                    {fw === 'unsloth' ? 'Unsloth (2x Fast)' : fw === 'axolotl' ? 'Axolotl YAML' : 'LLaMA-Factory'}
+                  </button>
+                ))}
+              </div>
+
+              {recipeData?.launch_command && (
+                <div className="flex items-center gap-1.5 text-xs">
+                  <span className="text-[#94a3b8]">Command:</span>
+                  <code className="px-2 py-0.5 rounded bg-[#161622] text-cyan-300 text-[11px] border border-[#272738]">
+                    {recipeData.launch_command}
+                  </code>
+                  <button
+                    onClick={() => {
+                      navigator.clipboard.writeText(recipeData.launch_command)
+                      setRecipeCmdCopied(true)
+                      setTimeout(() => setRecipeCmdCopied(false), 2000)
+                    }}
+                    className="p-1 hover:text-white text-[#94a3b8]"
+                    title="Copy launch command"
+                  >
+                    {recipeCmdCopied ? <Check className="h-3 w-3 text-[#10b981]" /> : <Copy className="h-3 w-3" />}
+                  </button>
+                </div>
+              )}
+            </div>
+
+            {/* Code Body */}
+            <div className="p-5 overflow-y-auto flex-1 text-xs bg-[#0a0a0f]">
+              {recipeLoading ? (
+                <div className="flex flex-col items-center justify-center py-16 space-y-3">
+                  <Loader2 className="h-8 w-8 animate-spin text-cyan-400" />
+                  <p className="text-xs text-[#94a3b8]">Generating optimized training recipe...</p>
+                </div>
+              ) : (
+                <pre className="p-4 rounded-xl bg-[#0d0d14] border border-[#272738] text-slate-200 overflow-x-auto whitespace-pre font-mono text-[11px] leading-relaxed select-all">
+                  {recipeData?.content || 'No recipe generated.'}
+                </pre>
+              )}
+            </div>
+
+            {/* Footer */}
+            <div className="px-5 py-3 border-t border-[#272738] bg-[#0e0e14] flex items-center justify-between">
+              <span className="text-[10px] text-[#64748b]">
+                Save as {recipeData?.filename || 'training_script'} in your training workspace.
+              </span>
+              <Button size="sm" variant="ghost" onClick={() => setRecipeModalOpen(false)} className="text-xs text-[#94a3b8] hover:text-white">
                 Close
               </Button>
             </div>
