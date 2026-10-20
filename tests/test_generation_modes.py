@@ -1017,6 +1017,148 @@ def test_contrastive_factual_perturbation_and_critique():
     assert pair["preference_pair"]["rejected"] == pair["perturbed_negative"]
 
 
+def test_active_rebalancing_plan():
+    """Verify targeted prompt mutations and quota allocation for underrepresented zones."""
+    from core.curation.active_balancer import plan_active_rebalancing
+
+    mock_audit = {
+        "representation_parity_score": 0.45,
+        "zone_distribution": {
+            "north": {"percentage": 60.0},
+            "south": {"percentage": 25.0},
+            "west": {"percentage": 10.0},
+            "east": {"percentage": 5.0},
+            "northeast": {"percentage": 0.0},
+        },
+        "setting_distribution": {
+            "rural_gramin": {"percentage": 10.0},
+            "tier_1_metro": {"percentage": 90.0},
+        },
+        "underrepresented_zones": ["east", "northeast"],
+    }
+
+    plan = plan_active_rebalancing(mock_audit, target_sample_pool=100, domain="taxation")
+    assert plan["status"] == "rebalancing_plan_generated"
+    assert plan["total_rebalancing_samples_planned"] > 0
+    assert len(plan["targeted_directives"]) >= 2
+    ne_directive = next((d for d in plan["targeted_directives"] if d["target_zone"] == "northeast"), None)
+    assert ne_directive is not None
+    assert "NORTHEAST" in ne_directive["prompt_directive"]
+
+
+def test_dialectic_debate_synthesis_and_coherence():
+    """Verify multi-agent dialectic debate directive, sample formatting, and coherence verification."""
+    from core.generation.socratic_synthesizer import (
+        build_dialectic_prompt_directive,
+        format_dialectic_sample,
+        evaluate_dialectic_coherence,
+    )
+
+    directive = build_dialectic_prompt_directive(domain="taxation", rounds=2)
+    assert "MULTI-AGENT DIALECTIC DEBATE SPECIFICATION" in directive
+    assert "Auditor Sharma" in directive
+    assert "CFO Mehra" in directive
+
+    rounds = [
+        {
+            "speaker": "Auditor Sharma",
+            "stance": "Strict Statutory Compliance",
+            "argument": "Under Section 16(2)(aa) of the CGST Act, ITC cannot be availed unless the supplier uploads invoice details in Form GSTR-1.",
+        },
+        {
+            "speaker": "CFO Mehra",
+            "stance": "Commercial Equity",
+            "argument": "The taxpayer has paid the invoice in full along with taxes; penalizing the recipient for bona fide supplier delay violates judicial precedent in Bharti Airtel.",
+        },
+    ]
+    verdict = "Consensus Adjudication: The taxpayer must reverse ITC provisionally under Rule 37A with interest, but may reclaim it immediately once the supplier rectifies GSTR-3B."
+
+    sample = format_dialectic_sample(
+        topic="ITC eligibility when supplier delays GSTR-1 filing",
+        debate_rounds=rounds,
+        verdict=verdict,
+        domain="taxation",
+    )
+    assert sample["metadata"]["type"] == "dialectic_debate"
+    assert "Auditor Sharma" in sample["response"]
+    assert "CFO Mehra" in sample["response"]
+    assert "Consensus Adjudication" in sample["response"]
+
+    coherence = evaluate_dialectic_coherence(rounds, verdict)
+    assert coherence["is_valid"] is True
+    assert coherence["coherence_score"] >= 0.70
+    assert coherence["distinct_speakers"] == 2
+
+
+def test_judge_calibration_and_kappa():
+    """Verify Cohen's Kappa, systematic bias detection, and threshold calibration."""
+    from core.evaluation.judge_calibrator import (
+        compute_cohens_kappa,
+        calibrate_judge_alignment,
+    )
+
+    human = [1, 1, 0, 0, 1, 1, 0, 1]
+    judge = [1, 1, 0, 0, 1, 1, 0, 0]
+    kappa = compute_cohens_kappa(human, judge)
+    assert kappa >= 0.60
+
+    evals = [
+        {"human_decision": "approved", "judge_score": 0.92},
+        {"human_decision": "approved", "judge_score": 0.85},
+        {"human_decision": "rejected", "judge_score": 0.35},
+        {"human_decision": "approved", "judge_score": 0.78},
+        {"human_decision": "rejected", "judge_score": 0.40},
+    ]
+    calib = calibrate_judge_alignment(evals, default_threshold=0.70)
+    assert calib["total_pairs"] == 5
+    assert calib["pairwise_accuracy_pct"] == 100.0
+    assert calib["agreement_strength"] in ("substantial", "almost_perfect")
+
+
+def test_synthetic_benchmark_evaluator():
+    """Verify Exact Match, token F1, and composite score computation on benchmark splits."""
+    from core.evaluation.benchmark_evaluator import (
+        compute_token_f1,
+        evaluate_benchmark_split,
+    )
+
+    f1 = compute_token_f1("The GST rate is 18%", "The GST rate is 18 percent")
+    assert f1 >= 0.75
+
+    pairs = [
+        {"prediction": "Rs. 18,000", "reference": "Rs. 18,000"},
+        {"prediction": "Section 80C allows Rs. 1.5 Lakhs [1]", "reference": "Section 80C allows Rs. 1.5 Lakhs [1]"},
+        {"prediction": "Wrong answer", "reference": "Correct answer"},
+    ]
+    report = evaluate_benchmark_split(pairs, benchmark_name="Tax QA Benchmark")
+    assert report["total_samples"] == 3
+    assert report["exact_match_pct"] >= 66.0
+    assert report["mean_token_f1"] > 0.60
+    assert report["citation_accuracy_pct"] == 100.0
+    assert report["rating"] in ("production_ready", "frontier_exceptional")
+
+
+def test_streaming_dataset_sharder():
+    """Verify chunked sharding, JSONL serialization, and SHA-256 checksums."""
+    from core.export.streaming_sharder import shard_dataset_records
+
+    records = [
+        {"instruction": f"Instruction {i}", "response": f"Response {i}"}
+        for i in range(25)
+    ]
+
+    sharded = shard_dataset_records(records, shard_size=10, prefix="train", compress=False)
+    assert sharded["total_samples"] == 25
+    assert sharded["shard_count"] == 3
+    assert len(sharded["shards"]) == 3
+    assert sharded["shards"][0]["record_count"] == 10
+    assert sharded["shards"][1]["record_count"] == 10
+    assert sharded["shards"][2]["record_count"] == 5
+    assert len(sharded["shards"][0]["sha256_checksum"]) == 64
+    assert sharded["manifest"]["total_records"] == 25
+
+
+
 
 
 

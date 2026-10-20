@@ -15,6 +15,7 @@ from core.generation.tool_caller import build_tool_calling_system_prompt, DEFAUL
 from core.generation.preference_synthesizer import build_preference_directive
 from core.generation.rag_synthesizer import build_rag_prompt_directive, format_rag_sample, evaluate_rag_faithfulness
 from core.generation.multi_turn_synthesizer import build_multi_turn_directive, format_multi_turn_sample, evaluate_dialogue_coherence
+from core.generation.socratic_synthesizer import build_dialectic_prompt_directive, format_dialectic_sample, evaluate_dialectic_coherence
 from core.curriculum.curriculum_sorter import sort_by_curriculum
 
 logger = logging.getLogger(__name__)
@@ -361,6 +362,10 @@ class SeedlessGenerator:
         if ds_type == "multi_turn":
             multi_turn_prompt = "\n" + build_multi_turn_directive(num_turns=4, language=lang)
 
+        dialectic_prompt = ""
+        if ds_type == "dialectic":
+            dialectic_prompt = "\n" + build_dialectic_prompt_directive(domain=plan.domain, rounds=2)
+
         system_prompt = (
             f"You are an expert dataset generator specializing in the '{plan.domain}' domain. "
             f"Your objective: {plan.objective}.\n"
@@ -377,6 +382,7 @@ class SeedlessGenerator:
             f"{pref_prompt}"
             f"{rag_prompt}"
             f"{multi_turn_prompt}"
+            f"{dialectic_prompt}"
         )
 
         user_message = (
@@ -522,6 +528,16 @@ class SeedlessGenerator:
                             "turn_count": len(raw_turns),
                             "coherence": coherence,
                             "turns": raw_turns,
+                        }
+                    elif ds_type == "dialectic":
+                        rounds = data.get("debate_rounds") or []
+                        verdict = str(data.get("verdict", ""))
+                        coherence = evaluate_dialectic_coherence(rounds, verdict)
+                        meta["dialectic"] = {
+                            "rounds_count": len(rounds),
+                            "coherence": coherence,
+                            "verdict": verdict,
+                            "personas": data.get("personas", []),
                         }
 
                     if data.get("instruction_en") and data.get("response_en"):

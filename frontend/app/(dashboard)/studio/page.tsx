@@ -488,6 +488,7 @@ function StudioContent() {
                   <option value="simpo">Simple Preference Optimization (SimPO)</option>
                   <option value="rag">Retrieval-Augmented Generation (RAG &amp; Citations)</option>
                   <option value="multi_turn">Multi-Turn Conversational Dialogue</option>
+                  <option value="dialectic">Multi-Agent Socratic Debate &amp; Adjudication</option>
                 </select>
               </div>
 

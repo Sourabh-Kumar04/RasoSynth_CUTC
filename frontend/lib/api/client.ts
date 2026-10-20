@@ -797,6 +797,116 @@ class APIClient {
     })
   }
 
+  async rebalanceDataset(payload: { audit_report: any; target_sample_pool?: number; domain?: string }) {
+    return this.request<{
+      status: string
+      initial_parity_score: number
+      target_sample_pool: number
+      total_rebalancing_samples_planned: number
+      targeted_directives: Array<{
+        target_zone: string
+        target_setting: string
+        allocated_sample_quota: number
+        domain_focus: string
+        scenario_context: string
+        prompt_directive: string
+      }>
+      expected_parity_score_post_rebalance: number
+    }>('/tools/rebalance-dataset', {
+      method: 'POST',
+      body: JSON.stringify(payload),
+    })
+  }
+
+  async generateDialectic(payload: {
+    topic: string
+    debate_rounds: Array<{ speaker: string; stance?: string; argument: string }>
+    verdict: string
+    domain?: string
+    personas?: Array<{ name: string; role: string }>
+  }) {
+    return this.request<{
+      sample: any
+      coherence: {
+        is_valid: boolean
+        coherence_score: number
+        distinct_speakers: number
+        total_rounds: number
+        issues: string[]
+      }
+    }>('/tools/generate-dialectic', {
+      method: 'POST',
+      body: JSON.stringify(payload),
+    })
+  }
+
+  async calibrateJudge(payload: { evaluations: Array<{ human_decision: any; judge_score: number }>; default_threshold?: number }) {
+    return this.request<{
+      total_pairs: number
+      cohens_kappa: number
+      agreement_strength: string
+      pairwise_accuracy_pct: number
+      bias_direction: string
+      human_approval_rate_pct: number
+      judge_approval_rate_pct: number
+      current_threshold: number
+      recommended_calibrated_threshold: number
+      potential_accuracy_gain_pct: number
+    }>('/tools/calibrate-judge', {
+      method: 'POST',
+      body: JSON.stringify(payload),
+    })
+  }
+
+  async evaluateBenchmark(payload: {
+    evaluation_pairs: Array<{ prediction: string; reference: string; id?: string }>
+    benchmark_name?: string
+    target_model?: string
+  }) {
+    return this.request<{
+      benchmark_name: string
+      target_model: string
+      total_samples: number
+      exact_match_pct: number
+      mean_token_f1: number
+      mean_chrf_score: number
+      citation_accuracy_pct: number
+      composite_score: number
+      rating: string
+      sample_evaluations: any[]
+    }>('/tools/evaluate-benchmark', {
+      method: 'POST',
+      body: JSON.stringify(payload),
+    })
+  }
+
+  async shardDataset(payload: { samples: any[]; shard_size?: number; prefix?: string; compress?: boolean }) {
+    return this.request<{
+      total_samples: number
+      shard_count: number
+      shards: Array<{
+        shard_index: number
+        filename: string
+        record_count: number
+        byte_size: number
+        sha256_checksum: string
+        is_compressed: boolean
+      }>
+      manifest: {
+        dataset_name: string
+        total_records: number
+        total_shards: number
+        shard_size_target: number
+        format: string
+        total_bytes: number
+        files: string[]
+      }
+    }>('/tools/shard-dataset', {
+      method: 'POST',
+      body: JSON.stringify(payload),
+    })
+  }
+
   // === Download API ===
   // Download a dataset with format selection - returns a Blob for file saving
   async downloadDataset(id: string, format: string = 'jsonl'): Promise<Blob> {

@@ -3377,6 +3377,93 @@ async def tool_generate_contrastive_pair(request: dict = Body(...)):
     )
 
 
+@app.post("/tools/rebalance-dataset", tags=["Tools"])
+async def tool_rebalance_dataset(request: dict = Body(...)):
+    """Formulate targeted prompt mutations and quotas to bridge representation deficits."""
+    from core.curation.active_balancer import plan_active_rebalancing
+    audit_report = request.get("audit_report") or {}
+    target_pool = int(request.get("target_sample_pool", 100))
+    domain = request.get("domain")
+    if not audit_report:
+        raise HTTPException(status_code=400, detail="Field 'audit_report' is required.")
+    return plan_active_rebalancing(
+        audit_report=audit_report,
+        target_sample_pool=target_pool,
+        domain=str(domain) if domain else None,
+    )
+
+
+@app.post("/tools/generate-dialectic", tags=["Tools"])
+async def tool_generate_dialectic(request: dict = Body(...)):
+    """Synthesize structured multi-agent dialectic debate sample."""
+    from core.generation.socratic_synthesizer import format_dialectic_sample, evaluate_dialectic_coherence
+    topic = str(request.get("topic", ""))
+    debate_rounds = request.get("debate_rounds") or []
+    verdict = str(request.get("verdict", ""))
+    domain = request.get("domain")
+    personas = request.get("personas")
+    if not topic or not debate_rounds or not verdict:
+        raise HTTPException(status_code=400, detail="Fields 'topic', 'debate_rounds', and 'verdict' are required.")
+
+    coherence = evaluate_dialectic_coherence(debate_rounds, verdict)
+    sample = format_dialectic_sample(
+        topic=topic,
+        debate_rounds=debate_rounds,
+        verdict=verdict,
+        domain=str(domain) if domain else None,
+        personas=personas,
+    )
+    return {
+        "sample": sample,
+        "coherence": coherence,
+    }
+
+
+@app.post("/tools/calibrate-judge", tags=["Tools"])
+async def tool_calibrate_judge(request: dict = Body(...)):
+    """Calibrate LLM Judge alignment against human reviewer decisions and compute Cohen's Kappa."""
+    from core.evaluation.judge_calibrator import calibrate_judge_alignment
+    evaluations = request.get("evaluations") or []
+    threshold = float(request.get("default_threshold", 0.70))
+    if not evaluations:
+        raise HTTPException(status_code=400, detail="Field 'evaluations' must be a non-empty list of {human_decision, judge_score}.")
+    return calibrate_judge_alignment(evaluations=evaluations, default_threshold=threshold)
+
+
+@app.post("/tools/evaluate-benchmark", tags=["Tools"])
+async def tool_evaluate_benchmark(request: dict = Body(...)):
+    """Directly evaluate model outputs against a synthetic test benchmark."""
+    from core.evaluation.benchmark_evaluator import evaluate_benchmark_split
+    pairs = request.get("evaluation_pairs") or []
+    name = str(request.get("benchmark_name", "Synthetic Indic QA"))
+    target = str(request.get("target_model", "Candidate LLM"))
+    if not pairs:
+        raise HTTPException(status_code=400, detail="Field 'evaluation_pairs' must be a non-empty list of {prediction, reference}.")
+    return evaluate_benchmark_split(
+        evaluation_pairs=pairs,
+        benchmark_name=name,
+        target_model=target,
+    )
+
+
+@app.post("/tools/shard-dataset", tags=["Tools"])
+async def tool_shard_dataset(request: dict = Body(...)):
+    """Partition dataset samples into standard Hugging Face/PyTorch sharded chunks."""
+    from core.export.streaming_sharder import shard_dataset_records
+    samples = request.get("samples") or []
+    shard_size = int(request.get("shard_size", 1000))
+    prefix = str(request.get("prefix", "train"))
+    compress = bool(request.get("compress", False))
+    if not samples:
+        raise HTTPException(status_code=400, detail="Field 'samples' must be a non-empty list of records.")
+    return shard_dataset_records(
+        samples=samples,
+        shard_size=shard_size,
+        prefix=prefix,
+        compress=compress,
+    )
+
+
 @app.get("/", tags=["Root"])
 async def root():
     """Root endpoint."""
