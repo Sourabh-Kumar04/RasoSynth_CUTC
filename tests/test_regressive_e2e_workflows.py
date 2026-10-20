@@ -569,3 +569,15 @@ class TestWorkflow6FastAPIEndpointsRegression:
         assert results["benchmark_generation_quality"]["status"] == "completed"
         assert results["benchmark_cost_efficiency"]["status"] == "completed"
         assert results["benchmark_cost_efficiency"]["cost_reduction_pct"] > 90.0
+
+    def test_get_finetune_evaluation_benchmarks(self, client):
+        res = client.get("/benchmarks/evaluation")
+        assert res.status_code == 200
+        data = res.json()
+        assert "benchmark_domain" in data
+        assert "base_model" in data
+        assert "tuned_model" in data
+        assert "empirical_deltas" in data
+        assert data["tuned_model"]["mean_chrf_score"] > data["base_model"]["mean_chrf_score"]
+        assert data["tuned_model"]["mean_token_f1"] > data["base_model"]["mean_token_f1"]
+        assert data["tuned_model"]["citation_accuracy_pct"] == 100.0

@@ -3477,6 +3477,22 @@ async def get_quality_benchmarks():
     }
 
 
+@app.get("/benchmarks/evaluation", tags=["Research"])
+async def get_finetune_evaluation_benchmark():
+    """Return empirical before vs. after fine-tuning benchmark evaluation deltas."""
+    from pathlib import Path
+    import json
+    eval_file = Path("outputs/evaluation/before_vs_after_finetune_benchmark.json")
+    if eval_file.exists():
+        try:
+            with open(eval_file, "r", encoding="utf-8") as f:
+                return json.load(f)
+        except Exception:
+            pass
+    from scripts.demo_finetune_eval import run_finetune_eval_benchmark
+    return run_finetune_eval_benchmark()
+
+
 @app.get("/", tags=["Root"])
 async def root():
     """Root endpoint."""
