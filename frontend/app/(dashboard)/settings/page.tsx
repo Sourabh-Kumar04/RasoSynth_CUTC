@@ -23,7 +23,7 @@ interface HealthStatus {
 
 const PROVIDERS_CONFIG = [
   { name: 'AI Kosh (IndiaAI / Bhashini)', env: 'AIKOSH_API_KEY',   letter: 'AK', color: 'text-[#10b981] bg-[#10b981]/10 border-emerald-500/30' },
-  { name: 'Google Gemini',              env: 'GOOGLE_API_KEY',    letter: 'G',  color: 'text-[#f26625] bg-[#f26625]/10 border-indigo-500/30' },
+  { name: 'Google Gemini',              env: 'GOOGLE_API_KEY',    letter: 'G',  color: 'text-[#f26625] bg-[#f26625]/10 border-[#f26625]/30' },
   { name: 'NVIDIA NIM',                 env: 'NVIDIA_API_KEY',    letter: 'N',  color: 'text-[#10b981] bg-[#10b981]/10 border-emerald-500/30' },
   { name: 'Anthropic Claude',           env: 'ANTHROPIC_API_KEY', letter: 'A',  color: 'text-[#f59e0b] bg-[#f59e0b]/10 border-amber-500/30' },
   { name: 'OpenAI',                     env: 'OPENAI_API_KEY',    letter: 'O',  color: 'text-emerald-400 bg-emerald-500/10 border-emerald-500/30' },
@@ -119,7 +119,7 @@ export default function SettingsPage() {
               <p className="text-xs font-bold text-white flex items-center gap-2">
                 <span>Platform Status: {loading ? 'Checking runtime...' : health?.status?.toUpperCase() ?? 'ONLINE'}</span>
                 {!loading && infraStatus && (
-                  <span className="text-[10px] font-mono px-2 py-0.2 rounded-full bg-emerald-500/10 text-emerald-400 border border-emerald-500/30">
+                  <span className="text-[10px] font-mono px-2 py-0.2 rounded-md bg-emerald-500/10 text-emerald-400 border border-emerald-500/30">
                     Live Verified
                   </span>
                 )}
@@ -135,7 +135,7 @@ export default function SettingsPage() {
             </div>
           </div>
           <a href={docsUrl} target="_blank" rel="noopener noreferrer">
-            <Button variant="outline" size="sm" className="h-7 text-xs rounded-full border-[#272738] text-[#94a3b8] hover:text-white hover:bg-[#161622] hover:border-[#3b3b52]">
+            <Button variant="outline" size="sm" className="h-7 text-xs rounded-md border-[#272738] text-[#94a3b8] hover:text-white hover:bg-[#161622] hover:border-[#3b3b52]">
               <ExternalLink className="h-3 w-3 mr-1 text-[#f26625]" />API Reference
             </Button>
           </a>
@@ -196,7 +196,7 @@ export default function SettingsPage() {
                       <p className="text-[11px] text-[#94a3b8] font-mono mt-0.5">{desc}</p>
                     </div>
                   </div>
-                  <span className="text-[10px] font-mono font-bold px-2.5 py-0.5 rounded-full bg-emerald-950/40 text-[#10b981] border border-emerald-500/30">
+                  <span className="text-[10px] font-mono font-bold px-2.5 py-0.5 rounded-md bg-emerald-950/40 text-[#10b981] border border-emerald-500/30">
                     {status}
                   </span>
                 </div>
@@ -237,7 +237,7 @@ export default function SettingsPage() {
                     <p className="text-xs font-bold text-white">{label}</p>
                     <p className="text-[11px] text-[#94a3b8] font-mono mt-0.5">{desc}</p>
                   </div>
-                  <code className="text-xs font-mono bg-[#0a0a0f] px-2.5 py-0.5 rounded-full border border-[#272738] text-indigo-300 shrink-0 ml-4">
+                  <code className="text-xs font-mono bg-[#0a0a0f] px-2.5 py-0.5 rounded-md border border-[#272738] text-[#f26625] shrink-0 ml-4">
                     {val}
                   </code>
                 </div>
@@ -268,7 +268,7 @@ export default function SettingsPage() {
                       <p className="text-[11px] text-[#94a3b8] font-mono">{env}</p>
                     </div>
                   </div>
-                  <span className="text-[10px] font-mono font-bold px-2.5 py-0.5 rounded-full bg-emerald-950/40 text-[#10b981] border border-emerald-500/30">
+                  <span className="text-[10px] font-mono font-bold px-2.5 py-0.5 rounded-md bg-emerald-950/40 text-[#10b981] border border-emerald-500/30">
                     Configured
                   </span>
                 </div>
@@ -301,7 +301,7 @@ export default function SettingsPage() {
                       <p className="text-[11px] text-[#94a3b8]">{desc}</p>
                     </div>
                   </div>
-                  <code className="text-xs font-mono bg-[#0a0a0f] px-2.5 py-0.5 rounded-full border border-[#272738] text-indigo-300">{env}</code>
+                  <code className="text-xs font-mono bg-[#0a0a0f] px-2.5 py-0.5 rounded-md border border-[#272738] text-[#f26625]">{env}</code>
                 </div>
               ))}
             </CardContent>
@@ -327,7 +327,7 @@ export default function SettingsPage() {
                     <p className="text-xs font-bold text-white">{label}</p>
                     <p className="text-[11px] text-[#94a3b8] font-mono mt-0.5">{desc}</p>
                   </div>
-                  <code className="text-xs font-mono bg-[#0a0a0f] px-2.5 py-0.5 rounded-full border border-[#272738] text-indigo-300 shrink-0 ml-4">{env}</code>
+                  <code className="text-xs font-mono bg-[#0a0a0f] px-2.5 py-0.5 rounded-md border border-[#272738] text-[#f26625] shrink-0 ml-4">{env}</code>
                 </div>
               ))}
             </CardContent>
@@ -357,7 +357,7 @@ export default function SettingsPage() {
                       <p className="text-[11px] text-[#94a3b8]">{desc}</p>
                     </div>
                   </div>
-                  <code className="text-xs font-mono bg-[#0a0a0f] px-2.5 py-0.5 rounded-full border border-[#272738] text-indigo-300">{env}</code>
+                  <code className="text-xs font-mono bg-[#0a0a0f] px-2.5 py-0.5 rounded-md border border-[#272738] text-[#f26625]">{env}</code>
                 </div>
               ))}
             </CardContent>
@@ -378,7 +378,7 @@ export default function SettingsPage() {
                     <p className="text-xs font-bold text-white">{label}</p>
                     <p className="text-[11px] text-[#94a3b8]">{desc}</p>
                   </div>
-                  <code className="text-xs font-mono bg-[#0a0a0f] px-2.5 py-0.5 rounded-full border border-[#272738] text-indigo-300 shrink-0 ml-4">{env}</code>
+                  <code className="text-xs font-mono bg-[#0a0a0f] px-2.5 py-0.5 rounded-md border border-[#272738] text-[#f26625] shrink-0 ml-4">{env}</code>
                 </div>
               ))}
             </CardContent>
@@ -404,7 +404,7 @@ export default function SettingsPage() {
                     <p className="text-xs font-bold text-white">{label}</p>
                     <p className="text-[11px] text-[#94a3b8]">{desc}</p>
                   </div>
-                  <code className="text-xs font-mono bg-[#0a0a0f] px-2.5 py-0.5 rounded-full border border-[#272738] text-indigo-300 shrink-0 ml-4">{env}</code>
+                  <code className="text-xs font-mono bg-[#0a0a0f] px-2.5 py-0.5 rounded-md border border-[#272738] text-[#f26625] shrink-0 ml-4">{env}</code>
                 </div>
               ))}
             </CardContent>

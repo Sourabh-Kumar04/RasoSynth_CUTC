@@ -109,7 +109,7 @@ export default function ResearchPage() {
       {/* Toast */}
       {toast && (
         <div className={clsx(
-          'fixed bottom-4 right-4 z-50 flex items-center gap-2 px-4 py-2.5 rounded-full border shadow-lg text-xs font-semibold animate-slide-in',
+          'fixed bottom-4 right-4 z-50 flex items-center gap-2 px-4 py-2.5 rounded-md border shadow-lg text-xs font-semibold animate-slide-in',
           toast.ok ? 'bg-emerald-900 text-white border-emerald-700'
                    : 'bg-rose-900 text-white border-rose-700',
         )}>
@@ -150,7 +150,7 @@ export default function ResearchPage() {
         <Card className="border-rose-300 bg-rose-950/30 border border-rose-500/30 text-rose-300 rounded-md">
           <CardContent className="p-3 flex items-center gap-3 text-xs text-rose-300">
             <AlertCircle className="h-4 w-4 shrink-0" />{error}
-            <Button variant="ghost" size="sm" className="ml-auto h-7 text-xs rounded-full" onClick={fetchAll}>Retry</Button>
+            <Button variant="ghost" size="sm" className="ml-auto h-7 text-xs rounded-md" onClick={fetchAll}>Retry</Button>
           </CardContent>
         </Card>
       )}
@@ -514,7 +514,7 @@ export default function ResearchPage() {
                   <CardContent className="p-4 space-y-3">
                     <div className="flex items-center justify-between">
                       <span className="text-[10px] font-mono text-[#94a3b8] uppercase">{h.key}</span>
-                      <span className={clsx('text-[10px] font-mono font-bold px-2 py-0.5 rounded-full bg-[#161622] border border-[#272738]', h.color)}>
+                      <span className={clsx('text-[10px] font-mono font-bold px-2 py-0.5 rounded-md bg-[#161622] border border-[#272738]', h.color)}>
                         LIVE INJECTED
                       </span>
                     </div>
@@ -575,7 +575,7 @@ export default function ResearchPage() {
                       </div>
                     </div>
                     <span className={clsx(
-                      'text-[10px] font-mono px-2.5 py-0.5 rounded-full border font-bold',
+                      'text-[10px] font-mono px-2.5 py-0.5 rounded-md border font-bold',
                       ok ? 'bg-emerald-950/40 text-emerald-400 border-emerald-500/30'
                          : 'bg-[#161622] text-[#94a3b8] border-[#3b3b52]',
                     )}>{badge}</span>

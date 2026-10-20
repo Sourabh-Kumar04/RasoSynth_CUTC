@@ -510,7 +510,7 @@ export default function DatasetsPage() {
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-[#272738] pb-5">
         <div>
           <div className="flex items-center gap-2.5 mb-1">
-            <span className="text-[10px] font-mono px-2.5 py-0.5 rounded-full bg-[#161622] border border-[#272738] text-[#10b981] font-bold uppercase tracking-wider">
+            <span className="text-[10px] font-mono px-2.5 py-0.5 rounded-md bg-[#161622] border border-[#272738] text-[#10b981] font-bold uppercase tracking-wider">
               Source-Grounded Repositories
             </span>
             <h1 className="text-2xl font-bold tracking-tight text-white font-display">Dataset Explorer</h1>
@@ -549,7 +549,7 @@ export default function DatasetsPage() {
               <p className="text-sm font-semibold text-rose-300">Connection Error</p>
               <p className="text-xs text-rose-400/80">{error}</p>
             </div>
-            <Button variant="outline" size="sm" onClick={fetchJobs} className="rounded-full border-rose-500/30 text-rose-300 hover:bg-rose-950/40">
+            <Button variant="outline" size="sm" onClick={fetchJobs} className="rounded-md border-rose-500/30 text-rose-300 hover:bg-rose-950/40">
               Retry
             </Button>
           </CardContent>
@@ -667,7 +667,7 @@ export default function DatasetsPage() {
                 <Button
                   size="sm"
                   variant="outline"
-                  className="flex-1 h-7 text-[10px] font-mono rounded-full border-[#272738] text-white hover:bg-[#161622] hover:border-emerald-500/30"
+                  className="flex-1 h-7 text-[10px] font-mono rounded-md border-[#272738] text-white hover:bg-[#161622] hover:border-emerald-500/30"
                   onClick={() => handleViewDbom(flagship.id, flagship.name)}
                 >
                   <ShieldCheck className="h-3 w-3 mr-1 text-[#10b981]" />
@@ -676,7 +676,7 @@ export default function DatasetsPage() {
                 <Button
                   size="sm"
                   variant="outline"
-                  className="flex-1 h-7 text-[10px] font-mono rounded-full border-[#272738] text-white hover:bg-[#161622] hover:border-[#f26625]/30"
+                  className="flex-1 h-7 text-[10px] font-mono rounded-md border-[#272738] text-white hover:bg-[#161622] hover:border-[#f26625]/30"
                   onClick={() => handleViewHfCard(flagship.id, flagship.name)}
                 >
                   <ExternalLink className="h-3 w-3 mr-1 text-[#f26625]" />
@@ -685,7 +685,7 @@ export default function DatasetsPage() {
                 <Button
                   size="sm"
                   variant="outline"
-                  className="flex-1 h-7 text-[10px] font-mono rounded-full border-[#272738] text-white hover:bg-[#161622] hover:border-amber-500/30"
+                  className="flex-1 h-7 text-[10px] font-mono rounded-md border-[#272738] text-white hover:bg-[#161622] hover:border-amber-500/30"
                   onClick={() => handleOpenRecipeModal(flagship.id)}
                 >
                   <Terminal className="h-3 w-3 mr-1 text-amber-400" />
@@ -810,7 +810,7 @@ export default function DatasetsPage() {
                       </div>
                     </TableCell>
                     <TableCell>
-                      <Badge variant="outline" className="font-mono text-[10px] bg-[#0a0a0f] border-[#272738] text-[#f26625] rounded-full">
+                      <Badge variant="outline" className="font-mono text-[10px] bg-[#0a0a0f] border-[#272738] text-[#f26625] rounded-md">
                         {dataset.format}
                       </Badge>
                     </TableCell>
@@ -829,7 +829,7 @@ export default function DatasetsPage() {
                     <TableCell>
                       <Badge
                         className={clsx(
-                          'capitalize text-[10px] rounded-full font-mono',
+                          'capitalize text-[10px] rounded-md font-mono',
                           dataset.status === 'ready'
                             ? 'bg-emerald-950/40 text-[#10b981] border border-emerald-500/30'
                             : 'bg-amber-950/40 text-amber-400 border border-amber-500/30'
@@ -850,7 +850,7 @@ export default function DatasetsPage() {
                         <Button
                           variant="ghost"
                           size="icon"
-                          className="h-8 w-8 rounded-full text-[#94a3b8] hover:text-white hover:bg-[#161622]"
+                          className="h-8 w-8 rounded-md text-[#94a3b8] hover:text-white hover:bg-[#161622]"
                           onClick={() => setSelectedDataset(dataset.id)}
                           title="View dataset details and records preview"
                         >
@@ -862,7 +862,7 @@ export default function DatasetsPage() {
                             setDownloadFormat((prev) => ({ ...prev, [dataset.id]: val }))
                           }
                         >
-                          <SelectTrigger className="h-8 w-[76px] text-[11px] px-2 rounded-full border-[#272738] bg-[#0a0a0f] text-white font-mono">
+                          <SelectTrigger className="h-8 w-[76px] text-[11px] px-2 rounded-md border-[#272738] bg-[#0a0a0f] text-white font-mono">
                             <SelectValue />
                           </SelectTrigger>
                           <SelectContent className="bg-[#12121a] border-[#272738] text-white text-xs font-mono">
@@ -876,7 +876,7 @@ export default function DatasetsPage() {
                         <Button
                           variant="outline"
                           size="sm"
-                          className="h-8 gap-1 text-xs px-2.5 rounded-full border-[#272738] text-white hover:bg-[#161622] hover:border-[#3b3b52]"
+                          className="h-8 gap-1 text-xs px-2.5 rounded-md border-[#272738] text-white hover:bg-[#161622] hover:border-[#3b3b52]"
                           disabled={downloadingIds.has(dataset.id) || dataset.status !== 'ready'}
                           onClick={() =>
                             handleDownload(dataset.id, downloadFormat[dataset.id] || 'jsonl')
@@ -894,7 +894,7 @@ export default function DatasetsPage() {
                             <Button
                               variant="ghost"
                               size="sm"
-                              className="h-8 text-xs px-2.5 rounded-full text-[#f26625] hover:text-white hover:bg-[#161622] font-mono"
+                              className="h-8 text-xs px-2.5 rounded-md text-[#f26625] hover:text-white hover:bg-[#161622] font-mono"
                               onClick={() => handleViewHfCard(dataset.id, dataset.name)}
                               title="Generate Hugging Face Dataset Card (README.md)"
                             >
@@ -904,7 +904,7 @@ export default function DatasetsPage() {
                             <Button
                               variant="ghost"
                               size="sm"
-                              className="h-8 text-xs px-2.5 rounded-full text-[#f26625] hover:text-white hover:bg-[#161622] font-mono"
+                              className="h-8 text-xs px-2.5 rounded-md text-[#f26625] hover:text-white hover:bg-[#161622] font-mono"
                               onClick={() => router.push(`/finetune?dataset=${dataset.id}`)}
                               title="1-Click Launch Fine-Tune"
                             >
@@ -931,11 +931,11 @@ export default function DatasetsPage() {
               <div className="flex items-center gap-2">
                 <Database className="h-4 w-4 text-[#f26625]" />
                 <CardTitle className="text-base font-bold text-white">{selected.name}</CardTitle>
-                <span className="text-[10px] font-mono px-2 py-0.5 rounded-full bg-[#0a0a0f] border border-[#272738] text-[#94a3b8]">
+                <span className="text-[10px] font-mono px-2 py-0.5 rounded-md bg-[#0a0a0f] border border-[#272738] text-[#94a3b8]">
                   ID: {selected.id}
                 </span>
               </div>
-              <Button variant="ghost" size="sm" className="rounded-full text-[#94a3b8] hover:text-white hover:bg-[#161622]" onClick={() => setSelectedDataset(null)}>
+              <Button variant="ghost" size="sm" className="rounded-md text-[#94a3b8] hover:text-white hover:bg-[#161622]" onClick={() => setSelectedDataset(null)}>
                 <X className="h-4 w-4" />
               </Button>
             </div>
@@ -956,7 +956,7 @@ export default function DatasetsPage() {
                     <div key={stage.id} className="flex items-center shrink-0">
                       <div
                         className={clsx(
-                          'flex items-center justify-center w-7 h-7 rounded-full text-xs font-medium',
+                          'flex items-center justify-center w-7 h-7 rounded-md text-xs font-medium',
                           isCompleted && 'bg-emerald-950/40 text-[#10b981] border border-emerald-500/30',
                           isCurrent && selected.status !== 'ready' ? 'bg-[#f26625] text-white' : 'bg-[#161622] text-[#94a3b8] border border-[#272738]',
                           !isCompleted && !isCurrent && 'bg-[#0a0a0f] text-[#64748b] border border-[#272738]'
@@ -1092,7 +1092,7 @@ export default function DatasetsPage() {
                   <Button
                     variant="outline"
                     size="sm"
-                    className="h-7 text-[11px] font-mono border-[#272738] text-emerald-400 hover:text-white hover:bg-[#161622] rounded-full px-3"
+                    className="h-7 text-[11px] font-mono border-[#272738] text-emerald-400 hover:text-white hover:bg-[#161622] rounded-md px-3"
                     onClick={handleAuditContamination}
                     disabled={contaminationLoading || records.length === 0}
                   >
@@ -1106,7 +1106,7 @@ export default function DatasetsPage() {
                   <Button
                     variant="outline"
                     size="sm"
-                    className="h-7 text-[11px] font-mono border-[#272738] text-amber-400 hover:text-white hover:bg-[#161622] rounded-full px-3"
+                    className="h-7 text-[11px] font-mono border-[#272738] text-amber-400 hover:text-white hover:bg-[#161622] rounded-md px-3"
                     onClick={() => handleGenerateAdversarial(selected.name)}
                     disabled={adversarialLoading}
                   >
@@ -1191,27 +1191,27 @@ export default function DatasetsPage() {
                         <span className="text-[#10b981] font-semibold">Record #{i + 1}</span>
                         <div className="flex items-center gap-1.5 flex-wrap">
                           {rec.metadata?.language && (
-                            <Badge variant="outline" className="text-[9px] px-1.5 py-0 font-mono rounded-full border-[#272738] text-purple-300">
+                            <Badge variant="outline" className="text-[9px] px-1.5 py-0 font-mono rounded-md border-[#272738] text-purple-300">
                               {rec.metadata.language}
                             </Badge>
                           )}
                           {rec.metadata?.regional_dialect && rec.metadata.regional_dialect !== 'standard' && (
-                            <Badge variant="outline" className="text-[9px] px-1.5 py-0 font-mono rounded-full border-[#272738] text-[#f26625]">
+                            <Badge variant="outline" className="text-[9px] px-1.5 py-0 font-mono rounded-md border-[#272738] text-[#f26625]">
                               {rec.metadata.regional_dialect}
                             </Badge>
                           )}
                           {rec.metadata?.parallel_en && (
-                            <Badge variant="outline" className="text-[9px] px-1.5 py-0 font-mono rounded-full border-[#f26625]/40 text-[#f26625] bg-[#f26625]/10">
+                            <Badge variant="outline" className="text-[9px] px-1.5 py-0 font-mono rounded-md border-[#f26625]/40 text-[#f26625] bg-[#f26625]/10">
                               Bitext
                             </Badge>
                           )}
                           {rec.metadata?.rejected_response && (
-                            <Badge variant="outline" className="text-[9px] px-1.5 py-0 font-mono rounded-full border-rose-900/40 text-rose-300 bg-rose-950/20">
+                            <Badge variant="outline" className="text-[9px] px-1.5 py-0 font-mono rounded-md border-rose-900/40 text-rose-300 bg-rose-950/20">
                               DPO Pair
                             </Badge>
                           )}
                           {rec.difficulty_tier !== undefined && (
-                            <Badge variant="outline" className="text-[9px] px-1.5 py-0 font-mono rounded-full border-[#272738] text-[#f26625]">
+                            <Badge variant="outline" className="text-[9px] px-1.5 py-0 font-mono rounded-md border-[#272738] text-[#f26625]">
                               Tier {rec.difficulty_tier}
                             </Badge>
                           )}
@@ -1279,7 +1279,7 @@ export default function DatasetsPage() {
                       setDownloadFormat((prev) => ({ ...prev, [selected.id]: val }))
                     }
                   >
-                    <SelectTrigger className="h-8 w-32 text-xs rounded-full border-[#272738] bg-[#0a0a0f] text-white font-mono">
+                    <SelectTrigger className="h-8 w-32 text-xs rounded-md border-[#272738] bg-[#0a0a0f] text-white font-mono">
                       <SelectValue />
                     </SelectTrigger>
                     <SelectContent className="bg-[#12121a] border-[#272738] text-white text-xs font-mono">
@@ -1296,7 +1296,7 @@ export default function DatasetsPage() {
                   <Button
                     variant="outline"
                     size="sm"
-                    className="gap-2 border-[#272738] text-[#f26625] hover:text-white hover:bg-[#161622] rounded-full px-4 font-mono text-xs"
+                    className="gap-2 border-[#272738] text-[#f26625] hover:text-white hover:bg-[#161622] rounded-md px-4 font-mono text-xs"
                     onClick={() => handleViewHfCard(selected.id, selected.name)}
                     title="View & Export Hugging Face Dataset Card"
                   >
@@ -1307,7 +1307,7 @@ export default function DatasetsPage() {
                   <Button
                     variant="outline"
                     size="sm"
-                    className="gap-2 border-[#272738] text-emerald-400 hover:text-white hover:bg-[#161622] rounded-full px-4 font-mono text-xs"
+                    className="gap-2 border-[#272738] text-emerald-400 hover:text-white hover:bg-[#161622] rounded-md px-4 font-mono text-xs"
                     onClick={() => {
                       setHfRepoId(`username/${selected.name.toLowerCase().replace(/[^a-z0-9_-]/g, '-')}`)
                       setHfPublishResult(null)
@@ -1323,7 +1323,7 @@ export default function DatasetsPage() {
                   <Button
                     variant="outline"
                     size="sm"
-                    className="gap-2 border-[#272738] text-cyan-300 hover:text-white hover:bg-[#161622] rounded-full px-4 font-mono text-xs"
+                    className="gap-2 border-[#272738] text-cyan-300 hover:text-white hover:bg-[#161622] rounded-md px-4 font-mono text-xs"
                     onClick={() => handleOpenRecipeModal(selected.id)}
                     title="Generate Fine-Tuning Scripts (Unsloth / Axolotl / LLaMA-Factory)"
                   >
@@ -1334,7 +1334,7 @@ export default function DatasetsPage() {
                   <Button
                     variant="outline"
                     size="sm"
-                    className="gap-2 border-[#272738] text-purple-300 hover:text-white hover:bg-[#161622] rounded-full px-4 font-mono text-xs"
+                    className="gap-2 border-[#272738] text-purple-300 hover:text-white hover:bg-[#161622] rounded-md px-4 font-mono text-xs"
                     onClick={() => handleViewDbom(selected.id, selected.name)}
                     title="Cryptographic Data Bill of Materials & Provenance Label"
                   >
@@ -1345,7 +1345,7 @@ export default function DatasetsPage() {
                   <Button
                     variant="outline"
                     size="sm"
-                    className="gap-2 border-[#272738] text-white hover:bg-[#161622] rounded-full px-4 font-mono text-xs"
+                    className="gap-2 border-[#272738] text-white hover:bg-[#161622] rounded-md px-4 font-mono text-xs"
                     onClick={() => router.push(`/finetune?dataset=${selected.id}`)}
                   >
                     <Zap className="h-3.5 w-3.5 text-amber-400" />
@@ -1354,7 +1354,7 @@ export default function DatasetsPage() {
 
                   <Button
                     size="sm"
-                    className="gap-2 bg-[#f26625] hover:bg-[#f26625] text-white rounded-full px-5 font-mono text-xs font-semibold shadow-sm glow-yc"
+                    className="gap-2 bg-[#f26625] hover:bg-[#f26625] text-white rounded-md px-5 font-mono text-xs font-semibold shadow-sm glow-yc"
                     disabled={downloadingIds.has(selected.id)}
                     onClick={() =>
                       handleDownload(selected.id, downloadFormat[selected.id] || 'jsonl')
@@ -1408,7 +1408,7 @@ export default function DatasetsPage() {
                   variant="outline"
                   onClick={handleCopyHfCard}
                   disabled={hfCardLoading || !hfCardContent}
-                  className="h-8 gap-1.5 text-xs font-mono rounded-full border-[#272738] bg-[#161622] text-white hover:bg-[#20202e]"
+                  className="h-8 gap-1.5 text-xs font-mono rounded-md border-[#272738] bg-[#161622] text-white hover:bg-[#20202e]"
                 >
                   {hfCardCopied ? (
                     <>
@@ -1426,7 +1426,7 @@ export default function DatasetsPage() {
                   size="icon"
                   variant="ghost"
                   onClick={() => setHfCardModalOpen(false)}
-                  className="h-8 w-8 rounded-full text-[#94a3b8] hover:text-white hover:bg-[#1a1a26]"
+                  className="h-8 w-8 rounded-md text-[#94a3b8] hover:text-white hover:bg-[#1a1a26]"
                 >
                   <X className="h-4 w-4" />
                 </Button>

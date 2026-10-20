@@ -179,7 +179,7 @@ export default function ProvidersPage() {
       <div className="fixed bottom-4 right-4 z-50 space-y-2 pointer-events-none">
         {toasts.map(t => (
           <div key={t.id} className={clsx(
-            'pointer-events-auto flex items-center gap-2 px-4 py-2.5 rounded-full border shadow-lg text-xs font-semibold animate-slide-in',
+            'pointer-events-auto flex items-center gap-2 px-4 py-2.5 rounded-md border shadow-lg text-xs font-semibold animate-slide-in',
             t.ok ? 'bg-emerald-900 text-white border-emerald-700'
                  : 'bg-rose-900 text-white border-rose-700',
           )}>
@@ -252,13 +252,13 @@ export default function ProvidersPage() {
             <div className="flex flex-col items-center justify-center py-20 gap-3 text-[#94a3b8] bg-[#12121a] rounded-md border border-[#272738]">
               <Server className="h-10 w-10 text-[#64748b]" />
               <p className="text-xs font-mono">No providers configured. Add API keys to <code className="bg-[#161622] text-[#f26625] px-1.5 py-0.5 rounded">.env</code></p>
-              <Button variant="outline" size="sm" className="rounded-full border-[#3b3b52] text-[#f26625]" onClick={fetchAll}><RefreshCw className="h-3.5 w-3.5 mr-1" />Retry</Button>
+              <Button variant="outline" size="sm" className="rounded-md border-[#3b3b52] text-[#f26625]" onClick={fetchAll}><RefreshCw className="h-3.5 w-3.5 mr-1" />Retry</Button>
             </div>
           ) : (
             <>
               <div className="flex items-center gap-3">
                 <Select value={filter} onValueChange={setFilter}>
-                  <SelectTrigger className="w-36 h-8 text-xs rounded-full border-[#3b3b52] bg-[#12121a] text-[#f26625]"><SelectValue /></SelectTrigger>
+                  <SelectTrigger className="w-36 h-8 text-xs rounded-md border-[#3b3b52] bg-[#12121a] text-[#f26625]"><SelectValue /></SelectTrigger>
                   <SelectContent>
                     <SelectItem value="all">All ({providers.length})</SelectItem>
                     <SelectItem value="healthy">Healthy</SelectItem>
@@ -285,7 +285,7 @@ export default function ProvidersPage() {
                         </div>
                         <Button
                           variant="ghost" size="sm"
-                          className="h-7 text-xs rounded-full border border-[#3b3b52] text-[#f26625] hover:bg-[#161622] shrink-0"
+                          className="h-7 text-xs rounded-md border border-[#3b3b52] text-[#f26625] hover:bg-[#161622] shrink-0"
                           disabled={testing === p.name}
                           onClick={() => handleTest(p.name)}
                         >
@@ -316,7 +316,7 @@ export default function ProvidersPage() {
 
                       {circuitBreakers[p.name] && (
                         <div className={clsx(
-                          'text-[11px] font-mono font-bold px-2.5 py-1 rounded-full flex items-center gap-1.5 border',
+                          'text-[11px] font-mono font-bold px-2.5 py-1 rounded-md flex items-center gap-1.5 border',
                           circuitBreakers[p.name] === 'open' ? 'bg-rose-950/40 text-rose-400 border-rose-500/30' : 'bg-emerald-950/40 text-emerald-400 border-emerald-500/30',
                         )}>
                           <ShieldAlert className="h-3 w-3 shrink-0" />
@@ -379,7 +379,7 @@ export default function ProvidersPage() {
                     <div key={name} className="flex items-center justify-between p-3 rounded-xl bg-[#0a0a0f] border border-[#272738]">
                       <span className="text-xs font-bold text-[#f26625]">{name.replace(/_/g, ' ')}</span>
                       <span className={clsx(
-                        'text-[10px] font-mono font-bold px-2.5 py-0.5 rounded-full border',
+                        'text-[10px] font-mono font-bold px-2.5 py-0.5 rounded-md border',
                         state === 'closed' && 'bg-emerald-950/40 text-emerald-400 border-emerald-500/30',
                         state === 'open' && 'bg-rose-950/40 text-rose-400 border-rose-500/30',
                         state === 'half_open' && 'bg-amber-950/40 text-amber-400 border-amber-500/30',
@@ -570,7 +570,7 @@ export default function ProvidersPage() {
                           <td className="py-2.5 text-[#f26625]">{m.checkpoint_id || 'ckpt-auto'}</td>
                           <td className="py-2.5">
                             <span className={clsx(
-                              'text-[10px] px-2 py-0.5 rounded-full font-bold uppercase border',
+                              'text-[10px] px-2 py-0.5 rounded-md font-bold uppercase border',
                               m.success ? 'bg-emerald-950/40 text-emerald-400 border-emerald-500/30' : 'bg-rose-950/40 text-rose-400 border-rose-500/30'
                             )}>
                               {m.success ? 'Success' : 'Failed'}

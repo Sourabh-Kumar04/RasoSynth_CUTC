@@ -135,7 +135,7 @@ export default function ObservabilityPage() {
               <p className="text-sm font-bold text-rose-200">Failed to load observability data</p>
               <p className="text-xs text-rose-400">{error}</p>
             </div>
-            <Button variant="outline" size="sm" className="rounded-full border-[#3b3b52] text-[#f8fafc] hover:bg-[#161622]" onClick={fetchData}>
+            <Button variant="outline" size="sm" className="rounded-md border-[#3b3b52] text-[#f8fafc] hover:bg-[#161622]" onClick={fetchData}>
               Retry
             </Button>
           </CardContent>
@@ -208,12 +208,12 @@ export default function ObservabilityPage() {
 
       {/* Tabs */}
       <Tabs value={selectedTab} onValueChange={setSelectedTab}>
-        <TabsList className="bg-[#161622] rounded-full border border-[#3b3b52]">
-          <TabsTrigger value="overview" className="rounded-full">Overview</TabsTrigger>
-          <TabsTrigger value="health" className="rounded-full">Health Monitor</TabsTrigger>
-          <TabsTrigger value="metrics" className="rounded-full">Metrics</TabsTrigger>
-          <TabsTrigger value="token_efficiency" className="rounded-full">Tokenizer &amp; Indic Savings</TabsTrigger>
-          <TabsTrigger value="validation" className="rounded-full">Security &amp; Validation</TabsTrigger>
+        <TabsList className="bg-[#161622] rounded-md border border-[#3b3b52]">
+          <TabsTrigger value="overview" className="rounded-sm">Overview</TabsTrigger>
+          <TabsTrigger value="health" className="rounded-sm">Health Monitor</TabsTrigger>
+          <TabsTrigger value="metrics" className="rounded-sm">Metrics</TabsTrigger>
+          <TabsTrigger value="token_efficiency" className="rounded-sm">Tokenizer &amp; Indic Savings</TabsTrigger>
+          <TabsTrigger value="validation" className="rounded-sm">Security &amp; Validation</TabsTrigger>
         </TabsList>
 
         {/* Overview */}
@@ -229,7 +229,7 @@ export default function ObservabilityPage() {
                     <Database className="h-4 w-4 text-[#f26625]" />
                     <span className="text-xs font-bold text-white">PostgreSQL Database</span>
                   </div>
-                  <span className="text-[10px] font-mono font-bold px-2.5 py-0.5 rounded-full bg-emerald-950/40 text-emerald-400 border border-emerald-500/30">
+                  <span className="text-[10px] font-mono font-bold px-2.5 py-0.5 rounded-md bg-emerald-950/40 text-emerald-400 border border-emerald-500/30">
                     Healthy
                   </span>
                 </div>
@@ -238,7 +238,7 @@ export default function ObservabilityPage() {
                     <Server className="h-4 w-4 text-[#f26625]" />
                     <span className="text-xs font-bold text-white">Redis In-Memory Cache</span>
                   </div>
-                  <span className="text-[10px] font-mono font-bold px-2.5 py-0.5 rounded-full bg-emerald-950/40 text-emerald-400 border border-emerald-500/30">
+                  <span className="text-[10px] font-mono font-bold px-2.5 py-0.5 rounded-md bg-emerald-950/40 text-emerald-400 border border-emerald-500/30">
                     Healthy
                   </span>
                 </div>
@@ -247,7 +247,7 @@ export default function ObservabilityPage() {
                     <Activity className="h-4 w-4 text-[#10b981]" />
                     <span className="text-xs font-bold text-white">Synthetics API Backend</span>
                   </div>
-                  <span className="text-[10px] font-mono font-bold px-2.5 py-0.5 rounded-full bg-emerald-950/40 text-emerald-400 border border-emerald-500/30">
+                  <span className="text-[10px] font-mono font-bold px-2.5 py-0.5 rounded-md bg-emerald-950/40 text-emerald-400 border border-emerald-500/30">
                     Healthy (99.9%)
                   </span>
                 </div>
@@ -271,7 +271,7 @@ export default function ObservabilityPage() {
                 <div className="space-y-3">
                   <div className="p-3 border border-[#272738] bg-[#0a0a0f] rounded-xl flex items-center justify-between">
                     <span className="text-xs text-[#94a3b8]">Overall Status</span>
-                    <span className="text-xs font-mono font-bold px-2.5 py-0.5 rounded-full bg-emerald-950/40 text-emerald-400 border border-emerald-500/30">
+                    <span className="text-xs font-mono font-bold px-2.5 py-0.5 rounded-md bg-emerald-950/40 text-emerald-400 border border-emerald-500/30">
                       Healthy
                     </span>
                   </div>
