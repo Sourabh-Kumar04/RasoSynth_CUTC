@@ -545,11 +545,19 @@ export default function OverviewDashboardPage() {
                     <div>
                       <label className="text-[10px] font-mono uppercase text-[#94a3b8] block mb-1">Base Model</label>
                       <select className="w-full bg-[#0a0a0f] border border-[#272738] rounded p-1.5 text-xs font-mono text-white focus:outline-none">
+                        <option>sarvamai/sarvam-2b-v0.5 (Sarvam Indic - Flagship)</option>
                         <option>HuggingFaceTB/SmolLM2-1.7B-Instruct</option>
                         <option>meta-llama/Llama-3-8B-Instruct</option>
                         <option>mistralai/Mistral-7B-v0.3</option>
                       </select>
                     </div>
+
+                    <Link href="/finetune?tab=new">
+                      <Button className="w-full bg-[#161622] hover:bg-[#1f1f2e] border border-emerald-500/30 text-emerald-400 text-xs font-mono h-7 flex items-center justify-center gap-1.5 mt-1">
+                        <Zap className="w-3 h-3 text-emerald-400" />
+                        <span>Load Flagship Indic GST Preset</span>
+                      </Button>
+                    </Link>
 
                     {/* Hyperparameters Grid */}
                     <div className="grid grid-cols-2 gap-2 text-xs font-mono">
