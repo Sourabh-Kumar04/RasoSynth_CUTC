@@ -81,22 +81,28 @@ uvicorn api.server:app --reload
 
 ### Unified Developer CLI (`rasosynthtune`)
 
-RasoSynthTune includes a command-line interface for autonomous synthesis, cryptographic auditing, latency benchmarking, and fine-tuning recipe generation:
+RasoSynthTune includes a command-line interface for autonomous synthesis, air-gapped generation, cryptographic auditing, latency benchmarking, fine-tuning recipe generation, and 1-click Hugging Face Hub publication:
 
 ```bash
 # 1. Autonomous synthetic generation with cryptographic DBOM & Nutrition Label
 rasosynthtune generate --domain "Indian Taxation & GST Compliance" --size 10 --format jsonl
 
-# 2. Cryptographic DBOM integrity, PII scan (DPDP Act), and benchmark contamination audit
-rasosynthtune audit --dataset outputs/dataset_distillation_10.jsonl
+# 2. Air-gapped local generation via vLLM or Ollama (zero network egress)
+rasosynthtune generate --domain "Clinical Emergency Triage" --size 50 --engine vllm --engine-url http://localhost:8000/v1
 
-# 3. Audited latency profiling, lexical diversity & enterprise ROI benchmark suite
+# 3. Cryptographic DBOM integrity, PII scan (DPDP Act), and benchmark contamination audit
+rasosynthtune audit --dataset outputs/flagship_indic_gst/flagship_indic_gst_sft.parquet
+
+# 4. Audited latency profiling, lexical diversity & enterprise ROI benchmark suite
 rasosynthtune benchmark
 
-# 4. Generate fine-tuning recipes (Axolotl / Unsloth / Torchtune)
-rasosynthtune recipe --framework axolotl --model "sarvamai/sarvam-2b-v0.5" --dataset outputs/dataset.jsonl
+# 5. Generate fine-tuning recipes (Axolotl / Unsloth / Torchtune)
+rasosynthtune recipe --framework axolotl --model "sarvamai/sarvam-2b-v0.5" --dataset outputs/flagship_indic_gst/flagship_indic_gst_sft.jsonl
 
-# 5. Start canonical API server
+# 6. Publish dataset with cryptographic DBOM badges to Hugging Face Hub
+rasosynthtune publish --dataset-dir outputs/flagship_indic_gst --repo-id rasosynthtune/indic-gst-law-instruct-v1 --dry-run
+
+# 7. Start canonical API server
 rasosynthtune serve --host 0.0.0.0 --port 8000
 ```
 
@@ -416,13 +422,30 @@ python -m research.prompt_optimizer
 | Single Trace Lookup | http://localhost:8000/traces/{trace_id} | Detailed request execution waterfall |
 | Flower (Celery) | http://localhost:5555 | Celery worker task monitoring |
 
+## Production Kubernetes & Helm Deployment
+
+Deploy RasoSynthTune to private VPCs, Kubernetes clusters, or air-gapped sovereign clouds:
+
+```bash
+# Production Helm Chart Deployment
+helm upgrade --install rasosynthtune deploy/helm/rasosynthtune \
+  --namespace rasosynthtune \
+  --create-namespace \
+  --values deploy/helm/rasosynthtune/values.yaml
+
+# Production Docker Compose Stack
+docker compose -f docker-compose.prod.yml up --build -d
+```
+
 ## Documentation & Collateral
 
 | Document | Description |
 |:---|:---|
 | [Technical Briefing](docs/TECHNICAL_BRIEFING.md) | Executive architecture overview, 5-D quality filtering, and DPDP / EU AI Act compliance |
 | [3-Minute Demo Walkthrough](docs/DEMO_WALKTHROUGH.md) | Fast-paced demonstration script and benchmark reproducibility guide for investors and evaluators |
-| [Flagship Community Dataset](outputs/flagship_indic_gst/README.md) | Gold-standard Indic GST instruction dataset with cryptographic DBOM attestation |
+| [Flagship Indic GST Dataset](outputs/flagship_indic_gst/README.md) | Gold-standard Indic GST instruction dataset with cryptographic DBOM attestation |
+| [Flagship Clinical Reasoning](outputs/flagship_clinical/README.md) | Emergency clinical reasoning & diagnostic triage dataset with DBOM verification badge |
+| [Flagship Corporate Law](outputs/flagship_corporate_law/README.md) | Indian Corporate Law & MCA-21 compliance dataset with DBOM cryptographic root |
 | [Empirical Fine-Tuning Delta](outputs/evaluation/before_vs_after_finetune_benchmark.md) | Before vs. After empirical evaluation report on Sarvam-2B (+537% chrF gain) |
 
 ## License

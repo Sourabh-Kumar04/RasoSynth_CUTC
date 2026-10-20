@@ -1,0 +1,16 @@
+apiVersion: v2
+name: rasosynthtune
+description: Helm Chart for RasoSynthTune 2.0.0 Enterprise Autonomous Synthetic Data & Sovereign AI Platform
+type: application
+version: 2.0.0
+appVersion: "2.0.0"
+keywords:
+  - synthetic-data
+  - llm-finetuning
+  - dbom
+  - sovereign-ai
+  - air-gapped
+home: https://github.com/rasosynthtune/rasosynthtune
+maintainers:
+  - name: RasoSynthTune Core Engineering Team
+    email: engineering@rasosynthtune.ai

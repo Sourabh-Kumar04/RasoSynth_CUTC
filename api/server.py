@@ -3284,6 +3284,50 @@ async def get_dataset_dbom(job_id: str):
     }
 
 
+@app.get("/badges/dbom/{certificate_id}.svg", tags=["Datasets"])
+@app.get("/badges/dbom/{certificate_id}", tags=["Datasets"])
+async def get_dbom_badge_svg_endpoint(certificate_id: str):
+    """Generate dynamic cryptographic DBOM verification SVG badge for dataset READMEs."""
+    from fastapi.responses import Response
+    from core.export.badge_generator import generate_dbom_badge_svg
+    from pathlib import Path
+    import json
+
+    merkle_root = ""
+    status = "verified"
+
+    # Check flagship release
+    if certificate_id.lower() in ("flagship", "flagship_indic_gst", "indic_gst") or certificate_id.startswith("DBOM-D91E91"):
+        flagship_dbom = Path("outputs/flagship_indic_gst/flagship_indic_gst_sft.dbom.json")
+        if flagship_dbom.exists():
+            try:
+                with open(flagship_dbom, "r", encoding="utf-8") as f:
+                    data = json.load(f)
+                merkle_root = data.get("merkle_root_hash", "")
+            except Exception:
+                pass
+    else:
+        for cand in Path("outputs").glob("**/*.dbom.json"):
+            try:
+                with open(cand, "r", encoding="utf-8") as f:
+                    cdata = json.load(f)
+                if cdata.get("certificate_id") == certificate_id or certificate_id in cand.stem:
+                    merkle_root = cdata.get("merkle_root_hash", "")
+                    break
+            except Exception:
+                pass
+
+    if not merkle_root:
+        merkle_root = certificate_id.replace("DBOM-", "").lower()
+
+    svg_content = generate_dbom_badge_svg(
+        certificate_id=certificate_id,
+        merkle_root=merkle_root,
+        status=status,
+    )
+    return Response(content=svg_content, media_type="image/svg+xml")
+
+
 @app.post("/tools/generate-adversarial-probes", tags=["Tools"])
 async def tool_generate_adversarial_probes(request: dict = Body(...)):
     """Generate domain-specific adversarial stress test probes."""

@@ -592,3 +592,12 @@ class TestWorkflow6FastAPIEndpointsRegression:
         assert data["dbom"]["certificate_id"].startswith("DBOM-")
         assert len(data["dbom"]["merkle_root_hash"]) == 64
         assert "Data Nutrition & Provenance Label" in data["nutrition_label_md"]
+
+    def test_get_dbom_badge_svg(self, client):
+        res = client.get("/badges/dbom/flagship_indic_gst.svg")
+        assert res.status_code == 200
+        assert res.headers["content-type"] == "image/svg+xml"
+        svg_text = res.text
+        assert "<svg" in svg_text
+        assert "DBOM" in svg_text
+        assert "Verified" in svg_text

@@ -196,3 +196,76 @@ def test_cli_generate_modes_and_parquet():
         )
         assert "PASSED - Cryptographically Intact" in audit_res.stdout
         assert "Total Samples Loaded: 4" in audit_res.stdout
+
+
+def test_cli_publish_dry_run():
+    """Verify `rasosynthtune publish` validates DBOM and metadata in dry-run mode."""
+    with tempfile.TemporaryDirectory() as tmp_dir:
+        # Generate a test dataset first
+        subprocess.run(
+            [
+                PYTHON_EXEC,
+                CLI_SCRIPT,
+                "generate",
+                "--domain",
+                "Flagship Indic Benchmark",
+                "--size",
+                "3",
+                "--output-dir",
+                tmp_dir,
+            ],
+            capture_output=True,
+            text=True,
+            check=True,
+        )
+
+        # Run publish with --dry-run
+        pub_res = subprocess.run(
+            [
+                PYTHON_EXEC,
+                CLI_SCRIPT,
+                "publish",
+                "--dataset-dir",
+                tmp_dir,
+                "--repo-id",
+                "rasosynthtune/test-indic-eval",
+                "--dry-run",
+            ],
+            capture_output=True,
+            text=True,
+            check=True,
+        )
+        assert "RasoSynthTune: Hugging Face Dataset Hub Publisher" in pub_res.stdout
+        assert "Dry-run validation passed" in pub_res.stdout
+        assert "[OK] Publish completed: dry_run_success" in pub_res.stdout
+
+
+def test_cli_generate_local_engine_air_gapped():
+    """Verify `rasosynthtune generate --engine vllm` operates with zero network egress."""
+    with tempfile.TemporaryDirectory() as tmp_dir:
+        gen_res = subprocess.run(
+            [
+                PYTHON_EXEC,
+                CLI_SCRIPT,
+                "generate",
+                "--domain",
+                "Air-Gapped Sovereign AI",
+                "--size",
+                "2",
+                "--engine",
+                "vllm",
+                "--output-dir",
+                tmp_dir,
+            ],
+            capture_output=True,
+            text=True,
+            check=True,
+        )
+        assert "[Engine] Utilizing local VLLM air-gapped engine" in gen_res.stdout
+        assert "[OK] Synthesized 2 samples" in gen_res.stdout
+        out_file = Path(tmp_dir) / "dataset_distillation_2.jsonl"
+        assert out_file.exists()
+        with open(out_file, "r", encoding="utf-8") as f:
+            lines = [json.loads(l) for l in f if l.strip()]
+        assert len(lines) == 2
+        assert lines[0]["engine"] == "vllm"

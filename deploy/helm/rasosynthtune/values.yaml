@@ -1,0 +1,100 @@
+# Default values for rasosynthtune Helm Chart.
+# Declares configuration for production multi-tenant deployment.
+
+replicaCount:
+  api: 3
+  frontend: 2
+
+image:
+  api:
+    repository: rasosynthtune/api
+    pullPolicy: IfNotPresent
+    tag: "2.0.0"
+  frontend:
+    repository: rasosynthtune/frontend
+    pullPolicy: IfNotPresent
+    tag: "2.0.0"
+
+serviceAccount:
+  create: true
+  annotations: {}
+  name: "rasosynthtune-sa"
+
+podAnnotations: {}
+
+podSecurityContext:
+  runAsNonRoot: true
+  runAsUser: 10001
+  fsGroup: 10001
+
+securityContext:
+  allowPrivilegeEscalation: false
+  readOnlyRootFilesystem: false
+  capabilities:
+    drop:
+      - ALL
+
+service:
+  api:
+    type: ClusterIP
+    port: 8000
+  frontend:
+    type: ClusterIP
+    port: 3000
+
+ingress:
+  enabled: true
+  className: "nginx"
+  annotations:
+    kubernetes.io/ingress.class: nginx
+    cert-manager.io/cluster-issuer: "letsencrypt-prod"
+    nginx.ingress.kubernetes.io/proxy-body-size: "100m"
+  hosts:
+    - host: app.rasosynthtune.internal
+      paths:
+        - path: /api
+          pathType: Prefix
+          service: api
+        - path: /
+          pathType: Prefix
+          service: frontend
+  tls:
+    - secretName: rasosynthtune-tls
+      hosts:
+        - app.rasosynthtune.internal
+
+resources:
+  api:
+    limits:
+      cpu: 2000m
+      memory: 4Gi
+    requests:
+      cpu: 500m
+      memory: 1Gi
+  frontend:
+    limits:
+      cpu: 1000m
+      memory: 2Gi
+    requests:
+      cpu: 250m
+      memory: 512Mi
+
+autoscaling:
+  api:
+    enabled: true
+    minReplicas: 3
+    maxReplicas: 10
+    targetCPUUtilizationPercentage: 75
+    targetMemoryUtilizationPercentage: 80
+  frontend:
+    enabled: true
+    minReplicas: 2
+    maxReplicas: 6
+    targetCPUUtilizationPercentage: 80
+
+env:
+  ENVIRONMENT: "production"
+  LOG_LEVEL: "INFO"
+  FASTAPI_WORKERS: "4"
+  AIR_GAPPED_MODE: "false"
+  LOCAL_VLLM_URL: "http://vllm-cluster-service:8000/v1"

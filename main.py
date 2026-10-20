@@ -17,7 +17,7 @@ from cli import main as cli_main
 
 def main():
     """Main entry point for RasoSynthTune."""
-    cli_commands = {"generate", "audit", "benchmark", "recipe", "serve"}
+    cli_commands = {"generate", "audit", "benchmark", "recipe", "serve", "publish"}
     
     # If a CLI subcommand is requested, delegate directly to the unified CLI
     if len(sys.argv) > 1 and sys.argv[1] in cli_commands:

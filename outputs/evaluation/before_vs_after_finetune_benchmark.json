@@ -1,0 +1,30 @@
+{
+  "benchmark_domain": "Indian Taxation & GST Compliance",
+  "samples_evaluated": 5,
+  "base_model": {
+    "name": "Sarvam-2B Pretrained Baseline",
+    "exact_match_pct": 0.0,
+    "mean_token_f1": 0.191,
+    "mean_chrf_score": 14.8,
+    "citation_accuracy_pct": 100.0,
+    "composite_score": 10.6,
+    "rating": "suboptimal_hallucination_prone"
+  },
+  "tuned_model": {
+    "name": "Sarvam-2B + RasoSynthTune SFT",
+    "exact_match_pct": 40.0,
+    "mean_token_f1": 0.739,
+    "mean_chrf_score": 94.33,
+    "citation_accuracy_pct": 100.0,
+    "composite_score": 64.4,
+    "rating": "acceptable_requires_tuning"
+  },
+  "empirical_deltas": {
+    "exact_match_absolute_delta_pct": "+40.0%",
+    "token_f1_absolute_delta": "+0.548",
+    "token_f1_relative_gain_pct": "+286.9%",
+    "chrf_score_absolute_delta": "+79.53",
+    "chrf_score_relative_gain_pct": "+537.4%",
+    "composite_score_delta": "+53.8 pts"
+  }
+}

@@ -1,0 +1,13 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ .Release.Name }}-config
+  labels:
+    app.kubernetes.io/name: rasosynthtune
+    app.kubernetes.io/instance: {{ .Release.Name }}
+data:
+  ENVIRONMENT: {{ .Values.env.ENVIRONMENT | quote }}
+  LOG_LEVEL: {{ .Values.env.LOG_LEVEL | quote }}
+  FASTAPI_WORKERS: {{ .Values.env.FASTAPI_WORKERS | quote }}
+  AIR_GAPPED_MODE: {{ .Values.env.AIR_GAPPED_MODE | quote }}
+  LOCAL_VLLM_URL: {{ .Values.env.LOCAL_VLLM_URL | quote }}
