@@ -98,8 +98,16 @@ export default function ResearchPage() {
     }
   }
 
-  const cachedTechniques = Array.isArray(status?.cached_techniques) ? status!.cached_techniques : []
-  const history = Array.isArray(status?.research_history) ? status!.research_history : []
+  const cachedTechniques: string[] = (() => {
+    if (Array.isArray(status?.cached_techniques)) return status!.cached_techniques.map(String)
+    if (status?.cached_techniques && typeof status.cached_techniques === 'object') {
+      return Object.values(status.cached_techniques).flat().map(String)
+    }
+    return []
+  })()
+  const history: string[] = Array.isArray(status?.research_history)
+    ? status!.research_history.map((h: any) => typeof h === 'string' ? h : (h?.query || h?.title || h?.name || JSON.stringify(h)))
+    : []
   const rawTech = techniques?.techniques
   const techEntries = rawTech && typeof rawTech === 'object' && !Array.isArray(rawTech) ? Object.entries(rawTech) : []
 

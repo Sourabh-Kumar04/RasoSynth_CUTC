@@ -116,22 +116,22 @@ class ProviderRouter:
 
     # Enhanced task-provider mapping with optimal routing
     TASK_PROVIDER_MAPPING = {
-        TaskType.TEXT_GENERATION: ["google_gemini", "nvidia_nim", "anthropic", "openai", "huggingface", "groq", "ollama"],
-        TaskType.EMBEDDING: ["nvidia_nim", "google_gemini", "huggingface", "openai", "ollama"],
-        TaskType.QUALITY_CHECK: ["google_gemini", "anthropic", "openai", "huggingface"],
-        TaskType.HALLUCINATION_DETECTION: ["google_gemini", "anthropic", "openai", "huggingface"],
-        TaskType.TOXICITY_CHECK: ["google_gemini", "anthropic", "openai", "huggingface"],
-        TaskType.SUMMARIZATION: ["google_gemini", "anthropic", "openai", "huggingface", "groq"],
-        TaskType.PARAPHRASING: ["google_gemini", "anthropic", "openai", "huggingface", "groq"],
-        TaskType.CODE_GENERATION: ["google_gemini", "anthropic", "openai", "huggingface", "groq", "ollama"],
-        TaskType.REASONING: ["google_gemini", "anthropic", "openai", "groq", "huggingface", "ollama"],
-        TaskType.MULTIMODAL: ["google_gemini", "openai", "anthropic", "huggingface"],
-        TaskType.OCR_CORRECTION: ["google_gemini", "anthropic", "openai", "huggingface"],
-        TaskType.TRANSLATION: ["google_gemini", "anthropic", "openai", "huggingface"],
-        TaskType.SCHEMA_INFERENCE: ["google_gemini", "anthropic", "openai", "huggingface"],
-        TaskType.SYNTHETIC_GENERATION: ["google_gemini", "anthropic", "openai", "huggingface", "ollama"],
-        TaskType.NORMALIZATION: ["google_gemini", "anthropic", "openai", "huggingface"],
-        TaskType.ENTITY_EXTRACTION: ["google_gemini", "anthropic", "openai", "huggingface"],
+        TaskType.TEXT_GENERATION: ["fireworks", "featherless", "together", "deepseek", "groq", "openrouter", "google_gemini", "nvidia_nim", "anthropic", "openai", "huggingface", "ollama"],
+        TaskType.EMBEDDING: ["nvidia_nim", "fireworks", "together", "google_gemini", "huggingface", "openai", "ollama"],
+        TaskType.QUALITY_CHECK: ["fireworks", "featherless", "together", "deepseek", "groq", "google_gemini", "anthropic", "openai", "huggingface"],
+        TaskType.HALLUCINATION_DETECTION: ["fireworks", "featherless", "together", "deepseek", "groq", "google_gemini", "anthropic", "openai", "huggingface"],
+        TaskType.TOXICITY_CHECK: ["fireworks", "featherless", "together", "deepseek", "groq", "google_gemini", "anthropic", "openai", "huggingface"],
+        TaskType.SUMMARIZATION: ["fireworks", "featherless", "together", "deepseek", "groq", "google_gemini", "anthropic", "openai", "huggingface"],
+        TaskType.PARAPHRASING: ["fireworks", "featherless", "together", "deepseek", "groq", "google_gemini", "anthropic", "openai", "huggingface"],
+        TaskType.CODE_GENERATION: ["fireworks", "featherless", "together", "deepseek", "groq", "google_gemini", "anthropic", "openai", "huggingface", "ollama"],
+        TaskType.REASONING: ["fireworks", "featherless", "together", "deepseek", "groq", "google_gemini", "anthropic", "openai", "huggingface", "ollama"],
+        TaskType.MULTIMODAL: ["google_gemini", "openai", "anthropic", "fireworks", "huggingface"],
+        TaskType.OCR_CORRECTION: ["google_gemini", "anthropic", "openai", "fireworks", "huggingface"],
+        TaskType.TRANSLATION: ["fireworks", "together", "google_gemini", "anthropic", "openai", "huggingface"],
+        TaskType.SCHEMA_INFERENCE: ["fireworks", "featherless", "together", "google_gemini", "anthropic", "openai", "huggingface"],
+        TaskType.SYNTHETIC_GENERATION: ["fireworks", "featherless", "together", "deepseek", "groq", "google_gemini", "anthropic", "openai", "huggingface", "ollama"],
+        TaskType.NORMALIZATION: ["fireworks", "featherless", "together", "google_gemini", "anthropic", "openai", "huggingface"],
+        TaskType.ENTITY_EXTRACTION: ["fireworks", "featherless", "together", "google_gemini", "anthropic", "openai", "huggingface"],
     }
 
     def __init__(self, config: dict[str, Any]):
@@ -270,9 +270,28 @@ class ProviderRouter:
         """Route request with intelligent selection and fallback."""
         from providers.core_lib.base import LLMRequest
 
-        providers = preferred_providers or self.TASK_PROVIDER_MAPPING.get(
+        base_providers = list(preferred_providers or self.TASK_PROVIDER_MAPPING.get(
             task, self.config.provider_priority
-        )
+        ))
+
+        # Include any configured provider not already in base_providers as fallbacks
+        all_configured = [
+            p for p, cfg in self._provider_configs.items()
+            if cfg.get("api_key") or (p in ("ollama", "vllm") and cfg.get("base_url"))
+        ]
+        for cp in all_configured:
+            if cp not in base_providers and cp in self._providers:
+                base_providers.append(cp)
+
+        # Prioritize providers that actually have configured credentials
+        def provider_sort_key(p_name: str) -> int:
+            cfg = self._provider_configs.get(p_name, {})
+            has_key = bool(cfg.get("api_key"))
+            if p_name in ("ollama", "vllm") and cfg.get("base_url"):
+                has_key = True
+            return 0 if has_key else 1
+
+        providers = sorted(base_providers, key=provider_sort_key)
 
         last_error = None
         logger = logging.getLogger(__name__)

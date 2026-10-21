@@ -117,6 +117,40 @@ export default function OrchestrationPage() {
   const runningJobs = jobs.filter((j) => j.status === 'running')
   const completedJobs = jobs.filter((j) => j.status === 'completed')
 
+  const fallbackHistory = [
+    'ArXiv Search: "Autonomous SFT Dataset Synthesis Frameworks"',
+    'GitHub Crawl: Open-source RAG benchmark corpora and prompt templates',
+    'PapersWithCode: High-quality instruction-following evaluation sets',
+    'HuggingFace Hub: Fine-tuning datasets quality metrics and license terms',
+  ]
+
+  const fallbackTechniques = [
+    'De-duplication via MinHash LSH (Jaccard > 0.85)',
+    'Toxicity & Hallucination filtering using LLM-as-a-Judge',
+    'Self-Instruct Prompt Diversification & Constraint Optimization',
+    'AST Python Syntax Compilation & Static Analysis',
+  ]
+
+  const researchHistoryList: string[] = (() => {
+    if (Array.isArray(researchStatus?.research_history) && researchStatus.research_history.length > 0) {
+      return researchStatus.research_history.map((item: any) =>
+        typeof item === 'string' ? item : (item?.query || item?.title || item?.name || JSON.stringify(item))
+      )
+    }
+    return fallbackHistory
+  })()
+
+  const cachedTechniquesList: string[] = (() => {
+    if (Array.isArray(researchStatus?.cached_techniques) && researchStatus.cached_techniques.length > 0) {
+      return researchStatus.cached_techniques.map(String)
+    }
+    if (researchStatus?.cached_techniques && typeof researchStatus.cached_techniques === 'object') {
+      const flattened = Object.values(researchStatus.cached_techniques).flat().map(String)
+      if (flattened.length > 0) return flattened
+    }
+    return fallbackTechniques
+  })()
+
   return (
     <div className="w-full max-w-[1600px] mx-auto space-y-6">
       
@@ -544,12 +578,7 @@ export default function OrchestrationPage() {
                 </CardTitle>
               </CardHeader>
               <CardContent className="p-4 space-y-2 text-xs font-mono">
-                {(researchStatus?.research_history || [
-                  'ArXiv Search: "Autonomous SFT Dataset Synthesis Frameworks"',
-                  'GitHub Crawl: Open-source RAG benchmark corpora and prompt templates',
-                  'PapersWithCode: High-quality instruction-following evaluation sets',
-                  'HuggingFace Hub: Fine-tuning datasets quality metrics and license terms',
-                ]).map((item: string, idx: number) => (
+                {researchHistoryList.map((item: string, idx: number) => (
                   <div key={idx} className="p-2.5 rounded-lg bg-[#0a0a0f] border border-[#272738] text-[#94a3b8] flex items-center gap-2">
                     <Search className="w-3.5 h-3.5 text-[#f26625] shrink-0" />
                     <span className="truncate">{item}</span>
@@ -566,12 +595,7 @@ export default function OrchestrationPage() {
                 </CardTitle>
               </CardHeader>
               <CardContent className="p-4 space-y-2 text-xs font-mono">
-                {(researchStatus?.cached_techniques || [
-                  'De-duplication via MinHash LSH (Jaccard > 0.85)',
-                  'Toxicity & Hallucination filtering using LLM-as-a-Judge',
-                  'Self-Instruct Prompt Diversification & Constraint Optimization',
-                  'AST Python Syntax Compilation & Static Analysis',
-                ]).map((item: string, idx: number) => (
+                {cachedTechniquesList.map((item: string, idx: number) => (
                   <div key={idx} className="p-2.5 rounded-lg bg-[#0a0a0f] border border-[#272738] text-white flex items-center gap-2">
                     <CheckCircle2 className="w-3.5 h-3.5 text-emerald-400 shrink-0" />
                     <span className="truncate">{item}</span>
