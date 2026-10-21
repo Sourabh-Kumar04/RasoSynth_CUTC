@@ -1,5 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server'
 
+export const dynamic = 'force-dynamic'
+export const maxDuration = 60
+
 // Server-side backend URL (never exposed to browser)
 const BACKEND_URL = (
   process.env.BACKEND_API_URL ||
