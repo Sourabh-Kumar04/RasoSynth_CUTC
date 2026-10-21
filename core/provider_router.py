@@ -21,7 +21,7 @@ from providers.core_lib.plugin import PluginRegistry, AbstractProviderPlugin
 class RouterConfig:
     """Router configuration with self-improvement settings."""
     provider_priority: list[str] = field(default_factory=lambda: [
-        "google_gemini", "nvidia_nim", "anthropic", "openai", "huggingface", "groq", "xai", "ollama", "vllm"
+        "google_gemini", "nvidia_nim", "anthropic", "openai", "huggingface", "groq", "fireworks", "featherless", "xai", "ollama", "vllm"
     ])
     max_retries: int = 3
     retry_base_delay: float = 2.0
@@ -171,6 +171,7 @@ class ProviderRouter:
             "openrouter_api_key": "openrouter",
             "together_api_key": "together",
             "featherless_api_key": "featherless",
+            "fireworks_api_key": "fireworks",
         }
 
         for key, provider_id in provider_keys.items():

@@ -1,5 +1,6 @@
 """OpenAI provider implementation."""
 import asyncio
+import os
 
 try:
     from openai import AsyncOpenAI
@@ -56,7 +57,8 @@ class OpenAIProvider(BaseProvider):
         self.client = None
 
         if provider_config.api_key and OPENAI_AVAILABLE:
-            self.client = AsyncOpenAI(api_key=provider_config.api_key, timeout=provider_config.timeout)
+            base_url = provider_config.base_url or os.environ.get("OPENAI_BASE_URL")
+            self.client = AsyncOpenAI(api_key=provider_config.api_key, base_url=base_url, timeout=provider_config.timeout)
 
     async def initialize(self, config: dict) -> None:
         """Initialize provider with configuration dict (called by ProviderRouter)."""
@@ -65,11 +67,11 @@ class OpenAIProvider(BaseProvider):
 
         provider_config = ProviderConfig(
             api_key=config.get("api_key", ""),
-            base_url=config.get("base_url"),
+            base_url=config.get("base_url") or os.environ.get("OPENAI_BASE_URL"),
             timeout=config.get("timeout", 120),
         )
         self.config = provider_config
-        self.client = AsyncOpenAI(api_key=provider_config.api_key, timeout=provider_config.timeout)
+        self.client = AsyncOpenAI(api_key=provider_config.api_key, base_url=provider_config.base_url, timeout=provider_config.timeout)
 
     async def _execute_generate(
         self,

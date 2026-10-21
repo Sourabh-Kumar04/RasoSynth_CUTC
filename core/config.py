@@ -65,6 +65,11 @@ class Settings(BaseSettings):
 
     # Featherless
     featherless_api_key: Optional[str] = Field(default=None)
+    featherless_base_url: Optional[str] = Field(default="https://api.featherless.ai/v1")
+
+    # Fireworks AI
+    fireworks_api_key: Optional[str] = Field(default=None)
+    fireworks_base_url: Optional[str] = Field(default="https://api.fireworks.ai/inference/v1")
 
     # Local Ollama
     ollama_base_url: str = Field(default="http://localhost:11434")

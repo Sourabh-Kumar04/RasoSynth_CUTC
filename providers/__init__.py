@@ -52,6 +52,8 @@ import providers.nvidia_nim  # noqa: F401, E402
 import providers.huggingface_provider  # noqa: F401, E402
 import providers.ollama_provider  # noqa: F401, E402
 import providers.xai_provider  # noqa: F401, E402
+import providers.fireworks  # noqa: F401, E402
+import providers.featherless  # noqa: F401, E402
 
 # Ensure canonical alias anthropic_claude is registered as well
 from providers.anthropic_claude import AnthropicClaudeProvider
