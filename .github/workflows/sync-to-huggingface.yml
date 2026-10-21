@@ -23,6 +23,10 @@ jobs:
             echo "::notice ::HF_TOKEN secret is not configured in GitHub repository secrets. Skipping Hugging Face Space sync."
             exit 0
           fi
-          SPACE="${HF_SPACE_NAME:-Sourabh-Kumar04/rasosynthtune-api}"
+          # Support both full 'username/space' or just 'space'
+          SPACE="${HF_SPACE_NAME:-Sourabh-Kumar04/RasoSynthTune}"
+          if [[ "$SPACE" != *"/"* ]]; then
+            SPACE="Sourabh-Kumar04/$SPACE"
+          fi
           echo "Syncing repository to Hugging Face Space: $SPACE..."
           git push --force https://oauth2:$HF_TOKEN@huggingface.co/spaces/$SPACE master:main

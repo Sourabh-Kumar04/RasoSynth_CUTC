@@ -1,5 +1,5 @@
 ---
-title: RasoSynthTune API
+title: RasoSynthTune
 emoji: ⚡
 colorFrom: orange
 colorTo: red

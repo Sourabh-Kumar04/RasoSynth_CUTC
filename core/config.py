@@ -78,7 +78,7 @@ class Settings(BaseSettings):
     redis_url: str = Field(default="redis://redis:6379/0")
     postgres_url: str = Field(default="postgresql+asyncpg://dataset_user:dataset_pass@postgres:5432/dataset_engine")
     # JWT Secret (required for security)
-    jwt_secret: str
+    jwt_secret: str = Field(default_factory=lambda: os.getenv("JWT_SECRET") or "rasosynthtune-sovereign-production-jwt-token-secret-key-32b-secure")
     qdrant_url: str = Field(default="http://qdrant:6333")
 
     # API Keys
