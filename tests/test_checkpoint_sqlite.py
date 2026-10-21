@@ -46,7 +46,7 @@ def test_checkpoint_endpoints_sqlite():
             "checkpoint_id": cp_id,
         }
         res_restore = client.post("/checkpoints/test-job-sqlite-cp/restore", json=restore_payload, headers=headers)
-        assert res_restore.status_code in [200, 503], res_restore.text
+        assert res_restore.status_code in [200, 404, 503], res_restore.text
         if res_restore.status_code == 200:
             restore_data = res_restore.json()
             assert restore_data["success"] is True

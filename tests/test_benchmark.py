@@ -77,25 +77,29 @@ class TestQualityBenchmark:
     async def test_benchmark_generation_quality(self, benchmark):
         """Test generation quality benchmark returns expected structure."""
         result = await benchmark.benchmark_generation_quality()
-        assert result["status"] == "not_implemented"
+        assert result["status"] == "completed"
+        assert "samples_evaluated" in result
 
     @pytest.mark.asyncio
     async def test_benchmark_latency(self, benchmark):
         """Test latency benchmark returns expected structure."""
         result = await benchmark.benchmark_latency()
-        assert result["status"] == "not_implemented"
+        assert result["status"] == "completed"
+        assert "throughput_samples_per_sec" in result
 
     @pytest.mark.asyncio
     async def test_benchmark_provider_quality(self, benchmark):
         """Test provider quality benchmark returns expected structure."""
         result = await benchmark.benchmark_provider_quality()
-        assert result["status"] == "not_implemented"
+        assert result["status"] == "completed"
+        assert "supported_providers" in result
 
     @pytest.mark.asyncio
     async def test_benchmark_cost_efficiency(self, benchmark):
         """Test cost efficiency benchmark returns expected structure."""
         result = await benchmark.benchmark_cost_efficiency()
-        assert result["status"] == "not_implemented"
+        assert result["status"] == "completed"
+        assert "cost_reduction_pct" in result
 
     @pytest.mark.asyncio
     async def test_benchmark_dataset_quality(self, benchmark):

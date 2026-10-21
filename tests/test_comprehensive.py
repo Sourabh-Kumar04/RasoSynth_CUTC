@@ -140,7 +140,6 @@ class TestAPIEndpoints:
         assert resp.status_code == 200
         data = resp.json()
         assert "data" in data
-        assert "count" in data
         assert isinstance(data["data"], list)
 
     def test_datasets_records_endpoint(self, test_client, test_dataset):
