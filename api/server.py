@@ -1323,16 +1323,17 @@ async def get_provider_health_metrics():
 
     if router and hasattr(router, "stats"):
         for provider_id, stat in router.stats.items():
-            total = stat.total_requests
-            succ = stat.successful_requests
-            rate = (succ / total) if total > 0 else 1.0
-            avg_lat = (stat.total_latency_ms / total * 1000) if total > 0 else 115.0
+            total = getattr(stat, "requests", getattr(stat, "total_requests", 0))
+            failed = getattr(stat, "failures", getattr(stat, "failed_requests", 0))
+            succ = getattr(stat, "successful_requests", max(0, total - failed))
+            rate = getattr(stat, "success_rate", (succ / total) if total > 0 else 1.0)
+            avg_lat = getattr(stat, "avg_latency_ms", (getattr(stat, "total_latency_ms", 0) / total if total > 0 else 115.0))
             metrics_map[provider_id] = {
                 "provider": provider_id,
                 "total_requests": total,
                 "success_rate": round(rate, 4),
                 "avg_latency_ms": round(avg_lat, 2),
-                "fallback_count": stat.failed_requests,
+                "fallback_count": failed,
             }
 
     if not metrics_map:
