@@ -89,42 +89,113 @@ class FireworksProvider(BaseProvider):
         model: str | None = None,
         **kwargs
     ) -> ModelResponse:
-        """Internal: Generate text using Fireworks OpenAI-compatible endpoint."""
+        """Internal: Generate text using Fireworks OpenAI-compatible endpoint with automatic model fallback."""
         import time
         start_time = time.time()
 
-        model_name = model or self.default_model
+        if not self.client:
+            api_key = self.config.api_key or os.environ.get("FIREWORKS_API_KEY", "")
+            if api_key and OPENAI_AVAILABLE:
+                self.client = AsyncOpenAI(
+                    api_key=api_key,
+                    base_url=self.config.base_url or os.environ.get("FIREWORKS_BASE_URL", self.DEFAULT_BASE_URL),
+                    timeout=self.config.timeout or 120,
+                )
+            else:
+                raise RuntimeError("Fireworks client not initialized. Set FIREWORKS_API_KEY environment variable.")
+
+        candidate_models = []
+        if model:
+            candidate_models.append(model)
+        env_model = os.environ.get("FIREWORKS_MODEL")
+        if env_model and env_model not in candidate_models:
+            candidate_models.append(env_model)
+        # Serverless instruct models supported on Fireworks AI
+        serverless_fallbacks = [
+            "accounts/fireworks/models/llama-v3p3-70b-instruct",
+            "accounts/fireworks/models/llama-v3p1-70b-instruct",
+            "accounts/fireworks/models/llama-v3p2-3b-instruct",
+            "accounts/fireworks/models/llama-v3p1-8b-instruct",
+            "accounts/fireworks/models/qwen2p5-72b-instruct",
+            "accounts/fireworks/models/deepseek-v3",
+        ]
+        for fb in serverless_fallbacks:
+            if fb not in candidate_models:
+                candidate_models.append(fb)
+
         messages = []
         if system_prompt:
             messages.append({"role": "system", "content": system_prompt})
         messages.append({"role": "user", "content": prompt})
 
+        last_err = None
+        for cand_model in candidate_models:
+            try:
+                response = await self.client.chat.completions.create(
+                    model=cand_model,
+                    messages=messages,
+                    temperature=temperature,
+                    max_tokens=max_tokens or 4096,
+                    **kwargs
+                )
+
+                choice = response.choices[0]
+                content = choice.message.content or ""
+                usage = response.usage
+                tokens = (usage.prompt_tokens or 0) + (usage.completion_tokens or 0) if usage else 0
+                latency_ms = (time.time() - start_time) * 1000
+
+                self.default_model = cand_model
+
+                return ModelResponse(
+                    content=content,
+                    model=cand_model,
+                    tokens_used=tokens,
+                    latency_ms=latency_ms,
+                    cost=self._estimate_cost(tokens),
+                    provider=self.name,
+                    finish_reason=choice.finish_reason,
+                )
+            except Exception as e:
+                err_str = str(e)
+                # If model is not found/not deployed, try next candidate model
+                if "404" in err_str or "not found" in err_str.lower() or "not deployed" in err_str.lower():
+                    last_err = e
+                    continue
+                # For authentication, credit, or rate limit errors, propagate immediately
+                raise RuntimeError(f"Fireworks AI generation failed: {e}")
+
+        # If all predefined candidates failed with 404, query models list dynamically
         try:
-            response = await self.client.chat.completions.create(
-                model=model_name,
-                messages=messages,
-                temperature=temperature,
-                max_tokens=max_tokens or 4096,
-                **kwargs
-            )
+            available = await self.client.models.list()
+            if hasattr(available, "data"):
+                for m in available.data:
+                    m_id = getattr(m, "id", None)
+                    if m_id and m_id not in candidate_models and ("instruct" in m_id or "chat" in m_id or "llama" in m_id):
+                        response = await self.client.chat.completions.create(
+                            model=m_id,
+                            messages=messages,
+                            temperature=temperature,
+                            max_tokens=max_tokens or 4096,
+                            **kwargs
+                        )
+                        self.default_model = m_id
+                        choice = response.choices[0]
+                        usage = response.usage
+                        tokens = (usage.prompt_tokens or 0) + (usage.completion_tokens or 0) if usage else 0
+                        return ModelResponse(
+                            content=choice.message.content or "",
+                            model=m_id,
+                            tokens_used=tokens,
+                            latency_ms=(time.time() - start_time) * 1000,
+                            cost=self._estimate_cost(tokens),
+                            provider=self.name,
+                            finish_reason=choice.finish_reason,
+                        )
+        except Exception:
+            pass
 
-            choice = response.choices[0]
-            content = choice.message.content or ""
-            usage = response.usage
-            tokens = (usage.prompt_tokens or 0) + (usage.completion_tokens or 0) if usage else 0
-            latency_ms = (time.time() - start_time) * 1000
-
-            return ModelResponse(
-                content=content,
-                model=model_name,
-                tokens_used=tokens,
-                latency_ms=latency_ms,
-                cost=self._estimate_cost(tokens),
-                provider=self.name,
-                finish_reason=choice.finish_reason,
-            )
-        except Exception as e:
-            raise RuntimeError(f"Fireworks AI generation failed: {e}")
+        raise RuntimeError(f"Fireworks AI generation failed: {last_err}")
 
     async def generate(self, prompt_or_request, system_prompt=None, temperature=0.7, max_tokens=None, model=None, **kwargs):
         """Generate text. Supports both LLMRequest (bridge) and legacy parameter modes."""

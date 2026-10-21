@@ -302,6 +302,13 @@ class ProviderRouter:
             provider = self._providers.get(provider_name)
             if not provider:
                 continue
+
+            # Skip providers without active credentials to avoid noisy cascade failures
+            cfg = self._provider_configs.get(provider_name, {})
+            has_credentials = bool(cfg.get("api_key")) or (provider_name in ("ollama", "vllm") and bool(cfg.get("base_url")))
+            if not has_credentials:
+                continue
+
             # Circuit breaker: skip unhealthy providers (with health reset after time)
             health = self._success_rates.get(provider_name, [])
             if len(health) >= 3:
