@@ -324,6 +324,7 @@ class DatasetOrchestrator:
         self.graph = self._build_graph()
         self.active_jobs: dict[str, Job] = {}
         self._cancellation_events: dict[str, asyncio.Event] = {}
+        self._db_update_tasks: set[asyncio.Task] = set()
         self.constraint_analyzer = ConstraintAnalyzer(config)
         self.redis_client = redis_client  # Redis client for intent caching (optional)
         self.persistent_checkpoint_manager = checkpoint_manager
@@ -2205,6 +2206,11 @@ class DatasetOrchestrator:
                         "No usable source-grounded samples were produced. Refine the request or broaden the source constraints."
                     )
 
+                if self._db_update_tasks:
+                    pending_tasks = [t for t in self._db_update_tasks if not t.done()]
+                    if pending_tasks:
+                        await asyncio.gather(*pending_tasks, return_exceptions=True)
+
                 if self.db:
                     try:
                         await self.db.update_job(
@@ -2361,7 +2367,9 @@ class DatasetOrchestrator:
                 db_fields["status"] = "running" if stage != "pending" else "pending"
             for k, v in kwargs.items():
                 db_fields[k] = v
-            asyncio.create_task(self._safe_db_update(job_id, db_fields))
+            task = asyncio.create_task(self._safe_db_update(job_id, db_fields))
+            self._db_update_tasks.add(task)
+            task.add_done_callback(self._db_update_tasks.discard)
 
         # Broadcast via WebSocket
         if self.ws_manager:
@@ -2384,8 +2392,20 @@ class DatasetOrchestrator:
                 pass  # WebSocket is best-effort; never block pipeline
 
     async def _safe_db_update(self, job_id: str, db_fields: dict) -> None:
-        """Fire-and-forget DB update with error logging."""
+        """Fire-and-forget DB update with monotonicity guard and error logging."""
         try:
+            if job_id in self.active_jobs:
+                active_job = self.active_jobs[job_id]
+                if "samples_generated" in db_fields:
+                    db_fields["samples_generated"] = max(
+                        int(db_fields["samples_generated"] or 0),
+                        getattr(active_job, "samples_generated", 0)
+                    )
+                if "progress" in db_fields:
+                    db_fields["progress"] = max(
+                        float(db_fields["progress"] or 0.0),
+                        getattr(active_job, "progress", 0.0)
+                    )
             await self.db.update_job(job_id, **db_fields)
         except Exception as e:
             logger.error(f"[{job_id}] Failed to persist job status to DB: {e}", exc_info=True)
