@@ -473,13 +473,20 @@ async def lifespan(app: FastAPI):
         logger.error(f"  ✗ ObservabilityManager init failed: {e}")
         observability = None
 
-    # (3) Database (AsyncDB backed by SQLAlchemy/asyncpg; .env may use sqlite URL)
+    # (3) Database (AsyncDB backed by SQLAlchemy/asyncpg; falls back to SQLite if Postgres unreachable)
     try:
         db = await AsyncDB.create(settings.postgres_url)
-        logger.info("  ✓ AsyncDB initialized")
+        logger.info("  ✓ AsyncDB initialized (PostgreSQL)")
     except Exception as e:
-        logger.error(f"  ✗ AsyncDB init failed: {e}")
-        db = None
+        logger.warning(f"  ⚠ PostgreSQL connection failed ({e}). Falling back to SQLite...")
+        try:
+            os.makedirs("outputs", exist_ok=True)
+            sqlite_url = f"sqlite+aiosqlite:///{os.path.abspath('outputs/rasosynthtune.db')}"
+            db = await AsyncDB.create(sqlite_url)
+            logger.info(f"  ✓ AsyncDB initialized with SQLite fallback ({sqlite_url})")
+        except Exception as sqle:
+            logger.error(f"  ✗ AsyncDB SQLite fallback failed: {sqle}")
+            db = None
 
     # (3b) Process-local job admission control. API and Celery worker processes
     # each enforce their own configured concurrency limit.

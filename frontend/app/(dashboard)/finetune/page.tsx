@@ -533,7 +533,16 @@ function FineTuneContent() {
             Parameter-Efficient Fine-Tuning (PEFT/LoRA) &amp; adapter optimization on synthetic datasets
           </p>
         </div>
-        <div className="flex gap-2 self-start sm:self-auto">
+        <div className="flex items-center gap-2 self-start sm:self-auto flex-wrap">
+          <a
+            href="https://colab.research.google.com/github/Sourabh-Kumar04/RasoSynth_CUTC/blob/master/finetuning/RasoSynthTune_FineTuning_Colab.ipynb"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-mono font-medium border border-amber-500/40 bg-amber-500/10 text-amber-300 hover:bg-amber-500/20 transition-colors shadow-sm"
+          >
+            <ExternalLink className="h-3.5 w-3.5 text-amber-400" />
+            <span>Open in Colab (Free GPU)</span>
+          </a>
           <Button
             variant={tab === 'jobs' ? 'default' : 'outline'}
             size="sm"
