@@ -298,13 +298,19 @@ class ProviderRouter:
         logger.info("Routing task %s. Preferred: %s. Providers list: %s", task, preferred_providers, providers)
         bypass_cache = kwargs.pop("bypass_cache", False)
 
+        is_cloud = bool(os.environ.get("SPACE_ID") or os.environ.get("RENDER") or os.environ.get("VERCEL"))
+
         for provider_name in providers:
             provider = self._providers.get(provider_name)
             if not provider:
                 continue
 
-            # Skip providers without active credentials to avoid noisy cascade failures
             cfg = self._provider_configs.get(provider_name, {})
+            # In cloud containers (HF Space, Render, Vercel), skip localhost ollama
+            if provider_name == "ollama" and is_cloud and "localhost" in str(cfg.get("base_url", "")):
+                continue
+
+            # Skip providers without active credentials to avoid noisy cascade failures
             has_credentials = bool(cfg.get("api_key")) or (provider_name in ("ollama", "vllm") and bool(cfg.get("base_url")))
             if not has_credentials:
                 continue
@@ -390,6 +396,10 @@ class ProviderRouter:
                             logger.debug("Failover notification error: %s", fe_err)
 
                     if attempt < self.config.max_retries - 1:
+                        err_str = str(e).lower()
+                        if "402" in err_str or "payment required" in err_str or "no remaining credits" in err_str:
+                            logger.warning("Provider %s has exhausted credits (402). Skipping immediately without retries.", provider_name)
+                            break
                         delay = min(
                             self.config.retry_base_delay ** attempt,
                             self.config.retry_max_delay

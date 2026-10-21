@@ -123,7 +123,7 @@ class GroqConfig(ProviderConfig):
 
 
 @PluginRegistry.register("groq")
-class GroqProvider(AbstractProviderPlugin):
+class GroqProvider(BaseProvider):
     """Groq AI provider plugin with ultra-low latency support."""
 
     provider_id = "groq"
@@ -136,10 +136,26 @@ class GroqProvider(AbstractProviderPlugin):
         ProviderCapability.FAST_INFERENCE,
     ]
 
-    def __init__(self, config: GroqConfig, model: str = "llama-3.3-70b-versatile"):
-        super().__init__(config, model)
-        self.groq_config = config
-        self.base_url = config.base_url or config.api_base
+    def __init__(self, config: Optional[Any] = None, model: str = "llama-3.3-70b-versatile"):
+        import os
+        if isinstance(config, dict):
+            provider_config = ProviderConfig(
+                api_key=config.get("api_key", ""),
+                base_url=config.get("base_url") or "https://api.groq.com/openai/v1",
+                timeout=config.get("timeout", 60),
+            )
+        elif config is None:
+            provider_config = ProviderConfig(
+                api_key=os.environ.get("GROQ_API_KEY", ""),
+                base_url=os.environ.get("GROQ_BASE_URL", "https://api.groq.com/openai/v1"),
+            )
+        else:
+            provider_config = config
+        super().__init__(provider_config, "groq")
+        self.groq_config = provider_config
+        self.base_url = getattr(provider_config, "base_url", "https://api.groq.com/openai/v1")
+        self.model = model
+        self.default_model = model
         self._client = None
 
     async def initialize(self) -> None:
@@ -300,6 +316,10 @@ class GroqProvider(AbstractProviderPlugin):
 
         return (input_tokens / 1000 * model_meta.cost_per_1k_input) + \
                (output_tokens / 1000 * model_meta.cost_per_1k_output)
+
+    async def embed(self, text: str, model: str | None = None) -> list[float]:
+        """Groq does not offer native embeddings; fallback representation."""
+        return [0.0] * 1536
 
     async def generate_response(self, request: LLMRequest) -> LLMResponse:
         """Generate response for LLMRequest."""

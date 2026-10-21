@@ -112,12 +112,18 @@ class FireworksProvider(BaseProvider):
             candidate_models.append(env_model)
         # Serverless instruct models supported on Fireworks AI
         serverless_fallbacks = [
+            "accounts/fireworks/models/llama-v3-8b-instruct",
+            "accounts/fireworks/models/llama-v3-70b-instruct",
             "accounts/fireworks/models/llama-v3p3-70b-instruct",
-            "accounts/fireworks/models/llama-v3p1-70b-instruct",
             "accounts/fireworks/models/llama-v3p2-3b-instruct",
+            "accounts/fireworks/models/llama-v3p2-1b-instruct",
             "accounts/fireworks/models/llama-v3p1-8b-instruct",
+            "accounts/fireworks/models/llama-v3p1-70b-instruct",
             "accounts/fireworks/models/qwen2p5-72b-instruct",
             "accounts/fireworks/models/deepseek-v3",
+            "accounts/fireworks/models/deepseek-r1",
+            "llama-v3-8b-instruct",
+            "llama-v3p3-70b-instruct",
         ]
         for fb in serverless_fallbacks:
             if fb not in candidate_models:
@@ -168,32 +174,46 @@ class FireworksProvider(BaseProvider):
         # If all predefined candidates failed with 404, query models list dynamically
         try:
             available = await self.client.models.list()
-            if hasattr(available, "data"):
-                for m in available.data:
-                    m_id = getattr(m, "id", None)
-                    if m_id and m_id not in candidate_models and ("instruct" in m_id or "chat" in m_id or "llama" in m_id):
-                        response = await self.client.chat.completions.create(
-                            model=m_id,
-                            messages=messages,
-                            temperature=temperature,
-                            max_tokens=max_tokens or 4096,
-                            **kwargs
-                        )
-                        self.default_model = m_id
-                        choice = response.choices[0]
-                        usage = response.usage
-                        tokens = (usage.prompt_tokens or 0) + (usage.completion_tokens or 0) if usage else 0
-                        return ModelResponse(
-                            content=choice.message.content or "",
-                            model=m_id,
-                            tokens_used=tokens,
-                            latency_ms=(time.time() - start_time) * 1000,
-                            cost=self._estimate_cost(tokens),
-                            provider=self.name,
-                            finish_reason=choice.finish_reason,
-                        )
-        except Exception:
-            pass
+            model_items = available.data if hasattr(available, "data") else []
+            import logging
+            logger = logging.getLogger(__name__)
+            logger.info("Fireworks returned %d available models from account query", len(model_items))
+            for m in model_items:
+                m_id = getattr(m, "id", None)
+                if not m_id:
+                    continue
+                # Skip non-chat models
+                if any(bad in m_id.lower() for bad in ("embed", "bge", "whisper", "vision", "flux", "stable-diffusion")):
+                    continue
+                try:
+                    logger.info("Attempting dynamically discovered Fireworks model: %s", m_id)
+                    response = await self.client.chat.completions.create(
+                        model=m_id,
+                        messages=messages,
+                        temperature=temperature,
+                        max_tokens=max_tokens or 4096,
+                        **kwargs
+                    )
+                    self.default_model = m_id
+                    choice = response.choices[0]
+                    usage = response.usage
+                    tokens = (usage.prompt_tokens or 0) + (usage.completion_tokens or 0) if usage else 0
+                    return ModelResponse(
+                        content=choice.message.content or "",
+                        model=m_id,
+                        tokens_used=tokens,
+                        latency_ms=(time.time() - start_time) * 1000,
+                        cost=self._estimate_cost(tokens),
+                        provider=self.name,
+                        finish_reason=choice.finish_reason,
+                    )
+                except Exception as inner_err:
+                    logger.debug("Discovered model %s failed: %s", m_id, inner_err)
+                    last_err = inner_err
+                    continue
+        except Exception as list_err:
+            import logging
+            logging.getLogger(__name__).warning("Dynamic models query failed: %s", list_err)
 
         raise RuntimeError(f"Fireworks AI generation failed: {last_err}")
 
