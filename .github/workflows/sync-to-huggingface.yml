@@ -1,0 +1,28 @@
+name: Sync to Hugging Face Spaces
+
+on:
+  push:
+    branches: [ master ]
+  workflow_dispatch:
+
+jobs:
+  sync-to-hub:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          lfs: true
+
+      - name: Push to Hugging Face Space
+        env:
+          HF_TOKEN: ${{ secrets.HF_TOKEN }}
+          HF_SPACE_NAME: ${{ secrets.HF_SPACE_NAME }}
+        run: |
+          if [ -z "$HF_TOKEN" ]; then
+            echo "::notice ::HF_TOKEN secret is not configured in GitHub repository secrets. Skipping Hugging Face Space sync."
+            exit 0
+          fi
+          SPACE="${HF_SPACE_NAME:-Sourabh-Kumar04/rasosynthtune-api}"
+          echo "Syncing repository to Hugging Face Space: $SPACE..."
+          git push --force https://oauth2:$HF_TOKEN@huggingface.co/spaces/$SPACE master:main

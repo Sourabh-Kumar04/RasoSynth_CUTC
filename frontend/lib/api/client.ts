@@ -228,6 +228,12 @@ class APIClient {
       'X-Correlation-ID': correlationId,
     }
 
+    // Attach Bearer token for Private Hugging Face Spaces authentication
+    const hfToken = process.env.NEXT_PUBLIC_HF_TOKEN || (typeof window !== 'undefined' ? localStorage.getItem('hf_token') : null)
+    if (hfToken && (this.baseUrl.includes('hf.space') || this.baseUrl.includes('huggingface.co'))) {
+      headers['Authorization'] = `Bearer ${hfToken}`
+    }
+
     // Fetch and attach CSRF token for state-changing methods
     const method = (fetchOptions.method || 'GET').toUpperCase()
     if (['POST', 'PUT', 'PATCH', 'DELETE'].includes(method)) {

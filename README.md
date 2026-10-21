@@ -1,3 +1,13 @@
+---
+title: RasoSynthTune API
+emoji: ⚡
+colorFrom: orange
+colorTo: red
+sdk: docker
+app_port: 8000
+pinned: false
+---
+
 # RasoSynthTune
 
 > **Autonomous AI Dataset Synthesis & Fine-Tuning Platform**
