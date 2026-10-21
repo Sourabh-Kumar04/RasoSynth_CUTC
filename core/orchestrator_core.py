@@ -58,7 +58,7 @@ class ConstraintAnalysis:
     """Analysis of data collection constraints."""
     target_domain: str
     constraints: dict
-    feasibility_score: float = 0.5
+    feasibility_score: float = 1.0
     estimated_sources: int = 0
     estimated_samples: int = 0
     estimated_cost: float = 0.0
@@ -473,16 +473,20 @@ class DatasetOrchestrator:
         job = state.get("job", {})
         config = job.get("config", {})
         mode = config.get("generation_mode", "strict_source")
+        allow_fallback = config.get("allow_seedless_generation", False)
         
         if mode == "synthetic":
             logger.info("Generation mode is set to synthetic. Proceeding directly to planning.")
             return "proceed_synthetic"
 
+        if mode == "hybrid" or allow_fallback:
+            return "proceed"
+
         analysis = state.get("constraint_analysis", {})
-        score = analysis.get("feasibility_score", 0.5)
+        score = analysis.get("feasibility_score", 1.0)
 
         if score < 0.3:
-            return "fail"
+            return "negotiate"
         elif score < 0.5:
             return "negotiate"
         else:
