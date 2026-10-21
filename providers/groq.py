@@ -189,17 +189,37 @@ class GroqProvider(BaseProvider):
             caps.append(ProviderCapability.FUNCTION_CALLING)
         return caps
 
-    async def generate(
+    async def _execute_generate(
         self,
         prompt: str,
         system_prompt: Optional[str] = None,
         temperature: float = 0.7,
         max_tokens: Optional[int] = None,
+        model: Optional[str] = None,
         **kwargs
     ) -> ModelResponse:
-        """Generate text using Groq API."""
+        """Internal text generation using Groq API with candidate model fallbacks."""
         if not self._client:
-            await self.initialize()
+            import os
+            api_key = (
+                getattr(self.config, "api_key", None)
+                or os.environ.get("GROQ_API_KEY")
+                or os.environ.get("GROP_API_KEY")
+                or ""
+            )
+            if api_key:
+                import httpx
+                self.config.api_key = api_key.strip()
+                self._client = httpx.AsyncClient(
+                    base_url=self.base_url.rstrip("/"),
+                    timeout=getattr(self.config, "timeout", 60),
+                    headers={
+                        "Authorization": f"Bearer {api_key.strip()}",
+                        "Content-Type": "application/json",
+                    }
+                )
+            else:
+                raise RuntimeError("Groq client not initialized. Set GROQ_API_KEY environment variable.")
 
         import time
         start_time = time.time()
@@ -209,44 +229,102 @@ class GroqProvider(BaseProvider):
             messages.append({"role": "system", "content": system_prompt})
         messages.append({"role": "user", "content": prompt})
 
-        payload = {
-            "model": self.model,
-            "messages": messages,
-            "temperature": temperature,
-            "max_tokens": max_tokens or self.config.max_tokens,
-            "stream": False,
-        }
+        candidate_models = []
+        if model:
+            candidate_models.append(model)
+        for m in (self.model, "llama-3.3-70b-versatile", "llama-3.1-8b-instant", "mixtral-8x7b-32768"):
+            if m not in candidate_models:
+                candidate_models.append(m)
 
-        if kwargs.get("tools"):
-            payload["tools"] = kwargs["tools"]
+        last_error = None
+        for cand_model in candidate_models:
+            payload = {
+                "model": cand_model,
+                "messages": messages,
+                "temperature": temperature,
+                "max_tokens": max_tokens or getattr(self.config, "max_tokens", 4096),
+                "stream": False,
+            }
+            if kwargs.get("tools"):
+                payload["tools"] = kwargs["tools"]
 
-        try:
-            response = await self._client.post("/chat/completions", json=payload)
-            response.raise_for_status()
+            try:
+                response = await self._client.post("/chat/completions", json=payload)
+                response.raise_for_status()
 
-            data = response.json()
-            content = data["choices"][0]["message"]["content"]
-            usage = data.get("usage", {})
+                data = response.json()
+                content = data["choices"][0]["message"]["content"]
+                usage = data.get("usage", {})
 
-            latency_ms = (time.time() - start_time) * 1000
-            cost = self._calculate_cost(
-                usage.get("prompt_tokens", 0),
-                usage.get("completion_tokens", 0)
+                latency_ms = (time.time() - start_time) * 1000
+                cost = self._calculate_cost(
+                    usage.get("prompt_tokens", 0),
+                    usage.get("completion_tokens", 0)
+                )
+
+                self.model = cand_model
+                self.default_model = cand_model
+
+                return ModelResponse(
+                    content=content,
+                    model=cand_model,
+                    tokens_used=usage.get("total_tokens", 0),
+                    latency_ms=latency_ms,
+                    cost=cost,
+                    provider="groq",
+                    finish_reason=data["choices"][0].get("finish_reason"),
+                )
+            except Exception as e:
+                last_error = e
+                logger.warning(f"Groq candidate model {cand_model} failed: {e}")
+                continue
+
+        raise RuntimeError(f"Groq generation failed after all candidate models: {last_error}")
+
+    async def generate(
+        self,
+        prompt_or_request: Any,
+        system_prompt: Optional[str] = None,
+        temperature: float = 0.7,
+        max_tokens: Optional[int] = None,
+        model: Optional[str] = None,
+        **kwargs
+    ) -> Any:
+        """Generate text using Groq API. Supports both LLMRequest and legacy parameter modes."""
+        from providers.core_lib.base import LLMRequest, LLMResponse, TokenUsage
+        if isinstance(prompt_or_request, LLMRequest):
+            req = prompt_or_request
+            prompt_str = req.input if isinstance(req.input, str) else str(req.input)
+            model_resp = await self._execute_generate(
+                prompt=prompt_str,
+                system_prompt=req.system_prompt,
+                temperature=req.temperature,
+                max_tokens=req.max_tokens,
+                model=model,
+                **kwargs
             )
-
-            return ModelResponse(
-                content=content,
-                model=self.model,
-                tokens_used=usage.get("total_tokens", 0),
-                latency_ms=latency_ms,
-                cost=cost,
-                provider="groq",
-                finish_reason=data["choices"][0].get("finish_reason"),
+            return LLMResponse(
+                content=model_resp.content,
+                provider=self.name,
+                model=model_resp.model,
+                tokens_used=model_resp.tokens_used,
+                token_usage=TokenUsage(
+                    prompt_tokens=0,
+                    completion_tokens=0,
+                    total_tokens=model_resp.tokens_used,
+                ),
+                latency_ms=model_resp.latency_ms,
+                finish_reason=model_resp.finish_reason or "stop",
             )
-
-        except Exception as e:
-            logger.error(f"Groq generation failed: {e}")
-            raise
+        else:
+            return await self._execute_generate(
+                prompt=prompt_or_request,
+                system_prompt=system_prompt,
+                temperature=temperature,
+                max_tokens=max_tokens,
+                model=model,
+                **kwargs
+            )
 
     async def stream_generate(
         self,

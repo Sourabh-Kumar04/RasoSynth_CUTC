@@ -36,26 +36,26 @@ class FireworksProvider(BaseProvider):
         """Initialize with optional config (dict, ProviderConfig, or None)."""
         if isinstance(config, dict):
             provider_config = ProviderConfig(
-                api_key=config.get("api_key", ""),
-                base_url=config.get("base_url") or os.environ.get("FIREWORKS_BASE_URL", self.DEFAULT_BASE_URL),
+                api_key=(config.get("api_key", "") or "").strip(),
+                base_url=(config.get("base_url") or os.environ.get("FIREWORKS_BASE_URL", self.DEFAULT_BASE_URL)).rstrip("/"),
                 timeout=config.get("timeout", 120),
             )
         elif config is None:
             provider_config = ProviderConfig(
-                api_key=os.environ.get("FIREWORKS_API_KEY", ""),
-                base_url=os.environ.get("FIREWORKS_BASE_URL", self.DEFAULT_BASE_URL),
+                api_key=(os.environ.get("FIREWORKS_API_KEY", "")).strip(),
+                base_url=(os.environ.get("FIREWORKS_BASE_URL", self.DEFAULT_BASE_URL)).rstrip("/"),
             )
         else:
             provider_config = config
 
         super().__init__(provider_config, "fireworks")
-        self.default_model = "accounts/fireworks/models/llama-v3p1-8b-instruct"
+        self.default_model = "accounts/fireworks/models/llama-v3-8b-instruct"
         self.client = None
 
         if provider_config.api_key and OPENAI_AVAILABLE:
             self.client = AsyncOpenAI(
-                api_key=provider_config.api_key,
-                base_url=provider_config.base_url or self.DEFAULT_BASE_URL,
+                api_key=provider_config.api_key.strip(),
+                base_url=(provider_config.base_url or self.DEFAULT_BASE_URL).rstrip("/"),
                 timeout=provider_config.timeout,
             )
 
@@ -64,9 +64,10 @@ class FireworksProvider(BaseProvider):
         if not OPENAI_AVAILABLE:
             raise ImportError("openai package not installed. Run: pip install openai")
 
-        base_url = config.get("base_url") or os.environ.get("FIREWORKS_BASE_URL", self.DEFAULT_BASE_URL)
+        base_url = (config.get("base_url") or os.environ.get("FIREWORKS_BASE_URL", self.DEFAULT_BASE_URL)).rstrip("/")
+        api_key = (config.get("api_key", "") or os.environ.get("FIREWORKS_API_KEY", "")).strip()
         provider_config = ProviderConfig(
-            api_key=config.get("api_key", "") or os.environ.get("FIREWORKS_API_KEY", ""),
+            api_key=api_key,
             base_url=base_url,
             timeout=config.get("timeout", 120),
         )

@@ -153,38 +153,53 @@ class ProviderRouter:
 
     def _register_providers(self, config: dict[str, Any]):
         """Instantiate provider objects and store their configs — no I/O performed here."""
+        import os
         from providers import PluginRegistry
 
-        # Map config keys to provider IDs
-        provider_keys = {
-            "google_api_key": "google_gemini",
-            "nvidia_api_key": "nvidia_nim",
-            "anthropic_api_key": "anthropic",
-            "anthropic_claude_api_key": "anthropic_claude",
-            "openai_api_key": "openai",
-            "hf_token": "huggingface",
-            "ollama_base_url": "ollama",
-            "vllm_base_url": "vllm",
-            "xai_api_key": "xai",
-            "groq_api_key": "groq",
-            "deepseek_api_key": "deepseek",
-            "openrouter_api_key": "openrouter",
-            "together_api_key": "together",
-            "featherless_api_key": "featherless",
-            "fireworks_api_key": "fireworks",
+        # Map provider IDs to possible config keys & environment variable aliases
+        provider_env_aliases = {
+            "google_gemini": ["google_api_key", "gemini_api_key", "GOOGLE_API_KEY", "GEMINI_API_KEY", "GOOGLE_GEMINI_API_KEY"],
+            "groq": ["groq_api_key", "grop_api_key", "GROQ_API_KEY", "GROP_API_KEY"],
+            "fireworks": ["fireworks_api_key", "FIREWORKS_API_KEY", "FIREWORK_API_KEY"],
+            "featherless": ["featherless_api_key", "FEATHERLESS_API_KEY"],
+            "xai": ["xai_api_key", "grok_api_key", "XAI_API_KEY", "GROK_API_KEY"],
+            "anthropic": ["anthropic_api_key", "anthropic_claude_api_key", "ANTHROPIC_API_KEY"],
+            "openai": ["openai_api_key", "OPENAI_API_KEY"],
+            "nvidia_nim": ["nvidia_api_key", "NVIDIA_API_KEY"],
+            "huggingface": ["hf_token", "HF_TOKEN"],
+            "deepseek": ["deepseek_api_key", "DEEPSEEK_API_KEY"],
+            "together": ["together_api_key", "TOGETHER_API_KEY"],
+            "openrouter": ["openrouter_api_key", "OPENROUTER_API_KEY"],
+            "ollama": ["ollama_base_url", "OLLAMA_BASE_URL", "OLLAMA_HOST"],
+            "vllm": ["vllm_base_url", "VLLM_BASE_URL"],
         }
 
-        for key, provider_id in provider_keys.items():
-            api_key = config.get(key, "")
+        for provider_id, alias_keys in provider_env_aliases.items():
+            api_key = ""
+            for ak in alias_keys:
+                val = config.get(ak) or os.environ.get(ak)
+                if val:
+                    api_key = str(val).strip()
+                    break
+
             if api_key:
                 try:
                     provider_class = PluginRegistry.get(provider_id)
                     if provider_class:
-                        provider = provider_class()
+                        base_url = (
+                            config.get(f"{provider_id}_base_url")
+                            or os.environ.get(f"{provider_id.upper()}_BASE_URL")
+                            or ""
+                        ).rstrip("/")
+                        provider = provider_class({
+                            "api_key": api_key,
+                            "base_url": base_url,
+                            "timeout": config.get("timeout", 60),
+                        })
                         self._providers[provider_id] = provider
                         self._provider_configs[provider_id] = {
                             "api_key": api_key,
-                            "base_url": config.get(f"{provider_id}_base_url"),
+                            "base_url": base_url,
                             "timeout": config.get("timeout", 60),
                         }
                         self.stats[provider_id] = RouterStats(provider=provider_id)

@@ -91,7 +91,25 @@ class GoogleGeminiProvider(BaseProvider):
             max_tokens = model_info.get("max_tokens", 8192)
 
         if not self._client:
-            raise RuntimeError("Gemini client not initialized. Call initialize() first.")
+            import os
+            api_key = (
+                getattr(self.config, "api_key", None)
+                or os.environ.get("GEMINI_API_KEY")
+                or os.environ.get("GOOGLE_API_KEY")
+                or os.environ.get("GOOGLE_GEMINI_API_KEY")
+                or ""
+            )
+            if api_key and GEMINI_AVAILABLE:
+                self._client = genai.Client(api_key=api_key.strip())
+            else:
+                raise RuntimeError("Gemini client not initialized. Set GEMINI_API_KEY or GOOGLE_API_KEY.")
+
+        candidate_models = []
+        if model:
+            candidate_models.append(model)
+        for m_name in (self.default_model, "gemini-2.0-flash", "gemini-1.5-flash", "gemini-1.5-pro"):
+            if m_name and m_name not in candidate_models:
+                candidate_models.append(m_name)
 
         # ── Retry loop: up to 5 attempts with exponential backoff + jitter ──
         max_retries = 5
@@ -211,7 +229,25 @@ class GoogleGeminiProvider(BaseProvider):
             prompt = prompt_or_request
 
         if not self._client:
-            raise RuntimeError("Gemini client not initialized. Call initialize() first.")
+            import os
+            api_key = (
+                getattr(self.config, "api_key", None)
+                or os.environ.get("GEMINI_API_KEY")
+                or os.environ.get("GOOGLE_API_KEY")
+                or os.environ.get("GOOGLE_GEMINI_API_KEY")
+                or ""
+            )
+            if api_key and GEMINI_AVAILABLE:
+                self._client = genai.Client(api_key=api_key.strip())
+            else:
+                raise RuntimeError("Gemini client not initialized. Set GEMINI_API_KEY or GOOGLE_API_KEY.")
+
+        candidate_models = []
+        if model:
+            candidate_models.append(model)
+        for m_name in (self.default_model, "gemini-2.0-flash", "gemini-1.5-flash", "gemini-1.5-pro"):
+            if m_name and m_name not in candidate_models:
+                candidate_models.append(m_name)
 
         import time
         start_time = time.time()
@@ -262,7 +298,25 @@ class GoogleGeminiProvider(BaseProvider):
     async def _execute_embed(self, text: str, model: str | None = None) -> EmbeddingResponse:
         """Internal: Generate embeddings using Gemini."""
         if not self._client:
-            raise RuntimeError("Gemini client not initialized. Call initialize() first.")
+            import os
+            api_key = (
+                getattr(self.config, "api_key", None)
+                or os.environ.get("GEMINI_API_KEY")
+                or os.environ.get("GOOGLE_API_KEY")
+                or os.environ.get("GOOGLE_GEMINI_API_KEY")
+                or ""
+            )
+            if api_key and GEMINI_AVAILABLE:
+                self._client = genai.Client(api_key=api_key.strip())
+            else:
+                raise RuntimeError("Gemini client not initialized. Set GEMINI_API_KEY or GOOGLE_API_KEY.")
+
+        candidate_models = []
+        if model:
+            candidate_models.append(model)
+        for m_name in (self.default_model, "gemini-2.0-flash", "gemini-1.5-flash", "gemini-1.5-pro"):
+            if m_name and m_name not in candidate_models:
+                candidate_models.append(m_name)
 
         import time
         start_time = time.time()

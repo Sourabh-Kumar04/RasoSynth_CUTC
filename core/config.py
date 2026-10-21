@@ -3,7 +3,7 @@ import os
 from typing import Optional
 from functools import lru_cache
 
-from pydantic import Field, field_validator, model_validator
+from pydantic import Field, field_validator, model_validator, AliasChoices
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
@@ -30,14 +30,20 @@ class Settings(BaseSettings):
     )
 
     # Google Gemini
-    google_api_key: Optional[str] = Field(default=None)
+    google_api_key: Optional[str] = Field(
+        default=None,
+        validation_alias=AliasChoices("google_api_key", "gemini_api_key", "google_gemini_api_key")
+    )
 
     # NVIDIA NIM
     nvidia_api_key: Optional[str] = Field(default=None)
     nvidia_nim_base_url: str = Field(default="https://integrate.api.nvidia.com/v1")
 
     # Anthropic Claude
-    anthropic_api_key: Optional[str] = Field(default=None)
+    anthropic_api_key: Optional[str] = Field(
+        default=None,
+        validation_alias=AliasChoices("anthropic_api_key", "anthropic_claude_api_key")
+    )
 
     # OpenAI
     openai_api_key: Optional[str] = Field(default=None)
@@ -49,10 +55,16 @@ class Settings(BaseSettings):
     aikosh_api_key: Optional[str] = Field(default=None)
 
     # XAI (Grok)
-    xai_api_key: Optional[str] = Field(default=None)
+    xai_api_key: Optional[str] = Field(
+        default=None,
+        validation_alias=AliasChoices("xai_api_key", "grok_api_key")
+    )
 
     # Groq
-    groq_api_key: Optional[str] = Field(default=None)
+    groq_api_key: Optional[str] = Field(
+        default=None,
+        validation_alias=AliasChoices("groq_api_key", "grop_api_key")
+    )
 
     # DeepSeek
     deepseek_api_key: Optional[str] = Field(default=None)
