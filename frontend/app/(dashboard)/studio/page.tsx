@@ -247,8 +247,8 @@ function StudioContent() {
         parallel_bilingual: parallelBilingual,
         dataset_size: datasetSize,
         quality_level: 'standard',
-        generation_mode: generationMode === 'grounded' ? 'strict_source' : 'synthetic',
-        allow_seedless_generation: generationMode === 'synthetic',
+        generation_mode: generationMode === 'grounded' ? 'hybrid' : 'synthetic',
+        allow_seedless_generation: true,
       }
 
       if (validAnchors.length > 0) {
