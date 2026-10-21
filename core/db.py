@@ -247,7 +247,13 @@ class DatabaseManager:
                     pass
 
             # ── Create all tables declared via core.db.Base ───────────
-            await conn.run_sync(Base.metadata.create_all)
+            try:
+                await conn.run_sync(Base.metadata.create_all)
+            except Exception as e:
+                if "already exists" in str(e).lower():
+                    pass
+                else:
+                    raise
 
             # ── Safe schema migration for existing deployments ─────────
             from sqlalchemy import text

@@ -157,11 +157,8 @@ class CSRFTokenManager:
         # (JWT_SECRET is the same across all uvicorn workers)
         secret = os.getenv("CSRF_SECRET")
         if not secret:
-            jwt_secret = os.getenv("JWT_SECRET")
-            if jwt_secret:
-                secret = hashlib.sha256(jwt_secret.encode()).hexdigest()
-            else:
-                secret = secrets.token_hex(32)
+            jwt_secret = os.getenv("JWT_SECRET") or "rasosynthtune-sovereign-production-jwt-token-secret-key-32b-secure"
+            secret = hashlib.sha256(jwt_secret.encode()).hexdigest()
         self._secret = secret
 
     def _sign(self, payload: str) -> str:
@@ -485,8 +482,18 @@ async def lifespan(app: FastAPI):
             db = await AsyncDB.create(sqlite_url)
             logger.info(f"  ✓ AsyncDB initialized with SQLite fallback ({sqlite_url})")
         except Exception as sqle:
-            logger.error(f"  ✗ AsyncDB SQLite fallback failed: {sqle}")
-            db = None
+            if "already exists" in str(sqle).lower():
+                try:
+                    from core.db import DatabaseManager
+                    db_manager = DatabaseManager(sqlite_url)
+                    db = AsyncDB(db_manager)
+                    logger.info(f"  ✓ AsyncDB attached to existing SQLite schema ({sqlite_url})")
+                except Exception as attach_err:
+                    logger.error(f"  ✗ AsyncDB SQLite attach failed: {attach_err}")
+                    db = None
+            else:
+                logger.error(f"  ✗ AsyncDB SQLite fallback failed: {sqle}")
+                db = None
 
     # (3b) Process-local job admission control. API and Celery worker processes
     # each enforce their own configured concurrency limit.

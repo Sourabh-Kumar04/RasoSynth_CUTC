@@ -163,7 +163,7 @@ class OpenRouterProvider(AbstractProviderPlugin):
         self.base_url = config.base_url or config.api_base
         self._client = None
 
-    async def initialize(self) -> None:
+    async def initialize(self, config: Optional[dict] = None) -> None:
         """Initialize OpenRouter client."""
         try:
             import httpx

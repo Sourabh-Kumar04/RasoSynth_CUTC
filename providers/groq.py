@@ -158,8 +158,15 @@ class GroqProvider(BaseProvider):
         self.default_model = model
         self._client = None
 
-    async def initialize(self) -> None:
+    async def initialize(self, config: Optional[dict] = None) -> None:
         """Initialize Groq client."""
+        if config and isinstance(config, dict):
+            api_key = config.get("api_key") or self.config.api_key
+            base_url = config.get("base_url") or self.base_url
+            if api_key:
+                self.config.api_key = api_key
+            if base_url:
+                self.base_url = base_url
         try:
             import httpx
             self._client = httpx.AsyncClient(

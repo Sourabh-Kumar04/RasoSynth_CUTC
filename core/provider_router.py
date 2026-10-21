@@ -3,6 +3,7 @@ import asyncio
 import hashlib
 import json
 import logging
+import os
 import time
 from collections import OrderedDict
 from typing import Optional, Any
@@ -230,7 +231,10 @@ class ProviderRouter:
             if not provider_config:
                 continue  # unconfigured stubs — skip
             try:
-                await provider.initialize(provider_config)
+                try:
+                    await provider.initialize(provider_config)
+                except TypeError:
+                    await provider.initialize()
             except Exception as e:
                 _log.warning(f"Failed to initialize provider '{provider_id}': {e}")
                 failed.append(provider_id)
