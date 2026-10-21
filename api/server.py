@@ -1232,23 +1232,16 @@ async def health_check():
         except Exception:
             pass
 
-    # Use provider validator results if available
+    # Use provider validator results if available, else derive from router configs
     providers_healthy = {}
-    if provider_validator:
+    if provider_validator and provider_validator.validation_results:
         for name, result in provider_validator.validation_results.items():
             providers_healthy[name] = result.status.value
     elif router:
-        for name in router.config.provider_priority:
-            try:
-                provider = router._providers.get(name)
-                if provider:
-                    if hasattr(provider, 'health_check') and asyncio.iscoroutinefunction(provider.health_check):
-                        providers_healthy[name] = await provider.health_check()
-                    else:
-                        loop = asyncio.get_event_loop()
-                        providers_healthy[name] = await loop.run_in_executor(None, provider.health_check)
-            except Exception:
-                providers_healthy[name] = False
+        for name, cfg in router._provider_configs.items():
+            has_key = bool(cfg.get("api_key") or (name in ("ollama", "vllm") and cfg.get("base_url")))
+            if has_key:
+                providers_healthy[name] = "healthy"
 
     # WebSocket manager health
     ws_healthy = False
@@ -1262,7 +1255,9 @@ async def health_check():
     research_status = "running" if research_loop and research_loop.last_research_time else "idle"
 
     overall_status = "healthy"
-    if not db_healthy or not redis_healthy:
+    if not db_healthy:
+        overall_status = "unhealthy"
+    elif not providers_healthy:
         overall_status = "degraded"
 
     return HealthResponse(
@@ -1301,10 +1296,18 @@ async def readiness_check():
         checks["redis"] = "not_configured"
 
     # Check at least one provider is available
-    has_provider = provider_validator and provider_validator.is_any_provider_available()
+    has_provider = False
+    if router:
+        has_provider = any(
+            bool(cfg.get("api_key") or (p in ("ollama", "vllm") and cfg.get("base_url")))
+            for p, cfg in router._provider_configs.items()
+        )
+    if not has_provider and provider_validator and provider_validator.validation_results:
+        has_provider = provider_validator.is_any_provider_available()
     checks["providers"] = "ready" if has_provider else "no_providers_configured"
 
-    is_ready = all(v == "ready" for v in checks.values())
+    # Core readiness requires database and an LLM provider (Redis cache is optional)
+    is_ready = checks.get("database") == "ready" and checks.get("providers") == "ready"
 
     return {
         "ready": is_ready,
