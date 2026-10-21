@@ -1,7 +1,8 @@
 // API Client for RasoSynthTune Backend - Enhanced with Production Hardening
 
 // Remove /api/v1 prefix - backend uses direct paths like /jobs not /api/v1/jobs
-const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000'
+// Defaults to secure server-side proxy /api/proxy which attaches HF_TOKEN safely
+const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || '/api/proxy'
 
 interface RequestOptions extends RequestInit {
   params?: Record<string, string | number | boolean>
@@ -226,12 +227,6 @@ class APIClient {
     const headers: Record<string, string> = {
       'Content-Type': 'application/json',
       'X-Correlation-ID': correlationId,
-    }
-
-    // Attach Bearer token for Private Hugging Face Spaces authentication
-    const hfToken = process.env.NEXT_PUBLIC_HF_TOKEN || (typeof window !== 'undefined' ? localStorage.getItem('hf_token') : null)
-    if (hfToken && (this.baseUrl.includes('hf.space') || this.baseUrl.includes('huggingface.co'))) {
-      headers['Authorization'] = `Bearer ${hfToken}`
     }
 
     // Fetch and attach CSRF token for state-changing methods
