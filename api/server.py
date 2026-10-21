@@ -879,6 +879,20 @@ async def list_providers():
         return []
 
 
+@app.get("/providers/techniques", tags=["Providers"])
+async def get_provider_techniques():
+    """Get recommended techniques for each task type."""
+    if not router:
+        return {}
+
+    techniques = {}
+    for task_type in TaskType:
+        info = router.get_techniques_for_task(task_type)
+        techniques[task_type.value] = info
+
+    return techniques
+
+
 @app.get("/providers/{provider_name}", response_model=ProviderStatus, tags=["Providers"])
 async def get_provider(provider_name: str):
     """Get single provider status and performance statistics."""
@@ -982,20 +996,6 @@ async def test_provider(request: ProviderTestRequest, fastapi_request: Request):
             latency_ms=latency_ms,
             error=str(e)
         )
-
-
-@app.get("/providers/techniques", tags=["Providers"])
-async def get_provider_techniques():
-    """Get recommended techniques for each task type."""
-    if not router:
-        return {}
-
-    techniques = {}
-    for task_type in TaskType:
-        info = router.get_techniques_for_task(task_type)
-        techniques[task_type.value] = info
-
-    return techniques
 
 
 @app.post("/research", response_model=ResearchResponse, tags=["Research"])
