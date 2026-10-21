@@ -1447,7 +1447,13 @@ class DiscoveryPipeline:
         """Search accessible AIKosh dataset metadata through its optional SDK."""
         import os
 
-        api_key = self.config.get("aikosh_api_key") or os.getenv("AIKOSH_API_KEY") or os.getenv("AIKOSH_ACCESS_KEY")
+        api_key = (
+            self.config.get("aikosh_api_key")
+            or self.config.get("ai_kosh_api_key")
+            or os.getenv("AIKOSH_API_KEY")
+            or os.getenv("AI_KOSH_API_KEY")
+            or os.getenv("AIKOSH_ACCESS_KEY")
+        )
         if not api_key:
             return []
 

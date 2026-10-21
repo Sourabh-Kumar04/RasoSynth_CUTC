@@ -436,7 +436,13 @@ class ExtractionPipeline:
         extension = Path(filename).suffix.lower()
         max_bytes = int(self.config.get("aikosh_max_file_size_bytes", 10 * 1024 * 1024))
         allowed_extensions = {".csv", ".tsv", ".parquet", ".json", ".jsonl", ".txt", ".md"}
-        api_key = self.config.get("aikosh_api_key") or os.getenv("AIKOSH_API_KEY") or os.getenv("AIKOSH_ACCESS_KEY")
+        api_key = (
+            self.config.get("aikosh_api_key")
+            or self.config.get("ai_kosh_api_key")
+            or os.getenv("AIKOSH_API_KEY")
+            or os.getenv("AI_KOSH_API_KEY")
+            or os.getenv("AIKOSH_ACCESS_KEY")
+        )
         if not (dataset_id and remote_path and ".." not in PurePosixPath(remote_path).parts and filename and extension in allowed_extensions and api_key):
             yield ExtractedContent(
                 content="", content_type="error", url=getattr(source, "url", ""),

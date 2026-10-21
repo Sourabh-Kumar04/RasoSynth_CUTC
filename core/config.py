@@ -52,7 +52,10 @@ class Settings(BaseSettings):
     hf_token: Optional[str] = Field(default=None)
 
     # AIKosh dataset catalogue API (optional; requires an account API key)
-    aikosh_api_key: Optional[str] = Field(default=None)
+    aikosh_api_key: Optional[str] = Field(
+        default=None,
+        validation_alias=AliasChoices("aikosh_api_key", "ai_kosh_api_key")
+    )
 
     # XAI (Grok)
     xai_api_key: Optional[str] = Field(
