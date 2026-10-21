@@ -25,11 +25,14 @@ class FireworksProvider(BaseProvider):
     DEFAULT_BASE_URL = "https://api.fireworks.ai/inference/v1"
 
     SUPPORTED_MODELS = {
+        "auto": {"max_tokens": 8192, "cost": 0.0002},
+        "accounts/fireworks/models/deepseek-v4p1-flash": {"max_tokens": 8192, "cost": 0.0002},
+        "accounts/fireworks/models/glm-5p3-flash": {"max_tokens": 8192, "cost": 0.0002},
+        "accounts/fireworks/models/minimax-m3p1-flash": {"max_tokens": 8192, "cost": 0.0002},
+        "accounts/fireworks/models/qwen3p8-max": {"max_tokens": 8192, "cost": 0.0009},
+        "accounts/fireworks/models/gpt-oss-120b": {"max_tokens": 8192, "cost": 0.0009},
         "accounts/fireworks/models/llama-v3p1-8b-instruct": {"max_tokens": 8192, "cost": 0.0002},
         "accounts/fireworks/models/llama-v3p1-70b-instruct": {"max_tokens": 8192, "cost": 0.0009},
-        "accounts/fireworks/models/qwen2p5-72b-instruct": {"max_tokens": 8192, "cost": 0.0009},
-        "accounts/fireworks/models/mixtral-8x7b-instruct": {"max_tokens": 4096, "cost": 0.0005},
-        "accounts/fireworks/models/deepseek-v3": {"max_tokens": 8192, "cost": 0.0009},
     }
 
     def __init__(self, config=None):
@@ -49,7 +52,7 @@ class FireworksProvider(BaseProvider):
             provider_config = config
 
         super().__init__(provider_config, "fireworks")
-        self.default_model = "accounts/fireworks/models/llama-v3-8b-instruct"
+        self.default_model = os.environ.get("FIREWORKS_MODEL", "auto")
         self.client = None
 
         if provider_config.api_key and OPENAI_AVAILABLE:
@@ -111,20 +114,18 @@ class FireworksProvider(BaseProvider):
         env_model = os.environ.get("FIREWORKS_MODEL")
         if env_model and env_model not in candidate_models:
             candidate_models.append(env_model)
-        # Serverless instruct models supported on Fireworks AI
+        # Modern serverless models actively supported on Fireworks AI
         serverless_fallbacks = [
-            "accounts/fireworks/models/llama-v3-8b-instruct",
-            "accounts/fireworks/models/llama-v3-70b-instruct",
-            "accounts/fireworks/models/llama-v3p3-70b-instruct",
-            "accounts/fireworks/models/llama-v3p2-3b-instruct",
-            "accounts/fireworks/models/llama-v3p2-1b-instruct",
+            "auto",
+            "accounts/fireworks/models/deepseek-v4p1-flash",
+            "accounts/fireworks/models/glm-5p3-flash",
+            "accounts/fireworks/models/minimax-m3p1-flash",
+            "accounts/fireworks/models/qwen3p8-max",
+            "accounts/fireworks/models/gpt-oss-120b",
             "accounts/fireworks/models/llama-v3p1-8b-instruct",
             "accounts/fireworks/models/llama-v3p1-70b-instruct",
-            "accounts/fireworks/models/qwen2p5-72b-instruct",
-            "accounts/fireworks/models/deepseek-v3",
-            "accounts/fireworks/models/deepseek-r1",
-            "llama-v3-8b-instruct",
-            "llama-v3p3-70b-instruct",
+            "accounts/fireworks/models/llama-v3p3-70b-instruct",
+            "accounts/fireworks/models/llama-v3-8b-instruct",
         ]
         for fb in serverless_fallbacks:
             if fb not in candidate_models:
@@ -148,6 +149,8 @@ class FireworksProvider(BaseProvider):
 
                 choice = response.choices[0]
                 content = choice.message.content or ""
+                if not content and hasattr(choice.message, "reasoning_content") and choice.message.reasoning_content:
+                    content = str(choice.message.reasoning_content)
                 usage = response.usage
                 tokens = (usage.prompt_tokens or 0) + (usage.completion_tokens or 0) if usage else 0
                 latency_ms = (time.time() - start_time) * 1000
