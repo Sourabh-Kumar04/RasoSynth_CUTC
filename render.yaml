@@ -1,10 +1,10 @@
 services:
-  # RasoSynthTune Production API Server
+  # RasoSynthTune 100% FREE Tier API Server on Render
   - type: web
     name: rasosynthtune-api
     runtime: docker
     dockerfilePath: ./Dockerfile
-    plan: standard
+    plan: free # 100% Free Tier ($0/month)
     region: oregon
     envVars:
       - key: PORT
@@ -17,31 +17,13 @@ services:
         value: "false"
       - key: ENABLE_CELERY
         value: "false"
-      # In cloud environments, LLM API keys provide generation & judging
+      # Add your free API key (e.g. Gemini 1.5 Flash has a free tier)
       - key: GEMINI_API_KEY
         sync: false
       - key: OPENAI_API_KEY
-        sync: false
-      - key: ANTHROPIC_API_KEY
         sync: false
       - key: GROQ_API_KEY
         sync: false
       - key: HF_TOKEN
         sync: false
-      # Optional external database (auto-falls back to SQLite if omitted)
-      - key: POSTGRES_URL
-        fromDatabase:
-          name: rasosynthtune-db
-          property: connectionString
-      - key: REDIS_URL
-        fromService:
-          type: redis
-          name: rasosynthtune-redis
-          property: connectionString
     healthCheckPath: /health
-
-databases:
-  - name: rasosynthtune-db
-    plan: starter
-    databaseName: dataset_engine
-    user: dataset_user
