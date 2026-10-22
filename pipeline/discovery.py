@@ -460,6 +460,8 @@ class SourceType(Enum):
     PAPERS_WITH_CODE = "papers_with_code"
     GOVERNMENT_DATA = "government_data"
     EUROSTAT = "eurostat"
+    UNESCO = "unesco"
+    WORLD_BANK = "world_bank"
     DATAONE = "dataone"
     MOLECULENET = "moleculenet"
     OPEN_IMAGES = "open_images"

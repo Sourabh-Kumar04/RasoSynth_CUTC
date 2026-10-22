@@ -1105,7 +1105,15 @@ class DatasetOrchestrator:
 
             # Add government and international data sources for non-ML domains too
             if any(ind in target_domain for ind in ["government", "public", "statistics", "economic", "demographic"]):
-                source_types.extend([SourceType.GOVERNMENT_DATA, SourceType.EUROSTAT, SourceType.DATAPORTALS_ORG, SourceType.DATAHUB_IO, SourceType.UNESCO, SourceType.WORLD_BANK])
+                gov_sources = [
+                    getattr(SourceType, "GOVERNMENT_DATA", None),
+                    getattr(SourceType, "EUROSTAT", None),
+                    getattr(SourceType, "DATAPORTALS_ORG", None),
+                    getattr(SourceType, "DATAHUB_IO", None),
+                    getattr(SourceType, "UNESCO", None),
+                    getattr(SourceType, "WORLD_BANK", None),
+                ]
+                source_types.extend([s for s in gov_sources if s is not None])
 
         # Always add high-quality repository sources that are generally useful
         source_types.extend([
