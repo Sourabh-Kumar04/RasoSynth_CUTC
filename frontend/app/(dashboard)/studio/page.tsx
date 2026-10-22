@@ -120,6 +120,9 @@ function StudioContent() {
   const [parallelBilingual, setParallelBilingual] = useState<boolean>(false)
   const [datasetSize, setDatasetSize] = useState(10000)
   const [generationMode, setGenerationMode] = useState<'grounded' | 'synthetic'>('grounded')
+  const [humanReview, setHumanReview] = useState<boolean>(false)
+  const [humanReviewPercentage, setHumanReviewPercentage] = useState<number>(10)
+  const [prioritizeAiKosh, setPrioritizeAiKosh] = useState<boolean>(true)
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [isAutoDetecting, setIsAutoDetecting] = useState(false)
   const [discoveredSources, setDiscoveredSources] = useState<Array<{ name: string; url?: string; source_type?: string }>>([])
@@ -249,6 +252,11 @@ function StudioContent() {
         quality_level: 'standard',
         generation_mode: generationMode === 'grounded' ? 'hybrid' : 'synthetic',
         allow_seedless_generation: true,
+        enable_research_loop: true,
+        human_review: humanReview,
+        human_review_percentage: humanReview ? humanReviewPercentage : 0,
+        human_review_mode: 'blocking',
+        ...(prioritizeAiKosh ? { preferred_providers: ['ai_kosh'] } : {}),
       }
 
       if (validAnchors.length > 0) {
@@ -322,6 +330,9 @@ function StudioContent() {
                   if ((preset as any).parallelBilingual !== undefined) {
                     setParallelBilingual(Boolean((preset as any).parallelBilingual))
                   }
+                  const hasAiKosh = ((preset as any).sources || []).some((s: string) => s.toLowerCase().includes('kosh')) ||
+                    (preset.source || '').toLowerCase().includes('kosh')
+                  setPrioritizeAiKosh(hasAiKosh)
                 }}
                 className={clsx(
                   'p-3.5 rounded-md border text-left transition-all space-y-2 relative overflow-hidden',
@@ -640,6 +651,70 @@ function StudioContent() {
                   onChange={(e) => setDatasetSize(Number(e.target.value))}
                   className="w-full accent-[#f26625] bg-[#0a0a0f] cursor-pointer"
                 />
+              </div>
+
+              {/* Quality & Human Review Gates */}
+              <div className="pt-3 border-t border-[#1c1c28] space-y-3">
+                <div className="flex items-center justify-between">
+                  <span className="text-[10px] font-mono uppercase text-[#94a3b8] font-bold">
+                    Pipeline Gates &amp; Sources
+                  </span>
+                  <span className="text-[10px] font-mono text-[#f26625]">Quality Control</span>
+                </div>
+
+                {/* HITL Review Toggle */}
+                <div className="p-2.5 rounded-md bg-[#0a0a0f] border border-[#272738] space-y-2">
+                  <label className="flex items-center justify-between text-xs font-mono text-white cursor-pointer">
+                    <div className="flex flex-col">
+                      <span className="font-semibold text-white">Stratified HITL Review</span>
+                      <span className="text-[10px] text-[#94a3b8]">
+                        Pause at awaiting_review gate to inspect, edit, or reject samples
+                      </span>
+                    </div>
+                    <input
+                      type="checkbox"
+                      checked={humanReview}
+                      onChange={(e) => setHumanReview(e.target.checked)}
+                      className="w-4 h-4 accent-[#f26625] cursor-pointer"
+                    />
+                  </label>
+
+                  {humanReview && (
+                    <div className="pt-2 border-t border-[#1c1c28] space-y-1.5">
+                      <div className="flex justify-between items-center text-[10px] font-mono">
+                        <span className="text-[#94a3b8]">Sampling Ratio</span>
+                        <span className="text-[#f26625] font-bold">{humanReviewPercentage}% of dataset</span>
+                      </div>
+                      <input
+                        type="range"
+                        min={1}
+                        max={50}
+                        step={1}
+                        value={humanReviewPercentage}
+                        onChange={(e) => setHumanReviewPercentage(Number(e.target.value))}
+                        className="w-full accent-[#f26625] bg-[#12121a] cursor-pointer"
+                      />
+                    </div>
+                  )}
+                </div>
+
+                {/* AI Kosh Prioritization Toggle */}
+                <div className="p-2.5 rounded-md bg-[#0a0a0f] border border-[#272738]">
+                  <label className="flex items-center justify-between text-xs font-mono text-white cursor-pointer">
+                    <div className="flex flex-col">
+                      <span className="font-semibold text-white">Prioritize AI Kosh &amp; IndiaAI</span>
+                      <span className="text-[10px] text-[#94a3b8]">
+                        Query Indian statutory, GST, and legal open corpora first
+                      </span>
+                    </div>
+                    <input
+                      type="checkbox"
+                      checked={prioritizeAiKosh}
+                      onChange={(e) => setPrioritizeAiKosh(e.target.checked)}
+                      className="w-4 h-4 accent-[#f26625] cursor-pointer"
+                    />
+                  </label>
+                </div>
               </div>
 
               {/* Collapsible Advanced Configuration */}
