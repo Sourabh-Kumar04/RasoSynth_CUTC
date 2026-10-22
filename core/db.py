@@ -7,6 +7,14 @@ from typing import Optional
 def utc_now() -> datetime:
     """Return naive UTC datetime compatible with PostgreSQL asyncpg and SQLite."""
     return datetime.now(timezone.utc).replace(tzinfo=None)
+
+def _is_valid_uuid(val: any) -> bool:
+    """Check if value is a valid UUID string or UUID object."""
+    try:
+        uuid.UUID(str(val))
+        return True
+    except (ValueError, AttributeError, TypeError):
+        return False
 from sqlalchemy.ext.asyncio import create_async_engine, AsyncSession, async_sessionmaker
 from sqlalchemy.orm import declarative_base, relationship
 from sqlalchemy import Column, String, Integer, Float, DateTime, JSON, Text, ForeignKey, delete
@@ -350,6 +358,8 @@ class DatabaseManager:
 
     async def get_job(self, job_id: str) -> Optional[Job]:
         """Get a job by ID."""
+        if not _is_valid_uuid(job_id):
+            return None
         async with self.session_maker() as session:
             job = await session.get(Job, job_id)
             if job:
@@ -358,6 +368,8 @@ class DatabaseManager:
 
     async def update_job(self, job_id: str, status_data: Optional[dict] = None, **kwargs):
         """Update job fields safely accepting either a dict or keyword arguments."""
+        if not _is_valid_uuid(job_id):
+            return
         fields = dict(status_data or {})
         fields.update(kwargs)
         async with self.session_maker() as session:
@@ -419,6 +431,8 @@ class DatabaseManager:
 
     async def get_dataset(self, dataset_id: str) -> Optional[Dataset]:
         """Get a dataset by ID."""
+        if not _is_valid_uuid(dataset_id):
+            return None
         async with self.session_maker() as session:
             dataset = await session.get(Dataset, dataset_id)
             if dataset:
@@ -427,6 +441,8 @@ class DatabaseManager:
 
     async def get_datasets_by_job(self, job_id: str) -> list[Dataset]:
         """Get all datasets for a specific job."""
+        if not _is_valid_uuid(job_id):
+            return []
         async with self.session_maker() as session:
             from sqlalchemy import select
             result = await session.execute(
@@ -608,6 +624,8 @@ class DatabaseManager:
 
     async def delete_job(self, job_id: str) -> bool:
         """Delete a job and all associated data."""
+        if not _is_valid_uuid(job_id):
+            return False
         async with self.session_maker() as session:
             job = await session.get(Job, job_id)
             if job:
@@ -618,6 +636,8 @@ class DatabaseManager:
 
     async def delete_dataset(self, dataset_id: str) -> bool:
         """Delete a dataset and all associated samples and quality scores."""
+        if not _is_valid_uuid(dataset_id):
+            return False
         async with self.session_maker() as session:
             ds = await session.get(Dataset, dataset_id)
             if ds:

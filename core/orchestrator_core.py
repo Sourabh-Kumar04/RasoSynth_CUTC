@@ -2171,13 +2171,14 @@ class DatasetOrchestrator:
                 except Exception as deliv_err:
                     logger.debug("DeliveryManager skipped: %s", deliv_err)
 
-                # Create dataset record
+                # Create dataset record (ensure metadata is JSON serializable)
+                json_safe_metadata = json.loads(json.dumps(metadata_dict, default=str))
                 dataset_record = await self.db.create_dataset(
                     job_id=job_id,
                     name=export_config.dataset_name,
                     type=export_config.format,
                     size=len(samples),
-                    metadata=metadata_dict,
+                    metadata=json_safe_metadata,
                     output_path=str(export_result.get("dataset", ""))
                 )
 

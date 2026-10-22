@@ -172,6 +172,9 @@ class CheckpointStore:
         """Save checkpoint to both PostgreSQL and Redis."""
         # Save to PostgreSQL for persistence if connected
         if self._pool:
+            created_at = checkpoint.created_at
+            if created_at and getattr(created_at, "tzinfo", None) is not None:
+                created_at = created_at.astimezone(timezone.utc).replace(tzinfo=None)
             async with self._pool.acquire() as conn:
                 await conn.execute("""
                 INSERT INTO orchestration_checkpoints (
@@ -206,7 +209,7 @@ class CheckpointStore:
                 json.dumps(checkpoint.filtered_samples),
                 json.dumps(checkpoint.constructed_samples),
                 json.dumps(checkpoint.metadata),
-                checkpoint.created_at,
+                created_at,
                 checkpoint.version,
             )
         else:
