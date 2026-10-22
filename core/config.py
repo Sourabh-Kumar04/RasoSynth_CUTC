@@ -116,6 +116,7 @@ class Settings(BaseSettings):
     max_concurrent_jobs: int = Field(default=5)
     max_job_queue_size: int = Field(default=50, ge=0, le=10000)
     token_budget_usd: float = Field(default=100.0)
+    synthesis_concurrency: int = Field(default=8, ge=1, le=32)
 
     # Provider Priority Order
     provider_priority: list[str] = Field(

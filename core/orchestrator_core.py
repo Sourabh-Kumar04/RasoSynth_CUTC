@@ -1617,8 +1617,99 @@ class DatasetOrchestrator:
         generation_mode = config.get("generation_mode", "strict_source")
         allow_seedless = config.get("allow_seedless_generation", False)
 
+        # Batch concurrency for synthesis & construction
+        synth_concurrency = int(
+            os.getenv(
+                "SYNTHESIS_CONCURRENCY",
+                config.get("synthesis_concurrency", getattr(get_settings(), "synthesis_concurrency", 8)),
+            )
+        )
+        synth_concurrency = max(1, min(synth_concurrency, 16))
+        synth_sem = asyncio.Semaphore(synth_concurrency)
+        max_attempts = config.get("regeneration_attempts", 3)
+
+        async def _generate_validated_sample(generator_inst, validator_inst, plan_ref, cell_ref, target_idx):
+            async with synth_sem:
+                for attempt in range(max_attempts):
+                    try:
+                        sample = await generator_inst.generate_sample(
+                            plan_ref, cell_ref,
+                            cell_index=target_idx,
+                            total_cells=target_dataset_size,
+                        )
+                        val_res = await validator_inst.validate(sample)
+                        if val_res.is_valid:
+                            return sample
+                        elif attempt == max_attempts - 1:
+                            if (
+                                sample
+                                and sample.instruction
+                                and sample.response
+                                and len(sample.instruction.strip()) > 5
+                                and len(sample.response.strip()) > 5
+                            ):
+                                return sample
+                        else:
+                            logger.debug(
+                                f"Sample validation failed (attempt {attempt+1}/{max_attempts}): "
+                                f"{', '.join(val_res.reasons)}"
+                            )
+                    except Exception as gen_err:
+                        logger.debug(f"Error during sample synthesis attempt {attempt+1}: {gen_err}")
+                return None
+
+        async def _fill_synthetic_samples(needed_count: int, generator_inst, validator_inst, plan_ref, cells_list):
+            nonlocal samples, seen_sample_keys
+            max_gen_attempts = max(needed_count * 5, 50)
+            attempt_count = 0
+            cell_idx = 0
+
+            while len(samples) < target_dataset_size and attempt_count < max_gen_attempts:
+                if self._is_cancelled(job_id):
+                    break
+
+                needed = target_dataset_size - len(samples)
+                batch_size = min(synth_concurrency, needed)
+                batch_tasks = []
+
+                for _ in range(batch_size):
+                    cell = cells_list[cell_idx % len(cells_list)] if cells_list else {}
+                    cell_idx += 1
+                    attempt_count += 1
+                    curr_pos = len(samples) + len(batch_tasks)
+                    batch_tasks.append(
+                        _generate_validated_sample(generator_inst, validator_inst, plan_ref, cell, curr_pos)
+                    )
+
+                batch_results = await asyncio.gather(*batch_tasks, return_exceptions=True)
+
+                for res in batch_results:
+                    if isinstance(res, Exception) or res is None:
+                        continue
+                    valid_sample = res
+                    if valid_sample and valid_sample.instruction and valid_sample.response:
+                        key = sample_key(valid_sample.instruction, valid_sample.response)
+                        if key in seen_sample_keys:
+                            continue
+                        seen_sample_keys.add(key)
+                        samples.append({
+                            "instruction": valid_sample.instruction,
+                            "response": valid_sample.response,
+                            "input": valid_sample.input,
+                            "conversation": getattr(valid_sample, "conversation", None),
+                            "metadata": valid_sample.metadata,
+                            "difficulty_tier": valid_sample.difficulty_tier,
+                            "curriculum_order": len(samples),
+                        })
+                        if len(samples) >= target_dataset_size:
+                            break
+
+                curr_len = len(samples)
+                prog = 0.7 + (curr_len / max(1, target_dataset_size)) * 0.2
+                self._update_job_status(job_id, "construct", prog, samples_generated=curr_len)
+
         if not filtered and (generation_mode in ("synthetic", "hybrid") or allow_seedless):
-            logger.info("No crawled reference data found. Launching Pure Synthetic planning & generation.")
+            logger.info("No crawled reference data found. Launching Pure Synthetic concurrent batch planning & generation.")
             
             # 1. Ensure Plan and Coverage Matrix exist
             plan_dict = state.get("dataset_plan")
@@ -1645,123 +1736,97 @@ class DatasetOrchestrator:
             # 2. Setup Generator and Validator
             generator = SeedlessGenerator(self.router, config)
             validator = MultiStageValidator(self.router, config)
-
-            max_attempts = config.get("regeneration_attempts", 3)
             cells = coverage_dict.get("cells", [])
-
             generator.reset_seen_topics()
 
-            # Generate samples up to target_dataset_size using coverage matrix cells
-            # Loop until exactly target_dataset_size samples are produced
-            max_generation_attempts = max(target_dataset_size * 5, 50)
-            attempt_count = 0
-            cell_idx = 0
-
-            while len(samples) < target_dataset_size and attempt_count < max_generation_attempts:
-                if self._is_cancelled(job_id):
-                    break
-
-                attempt_count += 1
-                curr_len = len(samples)
-                if curr_len % max(1, target_dataset_size // 10) == 0:
-                    prog = 0.7 + (curr_len / target_dataset_size) * 0.2
-                    self._update_job_status(job_id, "construct", prog, samples_generated=curr_len)
-
-                cell = cells[cell_idx % len(cells)] if cells else {}
-                cell_idx += 1
-                valid_sample = None
-                for attempt in range(max_attempts):
-                    sample = await generator.generate_sample(
-                        plan_obj, cell,
-                        cell_index=curr_len,
-                        total_cells=target_dataset_size,
-                    )
-                    val_res = await validator.validate(sample)
-                    if val_res.is_valid:
-                        valid_sample = sample
-                        break
-                    elif attempt == max_attempts - 1 and len(samples) < target_dataset_size:
-                        # Fallback: if sample has non-empty instruction & response, accept to guarantee exact count
-                        if sample and sample.instruction and sample.response and len(sample.instruction.strip()) > 5 and len(sample.response.strip()) > 5:
-                            valid_sample = sample
-                            break
-                    else:
-                        logger.warning(
-                            f"Sample validation failed (attempt {attempt+1}/{max_attempts}): "
-                            f"{', '.join(val_res.reasons)}"
-                        )
-
-                if valid_sample and valid_sample.instruction and valid_sample.response:
-                    key = sample_key(valid_sample.instruction, valid_sample.response)
-                    if key in seen_sample_keys:
-                        continue
-                    seen_sample_keys.add(key)
-                    samples.append({
-                        "instruction": valid_sample.instruction,
-                        "response": valid_sample.response,
-                        "input": valid_sample.input,
-                        "conversation": getattr(valid_sample, "conversation", None),
-                        "metadata": valid_sample.metadata,
-                        "difficulty_tier": valid_sample.difficulty_tier,
-                        "curriculum_order": len(samples),
-                    })
+            # Execute concurrent batch generation
+            await _fill_synthetic_samples(
+                target_dataset_size - len(samples),
+                generator,
+                validator,
+                plan_obj,
+                cells,
+            )
         else:
             # Source-based / Hybrid source generation
             construction = ConstructionPipeline(self.router, config)
-            for item in filtered:
+            source_concurrency = min(4, synth_concurrency)
+            source_sem = asyncio.Semaphore(source_concurrency)
+
+            async def _extract_from_item(item_dict: dict):
+                async with source_sem:
+                    item_samples = []
+                    sample_obj = type('Sample', (), {
+                        "content": item_dict["content"],
+                        "quality_score": item_dict.get("quality_score", 0.5),
+                        "metadata": item_dict.get("metadata", {}),
+                    })()
+                    try:
+                        async for constructed in construction.construct(
+                            sample_obj,
+                            intent,
+                            dataset_type=dataset_type
+                        ):
+                            item_samples.append((item_dict, constructed))
+                    except Exception as err:
+                        logger.warning(f"Source item construction error: {err}")
+                    return item_samples
+
+            for i in range(0, len(filtered), source_concurrency):
                 if len(samples) >= target_dataset_size:
                     break
                 if self._is_cancelled(job_id):
                     break
 
-                sample = type('Sample', (), {
-                    "content": item["content"],
-                    "quality_score": item.get("quality_score", 0.5),
-                    "metadata": item.get("metadata", {}),
-                })()
+                batch_items = filtered[i:i + source_concurrency]
+                batch_constructed = await asyncio.gather(
+                    *[_extract_from_item(it) for it in batch_items],
+                    return_exceptions=True
+                )
 
-                async for constructed in construction.construct(
-                    sample,
-                    intent,
-                    dataset_type=dataset_type
-                ):
-                    key = sample_key(constructed.instruction, constructed.response)
-                    if key in seen_sample_keys:
+                for item_res in batch_constructed:
+                    if isinstance(item_res, Exception) or not item_res:
                         continue
-                    seen_sample_keys.add(key)
-                    source_metadata = item.get("metadata", {}) or {}
-                    provenance = {
-                        key: value for key, value in {
-                            "source_url": source_metadata.get("source_url") or item.get("source_url"),
-                            "source_type": source_metadata.get("source_type") or item.get("source_type"),
-                            "license": source_metadata.get("license") or item.get("license"),
-                            "language": source_metadata.get("language") or item.get("language"),
-                        }.items() if value
-                    }
-                    samples.append({
-                        "instruction": constructed.instruction,
-                        "response": constructed.response,
-                        "input": constructed.input,
-                        "conversation": getattr(constructed, "conversation", None),
-                        "metadata": {**(constructed.metadata or {}), **source_metadata, **provenance},
-                        # Give reviewers enough evidence to verify grounding
-                        # without copying an entire extracted document into the queue.
-                        "source_text": str(item.get("content", ""))[:2000],
-                        "quality_score": item.get("quality_score", 0.0),
-                        "difficulty_tier": constructed.difficulty_tier,
-                        "curriculum_order": len(samples),
-                    })
+                    for item, constructed in item_res:
+                        key = sample_key(constructed.instruction, constructed.response)
+                        if key in seen_sample_keys:
+                            continue
+                        seen_sample_keys.add(key)
+                        source_metadata = item.get("metadata", {}) or {}
+                        provenance = {
+                            k: v for k, v in {
+                                "source_url": source_metadata.get("source_url") or item.get("source_url"),
+                                "source_type": source_metadata.get("source_type") or item.get("source_type"),
+                                "license": source_metadata.get("license") or item.get("license"),
+                                "language": source_metadata.get("language") or item.get("language"),
+                            }.items() if v
+                        }
+                        samples.append({
+                            "instruction": constructed.instruction,
+                            "response": constructed.response,
+                            "input": constructed.input,
+                            "conversation": getattr(constructed, "conversation", None),
+                            "metadata": {**(constructed.metadata or {}), **source_metadata, **provenance},
+                            "source_text": str(item.get("content", ""))[:2000],
+                            "quality_score": item.get("quality_score", 0.0),
+                            "difficulty_tier": constructed.difficulty_tier,
+                            "curriculum_order": len(samples),
+                        })
+                        if len(samples) >= target_dataset_size:
+                            break
                     if len(samples) >= target_dataset_size:
                         break
-                if len(samples) >= target_dataset_size:
-                    break
+
+                curr_len = len(samples)
+                prog = 0.7 + (curr_len / max(1, target_dataset_size)) * 0.2
+                self._update_job_status(job_id, "construct", prog, samples_generated=curr_len)
 
             # If source construction produced fewer samples than target_dataset_size,
             # augment with synthetic generation up to target_dataset_size
             if len(samples) < target_dataset_size and (generation_mode in ("synthetic", "hybrid") or allow_seedless):
                 logger.info(
                     f"Source extraction produced {len(samples)} samples. "
-                    f"Augmenting with synthetic generation to reach target {target_dataset_size}."
+                    f"Augmenting with concurrent synthetic generation to reach target {target_dataset_size}."
                 )
                 plan_dict = state.get("dataset_plan")
                 coverage_dict = state.get("coverage_matrix")
@@ -1783,50 +1848,16 @@ class DatasetOrchestrator:
                 plan_obj = DatasetPlan(**plan_dict)
                 generator = SeedlessGenerator(self.router, config)
                 validator = MultiStageValidator(self.router, config)
-                max_attempts = config.get("regeneration_attempts", 3)
                 cells = coverage_dict.get("cells", [])
                 generator.reset_seen_topics()
 
-                max_synth_attempts = max((target_dataset_size - len(samples)) * 5, 50)
-                synth_attempts = 0
-                cell_idx = 0
-                while len(samples) < target_dataset_size and synth_attempts < max_synth_attempts:
-                    if self._is_cancelled(job_id):
-                        break
-
-                    synth_attempts += 1
-                    cell = cells[cell_idx % len(cells)] if cells else {}
-                    cell_idx += 1
-                    valid_sample = None
-                    for attempt in range(max_attempts):
-                        sample = await generator.generate_sample(
-                            plan_obj, cell,
-                            cell_index=len(samples),
-                            total_cells=target_dataset_size,
-                        )
-                        val_res = await validator.validate(sample)
-                        if val_res.is_valid:
-                            valid_sample = sample
-                            break
-                        elif attempt == max_attempts - 1 and len(samples) < target_dataset_size:
-                            if sample and sample.instruction and sample.response and len(sample.instruction.strip()) > 5 and len(sample.response.strip()) > 5:
-                                valid_sample = sample
-                                break
-
-                    if valid_sample and valid_sample.instruction and valid_sample.response:
-                        key = sample_key(valid_sample.instruction, valid_sample.response)
-                        if key in seen_sample_keys:
-                            continue
-                        seen_sample_keys.add(key)
-                        samples.append({
-                            "instruction": valid_sample.instruction,
-                            "response": valid_sample.response,
-                            "input": valid_sample.input,
-                            "conversation": getattr(valid_sample, "conversation", None),
-                            "metadata": valid_sample.metadata,
-                            "difficulty_tier": valid_sample.difficulty_tier,
-                            "curriculum_order": len(samples),
-                        })
+                await _fill_synthetic_samples(
+                    target_dataset_size - len(samples),
+                    generator,
+                    validator,
+                    plan_obj,
+                    cells
+                )
 
         # Enforce exact target size: never more than requested
         if len(samples) > target_dataset_size:
