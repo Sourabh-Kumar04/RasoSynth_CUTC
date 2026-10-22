@@ -26,43 +26,42 @@ RasoSynthTune is a production-ready system that autonomously discovers, extracts
 
 ## Architecture
 
+```mermaid
+flowchart TD
+    UQ["1. User Prompt / Domain"] --> IQ["2. Query Optimizer (LLM Fast-Pass)\n(core/intent_extractor.py: domain, anti-domains, search queries)"]
+    IQ --> EP["3. Early Preview Gate (Stratified Samples)\n(Live inline editing & user approval before full synthesis)"]
+    EP -- "Approved" --> CR["4. Multi-Source Crawling & Discovery\n(pipeline/discovery.py: AI Kosh priority, HF, ArXiv, Zenodo, OpenML)"]
+    EP -. "↺ Refine Query Loop" .-> IQ
+    CR --> EX["5. Extraction & Pre-Checks\n(pipeline/extraction.py: parallel async semaphore, semantic chunking)"]
+    EX --> FL["6. Filtering & Statutory Compliance\n(pipeline/filtering.py: MinHash LSH deduplication, DPDP Act 2026 PII redaction)"]
+    FL -. "↺ Re-extract Loop" .-> EX
+    FL --> CG["7. Grounded Construction & Synthesis\n(pipeline/construction.py: Ollama/cloud batched context generation)"]
+    CG --> QE["8. Quality & Safety Evaluation\n(LLM-as-a-judge scoring, toxicity checks)"]
+    QE -. "↺ Synthesis Loop" .-> CG
+    QE --> HITL["9. Stratified Random HITL Gate\n(core/review_service.py: difficulty & topic spread verification)"]
+    HITL --> BAL["10. Balanced Dataset Engine\n(Curriculum tiers, topic spread, exact sample size guarantee)"]
+    BAL --> EXP["11. ADR-002 Storage Packaging & Delivery\n(PackageManifest chunking, DBOM attestation, multi-cloud export)"]
+    BAL --> FT["12. 1-Click Fine-Tuning\n(finetuning/trainer.py: HuggingFace SFTTrainer / Unsloth QLoRA)"]
+```
+
 ```
 ┌─────────────────────────────────────────────────────────────────────────┐
-│                           API Layer (FastAPI)                            │
-│  POST /jobs  │  GET /jobs/{id}  │  GET /providers  │  WebSocket stream  │
-│  POST /api/finetune/jobs        │  GET /api/review/queue                │
-└────────────────────────────┬────────────────────────────────────────────┘
-                             │
-┌────────────────────────────▼────────────────────────────────────────────┐
-│                    Orchestration Layer (LangGraph)                      │
-│  ┌─────────┐  ┌─────────┐  ┌─────────┐  ┌─────────┐  ┌─────────┐      │
-│  │Discover │─▶│Extract  │─▶│ Filter  │─▶│Construct│─▶│ Export  │      │
-│  └─────────┘  └─────────┘  └─────────┘  └────┬────┘  └─────────┘      │
-│                                               │ HITL gate               │
-│                                          ┌────▼────┐                   │
-│                                          │  Human  │                   │
-│                                          │ Review  │                   │
-│                                          └─────────┘                   │
-└────────────────────────────┬────────────────────────────────────────────┘
-                             │
-┌────────────────────────────▼────────────────────────────────────────────┐
-│                    Fine-Tuning Layer (PEFT / LoRA)                      │
-│  ┌──────────┐  ┌──────────┐  ┌──────────┐  ┌──────────┐               │
-│  │ Llama-3  │  │ Mistral  │  │  Phi-3   │  │ Gemma-2  │  …            │
-│  └──────────┘  └──────────┘  └──────────┘  └──────────┘               │
-│  Unsloth (GPU) · HuggingFace PEFT (CPU fallback) · HF Hub push         │
-└────────────────────────────┬────────────────────────────────────────────┘
-                             │
-┌────────────────────────────▼────────────────────────────────────────────┐
-│                       Provider Router Layer                              │
-│  Gemini (Primary) · NIM (Primary) · Claude · OpenAI · HuggingFace      │
-│  xAI · Groq · DeepSeek · Ollama (local) · OpenRouter · Together        │
-└────────────────────────────┬────────────────────────────────────────────┘
-                             │
-┌────────────────────────────▼────────────────────────────────────────────┐
-│                       Infrastructure Layer                               │
-│  Redis (cache) · PostgreSQL / SQLite (DB) · Qdrant (vector DB)          │
-│  Celery (workers) · Ray (distributed) · Prometheus (metrics)            │
+│                      Nginx Reverse Proxy (Port 80)                       │
+│  /studio, /datasets, /orchestration ──▶ Frontend UI (Next.js 14)       │
+│  /jobs, /api, /auth, /health, /ws ────▶ Backend API (FastAPI)          │
+│  /flower ─────────────────────────────▶ Celery Flower Monitoring       │
+└────────────────────────────────────┬────────────────────────────────────┘
+                                     │
+┌────────────────────────────────────▼────────────────────────────────────┐
+│                    Orchestration Layer (LangGraph DAG)                  │
+│   Non-Linear 10-Stage State Machine with Cyclic Adaptive Loops          │
+│   Early Preview Gate · MinHash LSH · DPDP Act Statutory Compliance      │
+└────────────────────────────────────┬────────────────────────────────────┘
+                                     │
+┌────────────────────────────────────▼────────────────────────────────────┐
+│                       Storage & Database Layer                          │
+│  authoritative PostgreSQL 16 (asyncpg + auto migrations 001-005)        │
+│  L1 Memory + L2 Redis Cache · ADR-002 Cryptographic PackageManifest     │
 └─────────────────────────────────────────────────────────────────────────┘
 ```
 

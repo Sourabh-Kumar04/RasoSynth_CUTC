@@ -102,7 +102,7 @@ class OllamaProvider(BaseProvider):
 
             data = response.json()
             content = data["message"]["content"]
-            tokens = data.get("eval_count", self._estimate_tokens(content))
+            tokens = data.get("eval_count") or self._estimate_tokens(content)
             latency_ms = (time.time() - start_time) * 1000
 
             return ModelResponse(
@@ -115,6 +115,10 @@ class OllamaProvider(BaseProvider):
             )
         except httpx.HTTPError as e:
             raise RuntimeError(f"Ollama generation failed: {e}")
+
+    def _estimate_tokens(self, text: str) -> int:
+        """Estimate token count (approx 4 chars per token)."""
+        return max(1, len(text) // 4)
 
     async def generate(self, prompt_or_request, system_prompt=None, temperature=0.7, max_tokens=None, model=None, **kwargs):
         """Generate text. Supports both LLMRequest (bridge) and legacy parameter modes.

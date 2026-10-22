@@ -20,7 +20,7 @@ from collections import deque
 from datetime import datetime, timezone
 from typing import AsyncGenerator, Optional
 
-from core.db import DatabaseManager, FineTuneJob
+from core.db import DatabaseManager, FineTuneJob, utc_now
 from finetuning.trainer import FineTuneConfig, Trainer
 
 logger = logging.getLogger(__name__)
@@ -167,7 +167,7 @@ class FinetuneJobManager:
 
     async def _run_job(self, job_id: str, config: FineTuneConfig):
         async with self._semaphore:
-            await self.db.update_finetune_job(job_id, status="running", started_at=datetime.now(timezone.utc))
+            await self.db.update_finetune_job(job_id, status="running", started_at=utc_now())
             self._list_cache = None
             await self._broadcast(job_id, {"type": "started", "job_id": job_id})
 
@@ -197,7 +197,7 @@ class FinetuneJobManager:
                             job_id, status="completed", progress=100.0,
                             output_path=event.get("output_path"),
                             hf_repo_url=event.get("hf_repo_url"),
-                            completed_at=datetime.now(timezone.utc),
+                            completed_at=utc_now(),
                         )
                         self._list_cache = None
                         logger.info("Fine-tune job %s completed", job_id)
@@ -205,7 +205,7 @@ class FinetuneJobManager:
                         await self.db.update_finetune_job(
                             job_id, status="failed",
                             error=event.get("message"),
-                            completed_at=datetime.now(timezone.utc),
+                            completed_at=utc_now(),
                         )
                         self._list_cache = None
                         logger.error("Fine-tune job %s failed: %s", job_id, event.get("message"))
