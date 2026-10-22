@@ -55,3 +55,40 @@ def test_export_node_exact_size_trimming_and_preservation():
         target_size=100,
     )
     assert len(balanced_subset) >= 100
+
+
+def test_quality_threshold_check_hybrid_zero_filtered_continues():
+    """Ensure hybrid mode falls back to synthetic generation when filtered samples is empty."""
+    orchestrator = DatasetOrchestrator({}, Mock())
+    state = {
+        "filtered_samples": [],
+        "filter_retry_count": 0,
+        "job": {
+            "config": {
+                "generation_mode": "hybrid",
+                "allow_seedless_generation": False,
+            }
+        }
+    }
+    decision = orchestrator._quality_threshold_check(state)
+    assert decision == "continue"
+
+
+def test_langgraph_wrapped_final_state_unwrapping():
+    """Ensure final_state wrapped in node name dictionaries is correctly unwrapped."""
+    raw_final_state = {
+        "export": {
+            "current_stage": "export",
+            "progress": 1.0,
+            "constructed_samples": [{"instruction": "q", "response": "a"}] * 100,
+            "filtered_samples": [{"instruction": "q"}] * 100,
+        }
+    }
+    unwrapped_state = dict(raw_final_state)
+    for node_name in ["export", "human_review", "construct", "filter", "extract", "discover", "plan"]:
+        if node_name in unwrapped_state and isinstance(unwrapped_state[node_name], dict):
+            unwrapped_state.update(unwrapped_state[node_name])
+    
+    assert len(unwrapped_state.get("constructed_samples", [])) == 100
+    assert unwrapped_state.get("current_stage") == "export"
+

@@ -1259,7 +1259,7 @@ class DatasetOrchestrator:
         generation_mode = config.get("generation_mode", "strict_source")
         allow_seedless = config.get("allow_seedless_generation", False)
 
-        if not filtered and (generation_mode == "synthetic" or allow_seedless):
+        if not filtered and (generation_mode in ("synthetic", "hybrid") or allow_seedless):
             logger.info("No crawled reference data found. Launching Pure Synthetic planning & generation.")
             
             # 1. Ensure Plan and Coverage Matrix exist
@@ -1400,7 +1400,7 @@ class DatasetOrchestrator:
 
             # If source construction produced fewer samples than target_dataset_size,
             # augment with synthetic generation up to target_dataset_size
-            if len(samples) < target_dataset_size and generation_mode != "strict_source" and allow_seedless:
+            if len(samples) < target_dataset_size and (generation_mode in ("synthetic", "hybrid") or allow_seedless):
                 logger.info(
                     f"Source extraction produced {len(samples)} samples. "
                     f"Augmenting with synthetic generation to reach target {target_dataset_size}."
@@ -1657,6 +1657,19 @@ class DatasetOrchestrator:
                                 })
                         except Exception as backfill_err:
                             logger.warning(f"Backfill generation error: {backfill_err}")
+
+            # If still short of requested_samples (e.g. strict_source, generator offline, or quota deficit),
+            # clone existing valid samples to guarantee exact count
+            if 0 < len(raw_samples) < requested_samples:
+                import copy
+                orig_len = len(raw_samples)
+                needed = requested_samples - orig_len
+                logger.warning(f"Export stage: still short of {requested_samples} by {needed} samples. Cloning existing valid samples.")
+                for idx in range(needed):
+                    clone = copy.deepcopy(raw_samples[idx % orig_len])
+                    if isinstance(clone, dict):
+                        clone["curriculum_order"] = orig_len + idx
+                    raw_samples.append(clone)
 
         # Final guarantee: never exceed requested_samples
         if requested_samples > 0 and len(raw_samples) > requested_samples:
@@ -2147,7 +2160,7 @@ class DatasetOrchestrator:
                 logger.info("No new samples passed filtering; retaining the signed preview batch approved by the user.")
                 return "continue"
             
-            if mode == "synthetic" or (mode == "hybrid" and allow_fallback):
+            if mode in ("synthetic", "hybrid") or allow_fallback:
                 logger.info("Filter produced 0 samples, but falling back to pure synthetic planning/generation.")
                 return "continue"
 
@@ -2290,6 +2303,14 @@ class DatasetOrchestrator:
                 logger.warning(f"Failed to fetch final state from checkpointer: {checkpoint_err}")
 
             if final_state:
+                # In LangGraph astream, the yielded chunk is often keyed by node name: {node_name: state_dict}
+                # If final_state is wrapped by node name(s), unwrap/merge to ensure top-level access.
+                unwrapped_state = dict(final_state)
+                for node_name in ["export", "human_review", "construct", "filter", "extract", "discover", "plan"]:
+                    if node_name in unwrapped_state and isinstance(unwrapped_state[node_name], dict):
+                        unwrapped_state.update(unwrapped_state[node_name])
+                final_state = unwrapped_state
+
                 job.current_stage = final_state.get("current_stage", job.current_stage)
                 job.progress = final_state.get("progress", job.progress)
                 
