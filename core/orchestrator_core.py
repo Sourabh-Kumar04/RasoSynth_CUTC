@@ -320,7 +320,11 @@ class DatasetOrchestrator:
             from core.config import Settings
             self.observability = ObservabilityManager(Settings())
 
-        self.checkpointer = MemorySaver()
+        try:
+            from langgraph.checkpoint.serde.jsonplus import JsonPlusSerializer
+            self.checkpointer = MemorySaver(serde=JsonPlusSerializer(allowed_msgpack_modules=True))
+        except Exception:
+            self.checkpointer = MemorySaver()
         self.graph = self._build_graph()
         self.active_jobs: dict[str, Job] = {}
         self._cancellation_events: dict[str, asyncio.Event] = {}

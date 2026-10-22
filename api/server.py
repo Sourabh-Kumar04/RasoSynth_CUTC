@@ -46,6 +46,8 @@ import os
 _schemas_path = os.path.join(os.path.dirname(__file__), "schemas.py")
 _spec = importlib.util.spec_from_file_location("legacy_schemas", _schemas_path)
 _legacy_schemas = importlib.util.module_from_spec(_spec)
+import sys
+sys.modules["legacy_schemas"] = _legacy_schemas
 _spec.loader.exec_module(_legacy_schemas)
 
 CheckpointResponse = getattr(_legacy_schemas, 'CheckpointResponse', None)

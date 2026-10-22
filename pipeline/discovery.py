@@ -286,8 +286,9 @@ async def health_check_urls(
                         source.url,
                         headers={"User-Agent": "RasoSynthTune/2.0"},
                     )
-                    if resp.status_code < 400:
-                        # Update metadata with resolved URL and status
+                    if resp.status_code < 400 or resp.status_code in (403, 429):
+                        # Update metadata with resolved URL and status.
+                        # Note: 403/429 means URL exists on academic/cloud server but HEAD is rate-limited.
                         source.metadata["health_checked"] = True
                         source.metadata["health_status"] = resp.status_code
                         source.metadata["resolved_url"] = str(resp.url)

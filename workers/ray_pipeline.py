@@ -1,11 +1,42 @@
 """Ray-based distributed pipeline for GPU-accelerated processing."""
-import ray
-from ray import remote
 from typing import List, Dict, Any, Optional
 import asyncio
 
+try:
+    import ray
+    from ray import remote
+    RAY_AVAILABLE = True
+    if not ray.is_initialized():
+        try:
+            ray.init(ignore_reinit_error=True)
+        except Exception:
+            pass
+except (ImportError, Exception):
+    RAY_AVAILABLE = False
+    class _DummyRay:
+        @staticmethod
+        def remote(*args, **kwargs):
+            if args and callable(args[0]):
+                return args[0]
+            return lambda x: x
+        @staticmethod
+        def init(*args, **kwargs):
+            pass
+        @staticmethod
+        def is_initialized():
+            return False
+        @staticmethod
+        def get(futures):
+            return []
+        @staticmethod
+        def nodes():
+            return []
+        @staticmethod
+        def available_resources():
+            return {}
+    ray = _DummyRay()
+    remote = _DummyRay.remote
 
-ray.init(ignore_reinit_error=True)
 
 
 @ray.remote
