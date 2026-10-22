@@ -2760,11 +2760,27 @@ class DatasetOrchestrator:
                     raw_input=job.config.get("target_domain", ""),
                 )
             else:
-                intent = await extract_intent(
-                    raw_input=str(job.config.get("target_domain", "")),
-                    provider_router=self.router,
-                    redis_client=getattr(self, 'redis_client', None),
-                )
+                try:
+                    intent = await extract_intent(
+                        raw_input=str(job.config.get("target_domain", "")),
+                        provider_router=self.router,
+                        redis_client=getattr(self, 'redis_client', None),
+                    )
+                except Exception as e:
+                    logger.warning(f"Intent extraction fallback for job {job_id}: {e}")
+                    target = str(job.config.get("target_domain", "")).strip()
+                    intent = UserIntent(
+                        primary_task=target or "data synthesis",
+                        domain=target or "General Knowledge",
+                        modality="text",
+                        anti_domains=[],
+                        key_entities=[target] if target else [],
+                        specialized_queries=[target] if target else [],
+                        constraints=[],
+                        output_format="jsonl",
+                        confidence=0.7,
+                        raw_input=target,
+                    )
             approved_queries = job.config.get("specialized_queries") or []
             if approved_queries:
                 intent.specialized_queries = approved_queries[:10]
@@ -2772,8 +2788,21 @@ class DatasetOrchestrator:
             if ideal_samples:
                 intent.ideal_samples = ideal_samples[:10]
             initial_state["intent"] = intent
-        except IntentExtractionError as e:
-            raise e  # will be caught by outer try block
+        except Exception as e:
+            logger.error(f"Unexpected error constructing initial intent for job {job_id}: {e}")
+            target = str(job.config.get("target_domain", "")).strip()
+            initial_state["intent"] = UserIntent(
+                primary_task=target or "data synthesis",
+                domain=target or "General Knowledge",
+                modality="text",
+                anti_domains=[],
+                key_entities=[target] if target else [],
+                specialized_queries=[target] if target else [],
+                constraints=[],
+                output_format="jsonl",
+                confidence=0.7,
+                raw_input=target,
+            )
 
 
         try:
