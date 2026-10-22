@@ -18,6 +18,7 @@ from enum import Enum
 from langgraph.graph import StateGraph, END
 from langgraph.checkpoint.memory import MemorySaver
 import operator
+from core.config import get_settings
 from core.intent import UserIntent, IntentExtractionError
 from core.intent_extractor import extract_intent
 
@@ -1618,12 +1619,19 @@ class DatasetOrchestrator:
         allow_seedless = config.get("allow_seedless_generation", False)
 
         # Batch concurrency for synthesis & construction
-        synth_concurrency = int(
-            os.getenv(
+        try:
+            default_concurrency = getattr(get_settings(), "synthesis_concurrency", 8)
+        except Exception:
+            default_concurrency = 8
+
+        try:
+            raw_concurrency = os.getenv(
                 "SYNTHESIS_CONCURRENCY",
-                config.get("synthesis_concurrency", getattr(get_settings(), "synthesis_concurrency", 8)),
+                str(config.get("synthesis_concurrency", default_concurrency)),
             )
-        )
+            synth_concurrency = int(raw_concurrency)
+        except Exception:
+            synth_concurrency = default_concurrency
         synth_concurrency = max(1, min(synth_concurrency, 16))
         synth_sem = asyncio.Semaphore(synth_concurrency)
         max_attempts = config.get("regeneration_attempts", 3)
