@@ -65,6 +65,7 @@ export default function OrchestrationPage() {
   const [loading, setLoading] = useState(true)
   const [selectedJob, setSelectedJob] = useState<any | null>(null)
   const [activeTab, setActiveTab] = useState<'dag' | 'agents' | 'research'>('dag')
+  const [dagInfo, setDagInfo] = useState<any | null>(null)
 
   const fetchJobs = useCallback(async () => {
     try {
@@ -84,18 +85,20 @@ export default function OrchestrationPage() {
   const fetchAll = useCallback(async () => {
     fetchJobs()
     try {
-      const [agentsRes, statsRes, resStatus] = await Promise.all([
+      const [agentsRes, statsRes, resStatus, liveDag] = await Promise.all([
         api.getAgents().catch(() => ({ agents: [], total: 0 })),
         api.getAgentStats().catch(() => null),
         api.getResearchStatus().catch(() => null),
+        selectedJob?.id ? api.getOrchestrationDag(selectedJob.id).catch(() => null) : Promise.resolve(null),
       ])
       setAgents(agentsRes?.agents || [])
       setAgentStats(statsRes)
       setResearchStatus(resStatus)
+      if (liveDag) setDagInfo(liveDag)
     } catch {
       console.debug('Failed to load agents or research data')
     }
-  }, [fetchJobs])
+  }, [fetchJobs, selectedJob?.id])
 
   useEffect(() => {
     fetchAll()
@@ -300,12 +303,19 @@ export default function OrchestrationPage() {
                   const isCurrent = currentStage.includes(stage.id.split('_')[0])
                   const isPast = selectedJob?.progress ? selectedJob.progress * arr.length > i : i < 3
 
+                  // Check if node has active feedback loop capability
+                  const hasFeedbackLoop = stage.id === 'preview_acceptance' || stage.id === 'filtering_quality' || stage.id === 'constructing_dataset'
+                  const feedbackLabel = stage.id === 'preview_acceptance' ? '↺ Refine Query Loop' : stage.id === 'filtering_quality' ? '↺ Re-extract Loop' : '↺ Synthesis Loop'
+
+                  // Check duration from live DAG endpoint if matched
+                  const liveNode = dagInfo?.nodes?.find((n: any) => n.id.includes(stage.id.split('_')[0]))
+
                   return (
                     <div key={stage.id} className="flex items-center relative z-10">
                       <motion.div
                         whileHover={{ scale: 1.03 }}
                         className={clsx(
-                          'w-36 p-3 rounded-md border transition-all',
+                          'w-40 p-3 rounded-md border transition-all',
                           isCurrent
                             ? 'bg-[#161622] border-[#f26625] shadow-sm glow-yc'
                             : isPast
@@ -324,10 +334,19 @@ export default function OrchestrationPage() {
                         </div>
                         <h4 className="text-xs font-semibold text-white truncate">{stage.label}</h4>
                         <p className="text-[10px] font-mono text-[#94a3b8] truncate">{stage.desc}</p>
+                        
+                        {hasFeedbackLoop && (
+                          <div className="mt-1">
+                            <span className="inline-block text-[9px] font-mono px-1.5 py-0.5 rounded bg-[#1c1c28] text-amber-400/90 border border-amber-500/20">
+                              {feedbackLabel}
+                            </span>
+                          </div>
+                        )}
+
                         <div className="mt-2 pt-1 border-t border-[#1c1c28] flex justify-between text-[10px] font-mono">
                           <span className="text-[#94a3b8]">Status:</span>
                           <span className={isCurrent ? 'text-[#10b981] font-semibold' : 'text-[#94a3b8]'}>
-                            {isCurrent ? 'Executing' : isPast ? 'Passed' : 'Pending'}
+                            {liveNode?.status ? liveNode.status.toUpperCase() : isCurrent ? 'EXECUTING' : isPast ? 'PASSED' : 'PENDING'}
                           </span>
                         </div>
                       </motion.div>

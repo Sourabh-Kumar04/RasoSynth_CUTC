@@ -103,7 +103,7 @@ services:
     build:
       context: .
       dockerfile: Dockerfile
-    command: ["uv", "run", "celery", "-A", "workers.celery_app.celery_app", "worker", "--loglevel=INFO", "--concurrency=2"]
+    command: ["/app/.venv/bin/celery", "-A", "workers.celery_app.celery_app", "worker", "--loglevel=INFO", "--concurrency=4"]
     env_file:
       - .env
     environment:

@@ -412,6 +412,10 @@ class FilteringPipeline:
 
         sample.filters_applied = self._get_applied_filters(sample, thresholds)
 
+        # Statutory Compliance under DPDP Act: sanitize passing content
+        if sample.content:
+            sample.content = self.redact_pii(sample.content)
+
         return sample
 
     # Anti-bot / garbage content patterns — content that is definitely not
@@ -657,22 +661,48 @@ class FilteringPipeline:
 
         return max(0.0, min(1.0, score)), issues
 
+    def redact_pii(self, text: str) -> str:
+        """Redact PII under DPDP Act (India 2023/2026) and global privacy regulations."""
+        redacted = text
+        # Aadhaar Number (12 digits with optional spaces/hyphens)
+        redacted = re.sub(r'\b[2-9]\d{3}[\s-]?\d{4}[\s-]?\d{4}\b', '[REDACTED_AADHAAR]', redacted)
+        # PAN (Permanent Account Number: 5 uppercase letters, 4 digits, 1 uppercase letter)
+        redacted = re.sub(r'\b[A-Z]{5}[0-9]{4}[A-Z]{1}\b', '[REDACTED_PAN]', redacted)
+        # Indian Mobile Numbers (+91 or starting with 6-9)
+        redacted = re.sub(r'\b(?:\+91|91)?[\s-]?[6-9]\d{9}\b', '[REDACTED_PHONE]', redacted)
+        # US SSN
+        redacted = re.sub(r'\b\d{3}-\d{2}-\d{4}\b', '[REDACTED_SSN]', redacted)
+        # Credit Card Numbers
+        redacted = re.sub(r'\b\d{4}[\s-]?\d{4}[\s-]?\d{4}[\s-]?\d{4}\b', '[REDACTED_CREDIT_CARD]', redacted)
+        # Email Addresses
+        redacted = re.sub(r'\b[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Z|a-z]{2,}\b', '[REDACTED_EMAIL]', redacted)
+        # Indian Passport
+        redacted = re.sub(r'\b[A-Z]{1}[0-9]{7}\b', '[REDACTED_PASSPORT]', redacted)
+        return redacted
+
     def _check_compliance(self, text: str) -> float:
-        """Layer 5: Compliance & safety (mandatory for enterprise)"""
+        """Layer 5: Statutory Compliance & DPDP Act 2023/2026 Safety."""
         score = 1.0  # Start with perfect compliance
 
-        # Check for PII patterns (simplified)
+        # Check for PII patterns including India DPDP Act statutory identifiers
         pii_patterns = [
-            r'\b\d{3}-\d{2}-\d{4}\b',  # SSN
+            r'\b[2-9]\d{3}[\s-]?\d{4}[\s-]?\d{4}\b',           # India Aadhaar (DPDP Act)
+            r'\b[A-Z]{5}[0-9]{4}[A-Z]{1}\b',                  # India PAN card (DPDP Act)
+            r'\b(?:\+91|91)?[\s-]?[6-9]\d{9}\b',             # India Mobile (DPDP Act)
+            r'\b[A-Z]{1}[0-9]{7}\b',                         # India Passport
+            r'\b\d{3}-\d{2}-\d{4}\b',                        # US SSN
             r'\b\d{4}[\s-]?\d{4}[\s-]?\d{4}[\s-]?\d{4}\b',  # Credit card
             r'\b[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Z|a-z]{2,}\b',  # Email
-            r'\b\d{3}[\s-]?\d{3}[\s-]?\d{4}\b',  # Phone number
+            r'\b\d{3}[\s-]?\d{3}[\s-]?\d{4}\b',              # General phone number
         ]
 
+        pii_violations = 0
         for pattern in pii_patterns:
             if re.search(pattern, text, re.IGNORECASE):
-                score -= 0.3  # Significant penalty for PII
-                break  # Only penalize once for simplicity
+                pii_violations += 1
+
+        if pii_violations > 0:
+            score -= min(0.6, pii_violations * 0.25)  # Strict statutory penalty for PII
 
         # Check for toxic content (simplified)
         toxic_patterns = [
@@ -1038,12 +1068,26 @@ class FilteringPipeline:
         if content_hash in self._seen_hashes:
             return True, "exact_match", 0.0
 
-        # N-gram similarity
-        ngrams = self._get_ngrams(text, 5)
+        # N-gram similarity & MinHash LSH
+        ngrams = self._get_ngrams(text, 3)
         ngram_hash = hashlib.md5(str(sorted(ngrams)).encode()).hexdigest()
 
         if ngram_hash in self._minhash_cache:
             return True, "ngram_match", 0.3
+
+        # MinHash Jaccard fuzzy duplicate detection over cached signatures
+        if ngrams:
+            recent_checks = 0
+            for cached_hash, (cached_ngrams, _) in reversed(list(self._minhash_cache.items())):
+                recent_checks += 1
+                if recent_checks > 100:  # Bound comparisons for efficiency
+                    break
+                if cached_ngrams:
+                    intersection = len(ngrams & cached_ngrams)
+                    union = len(ngrams | cached_ngrams)
+                    if union > 0 and (intersection / union) >= 0.60:
+                        return True, "minhash_lsh_duplicate", float(intersection / union)
+
         ngram_diversity = len(ngrams) / max(sum(len(ng) for ng in ngrams), 1)
 
         # Add to caches with timestamp

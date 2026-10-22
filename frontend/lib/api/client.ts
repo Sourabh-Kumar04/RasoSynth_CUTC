@@ -351,6 +351,11 @@ class APIClient {
     return this.request<any>(`/jobs/${id}`, { method: 'DELETE' })
   }
 
+  async getOrchestrationDag(jobId?: string) {
+    const q = jobId ? `?job_id=${encodeURIComponent(jobId)}` : ''
+    return this.request<any>(`/orchestration/dag${q}`)
+  }
+
   async getPreviewSamples(jobId: string) {
     return this.request<{ job_id: string; status: string; samples: any[]; sample_count: number }>(`/jobs/${jobId}/preview_samples`)
   }

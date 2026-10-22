@@ -2144,6 +2144,28 @@ class DatasetOrchestrator:
                 except Exception as pkg_err:
                     logger.debug(f"DatasetPackager skipped: {pkg_err}")
 
+                # Trigger DeliveryManager for multi-cloud / HF delivery
+                try:
+                    from core.storage.delivery import DeliveryManager, DeliveryRequest, StorageProviderType, DeliveryStrategy
+                    delivery_manager = DeliveryManager()
+                    dest = StorageProviderType.HUGGINGFACE if (job_config.get("hf_dataset_org") or export_config.hf_dataset_org) else StorageProviderType.AWS_S3 if (job_config.get("s3_bucket") or export_config.s3_bucket) else None
+                    if dest:
+                        deliv_req = DeliveryRequest(
+                            dataset_id=job_id,
+                            dataset_name=export_config.dataset_name,
+                            destination=dest,
+                            strategy=DeliveryStrategy.DIRECT_DOWNLOAD,
+                        )
+                        deliv_info = await delivery_manager.deliver(deliv_req, raw_samples)
+                        metadata_dict["delivery_info"] = {
+                            "delivery_id": deliv_info.delivery_id,
+                            "status": deliv_info.status.value,
+                            "destination": dest.value,
+                        }
+                        logger.info("  ✓ DeliveryManager orchestrated delivery [%s] to %s", deliv_info.delivery_id, dest.value)
+                except Exception as deliv_err:
+                    logger.debug("DeliveryManager skipped: %s", deliv_err)
+
                 # Create dataset record
                 dataset_record = await self.db.create_dataset(
                     job_id=job_id,
