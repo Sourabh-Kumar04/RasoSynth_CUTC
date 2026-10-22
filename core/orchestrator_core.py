@@ -649,32 +649,53 @@ class DatasetOrchestrator:
                             task=task_type,
                             prompt=llm_prompt,
                             temperature=0.7,
-                            max_tokens=1500,
+                            max_tokens=2500,
                         )
                     except TypeError:
                         from providers.core_lib.base import LLMRequest
-                        req = LLMRequest(input=llm_prompt, temperature=0.7, max_tokens=1500)
+                        req = LLMRequest(input=llm_prompt, temperature=0.7, max_tokens=2500)
                         llm_res = await self.router.route(req)
                     raw_text = (getattr(llm_res, "content", None) or getattr(llm_res, "text", "") or "").strip()
-                    match = _re.search(r'\[.*\]', raw_text, _re.DOTALL)
-                    if match:
-                        parsed = json.loads(match.group(0))
-                        if isinstance(parsed, list) and len(parsed) >= 1:
-                            for i, item in enumerate(parsed[:3]):
-                                inst = str(item.get("instruction") or "").strip()
-                                resp = str(item.get("response") or "").strip()
-                                if inst and resp:
-                                    preview_samples.append({
-                                        "instruction": inst,
-                                        "response": resp,
-                                        "metadata": {
-                                            "preview": True,
-                                            "domain": domain_name,
-                                            "quality_score": round(0.94 + (i * 0.02), 2),
-                                            "difficulty_tier": 3 + i,
-                                        }
-                                    })
-                            logger.info(f"[{job_id}] Early preview synthesized {len(preview_samples)} realistic samples via LLM router")
+                    cleaned_text = _re.sub(r'```(?:json)?\s*', '', raw_text, flags=_re.IGNORECASE)
+                    cleaned_text = _re.sub(r'```\s*$', '', cleaned_text).strip()
+
+                    parsed_list = []
+                    # Try direct JSON parsing
+                    try:
+                        match = _re.search(r'\[.*\]', cleaned_text, _re.DOTALL)
+                        if match:
+                            parsed_list = json.loads(match.group(0))
+                    except Exception:
+                        pass
+
+                    # Resilient fallback: extract individual objects with regex if list parsing failed
+                    if not parsed_list or not isinstance(parsed_list, list):
+                        obj_matches = _re.finditer(r'\{[^{}]*"instruction"\s*:\s*(?:"(?:\\.|[^"\\])*"|\'[^\']*\')\s*,\s*"response"\s*:\s*(?:"(?:\\.|[^"\\])*"|\'[^\']*\')[^{}]*\}', cleaned_text, _re.DOTALL)
+                        parsed_list = []
+                        for m in obj_matches:
+                            try:
+                                obj = json.loads(m.group(0))
+                                if "instruction" in obj and "response" in obj:
+                                    parsed_list.append(obj)
+                            except Exception:
+                                pass
+
+                    if isinstance(parsed_list, list) and len(parsed_list) >= 1:
+                        for i, item in enumerate(parsed_list[:3]):
+                            inst = str(item.get("instruction") or "").strip()
+                            resp = str(item.get("response") or "").strip()
+                            if inst and resp:
+                                preview_samples.append({
+                                    "instruction": inst,
+                                    "response": resp,
+                                    "metadata": {
+                                        "preview": True,
+                                        "domain": domain_name,
+                                        "quality_score": round(0.94 + (i * 0.02), 2),
+                                        "difficulty_tier": 3 + i,
+                                    }
+                                })
+                        logger.info(f"[{job_id}] Early preview synthesized {len(preview_samples)} realistic samples via LLM router")
                 except Exception as e:
                     logger.warning(f"Early preview LLM generation attempt failed: {e}")
 
