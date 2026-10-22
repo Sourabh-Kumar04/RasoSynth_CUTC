@@ -363,6 +363,17 @@ class APIClient {
     })
   }
 
+  async deliverDataset(id: string, payload: { destination?: string; strategy?: string; compression?: string; dataset_name?: string } = {}) {
+    return this.request<any>(`/datasets/${id}/deliver`, {
+      method: 'POST',
+      body: JSON.stringify(payload),
+    })
+  }
+
+  async getDelivery(deliveryId: string) {
+    return this.request<any>(`/deliveries/${deliveryId}`)
+  }
+
   // Providers API
   async getProviders() {
     return this.request<any[]>('/providers')

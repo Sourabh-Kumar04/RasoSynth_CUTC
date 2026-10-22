@@ -1799,6 +1799,23 @@ export default function DatasetsPage() {
                 Compliant with EU AI Act &amp; India DPDP Act 2023
               </span>
               <div className="flex items-center gap-2">
+                {dbomData?.package_manifest && (
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    onClick={() => {
+                      const blob = new Blob([JSON.stringify(dbomData.package_manifest, null, 2)], { type: 'application/json' })
+                      const url = URL.createObjectURL(blob)
+                      const a = document.createElement('a')
+                      a.href = url
+                      a.download = `manifest-${dbomData.job_id || 'dataset'}.json`
+                      a.click()
+                    }}
+                    className="text-xs font-mono border-[#272738] text-teal-300 hover:text-white"
+                  >
+                    Download manifest.json
+                  </Button>
+                )}
                 <Button
                   size="sm"
                   variant="outline"
