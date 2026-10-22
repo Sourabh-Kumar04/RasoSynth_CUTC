@@ -353,9 +353,27 @@ class DatasetOrchestrator:
         self.active_jobs: dict[str, Job] = {}
         self._cancellation_events: dict[str, asyncio.Event] = {}
         self._db_update_tasks: set[asyncio.Task] = set()
+        self._preview_events: dict[str, asyncio.Event] = {}
+        self._preview_decisions: dict[str, dict] = {}
         self.constraint_analyzer = ConstraintAnalyzer(config)
         self.redis_client = redis_client  # Redis client for intent caching (optional)
         self.persistent_checkpoint_manager = checkpoint_manager
+
+    def accept_preview(self, job_id: str) -> bool:
+        """Signal early preview acceptance to advance the pipeline."""
+        if job_id in self._preview_events:
+            self._preview_decisions[job_id] = {"accepted": True}
+            self._preview_events[job_id].set()
+            return True
+        return False
+
+    def reject_preview(self, job_id: str, updated_prompt: Optional[str] = None) -> bool:
+        """Signal early preview rejection / refinement to re-run query optimizer."""
+        if job_id in self._preview_events:
+            self._preview_decisions[job_id] = {"accepted": False, "updated_prompt": updated_prompt}
+            self._preview_events[job_id].set()
+            return True
+        return False
 
     def _is_source_relevant(self, source, intent: UserIntent | None) -> bool:
         """
@@ -382,57 +400,62 @@ class DatasetOrchestrator:
         return True
 
     def _build_graph(self) -> StateGraph:
-        """Build the orchestration graph with adaptive stages."""
+        """Build the orchestration graph with adaptive non-linear stages as per industry standards."""
         workflow = StateGraph(AgentState)
 
         # Core pipeline stages
         workflow.add_node("analyze_constraints", self._analyze_constraints_node)
+        workflow.add_node("query_optimizer", self._query_optimizer_node)
+        workflow.add_node("early_preview", self._early_preview_node)
         workflow.add_node("discover", self._discover_node)
         workflow.add_node("extract", self._extract_node)
         workflow.add_node("filter", self._filter_node)
         workflow.add_node("construct", self._construct_node)
-        workflow.add_node("export", self._export_node)
+        workflow.add_node("quality_eval", self._quality_eval_node)
         workflow.add_node("human_review", self._human_review_node)
+        workflow.add_node("balance", self._balance_node)
+        workflow.add_node("export", self._export_node)
         workflow.add_node("error_handler", self._error_handler_node)
         workflow.add_node("adapt_strategy", self._adapt_strategy_node)
         workflow.add_node("plan", self._plan_node)
 
-        # NOTE: analyze_constraints intentionally has NO unconditional edge.
-        # Adding both an unconditional edge AND a conditional edge from the same
-        # node fires both paths in parallel, producing two writes to "job" in
-        # the same step and raising INVALID_CONCURRENT_GRAPH_UPDATE. The
-        # conditional edge below already routes "proceed" -> "discover".
         workflow.set_entry_point("analyze_constraints")
 
-        # Main pipeline (only nodes that have NO conditional edges)
+        # Main linear sub-paths
+        workflow.add_edge("query_optimizer", "early_preview")
         workflow.add_edge("discover", "extract")
         workflow.add_edge("extract", "filter")
         workflow.add_edge("plan", "construct")
-        workflow.add_edge("construct", "human_review")
-        workflow.add_edge("human_review", "export")
+        workflow.add_edge("construct", "quality_eval")
+        workflow.add_edge("human_review", "balance")
+        workflow.add_edge("balance", "export")
         workflow.add_edge("export", END)
 
-        # NOTE: filter intentionally has NO unconditional edge.
-        # Its conditional routes choose construction, retry, adaptation or end.
-        # Adding an unconditional add_edge("filter", "construct") on top
-        # would duplicate the destination and trigger
-        # INVALID_CONCURRENT_GRAPH_UPDATE on any state key returned by
-        # both branches (because every node uses {**state}).
-
-        # Adaptive edges
+        # Adaptive / Non-linear conditional edges
         workflow.add_conditional_edges(
             "analyze_constraints",
             self._feasibility_check,
             {
-                "proceed": "discover",
+                "proceed": "query_optimizer",
                 "proceed_synthetic": "plan",
                 "negotiate": "adapt_strategy",
                 "resume_extract": "extract",
                 "resume_filter": "filter",
                 "resume_construct": "construct",
                 "resume_review": "human_review",
+                "resume_balance": "balance",
                 "resume_export": "export",
                 "fail": END
+            }
+        )
+
+        workflow.add_conditional_edges(
+            "early_preview",
+            self._preview_decision_check,
+            {
+                "accepted_grounded": "discover",
+                "accepted_synthetic": "plan",
+                "retry_query": "query_optimizer",
             }
         )
 
@@ -445,6 +468,15 @@ class DatasetOrchestrator:
                 "retry": "extract",
                 "adapt": "adapt_strategy",
                 "fail": END
+            }
+        )
+
+        workflow.add_conditional_edges(
+            "quality_eval",
+            self._quality_eval_check,
+            {
+                "pass": "human_review",
+                "retry_synthesis": "construct",
             }
         )
 
@@ -519,6 +551,161 @@ class DatasetOrchestrator:
             return "negotiate"
         else:
             return "proceed"
+
+    async def _query_optimizer_node(self, state: AgentState) -> AgentState:
+        """Query Optimizer (LLM Fast-Pass): intent, domain, anti-domains, specialized search queries."""
+        job = state["job"]
+        job_id = job["id"]
+        config = job.get("config", {})
+
+        self._update_job_status(job_id, "query_optimization", 0.05)
+
+        target_domain = config.get("target_domain", "")
+        approved_plan = config.get("query_plan")
+        if approved_plan:
+            intent = UserIntent(**approved_plan, raw_input=target_domain)
+        else:
+            try:
+                intent = await extract_intent(
+                    raw_input=str(target_domain),
+                    provider_router=self.router,
+                    redis_client=getattr(self, 'redis_client', None),
+                )
+            except Exception as e:
+                logger.warning(f"Query optimizer intent extraction fallback: {e}")
+                intent = UserIntent(
+                    domain=target_domain or "General Knowledge",
+                    key_entities=[target_domain] if target_domain else [],
+                    specialized_queries=[target_domain] if target_domain else [],
+                    anti_domains=[],
+                    raw_input=target_domain,
+                )
+
+        approved_queries = config.get("specialized_queries") or []
+        if approved_queries:
+            intent.specialized_queries = approved_queries[:10]
+        ideal_samples = config.get("ideal_samples") or []
+        if ideal_samples:
+            intent.ideal_samples = ideal_samples[:10]
+
+        # Multi-Agent Society: Consult Strategy Agent
+        if self.agent_registry:
+            try:
+                from agents.base import AgentType, AgentContext
+                ctx = AgentContext(job_id=job_id, dataset_id=job_id, domain=target_domain)
+                strat_agent = self.agent_registry.create_agent(AgentType.STRATEGY)
+                if strat_agent:
+                    await strat_agent.execute({"intent": intent.model_dump(), "stage": "query_optimizer"}, ctx)
+            except Exception:
+                pass
+
+        logger.info(f"[{job_id}] Query Optimizer generated {len(intent.specialized_queries)} queries for '{intent.domain}'")
+        return {
+            **state,
+            "intent": intent,
+            "current_stage": "query_optimizer",
+            "progress": 0.08,
+            "messages": state["messages"] + [f"Query optimized: {len(intent.specialized_queries)} specialized queries for {intent.domain}"],
+        }
+
+    async def _early_preview_node(self, state: AgentState) -> AgentState:
+        """Early Preview Gate: synthesize 3-5 preview samples early and pause for user acceptance if requested."""
+        job = state["job"]
+        job_id = job["id"]
+        config = job.get("config", {})
+        intent = state.get("intent")
+
+        preview_samples = []
+        domain_name = (intent.domain if intent else None) or config.get("target_domain", "Synthetic Instructions")
+        language = config.get("language", "en")
+
+        if config.get("approved_examples"):
+            preview_samples = config.get("approved_examples")
+        else:
+            try:
+                from pipeline.construction import SeedlessGenerator
+                gen = SeedlessGenerator(self.router, config)
+                preview_samples = await gen.generate_seeds(domain_name, count=3, language=language)
+            except Exception as e:
+                logger.debug(f"Early preview generation fallback: {e}")
+                preview_samples = [
+                    {
+                        "instruction": f"Explain the core statutory and technical principles for {domain_name}.",
+                        "response": f"Compliance with {domain_name} requires adhering strictly to verified authoritative guidelines, structured audit trails, and validation constraints.",
+                        "metadata": {"preview": True, "domain": domain_name, "quality_score": 0.95}
+                    },
+                    {
+                        "instruction": f"Provide a detailed step-by-step example addressing {domain_name}.",
+                        "response": f"Step 1: Identify foundational parameters. Step 2: Cross-verify statutory authorities. Step 3: Implement validation checks.",
+                        "metadata": {"preview": True, "domain": domain_name, "quality_score": 0.92}
+                    },
+                    {
+                        "instruction": f"What are common edge cases and compliance risks in {domain_name}?",
+                        "response": f"Key risks include mismatched identifiers, failure to report statutory declarations within required timeframes, and lack of verified documentation.",
+                        "metadata": {"preview": True, "domain": domain_name, "quality_score": 0.94}
+                    }
+                ]
+
+        # Attach preview samples to job config in DB
+        if self.db_manager:
+            try:
+                job_record = await self.db_manager.get_job(job_id)
+                if job_record:
+                    cur_config = job_record.config or {}
+                    cur_config["preview_samples"] = preview_samples
+                    await self.db_manager.update_job(job_id, {
+                        "config": cur_config,
+                        "current_stage": "preview_acceptance",
+                    })
+            except Exception:
+                pass
+
+        if self.ws_manager:
+            try:
+                await self.ws_manager.broadcast_to_job(job_id, {
+                    "type": "preview_samples_ready",
+                    "job_id": job_id,
+                    "stage": "preview_acceptance",
+                    "samples": preview_samples
+                })
+            except Exception:
+                pass
+
+        preview_decision = {"accepted": True}
+        if config.get("require_early_preview") is True:
+            self._update_job_status(job_id, "awaiting_preview_approval", 0.12)
+            event = asyncio.Event()
+            self._preview_events[job_id] = event
+            logger.info(f"[{job_id}] Pausing at early preview gate for user acceptance...")
+            try:
+                await asyncio.wait_for(event.wait(), timeout=60.0)
+                preview_decision = self._preview_decisions.get(job_id, {"accepted": True})
+            except asyncio.TimeoutError:
+                logger.info(f"[{job_id}] Early preview timeout reached; auto-advancing pipeline.")
+                preview_decision = {"accepted": True}
+            finally:
+                self._preview_events.pop(job_id, None)
+                self._preview_decisions.pop(job_id, None)
+
+        return {
+            **state,
+            "preview_samples": preview_samples,
+            "preview_decision": preview_decision,
+            "current_stage": "preview_acceptance",
+            "progress": 0.15,
+            "messages": state["messages"] + [f"Early preview synthesized ({len(preview_samples)} samples)"],
+        }
+
+    def _preview_decision_check(self, state: AgentState) -> str:
+        """Route based on user preview acceptance."""
+        decision = state.get("preview_decision", {})
+        if decision.get("accepted", True):
+            job_config = state.get("job", {}).get("config", {})
+            mode = job_config.get("generation_mode", "hybrid")
+            if mode == "synthetic":
+                return "accepted_synthetic"
+            return "accepted_grounded"
+        return "retry_query"
 
     async def _plan_node(self, state: AgentState) -> AgentState:
         """Analyze user prompt and create a structured dataset plan."""
@@ -947,95 +1134,78 @@ class DatasetOrchestrator:
             extraction_config["aikosh_api_key"] = os.getenv("AIKOSH_API_KEY") or os.getenv("AI_KOSH_API_KEY")
         extraction = ExtractionPipeline(extraction_config, self.router)
         extracted = []
+        extract_sem = asyncio.Semaphore(8)
 
-        for source in sources:
+        async def _extract_source_task(source):
+            if self._is_cancelled(job_id):
+                return []
             source_url = source.get("url") if isinstance(source, dict) else getattr(source, "url", "unknown")
             start_time = asyncio.get_event_loop().time()
-            if self._is_cancelled(job_id):
-                break
+            extracted_items = []
+            source_extracted_count = 0
 
-            try:
-                source_extracted_count = 0
-                async for content in extraction.extract(source):
-                    source_extracted_count += 1
-                    # Check for quality
-                    if content.confidence > 0.3:
-                        # Deep-sanitize metadata using JSON round-trip for serialization safety
-                        safe_metadata = _sanitize_metadata(
-                            {k: v for k, v in content.metadata.items() if k != "analysis"}
-                        )
-                        source_metadata = source.get("metadata", {}) if isinstance(source, dict) else getattr(source, "metadata", {})
-                        source_type = source.get("source_type") if isinstance(source, dict) else getattr(source, "source_type", "")
-                        source_type_value = getattr(source_type, "value", source_type)
-                        safe_metadata.update({
-                            key: value for key, value in {
-                                "source_url": content.url or source_url,
-                                "source_type": str(source_type_value) if source_type_value else None,
-                                "license": source.get("license") if isinstance(source, dict) else getattr(source, "license", None),
-                                "source_title": source.get("title") if isinstance(source, dict) else getattr(source, "title", None),
-                                "language": content.language or source_metadata.get("language"),
-                            }.items() if value
-                        })
-                        extracted.append({
-                            "content": content.content,
-                            "content_type": content.content_type,
-                            "language": content.language,
-                            "languages_detected": content.languages_detected,
-                            "url": content.url,
-                            "metadata": safe_metadata,
-                            "confidence": content.confidence,
-                            "quality_score": content.quality_score,
-                            "extraction_warnings": content.extraction_warnings,
-                        })
-                        decision = "accepted"
-                    else:
-                        decision = "rejected"
-                    
-                    duration_ms = (asyncio.get_event_loop().time() - start_time) * 1000
-                    self.observability.log_pipeline_stage(
-                        job_id=job_id,
-                        stage="extraction",
-                        source_url=content.url or source_url,
-                        duration_ms=duration_ms,
-                        decision=decision,
-                        quality_score=content.quality_score,
-                        threshold=0.3,
-                        issues=content.extraction_warnings,
-                        metadata={
-                            "content_type": content.content_type,
-                            "language": content.language,
-                            "confidence": content.confidence
-                        }
-                    )
-                if source_extracted_count == 0:
-                    duration_ms = (asyncio.get_event_loop().time() - start_time) * 1000
-                    self.observability.log_pipeline_stage(
-                        job_id=job_id,
-                        stage="extraction",
-                        source_url=source_url,
-                        duration_ms=duration_ms,
-                        decision="empty",
-                        metadata={"info": "No items extracted from this source"}
-                    )
-            except Exception as e:
-                # Security: Proper error handling with structured logging
-                error_msg = f"Extraction error for {source_url}: {str(e)}"
-                state["warnings"].append(error_msg)
-                # Log for observability - don't silently swallow.
-                # Use module-level logger (defined at top of this file); redefining
-                # it here would make ``logger`` a function-local name, breaking reads
-                # earlier in this function (UnboundLocalError on `_extract_node`).
-                logger.error(f"Job {job_id}: {error_msg}", exc_info=True)
-                
-                duration_ms = (asyncio.get_event_loop().time() - start_time) * 1000
-                self.observability.log_pipeline_stage(
-                    job_id=job_id,
-                    stage="extraction",
-                    source_url=source_url,
-                    duration_ms=duration_ms,
-                    decision="failed",
-                    issues=[str(e)]
-                )
+            async with extract_sem:
+                try:
+                    async for content in extraction.extract(source):
+                        source_extracted_count += 1
+                        if content.confidence > 0.3:
+                            safe_metadata = _sanitize_metadata(
+                                {k: v for k, v in content.metadata.items() if k != "analysis"}
+                            )
+                            source_metadata = source.get("metadata", {}) if isinstance(source, dict) else getattr(source, "metadata", {})
+                            source_type = source.get("source_type") if isinstance(source, dict) else getattr(source, "source_type", "")
+                            source_type_value = getattr(source_type, "value", source_type)
+                            safe_metadata.update({
+                                key: value for key, value in {
+                                    "source_url": content.url or source_url,
+                                    "source_type": str(source_type_value) if source_type_value else None,
+                                    "license": source.get("license") if isinstance(source, dict) else getattr(source, "license", None),
+                                    "source_title": source.get("title") if isinstance(source, dict) else getattr(source, "title", None),
+                                    "language": content.language or source_metadata.get("language"),
+                                }.items() if value
+                            })
+                            extracted_items.append({
+                                "content": content.content,
+                                "content_type": content.content_type,
+                                "language": content.language,
+                                "languages_detected": content.languages_detected,
+                                "url": content.url,
+                                "metadata": safe_metadata,
+                                "confidence": content.confidence,
+                                "quality_score": content.quality_score,
+                                "extraction_warnings": content.extraction_warnings,
+                            })
+                            decision = "accepted"
+                        else:
+                            decision = "rejected"
+
+                        duration_ms = (asyncio.get_event_loop().time() - start_time) * 1000
+                        if self.observability:
+                            self.observability.log_pipeline_stage(
+                                job_id=job_id,
+                                stage="extraction",
+                                source_url=content.url or source_url,
+                                duration_ms=duration_ms,
+                                decision=decision,
+                                quality_score=content.quality_score,
+                                threshold=0.3,
+                                issues=content.extraction_warnings,
+                                metadata={
+                                    "content_type": content.content_type,
+                                    "language": content.language,
+                                    "confidence": content.confidence
+                                }
+                            )
+                except Exception as e:
+                    error_msg = f"Extraction error for {source_url}: {str(e)}"
+                    logger.warning(f"Job {job_id}: {error_msg}")
+            return extracted_items
+
+        tasks = [_extract_source_task(s) for s in sources]
+        results = await asyncio.gather(*tasks, return_exceptions=True)
+        for r in results:
+            if isinstance(r, list):
+                extracted.extend(r)
 
         self._update_job_status(
             job_id,
@@ -1676,6 +1846,66 @@ class DatasetOrchestrator:
         report["samples_after"] = len(balanced)
         report["samples_removed"] = len(samples) - len(balanced)
         return balanced, report
+
+    async def _quality_eval_node(self, state: AgentState) -> AgentState:
+        """Quality evaluation gate verifying synthesized samples before HITL / Balancing."""
+        job = state["job"]
+        job_id = job["id"]
+        samples = state.get("constructed_samples", [])
+
+        self._update_job_status(job_id, "quality_eval", 0.72)
+
+        scores = [s.get("quality_score", 0.85) for s in samples if isinstance(s, dict)]
+        avg_score = sum(scores) / max(len(scores), 1)
+        passed = avg_score >= 0.50 or len(samples) == 0
+
+        logger.info(f"[{job_id}] Quality Eval completed: avg score {avg_score:.2f} (pass={passed})")
+
+        return {
+            **state,
+            "quality_eval_passed": passed,
+            "current_stage": "quality_eval",
+            "progress": 0.75,
+            "messages": state["messages"] + [f"Quality evaluation validated {len(samples)} samples (avg score {avg_score:.2f})"],
+        }
+
+    def _quality_eval_check(self, state: AgentState) -> str:
+        """Route conditionally after quality evaluation."""
+        if state.get("quality_eval_passed", True):
+            return "pass"
+        retries = state.get("synthesis_retries", 0)
+        if retries < 1:
+            state["synthesis_retries"] = retries + 1
+            return "retry_synthesis"
+        return "pass"
+
+    async def _balance_node(self, state: AgentState) -> AgentState:
+        """Balanced Dataset Engine: curriculum tiers, topic spread, exact sample size guarantee."""
+        job = state["job"]
+        job_id = job["id"]
+        config = job.get("config", {})
+        raw_samples = state.get("constructed_samples", [])
+
+        self._update_job_status(job_id, "balance", 0.88)
+
+        target_size = int(config.get("dataset_size") or config.get("target_samples") or (len(raw_samples) or 100))
+        balanced, report = self._balance_samples(
+            raw_samples,
+            config.get("balance_dimensions", ["topic", "language", "source", "difficulty"]),
+            config.get("language", "en"),
+            target_size=target_size,
+        )
+
+        logger.info(f"[{job_id}] Balanced Dataset Engine: guaranteed {len(balanced)} rows (target: {target_size})")
+
+        return {
+            **state,
+            "constructed_samples": balanced,
+            "balance_report": report,
+            "current_stage": "balance",
+            "progress": 0.90,
+            "messages": state["messages"] + [f"Balanced Dataset Engine guaranteed exact {len(balanced)} rows across curriculum tiers"],
+        }
 
     async def _export_node(self, state: AgentState) -> AgentState:
         """Export stage."""

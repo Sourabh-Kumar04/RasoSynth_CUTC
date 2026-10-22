@@ -26,7 +26,7 @@ services:
     environment:
       POSTGRES_DB: ${POSTGRES_DB:-dataset_engine}
       POSTGRES_USER: ${POSTGRES_USER:-dataset_user}
-      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?Set POSTGRES_PASSWORD in .env}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-dataset_pass}
     volumes:
       - postgres_data:/var/lib/postgresql/data
     healthcheck:
@@ -70,7 +70,7 @@ services:
       - .env
     environment:
       REDIS_URL: redis://redis:6379/0
-      POSTGRES_URL: postgresql+asyncpg://${POSTGRES_USER:-dataset_user}:${POSTGRES_PASSWORD:?Set POSTGRES_PASSWORD in .env}@postgres:5432/${POSTGRES_DB:-dataset_engine}
+      POSTGRES_URL: postgresql+asyncpg://${POSTGRES_USER:-dataset_user}:${POSTGRES_PASSWORD:-dataset_pass}@postgres:5432/${POSTGRES_DB:-dataset_engine}
       QDRANT_URL: http://qdrant:6333
       ENABLE_CELERY: "true"
       PYTHONUNBUFFERED: "1"
@@ -108,7 +108,7 @@ services:
       - .env
     environment:
       REDIS_URL: redis://redis:6379/0
-      POSTGRES_URL: postgresql+asyncpg://${POSTGRES_USER:-dataset_user}:${POSTGRES_PASSWORD:?Set POSTGRES_PASSWORD in .env}@postgres:5432/${POSTGRES_DB:-dataset_engine}
+      POSTGRES_URL: postgresql+asyncpg://${POSTGRES_USER:-dataset_user}:${POSTGRES_PASSWORD:-dataset_pass}@postgres:5432/${POSTGRES_DB:-dataset_engine}
       QDRANT_URL: http://qdrant:6333
       ENABLE_CELERY: "true"
       PYTHONUNBUFFERED: "1"

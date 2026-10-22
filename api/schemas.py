@@ -261,8 +261,10 @@ class HealthResponse(BaseModel):
     version: str
     providers: dict[str, str]
     database: bool
+    database_engine: Optional[str] = "postgresql"
     redis: bool
     research_loop_status: Optional[str] = None
+    system_metrics: Optional[dict[str, Any]] = None
 
 
 class ResearchRequest(BaseModel):

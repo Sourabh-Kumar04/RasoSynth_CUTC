@@ -240,6 +240,20 @@ class ObservabilityManager:
                 "dataset_engine_backup_size_bytes",
                 "Size of last backup in bytes",
             ),
+            "pipeline_stage_duration_seconds": _histogram(
+                "rasosynth_pipeline_stage_duration_seconds",
+                "Pipeline stage execution duration in seconds",
+                ["stage"],
+                buckets=(0.1, 0.5, 1.0, 2.5, 5.0, 10.0, 30.0, 60.0, 120.0, 300.0),
+            ),
+            "system_cpu_load": _gauge(
+                "rasosynth_system_cpu_load",
+                "System 1-minute load average",
+            ),
+            "system_memory_used_percent": _gauge(
+                "rasosynth_system_memory_used_percent",
+                "System memory utilization percentage",
+            ),
         }
 
     async def initialize(self) -> None:
@@ -533,6 +547,21 @@ class ObservabilityManager:
         """Generate and return the latest Prometheus metrics in text format."""
         if PROMETHEUS_AVAILABLE:
             try:
+                # Refresh host system resource gauges on scrape
+                try:
+                    if os.path.exists('/proc/loadavg') and "system_cpu_load" in self._metrics:
+                        with open('/proc/loadavg') as f:
+                            load = float(f.read().split()[0])
+                            self._metrics["system_cpu_load"].set(load)
+                    if os.path.exists('/proc/meminfo') and "system_memory_used_percent" in self._metrics:
+                        with open('/proc/meminfo') as f:
+                            lines = f.readlines()
+                            mem_total = int([x for x in lines if 'MemTotal' in x][0].split()[1])
+                            mem_avail = int([x for x in lines if 'MemAvailable' in x][0].split()[1])
+                            mem_used_pct = round((1 - mem_avail / mem_total) * 100, 2)
+                            self._metrics["system_memory_used_percent"].set(mem_used_pct)
+                except Exception:
+                    pass
                 return generate_latest()
             except Exception as e:
                 logger.error(f"Failed to generate Prometheus metrics: {e}")

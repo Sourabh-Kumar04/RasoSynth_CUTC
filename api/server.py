@@ -475,11 +475,23 @@ async def lifespan(app: FastAPI):
         observability = None
 
     # (3) Database (AsyncDB backed by SQLAlchemy/asyncpg; falls back to SQLite if Postgres unreachable)
+    db = None
     try:
         db = await AsyncDB.create(settings.postgres_url)
-        logger.info("  ✓ AsyncDB initialized (PostgreSQL)")
+        logger.info(f"  ✓ AsyncDB initialized (PostgreSQL: {settings.postgres_url})")
     except Exception as e:
-        logger.warning(f"  ⚠ PostgreSQL connection failed ({e}). Falling back to SQLite...")
+        # If running outside container network, try localhost fallback for docker-exposed postgres
+        if "@postgres:" in settings.postgres_url:
+            local_pg_url = settings.postgres_url.replace("@postgres:", "@localhost:", 1)
+            try:
+                db = await AsyncDB.create(local_pg_url)
+                logger.info(f"  ✓ AsyncDB initialized (PostgreSQL on host fallback: {local_pg_url})")
+            except Exception as e_local:
+                logger.warning(f"  ⚠ PostgreSQL connection failed (docker net: {e}, host: {e_local}). Falling back to SQLite...")
+        else:
+            logger.warning(f"  ⚠ PostgreSQL connection failed ({e}). Falling back to SQLite...")
+
+    if db is None:
         try:
             os.makedirs("outputs", exist_ok=True)
             sqlite_url = f"sqlite+aiosqlite:///{os.path.abspath('outputs/rasosynthtune.db')}"
@@ -1382,13 +1394,37 @@ async def health_check():
     elif not providers_healthy:
         overall_status = "degraded"
 
+    db_engine_name = "postgresql"
+    if db and hasattr(db, "db") and hasattr(db.db, "engine"):
+        driver = str(getattr(db.db.engine.url, "drivername", "")).lower()
+        if "sqlite" in driver:
+            db_engine_name = "sqlite"
+        elif "postgres" in driver or "asyncpg" in driver:
+            db_engine_name = "postgresql"
+
+    system_metrics: dict[str, Any] = {}
+    try:
+        if os.path.exists('/proc/loadavg'):
+            with open('/proc/loadavg') as f:
+                system_metrics["cpu_load_1m"] = float(f.read().split()[0])
+        if os.path.exists('/proc/meminfo'):
+            with open('/proc/meminfo') as f:
+                lines = f.readlines()
+                mem_total = int([x for x in lines if 'MemTotal' in x][0].split()[1])
+                mem_avail = int([x for x in lines if 'MemAvailable' in x][0].split()[1])
+                system_metrics["memory_used_percent"] = round((1 - mem_avail / mem_total) * 100, 2)
+    except Exception:
+        pass
+
     return HealthResponse(
         status=overall_status,
         version="2.0.0",
         providers=providers_healthy,
         database=db_healthy,
+        database_engine=db_engine_name,
         redis=redis_healthy,
-        research_loop_status=research_status
+        research_loop_status=research_status,
+        system_metrics=system_metrics or None,
     )
 
 
@@ -2121,6 +2157,97 @@ async def cancel_job(job_id: str):
     return {"status": "cancelled", "job_id": job_id, "message": "Job cancelled successfully"}
 
 
+@app.delete("/jobs/{job_id}", tags=["Jobs"])
+async def delete_job_endpoint(job_id: str):
+    """Delete a job, all associated datasets/samples, and output files."""
+    if not db:
+        raise HTTPException(status_code=503, detail="Database not available")
+
+    job = await db.get_job_status(job_id)
+    if not job:
+        raise HTTPException(status_code=404, detail=f"Job {job_id} not found")
+
+    # Cancel if running
+    if orchestrator and hasattr(orchestrator, "active_jobs") and job_id in orchestrator.active_jobs:
+        active_task = orchestrator.active_jobs.get(job_id)
+        if hasattr(active_task, "cancel") and callable(active_task.cancel):
+            try:
+                active_task.cancel()
+            except Exception:
+                pass
+
+    # Clean up output artifacts on disk
+    try:
+        output_dir = Path("outputs")
+        if output_dir.exists():
+            for f in output_dir.glob(f"*{job_id}*"):
+                try:
+                    f.unlink(missing_ok=True)
+                except Exception:
+                    pass
+    except Exception:
+        pass
+
+    success = await db.delete_job(job_id)
+    return {"success": success, "message": f"Job {job_id} and associated data deleted"}
+
+
+class RejectPreviewRequest(BaseModel):
+    updated_prompt: Optional[str] = None
+    notes: Optional[str] = None
+
+
+@app.get("/jobs/{job_id}/preview_samples", tags=["Jobs"])
+async def get_job_preview_samples(job_id: str):
+    """Retrieve early dataset preview samples generated for a job."""
+    if not db:
+        raise HTTPException(status_code=503, detail="Database not available")
+    job = await db.get_job_status(job_id)
+    if not job:
+        raise HTTPException(status_code=404, detail=f"Job {job_id} not found")
+    config = job.get("config") or {}
+    preview_samples = config.get("preview_samples", [])
+    return {
+        "job_id": job_id,
+        "status": job["status"],
+        "samples": preview_samples,
+        "sample_count": len(preview_samples)
+    }
+
+
+@app.post("/jobs/{job_id}/accept_preview", tags=["Jobs"])
+async def accept_job_preview(job_id: str):
+    """Accept early preview samples and advance pipeline with full capabilities."""
+    if orchestrator and hasattr(orchestrator, "accept_preview"):
+        success = orchestrator.accept_preview(job_id)
+        if success:
+            return {"success": True, "message": f"Preview accepted for job {job_id}. Advancing pipeline."}
+    if db:
+        await db.update_job_status(job_id, {"status": "running", "current_stage": "discover"})
+        return {"success": True, "message": f"Job {job_id} resumed."}
+    raise HTTPException(status_code=404, detail="Job not found or not awaiting preview")
+
+
+@app.post("/jobs/{job_id}/reject_preview", tags=["Jobs"])
+async def reject_job_preview(job_id: str, payload: RejectPreviewRequest = Body(default_factory=RejectPreviewRequest)):
+    """Reject early preview samples, optionally supply updated prompt, and re-generate preview."""
+    if orchestrator and hasattr(orchestrator, "reject_preview"):
+        success = orchestrator.reject_preview(job_id, updated_prompt=payload.updated_prompt)
+        if success:
+            return {"success": True, "message": f"Preview rejected. Re-optimizing query and generating fresh samples."}
+    if db:
+        status_update: dict[str, Any] = {"status": "running", "current_stage": "query_optimizer"}
+        if payload.updated_prompt:
+            job = await db.get_job_status(job_id)
+            if job:
+                cfg = job.get("config") or {}
+                cfg["target_domain"] = payload.updated_prompt
+                status_update["config"] = cfg
+        await db.update_job_status(job_id, status_update)
+        return {"success": True, "message": "Job updated for regeneration."}
+    raise HTTPException(status_code=404, detail="Job not found or not awaiting preview")
+
+
 # =============================================================================
 # Dataset API Endpoints
 # =============================================================================
@@ -2211,6 +2338,42 @@ async def get_dataset_records(dataset_id: str, limit: int = 10):
     except Exception as e:
         logger.error(f"Failed to get records for dataset {dataset_id}: {e}")
         raise HTTPException(status_code=500, detail=f"Failed to get records: {e}")
+
+
+@app.delete("/datasets/{dataset_id}", tags=["Datasets"])
+async def delete_dataset_endpoint(dataset_id: str):
+    """Delete a dataset, its samples, and output file."""
+    if not db:
+        raise HTTPException(status_code=503, detail="Database not available")
+
+    dataset = await db.get_dataset(dataset_id)
+    if not dataset:
+        # Check if it was referred by job_id
+        datasets_for_job = await db.get_datasets_by_job(dataset_id)
+        if datasets_for_job:
+            dataset = datasets_for_job[0]
+
+    if not dataset:
+        raise HTTPException(status_code=404, detail=f"Dataset {dataset_id} not found")
+
+    actual_id = dataset["id"]
+    output_path = dataset.get("output_path")
+    if output_path and os.path.exists(output_path):
+        try:
+            os.remove(output_path)
+        except Exception:
+            pass
+
+    # Also clean up manifest if exists
+    try:
+        manifest_path = f"{output_path}.manifest.json" if output_path else None
+        if manifest_path and os.path.exists(manifest_path):
+            os.remove(manifest_path)
+    except Exception:
+        pass
+
+    success = await db.delete_dataset(actual_id)
+    return {"success": success, "message": f"Dataset {actual_id} deleted"}
 
 
 @app.post("/datasets/{dataset_id}/export", tags=["Datasets"])

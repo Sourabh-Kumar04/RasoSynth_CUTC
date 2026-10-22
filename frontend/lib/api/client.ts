@@ -347,6 +347,25 @@ class APIClient {
     return this.request<any>(`/jobs/${id}/cancel`, { method: 'POST' })
   }
 
+  async deleteJob(id: string) {
+    return this.request<any>(`/jobs/${id}`, { method: 'DELETE' })
+  }
+
+  async getPreviewSamples(jobId: string) {
+    return this.request<{ job_id: string; status: string; samples: any[]; sample_count: number }>(`/jobs/${jobId}/preview_samples`)
+  }
+
+  async acceptPreview(jobId: string) {
+    return this.request<{ success: boolean; message: string }>(`/jobs/${jobId}/accept_preview`, { method: 'POST' })
+  }
+
+  async rejectPreview(jobId: string, updatedPrompt?: string) {
+    return this.request<{ success: boolean; message: string }>(`/jobs/${jobId}/reject_preview`, {
+      method: 'POST',
+      body: JSON.stringify({ updated_prompt: updatedPrompt }),
+    })
+  }
+
   // Datasets API
   async getDatasets(params?: { modality?: string; cursor?: string; limit?: number }) {
     return this.request<{ data: any[]; next_cursor?: string; has_more: boolean }>('/datasets', { params })
@@ -354,6 +373,10 @@ class APIClient {
 
   async getDataset(id: string) {
     return this.request<any>(`/datasets/${id}`)
+  }
+
+  async deleteDataset(id: string) {
+    return this.request<any>(`/datasets/${id}`, { method: 'DELETE' })
   }
 
   async exportDataset(id: string, format: string) {

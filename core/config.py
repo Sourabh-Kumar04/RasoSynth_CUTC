@@ -91,7 +91,10 @@ class Settings(BaseSettings):
 
     # Infrastructure - No defaults for credentials!
     redis_url: str = Field(default="redis://redis:6379/0")
-    postgres_url: str = Field(default="postgresql+asyncpg://dataset_user:dataset_pass@postgres:5432/dataset_engine")
+    postgres_url: str = Field(
+        default="postgresql+asyncpg://dataset_user:dataset_pass@postgres:5432/dataset_engine",
+        validation_alias=AliasChoices("postgres_url", "database_url")
+    )
     # JWT Secret (required for security)
     jwt_secret: str = Field(default_factory=lambda: os.getenv("JWT_SECRET") or "rasosynthtune-sovereign-production-jwt-token-secret-key-32b-secure")
     qdrant_url: str = Field(default="http://qdrant:6333")

@@ -27,6 +27,7 @@ import {
   Terminal,
   ShieldCheck,
   AlertTriangle,
+  Trash2,
 } from 'lucide-react'
 import { clsx } from 'clsx'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
@@ -285,6 +286,18 @@ export default function DatasetsPage() {
     setRecipeCopied(false)
     setRecipeCmdCopied(false)
     handleFetchRecipe(jobId, recipeFramework)
+  }
+
+  const handleDeleteDataset = async (id: string) => {
+    if (!confirm('Are you sure you want to delete this dataset? All samples and artifacts will be permanently removed.')) return
+    try {
+      await api.deleteDataset(id)
+      setDatasets((prev) => prev.filter((d) => d.id !== id))
+      if (selectedDataset === id) setSelectedDataset(null)
+    } catch (e: any) {
+      console.error('Failed to delete dataset:', e)
+      alert(e.message || 'Failed to delete dataset')
+    }
   }
 
   // Contamination & Adversarial state
@@ -801,12 +814,30 @@ export default function DatasetsPage() {
                           <p className="font-semibold text-xs text-white truncate max-w-[220px]">{dataset.name}</p>
                           <p className="text-[10px] text-[#94a3b8] font-mono">{dataset.id.slice(0, 16)}...</p>
                         </div>
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          className="h-8 w-8 rounded-md text-rose-400 hover:text-rose-300 hover:bg-rose-950/30"
+                          onClick={() => handleDeleteDataset(dataset.id)}
+                          title="Delete dataset"
+                        >
+                          <Trash2 className="h-3.5 w-3.5" />
+                        </Button>
                       </div>
                     </TableCell>
                     <TableCell>
                       <div className="flex items-center gap-1.5">
                         <ModalityIcon className="h-3.5 w-3.5 text-[#94a3b8]" />
                         <span className="text-xs text-[#94a3b8] capitalize">{dataset.modality}</span>
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          className="h-8 w-8 rounded-md text-rose-400 hover:text-rose-300 hover:bg-rose-950/30"
+                          onClick={() => handleDeleteDataset(dataset.id)}
+                          title="Delete dataset"
+                        >
+                          <Trash2 className="h-3.5 w-3.5" />
+                        </Button>
                       </div>
                     </TableCell>
                     <TableCell>
@@ -824,6 +855,15 @@ export default function DatasetsPage() {
                       <div className="flex items-center gap-2">
                         <Progress value={dataset.quality} className="w-16 h-1.5 bg-[#0a0a0f]" />
                         <span className="text-xs font-mono text-[#10b981] font-bold">{dataset.quality}%</span>
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          className="h-8 w-8 rounded-md text-rose-400 hover:text-rose-300 hover:bg-rose-950/30"
+                          onClick={() => handleDeleteDataset(dataset.id)}
+                          title="Delete dataset"
+                        >
+                          <Trash2 className="h-3.5 w-3.5" />
+                        </Button>
                       </div>
                     </TableCell>
                     <TableCell>
@@ -913,6 +953,15 @@ export default function DatasetsPage() {
                             </Button>
                           </>
                         )}
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          className="h-8 w-8 rounded-md text-rose-400 hover:text-rose-300 hover:bg-rose-950/30"
+                          onClick={() => handleDeleteDataset(dataset.id)}
+                          title="Delete dataset"
+                        >
+                          <Trash2 className="h-3.5 w-3.5" />
+                        </Button>
                       </div>
                     </TableCell>
                   </TableRow>

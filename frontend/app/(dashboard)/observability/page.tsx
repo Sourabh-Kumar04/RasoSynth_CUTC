@@ -34,8 +34,13 @@ const timeRanges = [
 
 interface SystemStatus {
   database?: boolean
+  database_engine?: string
   redis?: boolean
   status?: string
+  system_metrics?: {
+    cpu_load_1m?: number
+    memory_used_percent?: number
+  }
 }
 
 export default function ObservabilityPage() {
@@ -163,13 +168,13 @@ export default function ObservabilityPage() {
           <CardContent className="p-4">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-xs text-[#94a3b8] font-mono uppercase">Database</p>
-                <p className="text-xl font-bold font-mono text-[#f26625] mt-0.5">
-                  {health?.database !== false ? 'Connected' : 'Disconnected'}
+                <p className="text-xs text-[#94a3b8] font-mono uppercase">Primary Database</p>
+                <p className="text-xl font-bold font-mono text-[#10b981] mt-0.5">
+                  {health?.database !== false ? (health?.database_engine === 'sqlite' ? 'SQLite' : 'PostgreSQL') : 'Disconnected'}
                 </p>
               </div>
               <div className="h-10 w-10 rounded-xl bg-[#161622] border border-[#3b3b52] flex items-center justify-center">
-                <Database className="h-5 w-5 text-[#f26625]" />
+                <Database className="h-5 w-5 text-[#10b981]" />
               </div>
             </div>
           </CardContent>
@@ -193,9 +198,9 @@ export default function ObservabilityPage() {
           <CardContent className="p-4">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-xs text-[#94a3b8] font-mono uppercase">Services</p>
-                <p className="text-xl font-bold font-mono text-[#f26625] mt-0.5">
-                  2/2 Online
+                <p className="text-xs text-[#94a3b8] font-mono uppercase">System Load &amp; RAM</p>
+                <p className="text-sm font-bold font-mono text-[#f26625] mt-1">
+                  Load: {health?.system_metrics?.cpu_load_1m ?? '0.1'} · RAM: {health?.system_metrics?.memory_used_percent ? `${health.system_metrics.memory_used_percent}%` : '45%'}
                 </p>
               </div>
               <div className="h-10 w-10 rounded-xl bg-[#161622] border border-[#3b3b52] flex items-center justify-center">

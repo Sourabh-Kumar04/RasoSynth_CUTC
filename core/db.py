@@ -3,6 +3,10 @@ import uuid
 import os
 from datetime import datetime, timezone
 from typing import Optional
+
+def utc_now() -> datetime:
+    """Return naive UTC datetime compatible with PostgreSQL asyncpg and SQLite."""
+    return datetime.now(timezone.utc).replace(tzinfo=None)
 from sqlalchemy.ext.asyncio import create_async_engine, AsyncSession, async_sessionmaker
 from sqlalchemy.orm import declarative_base, relationship
 from sqlalchemy import Column, String, Integer, Float, DateTime, JSON, Text, ForeignKey, delete
@@ -28,8 +32,8 @@ class Job(Base):
 
     id = Column(PG_UUID(as_uuid=False), primary_key=True, default=lambda: str(uuid.uuid4()))
     status = Column(String, nullable=False, default="pending", index=True)
-    created_at = Column(DateTime, default=lambda: datetime.now(timezone.utc))
-    updated_at = Column(DateTime, default=lambda: datetime.now(timezone.utc), onupdate=lambda: datetime.now(timezone.utc))
+    created_at = Column(DateTime, default=utc_now)
+    updated_at = Column(DateTime, default=utc_now, onupdate=utc_now)
     config = Column(JSON)
     progress = Column(Float, default=0.0)
     current_stage = Column(String)
@@ -53,7 +57,7 @@ class Dataset(Base):
     name = Column(String, nullable=False)
     type = Column(String)
     size = Column(Integer)
-    created_at = Column(DateTime, default=lambda: datetime.now(timezone.utc))
+    created_at = Column(DateTime, default=utc_now)
     metadata_ = Column("metadata", JSON)
     output_path = Column(String)
 
@@ -73,7 +77,7 @@ class Sample(Base):
     metadata_ = Column("metadata", JSON)
     quality_score = Column(Float)
     difficulty_tier = Column(Integer)
-    created_at = Column(DateTime, default=lambda: datetime.now(timezone.utc))
+    created_at = Column(DateTime, default=utc_now)
 
     dataset = relationship("Dataset", back_populates="samples")
     quality_scores = relationship("QualityScore", back_populates="sample", cascade="all, delete-orphan")
@@ -88,7 +92,7 @@ class Source(Base):
     source_type = Column(String)
     title = Column(String)
     metadata_ = Column("metadata", JSON)
-    discovered_at = Column(DateTime, default=lambda: datetime.now(timezone.utc))
+    discovered_at = Column(DateTime, default=utc_now)
     license = Column(String)
 
 
@@ -102,7 +106,7 @@ class QualityScore(Base):
     toxicity = Column(Float)
     hallucination = Column(Float)
     overall = Column(Float)
-    evaluated_at = Column(DateTime, default=lambda: datetime.now(timezone.utc))
+    evaluated_at = Column(DateTime, default=utc_now)
 
     sample = relationship("Sample", back_populates="quality_scores")
 
@@ -129,10 +133,10 @@ class FineTuneJob(Base):
     output_path = Column(String)                         # local checkpoint dir
     hf_repo_url = Column(String)                         # HF Hub URL if pushed
     # timing
-    created_at = Column(DateTime, default=lambda: datetime.now(timezone.utc))
+    created_at = Column(DateTime, default=utc_now)
     started_at = Column(DateTime)
     completed_at = Column(DateTime)
-    updated_at = Column(DateTime, default=lambda: datetime.now(timezone.utc), onupdate=lambda: datetime.now(timezone.utc))
+    updated_at = Column(DateTime, default=utc_now, onupdate=utc_now)
 
     def to_dict(self) -> dict:
         return {
@@ -184,8 +188,8 @@ class ReviewQueueItem(Base):
     review_version = Column(Integer, default=0)
     extra_metadata = Column(JSON, default=dict)
     # timestamps
-    created_at = Column(DateTime, default=lambda: datetime.now(timezone.utc), index=True)
-    updated_at = Column(DateTime, default=lambda: datetime.now(timezone.utc), onupdate=lambda: datetime.now(timezone.utc))
+    created_at = Column(DateTime, default=utc_now, index=True)
+    updated_at = Column(DateTime, default=utc_now, onupdate=utc_now)
 
     def to_dict(self) -> dict:
         return {
@@ -326,11 +330,8 @@ class DatabaseManager:
     async def create_job(self, config: dict) -> Job:
         """Create a new job."""
         async with self.session_maker() as session:
-            job_id = config.get("id")
-            if job_id:
-                job = Job(id=job_id, config=config, status=config.get("status", "pending"))
-            else:
-                job = Job(config=config, status=config.get("status", "pending"))
+            job_id = config.get("id") or str(uuid.uuid4())
+            job = Job(id=job_id, config=config, status=config.get("status", "pending"))
             session.add(job)
             await self._commit_with_retry(session)
             _ = (job.id, job.status, job.created_at, job.updated_at, job.config, job.progress, job.current_stage)
@@ -376,7 +377,9 @@ class DatabaseManager:
     async def create_dataset(self, job_id: str, name: str, type: str, size: int, metadata: dict, output_path: str) -> Dataset:
         """Create a new dataset."""
         async with self.session_maker() as session:
+            ds_id = str(uuid.uuid4())
             dataset = Dataset(
+                id=ds_id,
                 job_id=job_id,
                 name=name,
                 type=type,
@@ -600,6 +603,16 @@ class DatabaseManager:
                 return True
             return False
 
+    async def delete_dataset(self, dataset_id: str) -> bool:
+        """Delete a dataset and all associated samples and quality scores."""
+        async with self.session_maker() as session:
+            ds = await session.get(Dataset, dataset_id)
+            if ds:
+                await session.delete(ds)
+                await self._commit_with_retry(session)
+                return True
+            return False
+
 
 class AsyncDB:
     """High-level async database interface."""
@@ -800,6 +813,14 @@ class AsyncDB:
             }
             for ds in datasets
         ]
+
+    async def delete_job(self, job_id: str) -> bool:
+        """Delete a job and its associated datasets/samples."""
+        return await self.db.delete_job(job_id)
+
+    async def delete_dataset(self, dataset_id: str) -> bool:
+        """Delete a dataset and its associated samples."""
+        return await self.db.delete_dataset(dataset_id)
 
     async def create_sample(self, dataset_id: str, data: dict) -> dict:
         """Create a new sample and return its ID."""
