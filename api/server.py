@@ -76,6 +76,8 @@ ResearchRequest = getattr(_legacy_schemas, 'ResearchRequest', None)
 ResearchResponse = getattr(_legacy_schemas, 'ResearchResponse', None)
 AdaptabilityRequest = getattr(_legacy_schemas, 'AdaptabilityRequest', None)
 AdaptabilityResponse = getattr(_legacy_schemas, 'AdaptabilityResponse', None)
+DeliveryRequestSchema = getattr(_legacy_schemas, 'DeliveryRequestSchema', None)
+DeliveryResponseSchema = getattr(_legacy_schemas, 'DeliveryResponseSchema', None)
 from core.config import get_settings
 from core.intent import UserIntent
 from core.provider_router import ProviderRouter, TaskType
@@ -606,6 +608,8 @@ async def lifespan(app: FastAPI):
         try:
             research_loop = ResearchLoop(router=router, config=config)
             technique_integrator = TechniqueIntegrator(router=router)
+            if orchestrator is not None:
+                orchestrator.technique_integrator = technique_integrator
             logger.info("  ✓ ResearchLoop + TechniqueIntegrator initialized")
         except Exception as e:
             logger.warning(f"  ⚠ ResearchLoop init failed: {e}")
@@ -733,6 +737,8 @@ async def lifespan(app: FastAPI):
             delivery_manager = DeliveryManager()
             container.register_instance(DeliveryManager, delivery_manager)
             app.state.delivery_manager = delivery_manager
+            if orchestrator is not None:
+                orchestrator.delivery_manager = delivery_manager
         except Exception as dm_err:
             logger.debug(f"DeliveryManager registration skipped: {dm_err}")
         try:
@@ -1032,6 +1038,42 @@ async def get_research_status():
     }
 
 
+@app.post("/research/cycle", response_model=ResearchResponse, tags=["Research"])
+async def trigger_research_cycle(request: Optional[ResearchRequest] = None):
+    """Trigger an autonomous research cycle across ArXiv and Hugging Face."""
+    if not research_loop:
+        raise HTTPException(status_code=500, detail="Research loop not initialized")
+    results = await research_loop.run_research_cycle()
+    return ResearchResponse(
+        techniques_discovered=results.get("techniques_discovered", []),
+        papers_found=results.get("papers_found", []),
+        updates_applied=results.get("updates_applied", []),
+        status=results.get("status", "completed"),
+    )
+
+
+@app.get("/research/techniques", tags=["Research"])
+async def get_research_techniques():
+    """Get discovered and cached research techniques."""
+    if not research_loop:
+        return {"techniques": {}}
+    return {
+        "cached_techniques": research_loop.get_cached_techniques(),
+        "history": research_loop.get_research_history(),
+    }
+
+
+@app.get("/research/heuristics", tags=["Research"])
+async def get_research_heuristics():
+    """Get active pipeline heuristics updated by the research loop."""
+    if not technique_integrator:
+        return {"heuristics": {}}
+    return {
+        "active_heuristics": technique_integrator.get_active_heuristics(),
+        "applied_techniques": technique_integrator.get_applied_techniques(),
+    }
+
+
 # =============================================================================
 # Multi-Agent Society & Registry Endpoints
 # =============================================================================
@@ -1068,6 +1110,84 @@ async def get_agent_stats():
         return AgentRegistry.get_stats()
     except Exception as exc:
         raise HTTPException(status_code=500, detail=f"Failed to query agent stats: {exc}")
+
+
+# =============================================================================
+# ADR-002 Storage & Packaging Delivery Endpoints
+# =============================================================================
+
+@app.post("/datasets/{dataset_id}/deliver", response_model=DeliveryResponseSchema, tags=["Storage & Delivery"])
+async def deliver_dataset(dataset_id: str, request: DeliveryRequestSchema):
+    """Trigger ADR-002 packaging and delivery of a dataset."""
+    if not hasattr(app.state, "delivery_manager") or not app.state.delivery_manager:
+        raise HTTPException(status_code=503, detail="DeliveryManager is not initialized")
+    if not db:
+        raise HTTPException(status_code=503, detail="Database not available")
+
+    samples = await db.get_samples(dataset_id, limit=50000)
+    if not samples:
+        raise HTTPException(status_code=404, detail=f"No samples found for dataset {dataset_id}")
+
+    from core.storage.base import DeliveryRequest, DeliveryStrategy, StorageProviderType
+    dest_map = {
+        "local": StorageProviderType.LOCAL if hasattr(StorageProviderType, "LOCAL") else StorageProviderType.HUGGINGFACE,
+        "huggingface": StorageProviderType.HUGGINGFACE,
+        "aws_s3": StorageProviderType.AWS_S3,
+        "kaggle": StorageProviderType.KAGGLE,
+    }
+    destination = dest_map.get(request.destination.lower(), StorageProviderType.HUGGINGFACE)
+    strat_map = {
+        "direct": DeliveryStrategy.DIRECT,
+        "streaming": DeliveryStrategy.STREAMING,
+        "tiered": DeliveryStrategy.TIERED,
+    }
+    strategy = strat_map.get(request.strategy.lower(), DeliveryStrategy.DIRECT)
+
+    deliv_req = DeliveryRequest(
+        dataset_id=dataset_id,
+        dataset_name=request.dataset_name or f"dataset_{dataset_id}",
+        destination=destination,
+        strategy=strategy,
+        compression=request.compression,
+    )
+
+    try:
+        delivery_info = await app.state.delivery_manager.deliver(deliv_req, samples)
+        return DeliveryResponseSchema(
+            delivery_id=delivery_info.delivery_id,
+            dataset_id=delivery_info.dataset_id,
+            dataset_name=delivery_info.dataset_name,
+            status=delivery_info.status.value,
+            download_url=delivery_info.download_url,
+            signed_url=delivery_info.signed_url,
+            created_at=delivery_info.created_at.isoformat(),
+            manifest_chunks=delivery_info.manifest.chunk_count if delivery_info.manifest else 0,
+            compression=request.compression,
+        )
+    except Exception as exc:
+        raise HTTPException(status_code=500, detail=f"Delivery failed: {exc}")
+
+
+@app.get("/deliveries/{delivery_id}", response_model=DeliveryResponseSchema, tags=["Storage & Delivery"])
+async def get_delivery_status(delivery_id: str):
+    """Get delivery operation status and download URLs."""
+    if not hasattr(app.state, "delivery_manager") or not app.state.delivery_manager:
+        raise HTTPException(status_code=503, detail="DeliveryManager is not initialized")
+    delivery_info = app.state.delivery_manager.get_delivery(delivery_id)
+    if not delivery_info:
+        raise HTTPException(status_code=404, detail=f"Delivery {delivery_id} not found")
+
+    return DeliveryResponseSchema(
+        delivery_id=delivery_info.delivery_id,
+        dataset_id=delivery_info.dataset_id,
+        dataset_name=delivery_info.dataset_name,
+        status=delivery_info.status.value,
+        download_url=delivery_info.download_url,
+        signed_url=delivery_info.signed_url,
+        created_at=delivery_info.created_at.isoformat(),
+        manifest_chunks=delivery_info.manifest.chunk_count if delivery_info.manifest else 0,
+        compression=delivery_info.manifest.compression if delivery_info.manifest else "tar.zstd",
+    )
 
 
 @app.post("/adaptability", response_model=AdaptabilityResponse, tags=["Adaptability"])

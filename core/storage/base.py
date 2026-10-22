@@ -133,8 +133,8 @@ class DeliveryRequest:
     dataset_id: str
     dataset_name: str
     destination: StorageProviderType
-    destination_config: dict
-    format: str
+    destination_config: dict = field(default_factory=dict)
+    format: str = "jsonl"
     compression: str = "zstd"
     strategy: DeliveryStrategy = DeliveryStrategy.CLOUD_STORAGE
     include_metadata: bool = True

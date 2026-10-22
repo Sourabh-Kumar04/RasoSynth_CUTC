@@ -128,7 +128,10 @@ class StorageOptimizationAgent(Agent):
 
     def __init__(self, config: AgentConfig):
         super().__init__(config)
-        self._optimization_stats: Dict[str, Any] = {}
+        self._optimization_stats: Dict[str, Any] = {
+            "total_optimized_gb": 0,
+            "compression_ratio": 1.0,
+        }
 
     async def initialize(self) -> bool:
         """Initialize the storage optimization agent."""
@@ -230,7 +233,7 @@ class DistributionAgent(Agent):
 
     def __init__(self, config: AgentConfig):
         super().__init__(config)
-        self._distribution_history: List[Dict] = {}
+        self._distribution_history: List[Dict] = []
 
     async def initialize(self) -> bool:
         """Initialize the distribution agent."""

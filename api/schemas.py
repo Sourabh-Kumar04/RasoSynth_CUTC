@@ -452,3 +452,25 @@ class FailoverHistoryResponse(BaseModel):
     migrations: list[MigrationRecordResponse]
     total_count: int
     failure_stats: dict[str, dict[str, int]] = Field(default_factory=dict)
+
+
+class DeliveryRequestSchema(BaseModel):
+    """Request to initiate dataset delivery."""
+    destination: str = Field(default="local", description="Destination: local | huggingface | aws_s3 | kaggle")
+    strategy: str = Field(default="direct", description="Delivery strategy: direct | streaming | tiered")
+    dataset_name: Optional[str] = None
+    compression: str = Field(default="tar.zstd", description="Compression format")
+
+
+class DeliveryResponseSchema(BaseModel):
+    """Response representing a delivery operation."""
+    delivery_id: str
+    dataset_id: str
+    dataset_name: str
+    status: str
+    download_url: Optional[str] = None
+    signed_url: Optional[str] = None
+    created_at: str
+    manifest_chunks: int = 0
+    compression: str = "tar.zstd"
+

@@ -342,7 +342,25 @@ class TechniqueIntegrator:
     def __init__(self, router=None):
         self.router = router
         self.applied_techniques: dict[str, datetime] = {}
-        self.active_heuristics: dict[str, dict] = {}
+        self.active_heuristics: dict[str, dict] = {
+            "minhash_dedup": {
+                "enabled": True,
+                "threshold": 0.85,
+                "num_perm": 128,
+            },
+            "perplexity_filtering": {
+                "enabled": True,
+                "max_perplexity": 50.0,
+            },
+            "cross_lingual": {
+                "enabled": True,
+                "unicode_norm": "NFC",
+            },
+            "evolutionary_prompting": {
+                "enabled": True,
+                "mutation_rate": 0.15,
+            },
+        }
 
     async def integrate_technique(
         self,

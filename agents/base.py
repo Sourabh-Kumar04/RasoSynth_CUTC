@@ -61,6 +61,7 @@ class AgentCapability(Enum):
     OCR = "ocr"
     QUALITY_SCORING = "quality_scoring"
     DEDUPLICATION = "deduplication"
+    TOXICITY = "toxicity"
     SYNTHETIC_GENERATION = "synthetic_generation"
     VALIDATION = "validation"
     DISTRIBUTION = "distribution"

@@ -306,13 +306,37 @@ class ConstraintAnalyzer:
 class DatasetOrchestrator:
     """Enhanced orchestrator with constraint awareness and intelligent adaptation."""
 
-    def __init__(self, config: dict, router, db=None, observability=None, ws_manager=None, redis_client=None, checkpoint_manager=None):
+    def __init__(
+        self,
+        config: dict,
+        router,
+        db=None,
+        observability=None,
+        ws_manager=None,
+        redis_client=None,
+        checkpoint_manager=None,
+        technique_integrator=None,
+        delivery_manager=None,
+        agent_registry=None,
+    ):
         self.config = config
         self.router = router
         self.db = db
         # Expose the raw DatabaseManager so nodes like _human_review_node can call update_job
         self.db_manager = getattr(db, "db", None) if db is not None else None
         self.ws_manager = ws_manager
+        self.technique_integrator = technique_integrator
+        self.delivery_manager = delivery_manager
+
+        # Multi-Agent Society integration
+        try:
+            from agents.registry import AgentRegistry, AgentRegistryInitializer
+            AgentRegistryInitializer.initialize()
+            self.agent_registry = agent_registry or AgentRegistry.get_instance()
+        except Exception as ar_err:
+            self.agent_registry = None
+            logger.debug(f"AgentRegistry initialization skipped: {ar_err}")
+
         if observability:
             self.observability = observability
         else:
@@ -511,16 +535,56 @@ class DatasetOrchestrator:
 
         prompt = config.get("target_domain", "")
 
+        # Multi-Agent Society: Consult Strategy & Research Agents
+        strategy_analysis = {}
+        research_analysis = {}
+        if self.agent_registry:
+            try:
+                from agents.base import AgentType, AgentContext
+                ctx = AgentContext(job_id=job_id, dataset_id=job_id, domain=prompt)
+                strat_agent = self.agent_registry.create_agent(AgentType.STRATEGY)
+                if strat_agent:
+                    strat_res = await strat_agent.execute({"domain": prompt, "size": config.get("dataset_size", 100)}, ctx)
+                    if strat_res and strat_res.output:
+                        strategy_analysis = strat_res.output
+                        logger.info("  ✓ StrategyAgent mapped execution dependencies & resource allocation")
+
+                res_agent = self.agent_registry.create_agent(AgentType.RESEARCH)
+                if res_agent:
+                    res_result = await res_agent.execute({"domain": prompt, "size": config.get("dataset_size", 100)}, ctx)
+                    if res_result and res_result.output:
+                        research_analysis = res_result.output
+                        logger.info("  ✓ ResearchAgent analyzed domain requirements & quality criteria")
+            except Exception as agent_err:
+                logger.debug(f"Multi-agent planning coordination skipped: {agent_err}")
+
+        # Continuous Research Loop: Query active 2026 heuristics
+        active_heuristics = {}
+        try:
+            if self.technique_integrator:
+                active_heuristics = self.technique_integrator.get_active_heuristics()
+            else:
+                from core.research_loop import ResearchLoop
+                rloop = ResearchLoop(self.router, config)
+                active_heuristics = rloop.get_active_heuristics()
+        except Exception as rl_err:
+            logger.debug(f"Research heuristics skipped: {rl_err}")
+
         plan = await planner.create_plan(prompt)
         coverage = cov_planner.generate_matrix(plan, target_size=config.get("dataset_size", 100))
 
+        plan_dict = plan.model_dump()
+        plan_dict["strategy_agent"] = strategy_analysis
+        plan_dict["research_agent"] = research_analysis
+        plan_dict["active_heuristics"] = active_heuristics
+
         return {
             **state,
-            "dataset_plan": plan.model_dump(),
+            "dataset_plan": plan_dict,
             "coverage_matrix": coverage.model_dump(),
             "current_stage": "plan",
             "progress": 0.4,
-            "messages": state["messages"] + [f"Generated dataset plan with {len(coverage.cells)} planned coverage cells"],
+            "messages": state["messages"] + [f"Generated dataset plan with {len(coverage.cells)} planned coverage cells (Multi-agent strategy + research attached)"],
         }
 
     async def _discover_node(self, state: AgentState) -> AgentState:
@@ -734,7 +798,13 @@ class DatasetOrchestrator:
             "gujarati", "odia", "assamese", "urdu", "sanskrit", "manipuri",
             "konkani", "kashmiri", "sindhi", "dogri", "maithili", "santali", "bodo",
         ))
-        if india_focus:
+        has_aikosh_key = bool(
+            os.getenv("AIKOSH_API_KEY")
+            or os.getenv("AI_KOSH_API_KEY")
+            or config.get("aikosh_api_key")
+            or config.get("ai_kosh_api_key")
+        )
+        if india_focus or has_aikosh_key:
             source_types.insert(0, SourceType.AI_KOSH)
 
         # For ML domains, prioritize ML-specific and high-quality dataset sources
@@ -873,6 +943,8 @@ class DatasetOrchestrator:
         from pipeline.extraction import ExtractionPipeline
 
         extraction_config = {**self.config, **job["config"]}
+        if not extraction_config.get("aikosh_api_key"):
+            extraction_config["aikosh_api_key"] = os.getenv("AIKOSH_API_KEY") or os.getenv("AI_KOSH_API_KEY")
         extraction = ExtractionPipeline(extraction_config, self.router)
         extracted = []
 
@@ -1255,6 +1327,18 @@ class DatasetOrchestrator:
                 "curriculum_order": len(samples),
             })
 
+        # Multi-Agent Society: Consult GPUSchedulingAgent for VRAM and device budget
+        if self.agent_registry:
+            try:
+                from agents.base import AgentType, AgentContext
+                ctx = AgentContext(job_id=job_id, dataset_id=job_id, domain=config.get("target_domain", ""))
+                gpu_agent = self.agent_registry.create_agent(AgentType.GPU_SCHEDULING)
+                if gpu_agent:
+                    await gpu_agent.execute({"tasks": [{"name": "dataset_synthesis", "size": target_dataset_size}]}, ctx)
+                    logger.info("  ✓ GPUSchedulingAgent budgeted VRAM allocation and synthesis throughput")
+            except Exception as gpu_err:
+                logger.debug(f"GPUSchedulingAgent execution skipped: {gpu_err}")
+
         # Check if we should use seedless synthetic generation
         generation_mode = config.get("generation_mode", "strict_source")
         allow_seedless = config.get("allow_seedless_generation", False)
@@ -1609,9 +1693,9 @@ class DatasetOrchestrator:
         if requested_samples <= 0:
             requested_samples = len(raw_samples)
 
-        # Soft-balancing is an opt-in refinement (e.g. for ablation studies);
-        # it must never silently discard user-requested dataset samples.
-        enable_balancing = bool(job_config.get("enable_balancing", False))
+        # Multi-dimensional balancing is enabled by default to prevent category/length bias,
+        # with our strict sample-count preservation ensuring exact quota delivery.
+        enable_balancing = bool(job_config.get("enable_balancing", True))
         if enable_balancing:
             balanced_subset, balance_report = self._balance_samples(
                 raw_samples,
@@ -1683,6 +1767,36 @@ class DatasetOrchestrator:
             SimpleNamespace(**s) if isinstance(s, dict) else s
             for s in raw_samples
         ]
+        # Multi-Agent Society: Consult StorageOptimizationAgent and DistributionAgent
+        storage_opt_report = {}
+        distribution_report = {}
+        if self.agent_registry:
+            try:
+                from agents.base import AgentType, AgentContext
+                ctx = AgentContext(job_id=job_id, dataset_id=job_id, domain=str(job_config.get("target_domain", "")))
+                storage_agent = self.agent_registry.create_agent(AgentType.STORAGE)
+                if storage_agent:
+                    st_res = await storage_agent.execute({"dataset": raw_samples, "compression": "lz4"}, ctx)
+                    if st_res and st_res.output:
+                        storage_opt_report = st_res.output
+                        logger.info("  ✓ StorageOptimizationAgent calculated dataset sharding & compression ratio")
+
+                dist_agent = self.agent_registry.create_agent(AgentType.DISTRIBUTION)
+                if dist_agent:
+                    destinations = []
+                    if job_config.get("hf_dataset_org") or job_config.get("hf_token"):
+                        destinations.append("huggingface")
+                    if job_config.get("s3_bucket"):
+                        destinations.append("aws_s3")
+                    if not destinations:
+                        destinations.append("local")
+                    dt_res = await dist_agent.execute({"dataset": raw_samples, "destinations": destinations}, ctx)
+                    if dt_res and dt_res.output:
+                        distribution_report = dt_res.output
+                        logger.info("  ✓ DistributionAgent verified delivery channels: %s", destinations)
+            except Exception as dist_err:
+                logger.debug(f"Multi-agent export coordination skipped: {dist_err}")
+
         export_config = ExportConfig(
             format=job_config.get("export_format", "jsonl"),
             instruction_format=job_config.get("instruction_format", "alpaca"),
@@ -1778,6 +1892,27 @@ class DatasetOrchestrator:
                             json.dump(dbom_cert, f, indent=2)
                 except Exception as dbom_err:
                     logger.warning("DBOM generation skipped in export node: %s", dbom_err)
+
+                # ADR-002: Package dataset with DatasetPackager and generate PackageManifest
+                package_manifest = None
+                try:
+                    from core.storage.packaging import DatasetPackager, PackagingConfig
+                    packager = DatasetPackager(PackagingConfig())
+                    package_manifest = await packager.package(
+                        raw_samples,
+                        dataset_name=export_config.dataset_name,
+                        version="1.0.0"
+                    )
+                    metadata_dict["package_manifest"] = package_manifest.__dict__ if hasattr(package_manifest, "__dict__") else {}
+                    metadata_dict["storage_optimization"] = storage_opt_report
+                    metadata_dict["distribution"] = distribution_report
+                    export_file = str(export_result.get("dataset", ""))
+                    if export_file and os.path.exists(export_file):
+                        with open(f"{export_file}.manifest.json", "w", encoding="utf-8") as f:
+                            json.dump(metadata_dict["package_manifest"], f, indent=2, default=str)
+                    logger.info("  ✓ ADR-002 DatasetPackager produced manifest with %d chunks", package_manifest.chunk_count)
+                except Exception as pkg_err:
+                    logger.debug(f"DatasetPackager skipped: {pkg_err}")
 
                 # Create dataset record
                 dataset_record = await self.db.create_dataset(
