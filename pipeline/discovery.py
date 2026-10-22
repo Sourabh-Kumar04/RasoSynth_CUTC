@@ -1632,7 +1632,11 @@ class DiscoveryPipeline:
         return sources[:self.max_per_source]
 
     async def _search_duckduckgo(self, query: str) -> list[DiscoveredSource]:
-        """Search with DDG HTML → DDG Lite fallback (rate-limited)."""
+        """Search with DDG HTML → DDG Lite fallback (rate-limited, circuit-broken on 403/429)."""
+        # Circuit breaker: skip immediately if DDG returned anti-bot 403/429 recently
+        if time.time() < getattr(DiscoveryPipeline, "_ddg_blocked_until", 0.0):
+            return []
+
         sources = []
 
         DDG_HEADERS = {
@@ -1646,11 +1650,15 @@ class DiscoveryPipeline:
 
         # DDG HTML Attempt
         try:
-            await asyncio.sleep(random.uniform(1.0, 3.0))
+            await asyncio.sleep(random.uniform(0.5, 1.5))
             async with self._rate_limiter.acquire("https://duckduckgo.com/"):
-                async with httpx.AsyncClient(timeout=httpx.Timeout(30.0), follow_redirects=True, headers=DDG_HEADERS) as client:
+                async with httpx.AsyncClient(timeout=httpx.Timeout(15.0), follow_redirects=True, headers=DDG_HEADERS) as client:
                     url = f"https://duckduckgo.com/html/?q={quote(query)}"
                     resp = await client.get(url)
+                    if resp.status_code in (403, 429):
+                        DiscoveryPipeline._ddg_blocked_until = time.time() + 300.0
+                        self._LOG.info("DuckDuckGo returned %s (anti-bot/rate-limit). Tripping DDG circuit breaker for 300s.", resp.status_code)
+                        return []
                     if resp.status_code == 200:
                         html = resp.text
                         urls = re.findall(r'href="(https?://[^"&]+)"', html)
@@ -1673,9 +1681,13 @@ class DiscoveryPipeline:
         # DDG Lite Attempt
         try:
             async with self._rate_limiter.acquire("https://lite.duckduckgo.com/"):
-                async with httpx.AsyncClient(timeout=httpx.Timeout(30.0), follow_redirects=True, headers=DDG_HEADERS) as client:
+                async with httpx.AsyncClient(timeout=httpx.Timeout(15.0), follow_redirects=True, headers=DDG_HEADERS) as client:
                     url = f"https://lite.duckduckgo.com/lite/?q={quote(query)}"
                     resp = await client.get(url)
+                    if resp.status_code in (403, 429):
+                        DiscoveryPipeline._ddg_blocked_until = time.time() + 300.0
+                        self._LOG.info("DuckDuckGo Lite returned %s. Tripping DDG circuit breaker for 300s.", resp.status_code)
+                        return []
                     if resp.status_code == 200:
                         html = resp.text
                         urls = re.findall(r'<a class="result-link" href="([^"]+)"', html)

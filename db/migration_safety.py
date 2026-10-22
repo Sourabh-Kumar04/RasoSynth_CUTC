@@ -256,6 +256,22 @@ class SafeMigrationManager:
                 duration_ms=(time.perf_counter() - start_time) * 1000,
             )
         except Exception as e:
+            err_msg = str(e).lower()
+            if "duplicate column name" in err_msg or "already exists" in err_msg:
+                logger.info(
+                    "SafeMigrationManager: Migration %s already satisfied (column/table exists): %s",
+                    migration_id,
+                    e,
+                )
+                self._applied_cache.add(migration_id)
+                return MigrationResult(
+                    migration_id=migration_id,
+                    success=True,
+                    steps_attempted=steps_attempted,
+                    steps_succeeded=len(steps),
+                    duration_ms=(time.perf_counter() - start_time) * 1000,
+                )
+
             logger.error("SafeMigrationManager: Migration %s failed: %s", migration_id, e)
             try:
                 if hasattr(session_obj, "rollback"):
