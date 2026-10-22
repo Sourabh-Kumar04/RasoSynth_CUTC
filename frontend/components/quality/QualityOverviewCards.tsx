@@ -24,7 +24,7 @@ export default function QualityOverviewCards() {
   if (loading) {
     return (
       <div className="flex items-center gap-2 p-4 text-[#94a3b8] font-mono text-xs">
-        <Loader2 className="h-4 w-4 animate-spin text-[#008ecc]" /> Loading quality overview…
+        <Loader2 className="h-4 w-4 animate-spin text-[#f26625]" /> Loading quality overview…
       </div>
     );
   }
@@ -45,7 +45,7 @@ export default function QualityOverviewCards() {
            : data.average_quality > 0.4 ? "text-amber-400" : "text-rose-400",
     },
     { label: "Total Datasets", value: data.total_jobs.toString(), color: "text-white" },
-    { label: "Samples Reviewed", value: data.total_samples_reviewed.toLocaleString(), color: "text-[#008ecc]" },
+    { label: "Samples Reviewed", value: data.total_samples_reviewed.toLocaleString(), color: "text-[#f26625]" },
     {
       label: "Approval Rate",
       value: data.approval_rate + "%",
@@ -61,7 +61,7 @@ export default function QualityOverviewCards() {
   return (
     <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3">
       {cards.map(({ label, value, color }) => (
-        <div key={label} className="bg-[#0c0d14] rounded-2xl border border-[#1e2235] p-4 card-shadow">
+        <div key={label} className="bg-[#12121a] rounded-2xl border border-[#272738] p-4 card-shadow">
           <p className="text-xs font-mono text-[#94a3b8] uppercase mb-1">{label}</p>
           <p className={`text-2xl font-bold font-mono ${color}`}>{value}</p>
         </div>

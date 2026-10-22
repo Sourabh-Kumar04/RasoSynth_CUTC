@@ -520,10 +520,10 @@ export default function DatasetsPage() {
   return (
     <div className="space-y-6 w-full pb-8 animate-fade-in">
       {/* Page Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-[#1e2235] pb-5">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-[#272738] pb-5">
         <div>
           <div className="flex items-center gap-2.5 mb-1">
-            <span className="text-[10px] font-mono px-2.5 py-0.5 rounded-md bg-[#12141e] border border-[#1e2235] text-[#10b981] font-bold uppercase tracking-wider">
+            <span className="text-[10px] font-mono px-2.5 py-0.5 rounded-md bg-[#161622] border border-[#272738] text-[#10b981] font-bold uppercase tracking-wider">
               Source-Grounded Repositories
             </span>
             <h1 className="text-2xl font-bold tracking-tight text-white font-display">Dataset Explorer</h1>
@@ -537,14 +537,14 @@ export default function DatasetsPage() {
             variant="outline"
             size="sm"
             onClick={fetchJobs}
-            className="rounded-md border-[#1e2235] text-white hover:bg-[#12141e] h-8 text-xs font-mono"
+            className="rounded-md border-[#272738] text-white hover:bg-[#161622] h-8 text-xs font-mono"
           >
-            <RefreshCw className="h-3 w-3 mr-1.5 text-[#008ecc]" />
+            <RefreshCw className="h-3 w-3 mr-1.5 text-[#f26625]" />
             Refresh
           </Button>
           <Button
             size="sm"
-            className="gap-2 bg-[#008ecc] hover:bg-[#00a4eb] border border-[#0077ab] text-white font-mono text-xs font-bold h-8 px-4 rounded-md shadow-sm glow-cerulean"
+            className="gap-2 bg-[#f26625] hover:bg-[#de581a] border border-[#ea580c] text-white font-mono text-xs font-bold h-8 px-4 rounded-md shadow-sm glow-yc"
             onClick={() => router.push('/studio')}
           >
             <Plus className="h-3.5 w-3.5 text-white" />
@@ -571,9 +571,9 @@ export default function DatasetsPage() {
 
       {/* Loading State */}
       {isLoading && datasets.length === 0 && (
-        <Card className="border-[#1e2235] bg-[#0c0d14] rounded-md">
+        <Card className="border-[#272738] bg-[#12121a] rounded-md">
           <CardContent className="p-12 flex flex-col items-center justify-center">
-            <Loader2 className="h-8 w-8 animate-spin text-[#008ecc] mb-4" />
+            <Loader2 className="h-8 w-8 animate-spin text-[#f26625] mb-4" />
             <p className="text-sm text-[#94a3b8] font-mono">Fetching active dataset jobs...</p>
           </CardContent>
         </Card>
@@ -582,10 +582,10 @@ export default function DatasetsPage() {
       {/* Stats Cards */}
       {!isLoading && (
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-          <Card className="border-[#1e2235] bg-[#0c0d14] hover:border-[#3b3b52] transition-all rounded-md card-shadow">
+          <Card className="border-[#272738] bg-[#12121a] hover:border-[#3b3b52] transition-all rounded-md card-shadow">
             <CardContent className="p-4 flex items-center gap-4">
-              <div className="h-10 w-10 rounded-md bg-[#12141e] border border-[#1e2235] flex items-center justify-center">
-                <Database className="h-5 w-5 text-[#008ecc]" />
+              <div className="h-10 w-10 rounded-md bg-[#161622] border border-[#272738] flex items-center justify-center">
+                <Database className="h-5 w-5 text-[#f26625]" />
               </div>
               <div>
                 <p className="text-[10px] text-[#94a3b8] font-mono uppercase tracking-wider">Total Datasets</p>
@@ -593,9 +593,9 @@ export default function DatasetsPage() {
               </div>
             </CardContent>
           </Card>
-          <Card className="border-[#1e2235] bg-[#0c0d14] hover:border-[#3b3b52] transition-all rounded-md card-shadow">
+          <Card className="border-[#272738] bg-[#12121a] hover:border-[#3b3b52] transition-all rounded-md card-shadow">
             <CardContent className="p-4 flex items-center gap-4">
-              <div className="h-10 w-10 rounded-md bg-[#12141e] border border-[#1e2235] flex items-center justify-center">
+              <div className="h-10 w-10 rounded-md bg-[#161622] border border-[#272738] flex items-center justify-center">
                 <CheckCircle2 className="h-5 w-5 text-[#10b981]" />
               </div>
               <div>
@@ -606,10 +606,10 @@ export default function DatasetsPage() {
               </div>
             </CardContent>
           </Card>
-          <Card className="border-[#1e2235] bg-[#0c0d14] hover:border-[#3b3b52] transition-all rounded-md card-shadow">
+          <Card className="border-[#272738] bg-[#12121a] hover:border-[#3b3b52] transition-all rounded-md card-shadow">
             <CardContent className="p-4 flex items-center gap-4">
-              <div className="h-10 w-10 rounded-md bg-[#12141e] border border-[#1e2235] flex items-center justify-center">
-                <Layers className="h-5 w-5 text-[#008ecc]" />
+              <div className="h-10 w-10 rounded-md bg-[#161622] border border-[#272738] flex items-center justify-center">
+                <Layers className="h-5 w-5 text-[#f26625]" />
               </div>
               <div>
                 <p className="text-[10px] text-[#94a3b8] font-mono uppercase tracking-wider">Total Records</p>
@@ -619,9 +619,9 @@ export default function DatasetsPage() {
               </div>
             </CardContent>
           </Card>
-          <Card className="border-[#1e2235] bg-[#0c0d14] hover:border-[#3b3b52] transition-all rounded-md card-shadow">
+          <Card className="border-[#272738] bg-[#12121a] hover:border-[#3b3b52] transition-all rounded-md card-shadow">
             <CardContent className="p-4 flex items-center gap-4">
-              <div className="h-10 w-10 rounded-md bg-[#12141e] border border-[#1e2235] flex items-center justify-center">
+              <div className="h-10 w-10 rounded-md bg-[#161622] border border-[#272738] flex items-center justify-center">
                 <AlertCircle className="h-5 w-5 text-amber-400" />
               </div>
               <div>
@@ -652,7 +652,7 @@ export default function DatasetsPage() {
           {FLAGSHIP_COMMUNITY_DATASETS.map((flagship) => (
             <Card
               key={flagship.id}
-              className="border-[#1e2235] bg-[#0c0d14] hover:border-emerald-500/40 transition-all rounded-md p-4 flex flex-col justify-between"
+              className="border-[#272738] bg-[#12121a] hover:border-emerald-500/40 transition-all rounded-md p-4 flex flex-col justify-between"
             >
               <div className="space-y-2.5">
                 <div className="flex items-start justify-between gap-2">
@@ -665,7 +665,7 @@ export default function DatasetsPage() {
                   <h3 className="text-xs font-bold text-white leading-snug">{flagship.name}</h3>
                   <p className="text-[11px] text-[#94a3b8] mt-0.5">{flagship.domain}</p>
                 </div>
-                <div className="p-2 rounded-md bg-[#050508] border border-[#1e2235] font-mono text-[10px] space-y-1">
+                <div className="p-2 rounded-md bg-[#0a0a0f] border border-[#272738] font-mono text-[10px] space-y-1">
                   <div className="flex items-center justify-between text-[#64748b]">
                     <span>Cert ID:</span>
                     <span className="text-emerald-400 font-semibold">{flagship.certificate_id}</span>
@@ -676,11 +676,11 @@ export default function DatasetsPage() {
                   </div>
                 </div>
               </div>
-              <div className="flex items-center gap-1.5 mt-3 pt-3 border-t border-[#1e2235]">
+              <div className="flex items-center gap-1.5 mt-3 pt-3 border-t border-[#272738]">
                 <Button
                   size="sm"
                   variant="outline"
-                  className="flex-1 h-7 text-[10px] font-mono rounded-md border-[#1e2235] text-white hover:bg-[#12141e] hover:border-emerald-500/30"
+                  className="flex-1 h-7 text-[10px] font-mono rounded-md border-[#272738] text-white hover:bg-[#161622] hover:border-emerald-500/30"
                   onClick={() => handleViewDbom(flagship.id, flagship.name)}
                 >
                   <ShieldCheck className="h-3 w-3 mr-1 text-[#10b981]" />
@@ -689,16 +689,16 @@ export default function DatasetsPage() {
                 <Button
                   size="sm"
                   variant="outline"
-                  className="flex-1 h-7 text-[10px] font-mono rounded-md border-[#1e2235] text-white hover:bg-[#12141e] hover:border-[#008ecc]/30"
+                  className="flex-1 h-7 text-[10px] font-mono rounded-md border-[#272738] text-white hover:bg-[#161622] hover:border-[#f26625]/30"
                   onClick={() => handleViewHfCard(flagship.id, flagship.name)}
                 >
-                  <ExternalLink className="h-3 w-3 mr-1 text-[#008ecc]" />
+                  <ExternalLink className="h-3 w-3 mr-1 text-[#f26625]" />
                   HF Card
                 </Button>
                 <Button
                   size="sm"
                   variant="outline"
-                  className="flex-1 h-7 text-[10px] font-mono rounded-md border-[#1e2235] text-white hover:bg-[#12141e] hover:border-amber-500/30"
+                  className="flex-1 h-7 text-[10px] font-mono rounded-md border-[#272738] text-white hover:bg-[#161622] hover:border-amber-500/30"
                   onClick={() => handleOpenRecipeModal(flagship.id)}
                 >
                   <Terminal className="h-3 w-3 mr-1 text-amber-400" />
@@ -718,15 +718,15 @@ export default function DatasetsPage() {
             placeholder="Search datasets by topic or ID..."
             value={search}
             onChange={(e) => setSearch(e.target.value)}
-            className="pl-10 rounded-md border-[#1e2235] bg-[#050508] text-white focus:border-[#008ecc] placeholder:text-[#64748b] text-xs font-mono w-full"
+            className="pl-10 rounded-md border-[#272738] bg-[#0a0a0f] text-white focus:border-[#f26625] placeholder:text-[#64748b] text-xs font-mono w-full"
           />
         </div>
 
         <Select value={modalityFilter} onValueChange={setModalityFilter}>
-          <SelectTrigger className="w-full sm:w-36 rounded-md border-[#1e2235] bg-[#050508] text-white text-xs font-mono">
+          <SelectTrigger className="w-full sm:w-36 rounded-md border-[#272738] bg-[#0a0a0f] text-white text-xs font-mono">
             <SelectValue placeholder="Modality" />
           </SelectTrigger>
-          <SelectContent className="bg-[#0c0d14] border-[#1e2235] text-white text-xs">
+          <SelectContent className="bg-[#12121a] border-[#272738] text-white text-xs">
             <SelectItem value="all">All Modalities</SelectItem>
             <SelectItem value="text">Text (SFT)</SelectItem>
             <SelectItem value="image">Image</SelectItem>
@@ -736,10 +736,10 @@ export default function DatasetsPage() {
         </Select>
 
         <Select value={statusFilter} onValueChange={setStatusFilter}>
-          <SelectTrigger className="w-full sm:w-32 rounded-md border-[#1e2235] bg-[#050508] text-white text-xs font-mono">
+          <SelectTrigger className="w-full sm:w-32 rounded-md border-[#272738] bg-[#0a0a0f] text-white text-xs font-mono">
             <SelectValue placeholder="Status" />
           </SelectTrigger>
-          <SelectContent className="bg-[#0c0d14] border-[#1e2235] text-white text-xs">
+          <SelectContent className="bg-[#12121a] border-[#272738] text-white text-xs">
             <SelectItem value="all">All Status</SelectItem>
             <SelectItem value="ready">Ready (Ready)</SelectItem>
             <SelectItem value="processing">Processing</SelectItem>
@@ -747,10 +747,10 @@ export default function DatasetsPage() {
         </Select>
 
         <Select value={sortBy} onValueChange={(v: any) => setSortBy(v)}>
-          <SelectTrigger className="w-full sm:w-36 rounded-md border-[#1e2235] bg-[#050508] text-white text-xs font-mono">
+          <SelectTrigger className="w-full sm:w-36 rounded-md border-[#272738] bg-[#0a0a0f] text-white text-xs font-mono">
             <SelectValue placeholder="Sort by" />
           </SelectTrigger>
-          <SelectContent className="bg-[#0c0d14] border-[#1e2235] text-white text-xs">
+          <SelectContent className="bg-[#12121a] border-[#272738] text-white text-xs">
             <SelectItem value="created">Created Date</SelectItem>
             <SelectItem value="name">Name</SelectItem>
             <SelectItem value="size">Size</SelectItem>
@@ -761,14 +761,14 @@ export default function DatasetsPage() {
 
       {/* Empty State */}
       {!isLoading && datasets.length === 0 && !error && (
-        <Card className="border-[#1e2235] bg-[#0c0d14] rounded-md">
+        <Card className="border-[#272738] bg-[#12121a] rounded-md">
           <CardContent className="p-12 flex flex-col items-center justify-center">
             <Database className="h-12 w-12 text-[#64748b] mb-4" />
             <h3 className="text-lg font-bold text-white mb-2">No datasets yet</h3>
             <p className="text-xs text-[#94a3b8] mb-6 text-center max-w-md">
               Describe the dataset you need in the Studio. Discover authentic source repositories, review grounded samples, and export to multi-destination targets.
             </p>
-            <Button className="gap-2 bg-[#008ecc] hover:bg-[#00a4eb] border border-[#0077ab] text-white rounded-md font-mono text-xs px-5 font-bold glow-cerulean" onClick={() => router.push('/studio')}>
+            <Button className="gap-2 bg-[#f26625] hover:bg-[#de581a] border border-[#ea580c] text-white rounded-md font-mono text-xs px-5 font-bold glow-yc" onClick={() => router.push('/studio')}>
               <Plus className="h-4 w-4" />
               Create Your First Dataset
             </Button>
@@ -778,10 +778,10 @@ export default function DatasetsPage() {
 
       {/* Dataset Table */}
       {datasets.length > 0 && (
-        <Card className="border-[#1e2235] bg-[#0c0d14] rounded-md card-shadow overflow-hidden">
+        <Card className="border-[#272738] bg-[#12121a] rounded-md card-shadow overflow-hidden">
           <Table>
-            <TableHeader className="bg-[#050508]">
-              <TableRow className="border-b border-[#1e2235]">
+            <TableHeader className="bg-[#0a0a0f]">
+              <TableRow className="border-b border-[#272738]">
                 <TableHead className="w-[300px] text-[#94a3b8] font-mono uppercase text-[10px]">Dataset Repository</TableHead>
                 <TableHead className="text-[#94a3b8] font-mono uppercase text-[10px]">Modality</TableHead>
                 <TableHead className="text-[#94a3b8] font-mono uppercase text-[10px]">Format</TableHead>
@@ -793,22 +793,22 @@ export default function DatasetsPage() {
                 <TableHead className="w-[240px] text-right text-[#94a3b8] font-mono uppercase text-[10px]">Actions</TableHead>
               </TableRow>
             </TableHeader>
-            <TableBody className="divide-y divide-[#1e2235]">
+            <TableBody className="divide-y divide-[#272738]">
               {filteredDatasets.map((dataset) => {
                 const ModalityIcon = modalityIcons[dataset.modality as keyof typeof modalityIcons] || FileText
                 return (
                   <TableRow
                     key={dataset.id}
                     className={clsx(
-                      'cursor-pointer hover:bg-[#050508] transition-colors',
-                      selectedDataset === dataset.id && 'bg-[#12141e]/80'
+                      'cursor-pointer hover:bg-[#0a0a0f] transition-colors',
+                      selectedDataset === dataset.id && 'bg-[#161622]/80'
                     )}
                     onClick={() => setSelectedDataset(dataset.id)}
                   >
                     <TableCell>
                       <div className="flex items-center gap-3">
-                        <div className="h-8 w-8 rounded-md bg-[#12141e] border border-[#1e2235] flex items-center justify-center shrink-0">
-                          <Database className="h-4 w-4 text-[#008ecc]" />
+                        <div className="h-8 w-8 rounded-md bg-[#161622] border border-[#272738] flex items-center justify-center shrink-0">
+                          <Database className="h-4 w-4 text-[#f26625]" />
                         </div>
                         <div>
                           <p className="font-semibold text-xs text-white truncate max-w-[220px]">{dataset.name}</p>
@@ -841,7 +841,7 @@ export default function DatasetsPage() {
                       </div>
                     </TableCell>
                     <TableCell>
-                      <Badge variant="outline" className="font-mono text-[10px] bg-[#050508] border-[#1e2235] text-[#008ecc] rounded-md">
+                      <Badge variant="outline" className="font-mono text-[10px] bg-[#0a0a0f] border-[#272738] text-[#f26625] rounded-md">
                         {dataset.format}
                       </Badge>
                     </TableCell>
@@ -853,7 +853,7 @@ export default function DatasetsPage() {
                     </TableCell>
                     <TableCell>
                       <div className="flex items-center gap-2">
-                        <Progress value={dataset.quality} className="w-16 h-1.5 bg-[#050508]" />
+                        <Progress value={dataset.quality} className="w-16 h-1.5 bg-[#0a0a0f]" />
                         <span className="text-xs font-mono text-[#10b981] font-bold">{dataset.quality}%</span>
                         <Button
                           variant="ghost"
@@ -890,7 +890,7 @@ export default function DatasetsPage() {
                         <Button
                           variant="ghost"
                           size="icon"
-                          className="h-8 w-8 rounded-md text-[#94a3b8] hover:text-white hover:bg-[#12141e]"
+                          className="h-8 w-8 rounded-md text-[#94a3b8] hover:text-white hover:bg-[#161622]"
                           onClick={() => setSelectedDataset(dataset.id)}
                           title="View dataset details and records preview"
                         >
@@ -902,10 +902,10 @@ export default function DatasetsPage() {
                             setDownloadFormat((prev) => ({ ...prev, [dataset.id]: val }))
                           }
                         >
-                          <SelectTrigger className="h-8 w-[76px] text-[11px] px-2 rounded-md border-[#1e2235] bg-[#050508] text-white font-mono">
+                          <SelectTrigger className="h-8 w-[76px] text-[11px] px-2 rounded-md border-[#272738] bg-[#0a0a0f] text-white font-mono">
                             <SelectValue />
                           </SelectTrigger>
-                          <SelectContent className="bg-[#0c0d14] border-[#1e2235] text-white text-xs font-mono">
+                          <SelectContent className="bg-[#12121a] border-[#272738] text-white text-xs font-mono">
                             <SelectItem value="jsonl">JSONL</SelectItem>
                             <SelectItem value="parquet">Parquet</SelectItem>
                             <SelectItem value="json">JSON</SelectItem>
@@ -916,7 +916,7 @@ export default function DatasetsPage() {
                         <Button
                           variant="outline"
                           size="sm"
-                          className="h-8 gap-1 text-xs px-2.5 rounded-md border-[#1e2235] text-white hover:bg-[#12141e] hover:border-[#3b3b52]"
+                          className="h-8 gap-1 text-xs px-2.5 rounded-md border-[#272738] text-white hover:bg-[#161622] hover:border-[#3b3b52]"
                           disabled={downloadingIds.has(dataset.id) || dataset.status !== 'ready'}
                           onClick={() =>
                             handleDownload(dataset.id, downloadFormat[dataset.id] || 'jsonl')
@@ -924,7 +924,7 @@ export default function DatasetsPage() {
                           title="Export & Download"
                         >
                           {downloadingIds.has(dataset.id) ? (
-                            <Loader2 className="h-3.5 w-3.5 animate-spin text-[#008ecc]" />
+                            <Loader2 className="h-3.5 w-3.5 animate-spin text-[#f26625]" />
                           ) : (
                             <Download className="h-3.5 w-3.5 text-[#10b981]" />
                           )}
@@ -934,17 +934,17 @@ export default function DatasetsPage() {
                             <Button
                               variant="ghost"
                               size="sm"
-                              className="h-8 text-xs px-2.5 rounded-md text-[#008ecc] hover:text-white hover:bg-[#12141e] font-mono"
+                              className="h-8 text-xs px-2.5 rounded-md text-[#f26625] hover:text-white hover:bg-[#161622] font-mono"
                               onClick={() => handleViewHfCard(dataset.id, dataset.name)}
                               title="Generate Hugging Face Dataset Card (README.md)"
                             >
-                              <FileText className="h-3.5 w-3.5 text-[#008ecc] mr-1" />
+                              <FileText className="h-3.5 w-3.5 text-[#f26625] mr-1" />
                               HF Card
                             </Button>
                             <Button
                               variant="ghost"
                               size="sm"
-                              className="h-8 text-xs px-2.5 rounded-md text-[#008ecc] hover:text-white hover:bg-[#12141e] font-mono"
+                              className="h-8 text-xs px-2.5 rounded-md text-[#f26625] hover:text-white hover:bg-[#161622] font-mono"
                               onClick={() => router.push(`/finetune?dataset=${dataset.id}`)}
                               title="1-Click Launch Fine-Tune"
                             >
@@ -974,17 +974,17 @@ export default function DatasetsPage() {
 
       {/* Selected Dataset Details Drawer / Card */}
       {selected && (
-        <Card className="border-[#1e2235] bg-[#0c0d14] rounded-md card-shadow">
-          <CardHeader className="pb-3 border-b border-[#1e2235]">
+        <Card className="border-[#272738] bg-[#12121a] rounded-md card-shadow">
+          <CardHeader className="pb-3 border-b border-[#272738]">
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-2">
-                <Database className="h-4 w-4 text-[#008ecc]" />
+                <Database className="h-4 w-4 text-[#f26625]" />
                 <CardTitle className="text-base font-bold text-white">{selected.name}</CardTitle>
-                <span className="text-[10px] font-mono px-2 py-0.5 rounded-md bg-[#050508] border border-[#1e2235] text-[#94a3b8]">
+                <span className="text-[10px] font-mono px-2 py-0.5 rounded-md bg-[#0a0a0f] border border-[#272738] text-[#94a3b8]">
                   ID: {selected.id}
                 </span>
               </div>
-              <Button variant="ghost" size="sm" className="rounded-md text-[#94a3b8] hover:text-white hover:bg-[#12141e]" onClick={() => setSelectedDataset(null)}>
+              <Button variant="ghost" size="sm" className="rounded-md text-[#94a3b8] hover:text-white hover:bg-[#161622]" onClick={() => setSelectedDataset(null)}>
                 <X className="h-4 w-4" />
               </Button>
             </div>
@@ -1007,8 +1007,8 @@ export default function DatasetsPage() {
                         className={clsx(
                           'flex items-center justify-center w-7 h-7 rounded-md text-xs font-medium',
                           isCompleted && 'bg-emerald-950/40 text-[#10b981] border border-emerald-500/30',
-                          isCurrent && selected.status !== 'ready' ? 'bg-[#008ecc] text-white' : 'bg-[#12141e] text-[#94a3b8] border border-[#1e2235]',
-                          !isCompleted && !isCurrent && 'bg-[#050508] text-[#64748b] border border-[#1e2235]'
+                          isCurrent && selected.status !== 'ready' ? 'bg-[#f26625] text-white' : 'bg-[#161622] text-[#94a3b8] border border-[#272738]',
+                          !isCompleted && !isCurrent && 'bg-[#0a0a0f] text-[#64748b] border border-[#272738]'
                         )}
                       >
                         {isCompleted ? '✓' : stage.icon}
@@ -1017,7 +1017,7 @@ export default function DatasetsPage() {
                         <div
                           className={clsx(
                             'w-6 sm:w-10 h-0.5',
-                            isCompleted ? 'bg-[#10b981]' : 'bg-[#1e2235]'
+                            isCompleted ? 'bg-[#10b981]' : 'bg-[#272738]'
                           )}
                         />
                       )}
@@ -1028,7 +1028,7 @@ export default function DatasetsPage() {
             </div>
 
             {/* Quick Metrics Grid */}
-            <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 p-3 bg-[#050508] rounded-md border border-[#1e2235]">
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 p-3 bg-[#0a0a0f] rounded-md border border-[#272738]">
               <div>
                 <p className="text-[10px] text-[#94a3b8] font-mono uppercase">Quality Score</p>
                 <p className="text-base font-mono font-bold text-[#10b981] mt-0.5">{Math.round(selected.quality)}%</p>
@@ -1043,12 +1043,12 @@ export default function DatasetsPage() {
               </div>
               <div>
                 <p className="text-[10px] text-[#94a3b8] font-mono uppercase">Delivery Spec</p>
-                <p className="text-xs font-mono text-[#008ecc] mt-1">ADR-002 Compliant</p>
+                <p className="text-xs font-mono text-[#f26625] mt-1">ADR-002 Compliant</p>
               </div>
             </div>
 
             {/* Persisted dataset quality and coverage summary */}
-            <div className="space-y-3 border-t border-[#1e2235] pt-4">
+            <div className="space-y-3 border-t border-[#272738] pt-4">
               <div className="flex items-center justify-between">
                 <p className="text-xs font-bold font-mono uppercase tracking-wider text-white">
                   Provenance &amp; Quality Audit Trail
@@ -1059,26 +1059,26 @@ export default function DatasetsPage() {
               {datasetSummary && (
                 <>
                   <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-                    <div className="rounded-md border border-[#1e2235] bg-[#050508] p-3">
+                    <div className="rounded-md border border-[#272738] bg-[#0a0a0f] p-3">
                       <p className="text-[10px] uppercase font-mono text-[#94a3b8]">Final Samples</p>
                       <p className="text-lg font-bold font-mono text-white mt-0.5">{datasetSummary.sample_count ?? 0}</p>
                     </div>
-                    <div className="rounded-md border border-[#1e2235] bg-[#050508] p-3">
+                    <div className="rounded-md border border-[#272738] bg-[#0a0a0f] p-3">
                       <p className="text-[10px] uppercase font-mono text-[#94a3b8]">Mean Quality</p>
                       <p className="text-lg font-bold font-mono text-[#10b981] mt-0.5">
                         {datasetSummary.quality?.mean == null ? '—' : `${Math.round(datasetSummary.quality.mean * 100)}%`}
                       </p>
                     </div>
-                    <div className="rounded-md border border-[#1e2235] bg-[#050508] p-3">
+                    <div className="rounded-md border border-[#272738] bg-[#0a0a0f] p-3">
                       <p className="text-[10px] uppercase font-mono text-[#94a3b8]">HITL Review Coverage</p>
-                      <p className="text-lg font-bold font-mono text-[#008ecc] mt-0.5">
+                      <p className="text-lg font-bold font-mono text-[#f26625] mt-0.5">
                         {datasetSummary.human_review?.enabled ? `${datasetSummary.human_review.total} items` : 'Stratified Auto'}
                       </p>
                       {datasetSummary.human_review?.enabled && (
                         <p className="mt-1 text-[10px] text-[#94a3b8] font-mono">{datasetSummary.human_review.requested_percentage}% requested</p>
                       )}
                     </div>
-                    <div className="rounded-md border border-[#1e2235] bg-[#050508] p-3">
+                    <div className="rounded-md border border-[#272738] bg-[#0a0a0f] p-3">
                       <p className="text-[10px] uppercase font-mono text-[#94a3b8]">Balance Removals</p>
                       <p className="text-lg font-bold font-mono text-white mt-0.5">{datasetSummary.balance_report?.samples_removed ?? 0}</p>
                     </div>
@@ -1091,8 +1091,8 @@ export default function DatasetsPage() {
                   )}
 
                   {datasetSummary.provenance && (
-                    <details className="rounded-md border border-[#1e2235] bg-[#050508] p-3">
-                      <summary className="cursor-pointer text-xs font-bold text-white hover:text-[#008ecc] transition-colors">
+                    <details className="rounded-md border border-[#272738] bg-[#0a0a0f] p-3">
+                      <summary className="cursor-pointer text-xs font-bold text-white hover:text-[#f26625] transition-colors">
                         Inspect Detailed Grounding Provenance
                       </summary>
                       <div className="mt-3 space-y-2 text-xs text-[#94a3b8]">
@@ -1127,7 +1127,7 @@ export default function DatasetsPage() {
             </div>
 
             {/* Frontier Safety & Contamination Audit Controls */}
-            <div className="space-y-3 border-t border-[#1e2235] pt-4">
+            <div className="space-y-3 border-t border-[#272738] pt-4">
               <div className="flex items-center justify-between">
                 <div>
                   <p className="text-xs font-bold font-mono uppercase tracking-wider text-white">
@@ -1141,7 +1141,7 @@ export default function DatasetsPage() {
                   <Button
                     variant="outline"
                     size="sm"
-                    className="h-7 text-[11px] font-mono border-[#1e2235] text-emerald-400 hover:text-white hover:bg-[#12141e] rounded-md px-3"
+                    className="h-7 text-[11px] font-mono border-[#272738] text-emerald-400 hover:text-white hover:bg-[#161622] rounded-md px-3"
                     onClick={handleAuditContamination}
                     disabled={contaminationLoading || records.length === 0}
                   >
@@ -1155,7 +1155,7 @@ export default function DatasetsPage() {
                   <Button
                     variant="outline"
                     size="sm"
-                    className="h-7 text-[11px] font-mono border-[#1e2235] text-amber-400 hover:text-white hover:bg-[#12141e] rounded-md px-3"
+                    className="h-7 text-[11px] font-mono border-[#272738] text-amber-400 hover:text-white hover:bg-[#161622] rounded-md px-3"
                     onClick={() => handleGenerateAdversarial(selected.name)}
                     disabled={adversarialLoading}
                   >
@@ -1170,7 +1170,7 @@ export default function DatasetsPage() {
               </div>
 
               {contaminationReport && (
-                <div className="p-3 bg-[#050508] border border-[#1e2235] rounded-md flex items-center justify-between font-mono text-xs">
+                <div className="p-3 bg-[#0a0a0f] border border-[#272738] rounded-md flex items-center justify-between font-mono text-xs">
                   <div className="flex items-center gap-2">
                     <span className={clsx("h-2.5 w-2.5 rounded-full", contaminationReport.status === 'clean' ? 'bg-[#10b981]' : 'bg-rose-500')} />
                     <span className="text-white font-bold">
@@ -1180,21 +1180,21 @@ export default function DatasetsPage() {
                       ({contaminationReport.total_samples_audited} samples audited against IndicGLUE, MMLU, GSM8K)
                     </span>
                   </div>
-                  <Badge variant="outline" className="text-[10px] border-[#1e2235] text-emerald-400">
+                  <Badge variant="outline" className="text-[10px] border-[#272738] text-emerald-400">
                     Cert: {contaminationReport.audit_certificate_id}
                   </Badge>
                 </div>
               )}
 
               {adversarialProbes && (
-                <div className="p-3 bg-[#050508] border border-[#1e2235] rounded-md space-y-2 font-mono text-xs">
-                  <div className="flex items-center justify-between pb-1 border-b border-[#151722]">
+                <div className="p-3 bg-[#0a0a0f] border border-[#272738] rounded-md space-y-2 font-mono text-xs">
+                  <div className="flex items-center justify-between pb-1 border-b border-[#1c1c28]">
                     <span className="text-[#94a3b8] text-[10px] uppercase font-bold">Generated Adversarial Safety Probes</span>
                     <span className="text-amber-400 text-[10px]">{adversarialProbes.length} stress tests synthesized</span>
                   </div>
                   <div className="space-y-1.5 max-h-36 overflow-y-auto">
                     {adversarialProbes.map((probe: any, idx: number) => (
-                      <div key={idx} className="p-2 rounded bg-[#0c0d14] border border-[#151722] text-[11px] space-y-1">
+                      <div key={idx} className="p-2 rounded bg-[#12121a] border border-[#1c1c28] text-[11px] space-y-1">
                         <div className="flex items-center justify-between text-[10px]">
                           <span className="text-amber-300 font-bold uppercase">{probe.category}</span>
                           <span className="text-[#94a3b8]">{probe.probe_id}</span>
@@ -1209,7 +1209,7 @@ export default function DatasetsPage() {
             </div>
 
             {/* Records Preview */}
-            <div className="space-y-3 border-t border-[#1e2235] pt-4">
+            <div className="space-y-3 border-t border-[#272738] pt-4">
               <div className="flex items-center justify-between">
                 <p className="text-xs font-bold font-mono uppercase tracking-wider text-white">
                   Sample Record Inspection (First 10 records)
@@ -1220,8 +1220,8 @@ export default function DatasetsPage() {
               </div>
 
               {recordsLoading ? (
-                <div className="p-8 flex items-center justify-center bg-[#050508] rounded-md border border-[#1e2235]">
-                  <Loader2 className="h-5 w-5 animate-spin text-[#008ecc] mr-2" />
+                <div className="p-8 flex items-center justify-center bg-[#0a0a0f] rounded-md border border-[#272738]">
+                  <Loader2 className="h-5 w-5 animate-spin text-[#f26625] mr-2" />
                   <span className="text-xs text-[#94a3b8] font-mono">Loading preview records...</span>
                 </div>
               ) : recordsError ? (
@@ -1229,28 +1229,28 @@ export default function DatasetsPage() {
                   Failed to load preview: {recordsError}
                 </div>
               ) : records.length === 0 ? (
-                <div className="p-8 text-center bg-[#050508] rounded-md border border-[#1e2235] text-xs text-[#94a3b8] font-mono">
+                <div className="p-8 text-center bg-[#0a0a0f] rounded-md border border-[#272738] text-xs text-[#94a3b8] font-mono">
                   No preview records available. Ensure pipeline has completed and exported files successfully.
                 </div>
               ) : (
-                <div className="max-h-[360px] overflow-y-auto space-y-3 rounded-md border border-[#1e2235] bg-[#050508] p-3">
+                <div className="max-h-[360px] overflow-y-auto space-y-3 rounded-md border border-[#272738] bg-[#0a0a0f] p-3">
                   {records.map((rec, i) => (
-                    <div key={i} className="p-3.5 bg-[#0c0d14] rounded-md border border-[#1e2235] text-xs space-y-2">
+                    <div key={i} className="p-3.5 bg-[#12121a] rounded-md border border-[#272738] text-xs space-y-2">
                       <div className="flex items-center justify-between text-[10px] text-[#94a3b8] font-mono">
                         <span className="text-[#10b981] font-semibold">Record #{i + 1}</span>
                         <div className="flex items-center gap-1.5 flex-wrap">
                           {rec.metadata?.language && (
-                            <Badge variant="outline" className="text-[9px] px-1.5 py-0 font-mono rounded-md border-[#1e2235] text-purple-300">
+                            <Badge variant="outline" className="text-[9px] px-1.5 py-0 font-mono rounded-md border-[#272738] text-purple-300">
                               {rec.metadata.language}
                             </Badge>
                           )}
                           {rec.metadata?.regional_dialect && rec.metadata.regional_dialect !== 'standard' && (
-                            <Badge variant="outline" className="text-[9px] px-1.5 py-0 font-mono rounded-md border-[#1e2235] text-[#008ecc]">
+                            <Badge variant="outline" className="text-[9px] px-1.5 py-0 font-mono rounded-md border-[#272738] text-[#f26625]">
                               {rec.metadata.regional_dialect}
                             </Badge>
                           )}
                           {rec.metadata?.parallel_en && (
-                            <Badge variant="outline" className="text-[9px] px-1.5 py-0 font-mono rounded-md border-[#008ecc]/40 text-[#008ecc] bg-[#008ecc]/10">
+                            <Badge variant="outline" className="text-[9px] px-1.5 py-0 font-mono rounded-md border-[#f26625]/40 text-[#f26625] bg-[#f26625]/10">
                               Bitext
                             </Badge>
                           )}
@@ -1260,7 +1260,7 @@ export default function DatasetsPage() {
                             </Badge>
                           )}
                           {rec.difficulty_tier !== undefined && (
-                            <Badge variant="outline" className="text-[9px] px-1.5 py-0 font-mono rounded-md border-[#1e2235] text-[#008ecc]">
+                            <Badge variant="outline" className="text-[9px] px-1.5 py-0 font-mono rounded-md border-[#272738] text-[#f26625]">
                               Tier {rec.difficulty_tier}
                             </Badge>
                           )}
@@ -1268,8 +1268,8 @@ export default function DatasetsPage() {
                       </div>
                       {rec.instruction || rec.prompt ? (
                         <div className="space-y-1">
-                          <p className="text-[10px] font-mono font-bold uppercase tracking-wider text-[#008ecc]">Prompt / Instruction:</p>
-                          <p className="bg-[#050508] p-3 rounded-lg text-[#f1f5f9] max-w-full overflow-x-auto whitespace-pre-wrap font-sans text-xs leading-relaxed border border-[#1e2235]">
+                          <p className="text-[10px] font-mono font-bold uppercase tracking-wider text-[#f26625]">Prompt / Instruction:</p>
+                          <p className="bg-[#0a0a0f] p-3 rounded-lg text-[#f1f5f9] max-w-full overflow-x-auto whitespace-pre-wrap font-sans text-xs leading-relaxed border border-[#272738]">
                             {rec.instruction || rec.prompt}
                           </p>
                         </div>
@@ -1277,37 +1277,37 @@ export default function DatasetsPage() {
                       {rec.response || rec.output ? (
                         <div className="space-y-1">
                           <p className="text-[10px] font-mono font-bold uppercase tracking-wider text-[#10b981]">Synthesized Output:</p>
-                          <p className="bg-[#050508] p-3 rounded-lg text-[#f1f5f9] max-w-full overflow-x-auto whitespace-pre-wrap font-sans text-xs leading-relaxed border border-[#1e2235]">
+                          <p className="bg-[#0a0a0f] p-3 rounded-lg text-[#f1f5f9] max-w-full overflow-x-auto whitespace-pre-wrap font-sans text-xs leading-relaxed border border-[#272738]">
                             {rec.response || rec.output}
                           </p>
                         </div>
                       ) : null}
                       {rec.metadata?.rejected_response && (
-                        <div className="space-y-1 pt-1 border-t border-[#1e2235]">
+                        <div className="space-y-1 pt-1 border-t border-[#272738]">
                           <p className="text-[10px] font-mono font-bold uppercase tracking-wider text-rose-400">DPO Rejected Baseline:</p>
-                          <p className="bg-[#050508] p-2.5 rounded-lg text-rose-200/90 text-xs font-sans whitespace-pre-wrap border border-rose-950">
+                          <p className="bg-[#0a0a0f] p-2.5 rounded-lg text-rose-200/90 text-xs font-sans whitespace-pre-wrap border border-rose-950">
                             {rec.metadata.rejected_response}
                           </p>
                         </div>
                       )}
                       {rec.metadata?.parallel_en && (
-                        <div className="space-y-1 pt-1 border-t border-[#1e2235]">
+                        <div className="space-y-1 pt-1 border-t border-[#272738]">
                           <div className="flex items-center justify-between">
-                            <p className="text-[10px] font-mono font-bold uppercase tracking-wider text-[#008ecc]">Parallel English Bitext:</p>
+                            <p className="text-[10px] font-mono font-bold uppercase tracking-wider text-[#f26625]">Parallel English Bitext:</p>
                             {rec.metadata.fidelity_metrics?.chrf_score && (
-                              <span className="text-[9px] font-mono text-[#008ecc]">
+                              <span className="text-[9px] font-mono text-[#f26625]">
                                 chrF++: {rec.metadata.fidelity_metrics.chrf_score}%
                               </span>
                             )}
                           </div>
-                          <div className="bg-[#050508] p-2.5 rounded-lg text-xs font-sans space-y-1 border border-[#1e2235]">
+                          <div className="bg-[#0a0a0f] p-2.5 rounded-lg text-xs font-sans space-y-1 border border-[#272738]">
                             <p className="text-[#94a3b8] font-mono text-[11px]"><span className="text-white font-medium">Prompt:</span> {rec.metadata.parallel_en.instruction}</p>
                             <p className="text-[#f1f5f9]"><span className="text-white font-mono text-[11px] font-medium">Response:</span> {rec.metadata.parallel_en.response}</p>
                           </div>
                         </div>
                       )}
                       {!rec.instruction && !rec.prompt && !rec.response && !rec.output ? (
-                        <pre className="text-[11px] font-mono text-[#f1f5f9] bg-[#050508] p-3 rounded-lg overflow-x-auto whitespace-pre border border-[#1e2235]">
+                        <pre className="text-[11px] font-mono text-[#f1f5f9] bg-[#0a0a0f] p-3 rounded-lg overflow-x-auto whitespace-pre border border-[#272738]">
                           {JSON.stringify(rec, null, 2)}
                         </pre>
                       ) : null}
@@ -1319,7 +1319,7 @@ export default function DatasetsPage() {
 
             {/* Download & Fine-Tune Action Bar */}
             {selected.status === 'ready' && (
-              <div className="pt-4 flex flex-wrap items-center justify-between gap-3 border-t border-[#1e2235]">
+              <div className="pt-4 flex flex-wrap items-center justify-between gap-3 border-t border-[#272738]">
                 <div className="flex items-center gap-2">
                   <span className="text-xs text-[#94a3b8] font-mono">Format:</span>
                   <Select
@@ -1328,10 +1328,10 @@ export default function DatasetsPage() {
                       setDownloadFormat((prev) => ({ ...prev, [selected.id]: val }))
                     }
                   >
-                    <SelectTrigger className="h-8 w-32 text-xs rounded-md border-[#1e2235] bg-[#050508] text-white font-mono">
+                    <SelectTrigger className="h-8 w-32 text-xs rounded-md border-[#272738] bg-[#0a0a0f] text-white font-mono">
                       <SelectValue />
                     </SelectTrigger>
-                    <SelectContent className="bg-[#0c0d14] border-[#1e2235] text-white text-xs font-mono">
+                    <SelectContent className="bg-[#12121a] border-[#272738] text-white text-xs font-mono">
                       <SelectItem value="jsonl">JSONL (.jsonl)</SelectItem>
                       <SelectItem value="parquet">Parquet (.parquet)</SelectItem>
                       <SelectItem value="json">JSON (.json)</SelectItem>
@@ -1345,18 +1345,18 @@ export default function DatasetsPage() {
                   <Button
                     variant="outline"
                     size="sm"
-                    className="gap-2 border-[#1e2235] text-[#008ecc] hover:text-white hover:bg-[#12141e] rounded-md px-4 font-mono text-xs"
+                    className="gap-2 border-[#272738] text-[#f26625] hover:text-white hover:bg-[#161622] rounded-md px-4 font-mono text-xs"
                     onClick={() => handleViewHfCard(selected.id, selected.name)}
                     title="View & Export Hugging Face Dataset Card"
                   >
-                    <FileText className="h-3.5 w-3.5 text-[#008ecc]" />
+                    <FileText className="h-3.5 w-3.5 text-[#f26625]" />
                     HF Dataset Card
                   </Button>
 
                   <Button
                     variant="outline"
                     size="sm"
-                    className="gap-2 border-[#1e2235] text-emerald-400 hover:text-white hover:bg-[#12141e] rounded-md px-4 font-mono text-xs"
+                    className="gap-2 border-[#272738] text-emerald-400 hover:text-white hover:bg-[#161622] rounded-md px-4 font-mono text-xs"
                     onClick={() => {
                       setHfRepoId(`username/${selected.name.toLowerCase().replace(/[^a-z0-9_-]/g, '-')}`)
                       setHfPublishResult(null)
@@ -1372,7 +1372,7 @@ export default function DatasetsPage() {
                   <Button
                     variant="outline"
                     size="sm"
-                    className="gap-2 border-[#1e2235] text-cyan-300 hover:text-white hover:bg-[#12141e] rounded-md px-4 font-mono text-xs"
+                    className="gap-2 border-[#272738] text-cyan-300 hover:text-white hover:bg-[#161622] rounded-md px-4 font-mono text-xs"
                     onClick={() => handleOpenRecipeModal(selected.id)}
                     title="Generate Fine-Tuning Scripts (Unsloth / Axolotl / LLaMA-Factory)"
                   >
@@ -1383,7 +1383,7 @@ export default function DatasetsPage() {
                   <Button
                     variant="outline"
                     size="sm"
-                    className="gap-2 border-[#1e2235] text-purple-300 hover:text-white hover:bg-[#12141e] rounded-md px-4 font-mono text-xs"
+                    className="gap-2 border-[#272738] text-purple-300 hover:text-white hover:bg-[#161622] rounded-md px-4 font-mono text-xs"
                     onClick={() => handleViewDbom(selected.id, selected.name)}
                     title="Cryptographic Data Bill of Materials & Provenance Label"
                   >
@@ -1394,7 +1394,7 @@ export default function DatasetsPage() {
                   <Button
                     variant="outline"
                     size="sm"
-                    className="gap-2 border-[#1e2235] text-white hover:bg-[#12141e] rounded-md px-4 font-mono text-xs"
+                    className="gap-2 border-[#272738] text-white hover:bg-[#161622] rounded-md px-4 font-mono text-xs"
                     onClick={() => router.push(`/finetune?dataset=${selected.id}`)}
                   >
                     <Zap className="h-3.5 w-3.5 text-amber-400" />
@@ -1403,7 +1403,7 @@ export default function DatasetsPage() {
 
                   <Button
                     size="sm"
-                    className="gap-2 bg-[#008ecc] hover:bg-[#008ecc] text-white rounded-md px-5 font-mono text-xs font-semibold shadow-sm glow-cerulean"
+                    className="gap-2 bg-[#f26625] hover:bg-[#f26625] text-white rounded-md px-5 font-mono text-xs font-semibold shadow-sm glow-yc"
                     disabled={downloadingIds.has(selected.id)}
                     onClick={() =>
                       handleDownload(selected.id, downloadFormat[selected.id] || 'jsonl')
@@ -1431,17 +1431,17 @@ export default function DatasetsPage() {
       {/* Hugging Face Dataset Card Modal */}
       {hfCardModalOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/70 backdrop-blur-sm animate-fade-in">
-          <div className="relative w-full max-w-4xl max-h-[85vh] flex flex-col bg-[#0c0d14] border border-[#1e2235] rounded-md shadow-2xl overflow-hidden">
+          <div className="relative w-full max-w-4xl max-h-[85vh] flex flex-col bg-[#12121a] border border-[#272738] rounded-md shadow-2xl overflow-hidden">
             {/* Modal Header */}
-            <div className="flex items-center justify-between px-5 py-4 border-b border-[#1e2235] bg-[#0e0e14]">
+            <div className="flex items-center justify-between px-5 py-4 border-b border-[#272738] bg-[#0e0e14]">
               <div className="flex items-center gap-2.5">
                 <div className="p-1.5 rounded-lg bg-[#1e1b4b] border border-[#3730a3]">
-                  <FileText className="h-4 w-4 text-[#008ecc]" />
+                  <FileText className="h-4 w-4 text-[#f26625]" />
                 </div>
                 <div>
                   <h3 className="text-sm font-bold text-white font-mono flex items-center gap-2">
                     Hugging Face Dataset Card (README.md)
-                    <Badge variant="outline" className="text-[10px] bg-[#008ecc]/10 text-[#008ecc] border-[#008ecc]/50">
+                    <Badge variant="outline" className="text-[10px] bg-[#f26625]/10 text-[#f26625] border-[#f26625]/50">
                       Hub Compliant
                     </Badge>
                   </h3>
@@ -1457,7 +1457,7 @@ export default function DatasetsPage() {
                   variant="outline"
                   onClick={handleCopyHfCard}
                   disabled={hfCardLoading || !hfCardContent}
-                  className="h-8 gap-1.5 text-xs font-mono rounded-md border-[#1e2235] bg-[#12141e] text-white hover:bg-[#20202e]"
+                  className="h-8 gap-1.5 text-xs font-mono rounded-md border-[#272738] bg-[#161622] text-white hover:bg-[#20202e]"
                 >
                   {hfCardCopied ? (
                     <>
@@ -1466,7 +1466,7 @@ export default function DatasetsPage() {
                     </>
                   ) : (
                     <>
-                      <Copy className="h-3.5 w-3.5 text-[#008ecc]" />
+                      <Copy className="h-3.5 w-3.5 text-[#f26625]" />
                       Copy README
                     </>
                   )}
@@ -1483,21 +1483,21 @@ export default function DatasetsPage() {
             </div>
 
             {/* Modal Body */}
-            <div className="p-5 overflow-y-auto flex-1 font-mono text-xs bg-[#050508]">
+            <div className="p-5 overflow-y-auto flex-1 font-mono text-xs bg-[#0a0a0f]">
               {hfCardLoading ? (
                 <div className="flex flex-col items-center justify-center py-16 space-y-3">
-                  <Loader2 className="h-8 w-8 animate-spin text-[#008ecc]" />
+                  <Loader2 className="h-8 w-8 animate-spin text-[#f26625]" />
                   <p className="text-xs text-[#94a3b8]">Synthesizing Hugging Face Card with YAML frontmatter...</p>
                 </div>
               ) : (
-                <pre className="p-4 rounded-md bg-[#0d0d14] border border-[#1e2235] text-[#e2e8f0] overflow-x-auto whitespace-pre-wrap leading-relaxed select-all">
+                <pre className="p-4 rounded-md bg-[#0d0d14] border border-[#272738] text-[#e2e8f0] overflow-x-auto whitespace-pre-wrap leading-relaxed select-all">
                   {hfCardContent}
                 </pre>
               )}
             </div>
 
             {/* Modal Footer */}
-            <div className="px-5 py-3 border-t border-[#1e2235] bg-[#0e0e14] flex items-center justify-between">
+            <div className="px-5 py-3 border-t border-[#272738] bg-[#0e0e14] flex items-center justify-between">
               <span className="text-[10px] text-[#64748b] font-mono">
                 Ready for direct upload to Hugging Face Hub (huggingface.co/datasets)
               </span>
@@ -1517,9 +1517,9 @@ export default function DatasetsPage() {
       {/* Hugging Face Hub Direct Publish Modal */}
       {hfPublishModalOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/70 backdrop-blur-sm animate-fade-in">
-          <div className="relative w-full max-w-lg bg-[#0c0d14] border border-[#1e2235] rounded-md shadow-2xl overflow-hidden font-mono">
+          <div className="relative w-full max-w-lg bg-[#12121a] border border-[#272738] rounded-md shadow-2xl overflow-hidden font-mono">
             {/* Header */}
-            <div className="flex items-center justify-between px-5 py-4 border-b border-[#1e2235] bg-[#0e0e14]">
+            <div className="flex items-center justify-between px-5 py-4 border-b border-[#272738] bg-[#0e0e14]">
               <div className="flex items-center gap-2">
                 <UploadCloud className="h-4 w-4 text-[#10b981]" />
                 <h3 className="text-sm font-bold text-white">Publish to Hugging Face Hub</h3>
@@ -1537,7 +1537,7 @@ export default function DatasetsPage() {
                   value={hfRepoId}
                   onChange={(e) => setHfRepoId(e.target.value)}
                   placeholder="e.g. your-org/indic-tax-instruct"
-                  className="bg-[#050508] border-[#1e2235] text-white text-xs h-8"
+                  className="bg-[#0a0a0f] border-[#272738] text-white text-xs h-8"
                 />
               </div>
 
@@ -1548,11 +1548,11 @@ export default function DatasetsPage() {
                   value={hfToken}
                   onChange={(e) => setHfToken(e.target.value)}
                   placeholder="hf_... (leave empty to use server HF_TOKEN)"
-                  className="bg-[#050508] border-[#1e2235] text-white text-xs h-8"
+                  className="bg-[#0a0a0f] border-[#272738] text-white text-xs h-8"
                 />
               </div>
 
-              <div className="flex items-center justify-between p-2.5 rounded bg-[#050508] border border-[#1e2235]">
+              <div className="flex items-center justify-between p-2.5 rounded bg-[#0a0a0f] border border-[#272738]">
                 <span className="text-xs text-white">Make Repository Private</span>
                 <input
                   type="checkbox"
@@ -1588,7 +1588,7 @@ export default function DatasetsPage() {
             </div>
 
             {/* Footer */}
-            <div className="px-5 py-3 border-t border-[#1e2235] bg-[#0e0e14] flex items-center justify-end gap-2">
+            <div className="px-5 py-3 border-t border-[#272738] bg-[#0e0e14] flex items-center justify-end gap-2">
               <Button size="sm" variant="ghost" onClick={() => setHfPublishModalOpen(false)} className="text-xs text-[#94a3b8]">
                 Cancel
               </Button>
@@ -1618,9 +1618,9 @@ export default function DatasetsPage() {
       {/* Fine-Tuning Recipe Generator Modal */}
       {recipeModalOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/70 backdrop-blur-sm animate-fade-in">
-          <div className="relative w-full max-w-4xl max-h-[85vh] flex flex-col bg-[#0c0d14] border border-[#1e2235] rounded-md shadow-2xl overflow-hidden font-mono">
+          <div className="relative w-full max-w-4xl max-h-[85vh] flex flex-col bg-[#12121a] border border-[#272738] rounded-md shadow-2xl overflow-hidden font-mono">
             {/* Header */}
-            <div className="flex items-center justify-between px-5 py-4 border-b border-[#1e2235] bg-[#0e0e14]">
+            <div className="flex items-center justify-between px-5 py-4 border-b border-[#272738] bg-[#0e0e14]">
               <div className="flex items-center gap-2.5">
                 <div className="p-1.5 rounded-lg bg-cyan-950/40 border border-cyan-800">
                   <Terminal className="h-4 w-4 text-cyan-400" />
@@ -1642,7 +1642,7 @@ export default function DatasetsPage() {
                       setTimeout(() => setRecipeCopied(false), 2000)
                     }
                   }}
-                  className="h-8 gap-1 text-xs border-[#1e2235] bg-[#12141e] text-white hover:bg-[#20202e]"
+                  className="h-8 gap-1 text-xs border-[#272738] bg-[#161622] text-white hover:bg-[#20202e]"
                 >
                   {recipeCopied ? <Check className="h-3.5 w-3.5 text-[#10b981]" /> : <Copy className="h-3.5 w-3.5 text-cyan-400" />}
                   {recipeCopied ? 'Copied Script!' : 'Copy Script'}
@@ -1654,7 +1654,7 @@ export default function DatasetsPage() {
             </div>
 
             {/* Controls Bar */}
-            <div className="flex flex-wrap items-center justify-between gap-3 px-5 py-3 border-b border-[#1e2235] bg-[#050508]">
+            <div className="flex flex-wrap items-center justify-between gap-3 px-5 py-3 border-b border-[#272738] bg-[#0a0a0f]">
               <div className="flex items-center gap-2">
                 <span className="text-[11px] text-[#94a3b8]">Framework:</span>
                 {(['unsloth', 'axolotl', 'llamafactory'] as const).map((fw) => (
@@ -1668,7 +1668,7 @@ export default function DatasetsPage() {
                       'px-2.5 py-1 rounded text-xs transition-colors',
                       recipeFramework === fw
                         ? 'bg-cyan-950/80 text-cyan-300 border border-cyan-700/60 font-bold'
-                        : 'text-[#94a3b8] hover:text-white bg-[#0c0d14] border border-[#1e2235]'
+                        : 'text-[#94a3b8] hover:text-white bg-[#12121a] border border-[#272738]'
                     )}
                   >
                     {fw === 'unsloth' ? 'Unsloth (2x Fast)' : fw === 'axolotl' ? 'Axolotl YAML' : 'LLaMA-Factory'}
@@ -1679,7 +1679,7 @@ export default function DatasetsPage() {
               {recipeData?.launch_command && (
                 <div className="flex items-center gap-1.5 text-xs">
                   <span className="text-[#94a3b8]">Command:</span>
-                  <code className="px-2 py-0.5 rounded bg-[#12141e] text-cyan-300 text-[11px] border border-[#1e2235]">
+                  <code className="px-2 py-0.5 rounded bg-[#161622] text-cyan-300 text-[11px] border border-[#272738]">
                     {recipeData.launch_command}
                   </code>
                   <button
@@ -1698,21 +1698,21 @@ export default function DatasetsPage() {
             </div>
 
             {/* Code Body */}
-            <div className="p-5 overflow-y-auto flex-1 text-xs bg-[#050508]">
+            <div className="p-5 overflow-y-auto flex-1 text-xs bg-[#0a0a0f]">
               {recipeLoading ? (
                 <div className="flex flex-col items-center justify-center py-16 space-y-3">
                   <Loader2 className="h-8 w-8 animate-spin text-cyan-400" />
                   <p className="text-xs text-[#94a3b8]">Generating optimized training recipe...</p>
                 </div>
               ) : (
-                <pre className="p-4 rounded-md bg-[#0d0d14] border border-[#1e2235] text-slate-200 overflow-x-auto whitespace-pre font-mono text-[11px] leading-relaxed select-all">
+                <pre className="p-4 rounded-md bg-[#0d0d14] border border-[#272738] text-slate-200 overflow-x-auto whitespace-pre font-mono text-[11px] leading-relaxed select-all">
                   {recipeData?.content || 'No recipe generated.'}
                 </pre>
               )}
             </div>
 
             {/* Footer */}
-            <div className="px-5 py-3 border-t border-[#1e2235] bg-[#0e0e14] flex items-center justify-between">
+            <div className="px-5 py-3 border-t border-[#272738] bg-[#0e0e14] flex items-center justify-between">
               <span className="text-[10px] text-[#64748b]">
                 Save as {recipeData?.filename || 'training_script'} in your training workspace.
               </span>
@@ -1727,9 +1727,9 @@ export default function DatasetsPage() {
       {/* Cryptographic DBOM Modal */}
       {dbomModalOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/75 backdrop-blur-sm animate-fade-in">
-          <div className="relative w-full max-w-2xl bg-[#0c0d14] border border-[#1e2235] rounded-md shadow-2xl overflow-hidden font-mono">
+          <div className="relative w-full max-w-2xl bg-[#12121a] border border-[#272738] rounded-md shadow-2xl overflow-hidden font-mono">
             {/* Header */}
-            <div className="flex items-center justify-between px-6 py-4 border-b border-[#1e2235] bg-[#0e0e14]">
+            <div className="flex items-center justify-between px-6 py-4 border-b border-[#272738] bg-[#0e0e14]">
               <div className="flex items-center gap-2.5">
                 <ShieldCheck className="h-5 w-5 text-purple-400" />
                 <div>
@@ -1752,7 +1752,7 @@ export default function DatasetsPage() {
               ) : (
                 <>
                   {/* Certificate ID & Merkle Hash */}
-                  <div className="p-3.5 rounded-md bg-[#050508] border border-[#1e2235] space-y-2">
+                  <div className="p-3.5 rounded-md bg-[#0a0a0f] border border-[#272738] space-y-2">
                     <div className="flex items-center justify-between">
                       <span className="text-[10px] text-[#94a3b8] uppercase font-bold">Attestation Certificate</span>
                       <Badge variant="outline" className="text-[10px] border-purple-800 text-purple-300 bg-purple-950/60 font-mono">
@@ -1761,7 +1761,7 @@ export default function DatasetsPage() {
                     </div>
                     <div>
                       <span className="text-[10px] text-[#64748b] block mb-1">SHA-256 Merkle Root:</span>
-                      <div className="flex items-center justify-between bg-[#12141e] p-2 rounded-lg border border-[#1e2235]">
+                      <div className="flex items-center justify-between bg-[#161622] p-2 rounded-lg border border-[#272738]">
                         <code className="text-[11px] text-purple-300 break-all select-all">
                           {dbomData?.dbom?.merkle_root_hash || 'Computing...'}
                         </code>
@@ -1783,19 +1783,19 @@ export default function DatasetsPage() {
 
                   {/* Compliance Matrix */}
                   <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5">
-                    <div className="p-2.5 rounded-md bg-[#050508] border border-[#1e2235]">
+                    <div className="p-2.5 rounded-md bg-[#0a0a0f] border border-[#272738]">
                       <span className="text-[10px] text-[#94a3b8] uppercase block">PII Scrubbing</span>
                       <span className="text-xs font-bold text-emerald-400 mt-1 block">✅ Certified Clean</span>
                     </div>
-                    <div className="p-2.5 rounded-md bg-[#050508] border border-[#1e2235]">
+                    <div className="p-2.5 rounded-md bg-[#0a0a0f] border border-[#272738]">
                       <span className="text-[10px] text-[#94a3b8] uppercase block">Cultural Safety</span>
                       <span className="text-xs font-bold text-emerald-400 mt-1 block">✅ Indian IT Act</span>
                     </div>
-                    <div className="p-2.5 rounded-md bg-[#050508] border border-[#1e2235]">
+                    <div className="p-2.5 rounded-md bg-[#0a0a0f] border border-[#272738]">
                       <span className="text-[10px] text-[#94a3b8] uppercase block">Contamination</span>
                       <span className="text-xs font-bold text-cyan-400 mt-1 block">0.0% Leakage</span>
                     </div>
-                    <div className="p-2.5 rounded-md bg-[#050508] border border-[#1e2235]">
+                    <div className="p-2.5 rounded-md bg-[#0a0a0f] border border-[#272738]">
                       <span className="text-[10px] text-[#94a3b8] uppercase block">Topic Entropy</span>
                       <span className="text-xs font-bold text-purple-300 mt-1 block">
                         {Math.round((dbomData?.dbom?.compliance_audit?.diversity_entropy || 0.94) * 100)}% Parity
@@ -1804,7 +1804,7 @@ export default function DatasetsPage() {
                   </div>
 
                   {/* Live Verification Box */}
-                  <div className="p-3.5 rounded-md bg-[#12141e] border border-[#3b3b52] flex flex-col sm:flex-row items-center justify-between gap-3">
+                  <div className="p-3.5 rounded-md bg-[#161622] border border-[#3b3b52] flex flex-col sm:flex-row items-center justify-between gap-3">
                     <div>
                       <p className="text-xs font-bold text-white">Cryptographic Tamper Check</p>
                       <p className="text-[10px] text-[#94a3b8]">Verify all dataset sample hashes against root</p>
@@ -1813,7 +1813,7 @@ export default function DatasetsPage() {
                       size="sm"
                       onClick={handleVerifyDbom}
                       disabled={dbomVerifyLoading}
-                      className="bg-[#1e2235] hover:bg-[#3b3b52] text-white text-xs font-mono h-7 gap-1.5"
+                      className="bg-[#272738] hover:bg-[#3b3b52] text-white text-xs font-mono h-7 gap-1.5"
                     >
                       {dbomVerifyLoading ? <Loader2 className="h-3 w-3 animate-spin" /> : <ShieldCheck className="h-3 w-3 text-purple-400" />}
                       {dbomVerifyLoading ? 'Verifying...' : 'Verify Cryptographic Root'}
@@ -1834,7 +1834,7 @@ export default function DatasetsPage() {
                     <span className="text-[10px] text-[#94a3b8] uppercase font-bold block mb-1">
                       Data Nutrition Label Preview (DATA_NUTRITION_LABEL.md)
                     </span>
-                    <pre className="p-3 rounded-md bg-[#050508] border border-[#1e2235] text-slate-300 text-[11px] overflow-x-auto whitespace-pre-wrap max-h-48">
+                    <pre className="p-3 rounded-md bg-[#0a0a0f] border border-[#272738] text-slate-300 text-[11px] overflow-x-auto whitespace-pre-wrap max-h-48">
                       {dbomData?.nutrition_label_md || 'Generating label...'}
                     </pre>
                   </div>
@@ -1843,7 +1843,7 @@ export default function DatasetsPage() {
             </div>
 
             {/* Footer */}
-            <div className="px-6 py-3 border-t border-[#1e2235] bg-[#0e0e14] flex items-center justify-between">
+            <div className="px-6 py-3 border-t border-[#272738] bg-[#0e0e14] flex items-center justify-between">
               <span className="text-[10px] text-[#64748b]">
                 Compliant with EU AI Act &amp; India DPDP Act 2023
               </span>
@@ -1860,7 +1860,7 @@ export default function DatasetsPage() {
                       a.download = `manifest-${dbomData.job_id || 'dataset'}.json`
                       a.click()
                     }}
-                    className="text-xs font-mono border-[#1e2235] text-teal-300 hover:text-white"
+                    className="text-xs font-mono border-[#272738] text-teal-300 hover:text-white"
                   >
                     Download manifest.json
                   </Button>
@@ -1877,7 +1877,7 @@ export default function DatasetsPage() {
                     a.download = `dbom-${dbomData.job_id || 'dataset'}.json`
                     a.click()
                   }}
-                  className="text-xs font-mono border-[#1e2235] text-purple-300 hover:text-white"
+                  className="text-xs font-mono border-[#272738] text-purple-300 hover:text-white"
                 >
                   Download dbom.json
                 </Button>

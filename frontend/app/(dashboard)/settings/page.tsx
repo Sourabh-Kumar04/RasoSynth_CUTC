@@ -23,7 +23,7 @@ interface HealthStatus {
 
 const PROVIDERS_CONFIG = [
   { name: 'AI Kosh (IndiaAI / Bhashini)', env: 'AIKOSH_API_KEY',   letter: 'AK', color: 'text-[#10b981] bg-[#10b981]/10 border-emerald-500/30' },
-  { name: 'Google Gemini',              env: 'GOOGLE_API_KEY',    letter: 'G',  color: 'text-[#008ecc] bg-[#008ecc]/10 border-[#008ecc]/30' },
+  { name: 'Google Gemini',              env: 'GOOGLE_API_KEY',    letter: 'G',  color: 'text-[#f26625] bg-[#f26625]/10 border-[#f26625]/30' },
   { name: 'NVIDIA NIM',                 env: 'NVIDIA_API_KEY',    letter: 'N',  color: 'text-[#10b981] bg-[#10b981]/10 border-emerald-500/30' },
   { name: 'Anthropic Claude',           env: 'ANTHROPIC_API_KEY', letter: 'A',  color: 'text-[#f59e0b] bg-[#f59e0b]/10 border-amber-500/30' },
   { name: 'OpenAI',                     env: 'OPENAI_API_KEY',    letter: 'O',  color: 'text-emerald-400 bg-emerald-500/10 border-emerald-500/30' },
@@ -80,10 +80,10 @@ export default function SettingsPage() {
     <div className="space-y-6 w-full pb-8 animate-fade-in">
 
       {/* Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-[#1e2235] pb-4">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-[#272738] pb-4">
         <div>
           <div className="flex items-center gap-2.5 mb-1">
-            <span className="text-[10px] font-mono px-2 py-0.5 rounded-sm bg-[#008ecc]/10 border border-[#008ecc]/30 text-[#008ecc] font-bold uppercase tracking-wider">
+            <span className="text-[10px] font-mono px-2 py-0.5 rounded-sm bg-[#f26625]/10 border border-[#f26625]/30 text-[#f26625] font-bold uppercase tracking-wider">
               System Control
             </span>
             <h1 className="text-2xl font-bold tracking-tight text-white font-display">
@@ -94,8 +94,8 @@ export default function SettingsPage() {
             Platform runtime configuration, API provider keys, ADR architecture standards &amp; resource boundaries
           </p>
         </div>
-        <Button variant="outline" size="sm" className="rounded-md border-[#1e2235] text-white hover:bg-[#12141e] hover:border-[#3b3b52] font-mono text-xs" onClick={refresh} disabled={refreshing || loading}>
-          <RefreshCw className={clsx('h-3.5 w-3.5 mr-1 text-[#008ecc]', (refreshing || loading) && 'animate-spin')} />
+        <Button variant="outline" size="sm" className="rounded-md border-[#272738] text-white hover:bg-[#161622] hover:border-[#3b3b52] font-mono text-xs" onClick={refresh} disabled={refreshing || loading}>
+          <RefreshCw className={clsx('h-3.5 w-3.5 mr-1 text-[#f26625]', (refreshing || loading) && 'animate-spin')} />
           Refresh Status
         </Button>
       </div>
@@ -103,13 +103,13 @@ export default function SettingsPage() {
       {/* Live health banner */}
       <Card className={clsx(
         'border rounded-md card-shadow transition-colors',
-        loading ? 'border-[#1e2235] bg-[#0c0d14]' :
-        infraStatus ? 'border-emerald-500/30 bg-[#0c0d14]' : 'border-rose-500/30 bg-[#0c0d14]',
+        loading ? 'border-[#272738] bg-[#12121a]' :
+        infraStatus ? 'border-emerald-500/30 bg-[#12121a]' : 'border-rose-500/30 bg-[#12121a]',
       )}>
         <CardContent className="p-4 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
           <div className="flex items-center gap-3">
             {loading ? (
-              <Loader2 className="h-5 w-5 animate-spin text-[#008ecc]" />
+              <Loader2 className="h-5 w-5 animate-spin text-[#f26625]" />
             ) : infraStatus ? (
               <CheckCircle2 className="h-5 w-5 text-[#10b981]" />
             ) : (
@@ -135,32 +135,32 @@ export default function SettingsPage() {
             </div>
           </div>
           <a href={docsUrl} target="_blank" rel="noopener noreferrer">
-            <Button variant="outline" size="sm" className="h-7 text-xs rounded-md border-[#1e2235] text-[#94a3b8] hover:text-white hover:bg-[#12141e] hover:border-[#3b3b52]">
-              <ExternalLink className="h-3 w-3 mr-1 text-[#008ecc]" />API Reference
+            <Button variant="outline" size="sm" className="h-7 text-xs rounded-md border-[#272738] text-[#94a3b8] hover:text-white hover:bg-[#161622] hover:border-[#3b3b52]">
+              <ExternalLink className="h-3 w-3 mr-1 text-[#f26625]" />API Reference
             </Button>
           </a>
         </CardContent>
       </Card>
 
       <Tabs defaultValue="general">
-        <TabsList className="bg-[#12141e] rounded-md border border-[#1e2235] p-1 flex flex-wrap gap-1 h-auto">
-          <TabsTrigger value="general" className="rounded-sm text-xs font-mono data-[state=active]:bg-[#008ecc] data-[state=active]:text-white data-[state=active]:glow-cerulean">General &amp; Engine</TabsTrigger>
-          <TabsTrigger value="providers" className="rounded-sm text-xs font-mono data-[state=active]:bg-[#008ecc] data-[state=active]:text-white data-[state=active]:glow-cerulean">Providers</TabsTrigger>
-          <TabsTrigger value="delivery" className="rounded-sm text-xs font-mono data-[state=active]:bg-[#008ecc] data-[state=active]:text-white data-[state=active]:glow-cerulean">Delivery (ADR-002)</TabsTrigger>
-          <TabsTrigger value="observability" className="rounded-sm text-xs font-mono data-[state=active]:bg-[#008ecc] data-[state=active]:text-white data-[state=active]:glow-cerulean">Observability</TabsTrigger>
-          <TabsTrigger value="security" className="rounded-sm text-xs font-mono data-[state=active]:bg-[#008ecc] data-[state=active]:text-white data-[state=active]:glow-cerulean">Security</TabsTrigger>
-          <TabsTrigger value="limits" className="rounded-sm text-xs font-mono data-[state=active]:bg-[#008ecc] data-[state=active]:text-white data-[state=active]:glow-cerulean">Limits &amp; Caps</TabsTrigger>
-          <TabsTrigger value="hitl" className="rounded-sm text-xs font-mono data-[state=active]:bg-[#008ecc] data-[state=active]:text-white data-[state=active]:glow-cerulean">HITL Gate</TabsTrigger>
+        <TabsList className="bg-[#161622] rounded-md border border-[#272738] p-1 flex flex-wrap gap-1 h-auto">
+          <TabsTrigger value="general" className="rounded-sm text-xs font-mono data-[state=active]:bg-[#f26625] data-[state=active]:text-white data-[state=active]:glow-yc">General &amp; Engine</TabsTrigger>
+          <TabsTrigger value="providers" className="rounded-sm text-xs font-mono data-[state=active]:bg-[#f26625] data-[state=active]:text-white data-[state=active]:glow-yc">Providers</TabsTrigger>
+          <TabsTrigger value="delivery" className="rounded-sm text-xs font-mono data-[state=active]:bg-[#f26625] data-[state=active]:text-white data-[state=active]:glow-yc">Delivery (ADR-002)</TabsTrigger>
+          <TabsTrigger value="observability" className="rounded-sm text-xs font-mono data-[state=active]:bg-[#f26625] data-[state=active]:text-white data-[state=active]:glow-yc">Observability</TabsTrigger>
+          <TabsTrigger value="security" className="rounded-sm text-xs font-mono data-[state=active]:bg-[#f26625] data-[state=active]:text-white data-[state=active]:glow-yc">Security</TabsTrigger>
+          <TabsTrigger value="limits" className="rounded-sm text-xs font-mono data-[state=active]:bg-[#f26625] data-[state=active]:text-white data-[state=active]:glow-yc">Limits &amp; Caps</TabsTrigger>
+          <TabsTrigger value="hitl" className="rounded-sm text-xs font-mono data-[state=active]:bg-[#f26625] data-[state=active]:text-white data-[state=active]:glow-yc">HITL Gate</TabsTrigger>
         </TabsList>
 
         {/* General & Engine */}
         <TabsContent value="general" className="mt-4 space-y-4">
-          <Card className="bg-[#0c0d14] border-[#1e2235] rounded-md card-shadow">
-            <CardHeader className="pb-3 border-b border-[#1e2235]">
+          <Card className="bg-[#12121a] border-[#272738] rounded-md card-shadow">
+            <CardHeader className="pb-3 border-b border-[#272738]">
               <CardTitle className="text-sm font-bold text-white">Infrastructure Architecture</CardTitle>
               <CardDescription className="text-xs text-[#94a3b8]">Core platform storage engines, distributed queue brokers &amp; caching backends</CardDescription>
             </CardHeader>
-            <CardContent className="p-0 divide-y divide-[#1e2235]">
+            <CardContent className="p-0 divide-y divide-[#272738]">
               {[
                 {
                   icon: Database, label: 'Database Backend',
@@ -185,8 +185,8 @@ export default function SettingsPage() {
               ].map(({ icon: Icon, label, desc, status }) => (
                 <div key={label} className="flex items-center justify-between px-5 py-3.5">
                   <div className="flex items-center gap-3.5">
-                    <div className="h-9 w-9 rounded-xl bg-[#12141e] border border-[#1e2235] flex items-center justify-center">
-                      <Icon className="h-4.5 w-4.5 text-[#008ecc]" />
+                    <div className="h-9 w-9 rounded-xl bg-[#161622] border border-[#272738] flex items-center justify-center">
+                      <Icon className="h-4.5 w-4.5 text-[#f26625]" />
                     </div>
                     <div>
                       <p className="text-xs font-bold text-white flex items-center gap-2">
@@ -204,12 +204,12 @@ export default function SettingsPage() {
             </CardContent>
           </Card>
 
-          <Card className="bg-[#0c0d14] border-[#1e2235] rounded-md card-shadow">
-            <CardHeader className="pb-3 border-b border-[#1e2235]">
+          <Card className="bg-[#12121a] border-[#272738] rounded-md card-shadow">
+            <CardHeader className="pb-3 border-b border-[#272738]">
               <CardTitle className="text-sm font-bold text-white">Source-Grounded Engine Standards</CardTitle>
               <CardDescription className="text-xs text-[#94a3b8]">Enforcing authentic retrieval-grounded generation over hallucinated pure synthetic data</CardDescription>
             </CardHeader>
-            <CardContent className="p-0 divide-y divide-[#1e2235]">
+            <CardContent className="p-0 divide-y divide-[#272738]">
               {[
                 {
                   label: 'Default Generation Mode',
@@ -237,7 +237,7 @@ export default function SettingsPage() {
                     <p className="text-xs font-bold text-white">{label}</p>
                     <p className="text-[11px] text-[#94a3b8] font-mono mt-0.5">{desc}</p>
                   </div>
-                  <code className="text-xs font-mono bg-[#050508] px-2.5 py-0.5 rounded-md border border-[#1e2235] text-[#008ecc] shrink-0 ml-4">
+                  <code className="text-xs font-mono bg-[#0a0a0f] px-2.5 py-0.5 rounded-md border border-[#272738] text-[#f26625] shrink-0 ml-4">
                     {val}
                   </code>
                 </div>
@@ -248,12 +248,12 @@ export default function SettingsPage() {
 
         {/* Providers */}
         <TabsContent value="providers" className="mt-4">
-          <Card className="bg-[#0c0d14] border-[#1e2235] rounded-md card-shadow">
-            <CardHeader className="pb-3 border-b border-[#1e2235]">
+          <Card className="bg-[#12121a] border-[#272738] rounded-md card-shadow">
+            <CardHeader className="pb-3 border-b border-[#272738]">
               <CardTitle className="text-sm font-bold text-white">Provider API Keys &amp; Gateway Integrations</CardTitle>
               <CardDescription className="text-xs text-[#94a3b8]">Configured through environment variables for automatic failover &amp; model routing</CardDescription>
             </CardHeader>
-            <CardContent className="p-0 divide-y divide-[#1e2235]">
+            <CardContent className="p-0 divide-y divide-[#272738]">
               {PROVIDERS_CONFIG.map(({ name, env, letter, color }) => (
                 <div key={env} className="flex items-center justify-between px-5 py-3.5">
                   <div className="flex items-center gap-3.5">
@@ -279,12 +279,12 @@ export default function SettingsPage() {
 
         {/* Delivery (ADR-002) */}
         <TabsContent value="delivery" className="mt-4">
-          <Card className="bg-[#0c0d14] border-[#1e2235] rounded-md card-shadow">
-            <CardHeader className="pb-3 border-b border-[#1e2235]">
+          <Card className="bg-[#12121a] border-[#272738] rounded-md card-shadow">
+            <CardHeader className="pb-3 border-b border-[#272738]">
               <CardTitle className="text-sm font-bold text-white">Multi-Destination Delivery &amp; Storage (ADR-002)</CardTitle>
               <CardDescription className="text-xs text-[#94a3b8]">Centralized delivery adapters registered in ServiceContainer for S3, HuggingFace Hub, and Kaggle</CardDescription>
             </CardHeader>
-            <CardContent className="p-0 divide-y divide-[#1e2235]">
+            <CardContent className="p-0 divide-y divide-[#272738]">
               {[
                 { icon: HardDrive, label: 'Local Artifact Output Directory', env: 'OUTPUT_DIR', desc: 'Default target for JSONL, Parquet, and CSV exports (./outputs)' },
                 { icon: Server,    label: 'Amazon S3 / S3-Compatible Store',   env: 'S3_BUCKET',  desc: 'Bucket name and credentials for cloud blob storage delivery' },
@@ -293,15 +293,15 @@ export default function SettingsPage() {
               ].map(({ icon: Icon, label, env, desc }) => (
                 <div key={env} className="flex items-center justify-between px-5 py-3.5">
                   <div className="flex items-center gap-3.5">
-                    <div className="h-9 w-9 rounded-xl bg-[#12141e] border border-[#1e2235] flex items-center justify-center">
-                      <Icon className="h-4.5 w-4.5 text-[#008ecc]" />
+                    <div className="h-9 w-9 rounded-xl bg-[#161622] border border-[#272738] flex items-center justify-center">
+                      <Icon className="h-4.5 w-4.5 text-[#f26625]" />
                     </div>
                     <div>
                       <p className="text-xs font-bold text-white">{label}</p>
                       <p className="text-[11px] text-[#94a3b8]">{desc}</p>
                     </div>
                   </div>
-                  <code className="text-xs font-mono bg-[#050508] px-2.5 py-0.5 rounded-md border border-[#1e2235] text-[#008ecc]">{env}</code>
+                  <code className="text-xs font-mono bg-[#0a0a0f] px-2.5 py-0.5 rounded-md border border-[#272738] text-[#f26625]">{env}</code>
                 </div>
               ))}
             </CardContent>
@@ -310,12 +310,12 @@ export default function SettingsPage() {
 
         {/* Observability */}
         <TabsContent value="observability" className="mt-4">
-          <Card className="bg-[#0c0d14] border-[#1e2235] rounded-md card-shadow">
-            <CardHeader className="pb-3 border-b border-[#1e2235]">
+          <Card className="bg-[#12121a] border-[#272738] rounded-md card-shadow">
+            <CardHeader className="pb-3 border-b border-[#272738]">
               <CardTitle className="text-sm font-bold text-white">Observability &amp; Distributed Tracing</CardTitle>
               <CardDescription className="text-xs text-[#94a3b8]">LangSmith tracing v2, OpenTelemetry metrics, and correlation IDs</CardDescription>
             </CardHeader>
-            <CardContent className="p-0 divide-y divide-[#1e2235]">
+            <CardContent className="p-0 divide-y divide-[#272738]">
               {[
                 { label: 'LangSmith Tracing v2', env: 'LANGCHAIN_TRACING_V2=true', desc: 'Full lifecycle execution tracing for LLM and agent invocations' },
                 { label: 'LangSmith Project Namespace', env: 'LANGCHAIN_PROJECT=RasoSynthTune', desc: 'Default tenant project namespace for trace categorization' },
@@ -327,7 +327,7 @@ export default function SettingsPage() {
                     <p className="text-xs font-bold text-white">{label}</p>
                     <p className="text-[11px] text-[#94a3b8] font-mono mt-0.5">{desc}</p>
                   </div>
-                  <code className="text-xs font-mono bg-[#050508] px-2.5 py-0.5 rounded-md border border-[#1e2235] text-[#008ecc] shrink-0 ml-4">{env}</code>
+                  <code className="text-xs font-mono bg-[#0a0a0f] px-2.5 py-0.5 rounded-md border border-[#272738] text-[#f26625] shrink-0 ml-4">{env}</code>
                 </div>
               ))}
             </CardContent>
@@ -336,12 +336,12 @@ export default function SettingsPage() {
 
         {/* Security */}
         <TabsContent value="security" className="mt-4">
-          <Card className="bg-[#0c0d14] border-[#1e2235] rounded-md card-shadow">
-            <CardHeader className="pb-3 border-b border-[#1e2235]">
+          <Card className="bg-[#12121a] border-[#272738] rounded-md card-shadow">
+            <CardHeader className="pb-3 border-b border-[#272738]">
               <CardTitle className="text-sm font-bold text-white">Security &amp; Cryptography Configuration</CardTitle>
               <CardDescription className="text-xs text-[#94a3b8]">Cryptographic signatures, CSRF protection, and identity tokens</CardDescription>
             </CardHeader>
-            <CardContent className="p-0 divide-y divide-[#1e2235]">
+            <CardContent className="p-0 divide-y divide-[#272738]">
               {[
                 { icon: Shield, label: 'JWT Authentication Secret', env: 'JWT_SECRET', desc: 'HMAC-SHA256 signature key (≥ 32 characters required)' },
                 { icon: Shield, label: 'CSRF Token Protection',     env: 'CSRF_SECRET', desc: 'Cross-Site Request Forgery validation key (auto-derived if omitted)' },
@@ -349,15 +349,15 @@ export default function SettingsPage() {
               ].map(({ icon: Icon, label, env, desc }) => (
                 <div key={env} className="flex items-center justify-between px-5 py-3.5">
                   <div className="flex items-center gap-3.5">
-                    <div className="h-9 w-9 rounded-xl bg-[#12141e] border border-[#1e2235] flex items-center justify-center">
-                      <Icon className="h-4.5 w-4.5 text-[#008ecc]" />
+                    <div className="h-9 w-9 rounded-xl bg-[#161622] border border-[#272738] flex items-center justify-center">
+                      <Icon className="h-4.5 w-4.5 text-[#f26625]" />
                     </div>
                     <div>
                       <p className="text-xs font-bold text-white">{label}</p>
                       <p className="text-[11px] text-[#94a3b8]">{desc}</p>
                     </div>
                   </div>
-                  <code className="text-xs font-mono bg-[#050508] px-2.5 py-0.5 rounded-md border border-[#1e2235] text-[#008ecc]">{env}</code>
+                  <code className="text-xs font-mono bg-[#0a0a0f] px-2.5 py-0.5 rounded-md border border-[#272738] text-[#f26625]">{env}</code>
                 </div>
               ))}
             </CardContent>
@@ -366,19 +366,19 @@ export default function SettingsPage() {
 
         {/* Limits */}
         <TabsContent value="limits" className="mt-4">
-          <Card className="bg-[#0c0d14] border-[#1e2235] rounded-md card-shadow">
-            <CardHeader className="pb-3 border-b border-[#1e2235]">
+          <Card className="bg-[#12121a] border-[#272738] rounded-md card-shadow">
+            <CardHeader className="pb-3 border-b border-[#272738]">
               <CardTitle className="text-sm font-bold text-white">System Resource Limits &amp; Rate Caps</CardTitle>
               <CardDescription className="text-xs text-[#94a3b8]">Concurrency bounds, token quotas, and provider throttle limits</CardDescription>
             </CardHeader>
-            <CardContent className="p-0 divide-y divide-[#1e2235]">
+            <CardContent className="p-0 divide-y divide-[#272738]">
               {LIMITS_CONFIG.map(({ label, env, desc }) => (
                 <div key={env} className="flex items-center justify-between px-5 py-3.5">
                   <div>
                     <p className="text-xs font-bold text-white">{label}</p>
                     <p className="text-[11px] text-[#94a3b8]">{desc}</p>
                   </div>
-                  <code className="text-xs font-mono bg-[#050508] px-2.5 py-0.5 rounded-md border border-[#1e2235] text-[#008ecc] shrink-0 ml-4">{env}</code>
+                  <code className="text-xs font-mono bg-[#0a0a0f] px-2.5 py-0.5 rounded-md border border-[#272738] text-[#f26625] shrink-0 ml-4">{env}</code>
                 </div>
               ))}
             </CardContent>
@@ -387,12 +387,12 @@ export default function SettingsPage() {
 
         {/* HITL */}
         <TabsContent value="hitl" className="mt-4">
-          <Card className="bg-[#0c0d14] border-[#1e2235] rounded-md card-shadow">
-            <CardHeader className="pb-3 border-b border-[#1e2235]">
+          <Card className="bg-[#12121a] border-[#272738] rounded-md card-shadow">
+            <CardHeader className="pb-3 border-b border-[#272738]">
               <CardTitle className="text-sm font-bold text-white">Human-in-the-Loop (HITL) Quality Gate</CardTitle>
               <CardDescription className="text-xs text-[#94a3b8]">Review gate policies, stratified sampling, and auto-resume timeouts</CardDescription>
             </CardHeader>
-            <CardContent className="p-0 divide-y divide-[#1e2235]">
+            <CardContent className="p-0 divide-y divide-[#272738]">
               {[
                 { label: 'HITL Review Mode',       env: 'HITL_MODE',             desc: '"blocking" halts pipeline until approved | "async" persists job to awaiting_review state' },
                 { label: 'Auto-Approval Timeout',   env: 'HITL_TIMEOUT_SECONDS',  desc: 'Max seconds before auto-accepting pending review batches (0 = unlimited wait)' },
@@ -404,7 +404,7 @@ export default function SettingsPage() {
                     <p className="text-xs font-bold text-white">{label}</p>
                     <p className="text-[11px] text-[#94a3b8]">{desc}</p>
                   </div>
-                  <code className="text-xs font-mono bg-[#050508] px-2.5 py-0.5 rounded-md border border-[#1e2235] text-[#008ecc] shrink-0 ml-4">{env}</code>
+                  <code className="text-xs font-mono bg-[#0a0a0f] px-2.5 py-0.5 rounded-md border border-[#272738] text-[#f26625] shrink-0 ml-4">{env}</code>
                 </div>
               ))}
             </CardContent>

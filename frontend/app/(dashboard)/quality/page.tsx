@@ -95,13 +95,13 @@ export default function QualityDashboardPage() {
   return (
     <div className="space-y-6 animate-fade-in pb-8">
       {/* Header */}
-      <div className="border-b border-[#1e2235] pb-4">
+      <div className="border-b border-[#272738] pb-4">
         <div className="flex items-center gap-2.5 mb-1">
-          <span className="text-[10px] font-mono px-2 py-0.5 rounded-sm bg-[#008ecc]/10 border border-[#008ecc]/30 text-[#008ecc] font-bold uppercase tracking-wider">
+          <span className="text-[10px] font-mono px-2 py-0.5 rounded-sm bg-[#f26625]/10 border border-[#f26625]/30 text-[#f26625] font-bold uppercase tracking-wider">
             Quality Intelligence
           </span>
           <h1 className="text-2xl font-bold tracking-tight text-white font-display flex items-center gap-2">
-            <BarChart2 className="h-5 w-5 text-[#008ecc]" />
+            <BarChart2 className="h-5 w-5 text-[#f26625]" />
             Dataset Quality Studio
           </h1>
         </div>
@@ -121,7 +121,7 @@ export default function QualityDashboardPage() {
       {/* Charts Row */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         <QualityScoreChart />
-        <div className="bg-[#0c0d14] rounded-md border border-[#1e2235] p-6 card-shadow">
+        <div className="bg-[#12121a] rounded-md border border-[#272738] p-6 card-shadow">
           <h3 className="text-sm font-bold text-white mb-4 font-mono uppercase tracking-wider">Metrics &amp; Grounding Controls</h3>
           <ul className="space-y-3 text-sm">
             {[
@@ -131,7 +131,7 @@ export default function QualityDashboardPage() {
               ["Semantic Scoring",       "LLM Judge + heuristic fallback (perplexity & length)"],
               ["Human Review Gate",      "Stratified sampling, approve, reject, edit in HITL queue"],
             ].map(([label, detail]) => (
-              <li key={label} className="flex items-start justify-between gap-4 p-2.5 rounded-md bg-[#050508] border border-[#1e2235]">
+              <li key={label} className="flex items-start justify-between gap-4 p-2.5 rounded-md bg-[#0a0a0f] border border-[#272738]">
                 <span className="text-white font-bold text-xs">{label}</span>
                 <span className="text-[#94a3b8] text-xs font-mono text-right">{detail}</span>
               </li>
@@ -146,23 +146,23 @@ export default function QualityDashboardPage() {
           <h2 className="text-xs font-mono font-bold uppercase tracking-wider text-[#94a3b8]">
             Automated LLM-as-a-Judge Multi-Dimensional Rubric
           </h2>
-          <Badge variant="outline" className="text-[10px] border-[#1e2235] text-cyan-300 font-mono rounded-sm">
+          <Badge variant="outline" className="text-[10px] border-[#272738] text-cyan-300 font-mono rounded-sm">
             5-Dimension MT-Bench Rubric
           </Badge>
         </div>
 
-        <Card className="border-[#1e2235] bg-[#0c0d14] rounded-md card-shadow overflow-hidden">
-          <CardHeader className="pb-3 border-b border-[#1e2235] bg-[#0e0e14]">
+        <Card className="border-[#272738] bg-[#12121a] rounded-md card-shadow overflow-hidden">
+          <CardHeader className="pb-3 border-b border-[#272738] bg-[#0e0e14]">
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-2">
-                <Sparkles className="h-4 w-4 text-[#008ecc]" />
+                <Sparkles className="h-4 w-4 text-[#f26625]" />
                 <CardTitle className="text-sm font-bold text-white font-mono">Sample Quality Jury</CardTitle>
               </div>
               <Button
                 size="sm"
                 onClick={handleRunJudge}
                 disabled={judgeLoading}
-                className="h-8 gap-1.5 text-xs font-mono rounded-md bg-[#008ecc] hover:bg-[#00a4eb] border border-[#0077ab] text-white font-bold glow-cerulean"
+                className="h-8 gap-1.5 text-xs font-mono rounded-md bg-[#f26625] hover:bg-[#de581a] border border-[#ea580c] text-white font-bold glow-yc"
               >
                 {judgeLoading ? (
                   <>
@@ -186,7 +186,7 @@ export default function QualityDashboardPage() {
                   value={judgeInstruction}
                   onChange={(e) => setJudgeInstruction(e.target.value)}
                   rows={3}
-                  className="w-full p-2.5 rounded-md bg-[#050508] border border-[#1e2235] text-white focus:outline-none focus:border-[#008ecc] text-xs resize-none"
+                  className="w-full p-2.5 rounded-md bg-[#0a0a0f] border border-[#272738] text-white focus:outline-none focus:border-[#f26625] text-xs resize-none"
                 />
               </div>
               <div>
@@ -195,15 +195,15 @@ export default function QualityDashboardPage() {
                   value={judgeResponse}
                   onChange={(e) => setJudgeResponse(e.target.value)}
                   rows={3}
-                  className="w-full p-2.5 rounded-md bg-[#050508] border border-[#1e2235] text-white focus:outline-none focus:border-[#008ecc] text-xs resize-none"
+                  className="w-full p-2.5 rounded-md bg-[#0a0a0f] border border-[#272738] text-white focus:outline-none focus:border-[#f26625] text-xs resize-none"
                 />
               </div>
             </div>
 
             {/* Rubric Score Breakdown */}
             {judgeResult && (
-              <div className="p-4 rounded-md bg-[#050508] border border-[#1e2235] space-y-3 animate-fade-in">
-                <div className="flex items-center justify-between pb-2 border-b border-[#151722]">
+              <div className="p-4 rounded-md bg-[#0a0a0f] border border-[#272738] space-y-3 animate-fade-in">
+                <div className="flex items-center justify-between pb-2 border-b border-[#1c1c28]">
                   <div className="flex items-center gap-2">
                     <CheckCircle2 className="h-4 w-4 text-[#10b981]" />
                     <span className="font-bold text-white text-xs">Jury Rubric Results</span>
@@ -227,12 +227,12 @@ export default function QualityDashboardPage() {
                     { label: "Safety & Tone", val: judgeResult.safety_tone },
                     { label: "Conciseness", val: judgeResult.conciseness },
                   ].map((dim, i) => (
-                    <div key={i} className="p-2.5 rounded-lg bg-[#0c0d14] border border-[#1e2235] space-y-1">
+                    <div key={i} className="p-2.5 rounded-lg bg-[#12121a] border border-[#272738] space-y-1">
                       <span className="text-[10px] text-[#94a3b8] uppercase block truncate">{dim.label}</span>
                       <p className="text-sm font-bold text-white">
                         {Math.round(dim.val * 100)}%
                       </p>
-                      <div className="w-full bg-[#151722] h-1 rounded-full overflow-hidden">
+                      <div className="w-full bg-[#1c1c28] h-1 rounded-full overflow-hidden">
                         <div
                           className={clsx("h-full", dim.val >= 0.85 ? "bg-[#10b981]" : dim.val >= 0.65 ? "bg-amber-400" : "bg-rose-500")}
                           style={{ width: `${Math.round(dim.val * 100)}%` }}
@@ -254,7 +254,7 @@ export default function QualityDashboardPage() {
             <h2 className="text-xs font-mono font-bold uppercase tracking-wider text-[#94a3b8]">
               Semantic Density &amp; 2D Topic Coverage Visualizer
             </h2>
-            <Badge variant="outline" className="text-[10px] border-[#1e2235] text-purple-300 font-mono">
+            <Badge variant="outline" className="text-[10px] border-[#272738] text-purple-300 font-mono">
               TF-IDF + Truncated SVD Projection
             </Badge>
           </div>
@@ -269,32 +269,32 @@ export default function QualityDashboardPage() {
           </Button>
         </div>
 
-        <Card className="border-[#1e2235] bg-[#0c0d14] rounded-md card-shadow overflow-hidden">
-          <CardHeader className="pb-3 border-b border-[#1e2235] bg-[#0e0e14]">
+        <Card className="border-[#272738] bg-[#12121a] rounded-md card-shadow overflow-hidden">
+          <CardHeader className="pb-3 border-b border-[#272738] bg-[#0e0e14]">
             <div className="grid grid-cols-2 sm:grid-cols-5 gap-3 text-center sm:text-left">
-              <div className="p-2 rounded-lg bg-[#12141e] border border-[#1e2235]">
+              <div className="p-2 rounded-lg bg-[#161622] border border-[#272738]">
                 <span className="text-[10px] text-[#94a3b8] uppercase font-mono block">Audited Points</span>
                 <span className="text-sm font-bold text-white font-mono">{densityResult?.total_samples || 0} records</span>
               </div>
-              <div className="p-2 rounded-lg bg-[#12141e] border border-[#1e2235]">
+              <div className="p-2 rounded-lg bg-[#161622] border border-[#272738]">
                 <span className="text-[10px] text-[#94a3b8] uppercase font-mono block">Topic Entropy</span>
                 <span className="text-sm font-bold text-emerald-400 font-mono">
                   {Math.round((densityResult?.diversity_entropy || 0) * 100)}%
                 </span>
               </div>
-              <div className="p-2 rounded-lg bg-[#12141e] border border-[#1e2235]">
+              <div className="p-2 rounded-lg bg-[#161622] border border-[#272738]">
                 <span className="text-[10px] text-[#94a3b8] uppercase font-mono block">Semantic Coverage</span>
                 <span className="text-sm font-bold text-cyan-400 font-mono">
                   {densityResult?.semantic_coverage_pct || 0}%
                 </span>
               </div>
-              <div className="p-2 rounded-lg bg-[#12141e] border border-[#1e2235]">
+              <div className="p-2 rounded-lg bg-[#161622] border border-[#272738]">
                 <span className="text-[10px] text-[#94a3b8] uppercase font-mono block">Isolated Outliers</span>
                 <span className="text-sm font-bold text-rose-400 font-mono">
                   {densityResult?.outlier_count || 0} edge case(s)
                 </span>
               </div>
-              <div className="p-2 rounded-lg bg-[#12141e] border border-[#1e2235]">
+              <div className="p-2 rounded-lg bg-[#161622] border border-[#272738]">
                 <span className="text-[10px] text-[#94a3b8] uppercase font-mono block">Dense Redundancies</span>
                 <span className="text-sm font-bold text-sky-400 font-mono">
                   {densityResult?.redundancy_count || 0} core duplicates
@@ -306,7 +306,7 @@ export default function QualityDashboardPage() {
           <CardContent className="p-5">
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
               {/* 2D Projection Canvas */}
-              <div className="lg:col-span-2 relative bg-[#050508] border border-[#1e2235] rounded-md p-4 flex flex-col items-center justify-center min-h-[340px]">
+              <div className="lg:col-span-2 relative bg-[#0a0a0f] border border-[#272738] rounded-md p-4 flex flex-col items-center justify-center min-h-[340px]">
                 <div className="absolute top-2 left-3 flex items-center gap-2 text-[10px] font-mono text-[#64748b]">
                   <Compass className="h-3 w-3 text-purple-400" />
                   <span>Principal Latent Dimension 1 (X) vs. Dimension 2 (Y)</span>
@@ -319,7 +319,7 @@ export default function QualityDashboardPage() {
 
                   {/* Centroids */}
                   {densityResult?.clusters?.map((c: any, idx: number) => {
-                    const colors = ["#008ecc", "#10b981", "#f59e0b", "#ec4899"];
+                    const colors = ["#f26625", "#10b981", "#f59e0b", "#ec4899"];
                     const color = colors[idx % colors.length];
                     return (
                       <g key={`cent-${c.cluster_id}`}>
@@ -343,7 +343,7 @@ export default function QualityDashboardPage() {
 
                   {/* Points */}
                   {densityResult?.points?.map((pt: any) => {
-                    const colors = ["#008ecc", "#10b981", "#f59e0b", "#ec4899"];
+                    const colors = ["#f26625", "#10b981", "#f59e0b", "#ec4899"];
                     const color = colors[pt.cluster_id % colors.length];
                     const isSelected = selectedPoint?.id === pt.id;
 
@@ -411,12 +411,12 @@ export default function QualityDashboardPage() {
                   </h4>
                   <div className="space-y-2">
                     {densityResult?.clusters?.map((c: any, idx: number) => {
-                      const colors = ["#008ecc", "#10b981", "#f59e0b", "#ec4899"];
+                      const colors = ["#f26625", "#10b981", "#f59e0b", "#ec4899"];
                       const color = colors[idx % colors.length];
                       return (
                         <div
                           key={c.cluster_id}
-                          className="p-2.5 rounded-md bg-[#050508] border border-[#1e2235] flex items-center justify-between"
+                          className="p-2.5 rounded-md bg-[#0a0a0f] border border-[#272738] flex items-center justify-between"
                         >
                           <div className="flex items-center gap-2">
                             <span
@@ -430,7 +430,7 @@ export default function QualityDashboardPage() {
                               </p>
                             </div>
                           </div>
-                          <Badge variant="outline" className="text-[10px] font-mono border-[#1e2235] text-white">
+                          <Badge variant="outline" className="text-[10px] font-mono border-[#272738] text-white">
                             {c.sample_count} ({c.percentage}%)
                           </Badge>
                         </div>
@@ -440,7 +440,7 @@ export default function QualityDashboardPage() {
                 </div>
 
                 {/* Point Detail Inspector */}
-                <div className="p-3.5 rounded-md bg-[#050508] border border-[#1e2235]">
+                <div className="p-3.5 rounded-md bg-[#0a0a0f] border border-[#272738]">
                   <div className="flex items-center justify-between mb-2">
                     <span className="text-[10px] font-mono uppercase text-[#94a3b8] flex items-center gap-1">
                       <Info className="h-3 w-3 text-cyan-400" />

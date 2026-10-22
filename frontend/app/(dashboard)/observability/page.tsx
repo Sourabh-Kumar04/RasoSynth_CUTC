@@ -85,10 +85,10 @@ export default function ObservabilityPage() {
   return (
     <div className="space-y-6 w-full pb-8">
       {/* Page Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-[#1e2235] pb-4">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-[#272738] pb-4">
         <div>
           <div className="flex items-center gap-2.5 mb-1">
-            <span className="text-[10px] font-mono px-2 py-0.5 rounded-sm bg-[#008ecc]/10 border border-[#008ecc]/30 text-[#008ecc] font-bold uppercase tracking-wider">
+            <span className="text-[10px] font-mono px-2 py-0.5 rounded-sm bg-[#f26625]/10 border border-[#f26625]/30 text-[#f26625] font-bold uppercase tracking-wider">
               Telemetry &amp; Health
             </span>
             <h1 className="text-2xl font-bold tracking-tight text-white font-display">Observability Center</h1>
@@ -98,7 +98,7 @@ export default function ObservabilityPage() {
           </p>
         </div>
         <div className="flex items-center gap-2">
-          <div className="flex rounded-md border border-[#1e2235] bg-[#0c0d14] overflow-hidden p-0.5">
+          <div className="flex rounded-md border border-[#272738] bg-[#12121a] overflow-hidden p-0.5">
             {timeRanges.map((range) => (
               <button
                 key={range.value}
@@ -106,8 +106,8 @@ export default function ObservabilityPage() {
                 className={clsx(
                   'px-3 py-1 text-xs font-mono font-bold rounded-sm transition-colors',
                   timeRange === range.value
-                    ? 'bg-[#008ecc] text-white shadow-xs glow-cerulean'
-                    : 'hover:bg-[#12141e] text-[#94a3b8]'
+                    ? 'bg-[#f26625] text-white shadow-xs glow-yc'
+                    : 'hover:bg-[#161622] text-[#94a3b8]'
                 )}
               >
                 {range.label}
@@ -117,14 +117,14 @@ export default function ObservabilityPage() {
           <Button
             variant="outline"
             size="sm"
-            className="gap-2 rounded-md border-[#1e2235] text-[#94a3b8] hover:text-white hover:bg-[#12141e] font-mono text-xs"
+            className="gap-2 rounded-md border-[#272738] text-[#94a3b8] hover:text-white hover:bg-[#161622] font-mono text-xs"
             onClick={fetchData}
             disabled={loading}
           >
             {loading ? (
-              <Loader2 className="h-4 w-4 animate-spin text-[#008ecc]" />
+              <Loader2 className="h-4 w-4 animate-spin text-[#f26625]" />
             ) : (
-              <RefreshCw className="h-4 w-4 text-[#008ecc]" />
+              <RefreshCw className="h-4 w-4 text-[#f26625]" />
             )}
             Refresh
           </Button>
@@ -140,7 +140,7 @@ export default function ObservabilityPage() {
               <p className="text-sm font-bold text-rose-200">Failed to load observability data</p>
               <p className="text-xs text-rose-400">{error}</p>
             </div>
-            <Button variant="outline" size="sm" className="rounded-md border-[#3b3b52] text-[#f4f6fa] hover:bg-[#12141e]" onClick={fetchData}>
+            <Button variant="outline" size="sm" className="rounded-md border-[#3b3b52] text-[#f8fafc] hover:bg-[#161622]" onClick={fetchData}>
               Retry
             </Button>
           </CardContent>
@@ -149,22 +149,22 @@ export default function ObservabilityPage() {
 
       {/* System Status Cards */}
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
-        <Card className="border-[#1e2235] bg-[#0c0d14] rounded-md card-shadow">
+        <Card className="border-[#272738] bg-[#12121a] rounded-md card-shadow">
           <CardContent className="p-4">
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-xs text-[#94a3b8] font-mono uppercase">System Status</p>
-                <p className="text-xl font-bold font-mono text-[#008ecc] capitalize mt-0.5">
+                <p className="text-xl font-bold font-mono text-[#f26625] capitalize mt-0.5">
                   {health?.status || 'healthy'}
                 </p>
               </div>
-              <div className="h-10 w-10 rounded-xl bg-[#12141e] border border-[#3b3b52] flex items-center justify-center">
+              <div className="h-10 w-10 rounded-xl bg-[#161622] border border-[#3b3b52] flex items-center justify-center">
                 <CheckCircle2 className="h-5 w-5 text-emerald-600" />
               </div>
             </div>
           </CardContent>
         </Card>
-        <Card className="border-[#1e2235] bg-[#0c0d14] rounded-md card-shadow">
+        <Card className="border-[#272738] bg-[#12121a] rounded-md card-shadow">
           <CardContent className="p-4">
             <div className="flex items-center justify-between">
               <div>
@@ -173,37 +173,37 @@ export default function ObservabilityPage() {
                   {health?.database !== false ? (health?.database_engine === 'sqlite' ? 'SQLite' : 'PostgreSQL') : 'Disconnected'}
                 </p>
               </div>
-              <div className="h-10 w-10 rounded-xl bg-[#12141e] border border-[#3b3b52] flex items-center justify-center">
+              <div className="h-10 w-10 rounded-xl bg-[#161622] border border-[#3b3b52] flex items-center justify-center">
                 <Database className="h-5 w-5 text-[#10b981]" />
               </div>
             </div>
           </CardContent>
         </Card>
-        <Card className="border-[#1e2235] bg-[#0c0d14] rounded-md card-shadow">
+        <Card className="border-[#272738] bg-[#12121a] rounded-md card-shadow">
           <CardContent className="p-4">
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-xs text-[#94a3b8] font-mono uppercase">Redis Cache</p>
-                <p className="text-xl font-bold font-mono text-[#008ecc] mt-0.5">
+                <p className="text-xl font-bold font-mono text-[#f26625] mt-0.5">
                   {health?.redis !== false ? 'Connected' : 'Disconnected'}
                 </p>
               </div>
-              <div className="h-10 w-10 rounded-xl bg-[#12141e] border border-[#3b3b52] flex items-center justify-center">
-                <Server className="h-5 w-5 text-[#008ecc]" />
+              <div className="h-10 w-10 rounded-xl bg-[#161622] border border-[#3b3b52] flex items-center justify-center">
+                <Server className="h-5 w-5 text-[#f26625]" />
               </div>
             </div>
           </CardContent>
         </Card>
-        <Card className="border-[#1e2235] bg-[#0c0d14] rounded-md card-shadow">
+        <Card className="border-[#272738] bg-[#12121a] rounded-md card-shadow">
           <CardContent className="p-4">
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-xs text-[#94a3b8] font-mono uppercase">System Load &amp; RAM</p>
-                <p className="text-sm font-bold font-mono text-[#008ecc] mt-1">
+                <p className="text-sm font-bold font-mono text-[#f26625] mt-1">
                   Load: {health?.system_metrics?.cpu_load_1m ?? '0.1'} · RAM: {health?.system_metrics?.memory_used_percent ? `${health.system_metrics.memory_used_percent}%` : '45%'}
                 </p>
               </div>
-              <div className="h-10 w-10 rounded-xl bg-[#12141e] border border-[#3b3b52] flex items-center justify-center">
+              <div className="h-10 w-10 rounded-xl bg-[#161622] border border-[#3b3b52] flex items-center justify-center">
                 <Activity className="h-5 w-5 text-emerald-600" />
               </div>
             </div>
@@ -213,7 +213,7 @@ export default function ObservabilityPage() {
 
       {/* Tabs */}
       <Tabs value={selectedTab} onValueChange={setSelectedTab}>
-        <TabsList className="bg-[#12141e] rounded-md border border-[#3b3b52]">
+        <TabsList className="bg-[#161622] rounded-md border border-[#3b3b52]">
           <TabsTrigger value="overview" className="rounded-sm">Overview</TabsTrigger>
           <TabsTrigger value="health" className="rounded-sm">Health Monitor</TabsTrigger>
           <TabsTrigger value="metrics" className="rounded-sm">Metrics</TabsTrigger>
@@ -223,31 +223,31 @@ export default function ObservabilityPage() {
 
         {/* Overview */}
         <TabsContent value="overview" className="mt-6">
-          <Card className="border-[#1e2235] bg-[#0c0d14] rounded-md card-shadow">
-            <CardHeader className="pb-3 border-b border-[#1e2235]">
+          <Card className="border-[#272738] bg-[#12121a] rounded-md card-shadow">
+            <CardHeader className="pb-3 border-b border-[#272738]">
               <CardTitle className="text-sm font-bold text-white">System Health Summary</CardTitle>
             </CardHeader>
             <CardContent className="p-4">
               <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-                <div className="flex items-center justify-between p-3.5 rounded-xl bg-[#050508] border border-[#1e2235]">
+                <div className="flex items-center justify-between p-3.5 rounded-xl bg-[#0a0a0f] border border-[#272738]">
                   <div className="flex items-center gap-3">
-                    <Database className="h-4 w-4 text-[#008ecc]" />
+                    <Database className="h-4 w-4 text-[#f26625]" />
                     <span className="text-xs font-bold text-white">PostgreSQL Database</span>
                   </div>
                   <span className="text-[10px] font-mono font-bold px-2.5 py-0.5 rounded-md bg-emerald-950/40 text-emerald-400 border border-emerald-500/30">
                     Healthy
                   </span>
                 </div>
-                <div className="flex items-center justify-between p-3.5 rounded-xl bg-[#050508] border border-[#1e2235]">
+                <div className="flex items-center justify-between p-3.5 rounded-xl bg-[#0a0a0f] border border-[#272738]">
                   <div className="flex items-center gap-3">
-                    <Server className="h-4 w-4 text-[#008ecc]" />
+                    <Server className="h-4 w-4 text-[#f26625]" />
                     <span className="text-xs font-bold text-white">Redis In-Memory Cache</span>
                   </div>
                   <span className="text-[10px] font-mono font-bold px-2.5 py-0.5 rounded-md bg-emerald-950/40 text-emerald-400 border border-emerald-500/30">
                     Healthy
                   </span>
                 </div>
-                <div className="flex items-center justify-between p-3.5 rounded-xl bg-[#050508] border border-[#1e2235]">
+                <div className="flex items-center justify-between p-3.5 rounded-xl bg-[#0a0a0f] border border-[#272738]">
                   <div className="flex items-center gap-3">
                     <Activity className="h-4 w-4 text-[#10b981]" />
                     <span className="text-xs font-bold text-white">Synthetics API Backend</span>
@@ -265,24 +265,24 @@ export default function ObservabilityPage() {
         <TabsContent value="health" className="mt-6">
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
             <HealthMonitor />
-            <Card className="border-[#1e2235] bg-[#0c0d14] rounded-md card-shadow">
-              <CardHeader className="pb-3 border-b border-[#1e2235]">
-                <CardTitle className="flex items-center gap-2 text-sm font-bold text-[#008ecc]">
-                  <Activity className="h-4 w-4 text-[#008ecc]" />
+            <Card className="border-[#272738] bg-[#12121a] rounded-md card-shadow">
+              <CardHeader className="pb-3 border-b border-[#272738]">
+                <CardTitle className="flex items-center gap-2 text-sm font-bold text-[#f26625]">
+                  <Activity className="h-4 w-4 text-[#f26625]" />
                   System Information
                 </CardTitle>
               </CardHeader>
               <CardContent className="p-4">
                 <div className="space-y-3">
-                  <div className="p-3 border border-[#1e2235] bg-[#050508] rounded-xl flex items-center justify-between">
+                  <div className="p-3 border border-[#272738] bg-[#0a0a0f] rounded-xl flex items-center justify-between">
                     <span className="text-xs text-[#94a3b8]">Overall Status</span>
                     <span className="text-xs font-mono font-bold px-2.5 py-0.5 rounded-md bg-emerald-950/40 text-emerald-400 border border-emerald-500/30">
                       Healthy
                     </span>
                   </div>
-                  <div className="p-3 border border-[#1e2235] bg-[#050508] rounded-xl flex items-center justify-between">
+                  <div className="p-3 border border-[#272738] bg-[#0a0a0f] rounded-xl flex items-center justify-between">
                     <span className="text-xs text-[#94a3b8]">Last Updated</span>
-                    <span className="font-mono text-xs font-bold text-[#008ecc]">
+                    <span className="font-mono text-xs font-bold text-[#f26625]">
                       {new Date().toLocaleTimeString()}
                     </span>
                   </div>
@@ -294,22 +294,22 @@ export default function ObservabilityPage() {
 
         {/* Metrics Tab */}
         <TabsContent value="metrics" className="mt-6">
-          <Card className="border-[#1e2235] bg-[#0c0d14] rounded-md card-shadow">
-            <CardHeader className="pb-3 border-b border-[#1e2235]">
-              <CardTitle className="text-sm font-bold text-[#008ecc]">Prometheus Telemetry Stream</CardTitle>
+          <Card className="border-[#272738] bg-[#12121a] rounded-md card-shadow">
+            <CardHeader className="pb-3 border-b border-[#272738]">
+              <CardTitle className="text-sm font-bold text-[#f26625]">Prometheus Telemetry Stream</CardTitle>
             </CardHeader>
             <CardContent className="p-4">
               {metricsText ? (
-                <ScrollArea className="h-[400px] bg-[#050508] p-3 rounded-xl border border-[#1e2235]">
-                  <pre className="text-[11px] font-mono text-[#008ecc] whitespace-pre-wrap">
+                <ScrollArea className="h-[400px] bg-[#0a0a0f] p-3 rounded-xl border border-[#272738]">
+                  <pre className="text-[11px] font-mono text-[#f26625] whitespace-pre-wrap">
                     {metricsText.slice(0, 5000)}
                     {metricsText.length > 5000 && '... (truncated)'}
                   </pre>
                 </ScrollArea>
               ) : (
-                <div className="p-12 text-center text-[#94a3b8] bg-[#050508] rounded-xl border border-[#1e2235]">
+                <div className="p-12 text-center text-[#94a3b8] bg-[#0a0a0f] rounded-xl border border-[#272738]">
                   <Activity className="h-10 w-10 mx-auto mb-3 text-[#64748b]" />
-                  <p className="text-xs font-mono font-bold text-[#008ecc]">Live Metrics Ready</p>
+                  <p className="text-xs font-mono font-bold text-[#f26625]">Live Metrics Ready</p>
                   <p className="text-[11px] font-mono mt-1">Metrics available at /metrics endpoint</p>
                 </div>
               )}
@@ -319,8 +319,8 @@ export default function ObservabilityPage() {
 
         {/* Tokenizer & Indic Efficiency Tab */}
         <TabsContent value="token_efficiency" className="mt-6 space-y-4 font-mono text-xs">
-          <Card className="border-[#1e2235] bg-[#0c0d14] rounded-md card-shadow">
-            <CardHeader className="pb-3 border-b border-[#1e2235]">
+          <Card className="border-[#272738] bg-[#12121a] rounded-md card-shadow">
+            <CardHeader className="pb-3 border-b border-[#272738]">
               <div className="flex items-center justify-between">
                 <div>
                   <CardTitle className="text-sm font-bold text-white flex items-center gap-2">
@@ -338,17 +338,17 @@ export default function ObservabilityPage() {
             </CardHeader>
             <CardContent className="p-4 space-y-4">
               <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
-                <div className="p-3 bg-[#050508] border border-[#1e2235] rounded-xl space-y-1">
+                <div className="p-3 bg-[#0a0a0f] border border-[#272738] rounded-xl space-y-1">
                   <span className="text-[10px] uppercase text-[#94a3b8] font-bold">Standard Llama-3 Fertility</span>
                   <p className="text-xl font-bold text-rose-400">3.65 tok/word</p>
                   <p className="text-[10px] text-[#64748b]">Byte fallback bloat on Devanagari &amp; Indic scripts</p>
                 </div>
-                <div className="p-3 bg-[#050508] border border-[#1e2235] rounded-xl space-y-1">
+                <div className="p-3 bg-[#0a0a0f] border border-[#272738] rounded-xl space-y-1">
                   <span className="text-[10px] uppercase text-[#94a3b8] font-bold">Sarvam / Gemma-2 Fertility</span>
                   <p className="text-xl font-bold text-[#10b981]">1.28 tok/word</p>
                   <p className="text-[10px] text-[#64748b]">Optimized Devanagari subword vocabulary</p>
                 </div>
-                <div className="p-3 bg-[#050508] border border-[#1e2235] rounded-xl space-y-1">
+                <div className="p-3 bg-[#0a0a0f] border border-[#272738] rounded-xl space-y-1">
                   <span className="text-[10px] uppercase text-[#94a3b8] font-bold">Inference &amp; Fine-Tune Savings</span>
                   <p className="text-xl font-bold text-cyan-300">~65% Less Compute</p>
                   <p className="text-[10px] text-[#64748b]">Over 2.8x shorter sequence lengths at training time</p>
@@ -356,8 +356,8 @@ export default function ObservabilityPage() {
               </div>
 
               {/* Language Benchmark Comparison Grid */}
-              <div className="border border-[#1e2235] bg-[#050508] rounded-xl overflow-hidden">
-                <div className="grid grid-cols-5 p-2.5 bg-[#12141e] text-[10px] uppercase font-bold text-[#94a3b8] border-b border-[#1e2235]">
+              <div className="border border-[#272738] bg-[#0a0a0f] rounded-xl overflow-hidden">
+                <div className="grid grid-cols-5 p-2.5 bg-[#161622] text-[10px] uppercase font-bold text-[#94a3b8] border-b border-[#272738]">
                   <span>Language</span>
                   <span>Script</span>
                   <span>Llama-3 (t/w)</span>
@@ -372,7 +372,7 @@ export default function ObservabilityPage() {
                   { lang: 'Bengali (বাংলা)', script: 'Native Bengali', llama: '3.60', sarvam: '1.31', savings: '63%' },
                   { lang: 'Marathi (मराठी)', script: 'Native Devanagari', llama: '3.55', sarvam: '1.29', savings: '63%' },
                 ].map((row, idx) => (
-                  <div key={idx} className="grid grid-cols-5 p-2.5 text-[11px] border-b border-[#151722] last:border-0 hover:bg-[#0c0d14]">
+                  <div key={idx} className="grid grid-cols-5 p-2.5 text-[11px] border-b border-[#1c1c28] last:border-0 hover:bg-[#12121a]">
                     <span className="font-bold text-white">{row.lang}</span>
                     <span className="text-[#94a3b8]">{row.script}</span>
                     <span className="text-rose-300 font-mono">{row.llama}</span>
@@ -389,16 +389,16 @@ export default function ObservabilityPage() {
         <TabsContent value="validation" className="mt-6">
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
             <ValidationFeedback />
-            <Card className="border-[#1e2235] bg-[#0c0d14] rounded-md card-shadow">
-              <CardHeader className="pb-3 border-b border-[#1e2235]">
+            <Card className="border-[#272738] bg-[#12121a] rounded-md card-shadow">
+              <CardHeader className="pb-3 border-b border-[#272738]">
                 <CardTitle className="flex items-center gap-2 text-sm font-bold text-white">
-                  <Shield className="h-4 w-4 text-[#008ecc]" />
+                  <Shield className="h-4 w-4 text-[#f26625]" />
                   Security Features
                 </CardTitle>
               </CardHeader>
               <CardContent className="p-4">
                 <div className="space-y-3">
-                  <div className="flex items-start gap-3 p-3 bg-[#050508] border border-[#1e2235] rounded-xl">
+                  <div className="flex items-start gap-3 p-3 bg-[#0a0a0f] border border-[#272738] rounded-xl">
                     <CheckCircle2 className="h-4 w-4 text-[#10b981] mt-0.5 shrink-0" />
                     <div>
                       <h4 className="font-bold text-xs text-white">Input Validation &amp; Sanitization</h4>
@@ -407,7 +407,7 @@ export default function ObservabilityPage() {
                       </p>
                     </div>
                   </div>
-                  <div className="flex items-start gap-3 p-3 bg-[#050508] border border-[#1e2235] rounded-xl">
+                  <div className="flex items-start gap-3 p-3 bg-[#0a0a0f] border border-[#272738] rounded-xl">
                     <CheckCircle2 className="h-4 w-4 text-[#10b981] mt-0.5 shrink-0" />
                     <div>
                       <h4 className="font-bold text-xs text-white">JWT Token &amp; CSRF Protection</h4>
@@ -416,7 +416,7 @@ export default function ObservabilityPage() {
                       </p>
                     </div>
                   </div>
-                  <div className="flex items-start gap-3 p-3 bg-[#050508] border border-[#1e2235] rounded-xl">
+                  <div className="flex items-start gap-3 p-3 bg-[#0a0a0f] border border-[#272738] rounded-xl">
                     <CheckCircle2 className="h-4 w-4 text-[#10b981] mt-0.5 shrink-0" />
                     <div>
                       <h4 className="font-bold text-xs text-white">CORS &amp; Admission Control</h4>

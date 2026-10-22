@@ -186,10 +186,10 @@ export function CommandPalette({
 
   return (
     <div className="fixed inset-0 z-[100] flex items-start justify-center pt-20 p-4 bg-black/60 backdrop-blur-xs animate-fade-in">
-      <div className="w-full max-w-lg bg-[#0c0d14] border border-[#1e2235] rounded-xl shadow-2xl overflow-hidden flex flex-col">
+      <div className="w-full max-w-lg bg-[#12121a] border border-[#272738] rounded-xl shadow-2xl overflow-hidden flex flex-col">
         {/* Search Header Input */}
-        <div className="flex items-center gap-3 p-4 border-b border-[#1e2235] bg-[#050508]">
-          <Search className="h-4 w-4 text-[#008ecc] shrink-0" />
+        <div className="flex items-center gap-3 p-4 border-b border-[#272738] bg-[#0a0a0f]">
+          <Search className="h-4 w-4 text-[#f26625] shrink-0" />
           <input
             ref={inputRef}
             type="text"
@@ -199,11 +199,11 @@ export function CommandPalette({
               setSelectedIndex(0)
             }}
             placeholder="Search pages, presets, workflows, settings... (Cmd+K)"
-            className="w-full bg-transparent text-xs text-[#f4f6fa] font-medium outline-none placeholder:text-[#64748b]"
+            className="w-full bg-transparent text-xs text-[#f8fafc] font-medium outline-none placeholder:text-[#64748b]"
           />
           <button
             onClick={() => onOpenChange(false)}
-            className="text-[#94a3b8] hover:text-[#f4f6fa] p-1 rounded-md hover:bg-[#12141e]"
+            className="text-[#94a3b8] hover:text-[#f8fafc] p-1 rounded-md hover:bg-[#161622]"
           >
             <X className="h-4 w-4" />
           </button>
@@ -229,13 +229,13 @@ export function CommandPalette({
                   }}
                   onMouseEnter={() => setSelectedIndex(idx)}
                   className={`flex items-center justify-between p-3 rounded-lg cursor-pointer transition-all ${
-                    isSelected ? 'bg-[#008ecc] text-white shadow-xs glow-cerulean' : 'hover:bg-[#12141e] text-[#f4f6fa]'
+                    isSelected ? 'bg-[#f26625] text-white shadow-xs glow-yc' : 'hover:bg-[#161622] text-[#f8fafc]'
                   }`}
                 >
                   <div className="flex items-center gap-3 min-w-0">
                     <div
                       className={`h-8 w-8 rounded-md flex items-center justify-center shrink-0 ${
-                        isSelected ? 'bg-white/20 text-white' : 'bg-[#12141e] text-[#008ecc]'
+                        isSelected ? 'bg-white/20 text-white' : 'bg-[#161622] text-[#f26625]'
                       }`}
                     >
                       <Icon className="h-4 w-4" />
@@ -245,7 +245,7 @@ export function CommandPalette({
                         <span className="text-xs font-bold truncate">{item.title}</span>
                         <span
                           className={`text-[9px] font-mono px-1.5 py-0.5 rounded-full ${
-                            isSelected ? 'bg-indigo-950 text-indigo-200' : 'bg-[#12141e] text-[#94a3b8]'
+                            isSelected ? 'bg-indigo-950 text-indigo-200' : 'bg-[#161622] text-[#94a3b8]'
                           }`}
                         >
                           {item.category}
@@ -264,11 +264,11 @@ export function CommandPalette({
         </div>
 
         {/* Footer shortcuts hint */}
-        <div className="p-3 bg-[#050508] border-t border-[#1e2235] flex items-center justify-between text-[10px] font-mono text-[#94a3b8]">
+        <div className="p-3 bg-[#0a0a0f] border-t border-[#272738] flex items-center justify-between text-[10px] font-mono text-[#94a3b8]">
           <div className="flex items-center gap-3">
-            <span><kbd className="px-1 py-0.5 bg-[#12141e] text-[#94a3b8] rounded border border-[#3b3b52]">↑↓</kbd> Navigate</span>
-            <span><kbd className="px-1 py-0.5 bg-[#12141e] text-[#94a3b8] rounded border border-[#3b3b52]">↵</kbd> Select</span>
-            <span><kbd className="px-1 py-0.5 bg-[#12141e] text-[#94a3b8] rounded border border-[#3b3b52]">ESC</kbd> Close</span>
+            <span><kbd className="px-1 py-0.5 bg-[#161622] text-[#94a3b8] rounded border border-[#3b3b52]">↑↓</kbd> Navigate</span>
+            <span><kbd className="px-1 py-0.5 bg-[#161622] text-[#94a3b8] rounded border border-[#3b3b52]">↵</kbd> Select</span>
+            <span><kbd className="px-1 py-0.5 bg-[#161622] text-[#94a3b8] rounded border border-[#3b3b52]">ESC</kbd> Close</span>
           </div>
           <span>RasoSynthTune Search</span>
         </div>

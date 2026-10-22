@@ -212,10 +212,10 @@ export default function OrchestrationPage() {
     <div className="w-full max-w-[1600px] mx-auto space-y-6">
       
       {/* Header Bar */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-[#1e2235] pb-5">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-[#272738] pb-5">
         <div>
           <div className="flex items-center gap-2 mb-1">
-            <span className="px-2 py-0.5 rounded-sm text-[10px] font-mono font-bold bg-[#008ecc]/10 border border-[#008ecc]/30 text-[#008ecc] uppercase tracking-wider">
+            <span className="px-2 py-0.5 rounded-sm text-[10px] font-mono font-bold bg-[#f26625]/10 border border-[#f26625]/30 text-[#f26625] uppercase tracking-wider">
               WORKFLOW ORCHESTRATOR
             </span>
             <h1 className="text-xl sm:text-2xl font-bold tracking-tight text-white font-display">
@@ -229,11 +229,11 @@ export default function OrchestrationPage() {
 
         <div className="flex items-center gap-3">
           <div className="flex items-center space-x-2 text-xs font-mono">
-            <span className="px-2 py-1 rounded bg-[#0c0d14] border border-[#1e2235] text-[#10b981] flex items-center gap-1.5">
+            <span className="px-2 py-1 rounded bg-[#12121a] border border-[#272738] text-[#10b981] flex items-center gap-1.5">
               <span className="w-2 h-2 rounded-full bg-[#10b981] animate-pulse" />
               {runningJobs.length} Running
             </span>
-            <span className="px-2 py-1 rounded bg-[#0c0d14] border border-[#1e2235] text-white">
+            <span className="px-2 py-1 rounded bg-[#12121a] border border-[#272738] text-white">
               {completedJobs.length} Completed
             </span>
           </div>
@@ -241,9 +241,9 @@ export default function OrchestrationPage() {
           <Button
             onClick={fetchJobs}
             variant="outline"
-            className="border-[#1e2235] bg-[#0c0d14] hover:bg-[#12141e] text-[#94a3b8] hover:text-white text-xs font-mono h-8 rounded-md"
+            className="border-[#272738] bg-[#12121a] hover:bg-[#161622] text-[#94a3b8] hover:text-white text-xs font-mono h-8 rounded-md"
           >
-            <RefreshCw className="w-3.5 h-3.5 mr-1 text-[#008ecc]" />
+            <RefreshCw className="w-3.5 h-3.5 mr-1 text-[#f26625]" />
             Refresh
           </Button>
         </div>
@@ -259,16 +259,16 @@ export default function OrchestrationPage() {
 
       {/* Tabs Navigation */}
       <Tabs value={activeTab} onValueChange={(v) => setActiveTab(v as any)} className="w-full space-y-6">
-        <TabsList className="bg-[#12141e] rounded-md border border-[#1e2235] p-1 flex flex-wrap gap-1 h-auto">
-          <TabsTrigger value="dag" className="rounded-sm text-xs font-mono flex items-center gap-1.5 data-[state=active]:bg-[#008ecc] data-[state=active]:text-white data-[state=active]:glow-cerulean">
+        <TabsList className="bg-[#161622] rounded-md border border-[#272738] p-1 flex flex-wrap gap-1 h-auto">
+          <TabsTrigger value="dag" className="rounded-sm text-xs font-mono flex items-center gap-1.5 data-[state=active]:bg-[#f26625] data-[state=active]:text-white data-[state=active]:glow-yc">
             <Workflow className="w-3.5 h-3.5" />
             Pipeline DAG Execution
           </TabsTrigger>
-          <TabsTrigger value="agents" className="rounded-sm text-xs font-mono flex items-center gap-1.5 data-[state=active]:bg-[#008ecc] data-[state=active]:text-white data-[state=active]:glow-cerulean">
+          <TabsTrigger value="agents" className="rounded-sm text-xs font-mono flex items-center gap-1.5 data-[state=active]:bg-[#f26625] data-[state=active]:text-white data-[state=active]:glow-yc">
             <Users className="w-3.5 h-3.5" />
             Multi-Agent Society ({agents.length || 13})
           </TabsTrigger>
-          <TabsTrigger value="research" className="rounded-sm text-xs font-mono flex items-center gap-1.5 data-[state=active]:bg-[#008ecc] data-[state=active]:text-white data-[state=active]:glow-cerulean">
+          <TabsTrigger value="research" className="rounded-sm text-xs font-mono flex items-center gap-1.5 data-[state=active]:bg-[#f26625] data-[state=active]:text-white data-[state=active]:glow-yc">
             <FlaskConical className="w-3.5 h-3.5" />
             Autonomous Research Loop
           </TabsTrigger>
@@ -277,10 +277,10 @@ export default function OrchestrationPage() {
         {/* Tab 1: Pipeline DAG View */}
         <TabsContent value="dag" className="space-y-6 mt-0">
           {/* Main DAG Visualizer Card */}
-          <div className="p-5 rounded-md bg-[#0c0d14] border border-[#1e2235] space-y-4 relative overflow-hidden">
-            <div className="flex flex-wrap items-center justify-between pb-3 border-b border-[#151722] gap-2">
+          <div className="p-5 rounded-md bg-[#12121a] border border-[#272738] space-y-4 relative overflow-hidden">
+            <div className="flex flex-wrap items-center justify-between pb-3 border-b border-[#1c1c28] gap-2">
               <div className="flex items-center space-x-2">
-                <Workflow className="w-4 h-4 text-[#008ecc]" />
+                <Workflow className="w-4 h-4 text-[#f26625]" />
                 <h3 className="text-xs font-bold font-mono uppercase tracking-wider text-white">
                   Active Pipeline Execution DAG
                 </h3>
@@ -305,7 +305,7 @@ export default function OrchestrationPage() {
             <div className="overflow-x-auto py-4">
               <div className="min-w-[960px] flex items-center justify-between relative px-4">
                 {/* Connecting Track Line */}
-                <div className="absolute left-10 right-10 top-1/2 -translate-y-1/2 h-[2px] bg-[#151722] -z-0" />
+                <div className="absolute left-10 right-10 top-1/2 -translate-y-1/2 h-[2px] bg-[#1c1c28] -z-0" />
 
                 {PIPELINE_STAGES.map((stage, i, arr) => {
                   const currentStage = selectedJob?.current_stage || 'constructing_dataset'
@@ -326,14 +326,14 @@ export default function OrchestrationPage() {
                         className={clsx(
                           'w-40 p-3 rounded-md border transition-all',
                           isCurrent
-                            ? 'bg-[#12141e] border-[#008ecc] shadow-sm glow-cerulean'
+                            ? 'bg-[#161622] border-[#f26625] shadow-sm glow-yc'
                             : isPast
-                            ? 'bg-[#0c0d14] border-[#10b981]/50'
-                            : 'bg-[#0e0e13] border-[#1e2235] opacity-60'
+                            ? 'bg-[#12121a] border-[#10b981]/50'
+                            : 'bg-[#0e0e13] border-[#272738] opacity-60'
                         )}
                       >
                         <div className="flex items-center justify-between mb-1.5">
-                          <span className="text-[10px] font-mono font-bold text-[#008ecc]">
+                          <span className="text-[10px] font-mono font-bold text-[#f26625]">
                             NODE 0{i + 1}
                           </span>
                           <span className={clsx(
@@ -346,13 +346,13 @@ export default function OrchestrationPage() {
                         
                         {hasFeedbackLoop && (
                           <div className="mt-1">
-                            <span className="inline-block text-[9px] font-mono px-1.5 py-0.5 rounded bg-[#151722] text-amber-400/90 border border-amber-500/20">
+                            <span className="inline-block text-[9px] font-mono px-1.5 py-0.5 rounded bg-[#1c1c28] text-amber-400/90 border border-amber-500/20">
                               {feedbackLabel}
                             </span>
                           </div>
                         )}
 
-                        <div className="mt-2 pt-1 border-t border-[#151722] flex justify-between text-[10px] font-mono">
+                        <div className="mt-2 pt-1 border-t border-[#1c1c28] flex justify-between text-[10px] font-mono">
                           <span className="text-[#94a3b8]">Status:</span>
                           <span className={isCurrent ? 'text-[#10b981] font-semibold' : 'text-[#94a3b8]'}>
                             {liveNode?.status ? liveNode.status.toUpperCase() : isCurrent ? 'EXECUTING' : isPast ? 'PASSED' : 'PENDING'}
@@ -362,7 +362,7 @@ export default function OrchestrationPage() {
 
                       {i < arr.length - 1 && (
                         <div className="mx-2 text-[#94a3b8]">
-                          <ChevronRight className="w-4 h-4 text-[#1e2235]" />
+                          <ChevronRight className="w-4 h-4 text-[#272738]" />
                         </div>
                       )}
                     </div>
@@ -373,20 +373,20 @@ export default function OrchestrationPage() {
 
             {/* Selected Job Telemetry Bar */}
             {selectedJob && (
-              <div className="pt-3 border-t border-[#151722] grid grid-cols-2 sm:grid-cols-4 gap-3 text-xs font-mono">
-                <div className="p-2 rounded bg-[#050508] border border-[#1e2235]">
+              <div className="pt-3 border-t border-[#1c1c28] grid grid-cols-2 sm:grid-cols-4 gap-3 text-xs font-mono">
+                <div className="p-2 rounded bg-[#0a0a0f] border border-[#272738]">
                   <span className="text-[#94a3b8] text-[10px] block">Current Stage</span>
                   <span className="text-white font-bold">{selectedJob.current_stage || 'constructing_dataset'}</span>
                 </div>
-                <div className="p-2 rounded bg-[#050508] border border-[#1e2235]">
+                <div className="p-2 rounded bg-[#0a0a0f] border border-[#272738]">
                   <span className="text-[#94a3b8] text-[10px] block">Samples Generated</span>
                   <span className="text-[#10b981] font-bold">{selectedJob.samples_generated || 0}</span>
                 </div>
-                <div className="p-2 rounded bg-[#050508] border border-[#1e2235]">
+                <div className="p-2 rounded bg-[#0a0a0f] border border-[#272738]">
                   <span className="text-[#94a3b8] text-[10px] block">Total Cost Accrued</span>
-                  <span className="text-[#008ecc] font-bold">${(selectedJob.cost_usd || 0.041).toFixed(3)}</span>
+                  <span className="text-[#f26625] font-bold">${(selectedJob.cost_usd || 0.041).toFixed(3)}</span>
                 </div>
-                <div className="p-2 rounded bg-[#050508] border border-[#1e2235]">
+                <div className="p-2 rounded bg-[#0a0a0f] border border-[#272738]">
                   <span className="text-[#94a3b8] text-[10px] block">Pipeline Progress</span>
                   <span className="text-white font-bold">{Math.round((selectedJob.progress || 0.7) * 100)}%</span>
                 </div>
@@ -395,11 +395,11 @@ export default function OrchestrationPage() {
 
             {/* Early Preview Samples & User Acceptance Gate */}
             {selectedJob && (selectedJob.status === 'awaiting_preview_approval' || selectedJob.current_stage === 'preview_acceptance' || (selectedJob.config?.preview_samples && selectedJob.config.preview_samples.length > 0)) && (
-              <div className="pt-4 border-t border-[#151722] space-y-3">
-                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 p-3 rounded-md bg-[#12141e] border border-[#008ecc]/40 glow-cerulean">
+              <div className="pt-4 border-t border-[#1c1c28] space-y-3">
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 p-3 rounded-md bg-[#161622] border border-[#f26625]/40 glow-yc">
                   <div>
-                    <span className="text-[10px] font-mono font-bold uppercase tracking-wider text-[#008ecc] flex items-center gap-1.5">
-                      <Sparkles className="w-3.5 h-3.5 text-[#008ecc]" />
+                    <span className="text-[10px] font-mono font-bold uppercase tracking-wider text-[#f26625] flex items-center gap-1.5">
+                      <Sparkles className="w-3.5 h-3.5 text-[#f26625]" />
                       Early Dataset Preview &amp; User Acceptance Gate
                     </span>
                     <p className="text-xs text-[#94a3b8] mt-0.5">
@@ -411,7 +411,7 @@ export default function OrchestrationPage() {
                       size="sm"
                       onClick={() => handleAcceptPreview(selectedJob.id)}
                       disabled={previewSubmitting}
-                      className="bg-[#ff0038] hover:bg-[#ff2654] border border-[#cc002d] text-white font-mono text-xs font-bold h-8 px-3.5 rounded-md flex items-center gap-1.5 shadow-sm glow-neon-red"
+                      className="bg-[#10b981] hover:bg-[#059669] text-white font-mono text-xs font-bold h-8 px-3 rounded-md flex items-center gap-1.5"
                     >
                       {previewSubmitting ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <CheckCircle2 className="w-3.5 h-3.5" />}
                       Accept &amp; Run Full Pipeline
@@ -428,10 +428,10 @@ export default function OrchestrationPage() {
                     const isModified = Boolean(editedSamples[idx])
 
                     return (
-                      <div key={idx} className="p-3 rounded-md bg-[#050508] border border-[#1e2235] space-y-2 font-mono text-xs">
+                      <div key={idx} className="p-3 rounded-md bg-[#0a0a0f] border border-[#272738] space-y-2 font-mono text-xs">
                         <div className="flex justify-between items-center text-[10px]">
                           <div className="flex items-center gap-2">
-                            <span className="text-[#008ecc] font-bold">Sample #{idx + 1}</span>
+                            <span className="text-[#f26625] font-bold">Sample #{idx + 1}</span>
                             {isModified && (
                               <span className="px-1.5 py-0.2 rounded bg-amber-500/10 text-amber-400 border border-amber-500/30 text-[9px]">
                                 Custom Edited
@@ -443,7 +443,7 @@ export default function OrchestrationPage() {
                             <button
                               type="button"
                               onClick={() => setEditingSampleIndex(isEditing ? null : idx)}
-                              className="text-[#008ecc] hover:underline text-[10px]"
+                              className="text-[#f26625] hover:underline text-[10px]"
                             >
                               {isEditing ? 'Done Editing' : 'Edit Sample'}
                             </button>
@@ -451,7 +451,7 @@ export default function OrchestrationPage() {
                         </div>
 
                         {isEditing ? (
-                          <div className="space-y-2 pt-1 border-t border-[#151722]">
+                          <div className="space-y-2 pt-1 border-t border-[#1c1c28]">
                             <div>
                               <span className="text-[#94a3b8] block text-[10px] uppercase">Edit Instruction:</span>
                               <textarea
@@ -464,7 +464,7 @@ export default function OrchestrationPage() {
                                     [idx]: { instruction: val, response: prev[idx]?.response ?? sample.response },
                                   }))
                                 }}
-                                className="w-full mt-1 bg-[#12141e] border border-[#1e2235] rounded p-2 text-xs font-mono text-white focus:outline-none focus:border-[#008ecc]"
+                                className="w-full mt-1 bg-[#161622] border border-[#272738] rounded p-2 text-xs font-mono text-white focus:outline-none focus:border-[#f26625]"
                               />
                             </div>
                             <div>
@@ -479,7 +479,7 @@ export default function OrchestrationPage() {
                                     [idx]: { instruction: prev[idx]?.instruction ?? sample.instruction, response: val },
                                   }))
                                 }}
-                                className="w-full mt-1 bg-[#12141e] border border-[#1e2235] rounded p-2 text-xs font-mono text-white focus:outline-none focus:border-[#008ecc]"
+                                className="w-full mt-1 bg-[#161622] border border-[#272738] rounded p-2 text-xs font-mono text-white focus:outline-none focus:border-[#f26625]"
                               />
                             </div>
                           </div>
@@ -507,14 +507,14 @@ export default function OrchestrationPage() {
                     value={refinePrompt}
                     onChange={(e) => setRefinePrompt(e.target.value)}
                     placeholder={selectedJob.config?.target_domain ? `Refine prompt (currently: ${selectedJob.config.target_domain})...` : "Refine query / specification prompt..."}
-                    className="flex-1 bg-[#050508] border border-[#1e2235] rounded-md px-3 py-1.5 text-xs font-mono text-white placeholder:text-[#64748b] focus:outline-none focus:border-[#008ecc]"
+                    className="flex-1 bg-[#0a0a0f] border border-[#272738] rounded-md px-3 py-1.5 text-xs font-mono text-white placeholder:text-[#64748b] focus:outline-none focus:border-[#f26625]"
                   />
                   <Button
                     size="sm"
                     variant="outline"
                     onClick={() => handleRejectPreview(selectedJob.id)}
                     disabled={previewSubmitting}
-                    className="border-[#008ecc]/40 text-[#008ecc] hover:bg-[#008ecc]/10 text-xs font-mono h-8 rounded-md"
+                    className="border-[#f26625]/40 text-[#f26625] hover:bg-[#f26625]/10 text-xs font-mono h-8 rounded-md"
                   >
                     Refine Query &amp; Regenerate
                   </Button>
@@ -524,8 +524,8 @@ export default function OrchestrationPage() {
           </div>
 
           {/* Jobs History Table */}
-          <div className="p-4 rounded-lg bg-[#0c0d14] border border-[#1e2235] space-y-3">
-            <div className="flex items-center justify-between pb-2 border-b border-[#151722]">
+          <div className="p-4 rounded-lg bg-[#12121a] border border-[#272738] space-y-3">
+            <div className="flex items-center justify-between pb-2 border-b border-[#1c1c28]">
               <div className="flex items-center space-x-2">
                 <Database className="w-4 h-4 text-[#10b981]" />
                 <h3 className="text-xs font-bold font-mono uppercase tracking-wider text-white">
@@ -540,7 +540,7 @@ export default function OrchestrationPage() {
             <div className="overflow-x-auto">
               <table className="w-full text-left text-xs font-mono">
                 <thead>
-                  <tr className="border-b border-[#151722] text-[#94a3b8] text-[10px] uppercase">
+                  <tr className="border-b border-[#1c1c28] text-[#94a3b8] text-[10px] uppercase">
                     <th className="pb-2">Job ID</th>
                     <th className="pb-2">Target Domain / Source</th>
                     <th className="pb-2">Status</th>
@@ -549,7 +549,7 @@ export default function OrchestrationPage() {
                     <th className="pb-2 text-right">Actions</th>
                   </tr>
                 </thead>
-                <tbody className="divide-y divide-[#151722]">
+                <tbody className="divide-y divide-[#1c1c28]">
                   {jobs.map((job) => {
                     const isSelected = selectedJob?.id === job.id
                     return (
@@ -557,7 +557,7 @@ export default function OrchestrationPage() {
                         key={job.id}
                         onClick={() => setSelectedJob(job)}
                         className={clsx(
-                          'cursor-pointer transition-colors hover:bg-[#12141e]',
+                          'cursor-pointer transition-colors hover:bg-[#161622]',
                           isSelected && 'bg-[#1a1a24]'
                         )}
                       >
@@ -568,7 +568,7 @@ export default function OrchestrationPage() {
                         <td className="py-2.5">
                           <span className={clsx(
                             'px-2 py-0.5 rounded text-[10px] font-mono uppercase font-semibold',
-                            job.status === 'running' && 'bg-[#008ecc]/20 text-[#008ecc] border border-[#008ecc]/40',
+                            job.status === 'running' && 'bg-[#f26625]/20 text-[#f26625] border border-[#f26625]/40',
                             job.status === 'completed' && 'bg-[#10b981]/20 text-[#10b981] border border-[#10b981]/40',
                             job.status === 'failed' && 'bg-[#f43f5e]/20 text-[#f43f5e] border border-[#f43f5e]/40',
                             job.status !== 'running' && job.status !== 'completed' && job.status !== 'failed' && 'bg-[#f59e0b]/20 text-[#f59e0b]'
@@ -582,13 +582,13 @@ export default function OrchestrationPage() {
                           <div className="flex items-center justify-end gap-1.5" onClick={(e) => e.stopPropagation()}>
                             <button
                               onClick={() => setSelectedJob(job)}
-                              className="px-2 py-0.5 rounded-md bg-[#12141e] hover:bg-[#20202e] text-[#008ecc] hover:text-white text-[10px] border border-[#1e2235] transition-colors"
+                              className="px-2 py-0.5 rounded-md bg-[#161622] hover:bg-[#20202e] text-[#f26625] hover:text-white text-[10px] border border-[#272738] transition-colors"
                             >
                               Inspect DAG
                             </button>
                             <button
                               onClick={() => handleDeleteJob(job.id)}
-                              className="p-1 rounded-md bg-[#12141e] hover:bg-rose-950/40 text-rose-400 hover:text-rose-300 border border-[#1e2235] transition-colors"
+                              className="p-1 rounded-md bg-[#161622] hover:bg-rose-950/40 text-rose-400 hover:text-rose-300 border border-[#272738] transition-colors"
                               title="Delete Job"
                             >
                               <Trash2 className="w-3 h-3" />
@@ -608,43 +608,43 @@ export default function OrchestrationPage() {
         <TabsContent value="agents" className="space-y-6 mt-0">
           {/* Summary stats */}
           <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
-            <Card className="bg-[#0c0d14] border-[#1e2235] rounded-md card-shadow">
+            <Card className="bg-[#12121a] border-[#272738] rounded-md card-shadow">
               <CardContent className="pt-4 pb-4 px-4 flex items-center justify-between">
                 <div>
                   <p className="text-xs text-[#94a3b8] font-mono uppercase">Registered Agents</p>
                   <p className="text-2xl font-bold font-mono mt-0.5 text-white">{agents.length || 13}</p>
                 </div>
-                <div className="h-9 w-9 rounded-md flex items-center justify-center border border-[#1e2235] bg-[#12141e] text-[#008ecc]">
+                <div className="h-9 w-9 rounded-md flex items-center justify-center border border-[#272738] bg-[#161622] text-[#f26625]">
                   <Users className="h-4.5 w-4.5" />
                 </div>
               </CardContent>
             </Card>
 
-            <Card className="bg-[#0c0d14] border-[#1e2235] rounded-md card-shadow">
+            <Card className="bg-[#12121a] border-[#272738] rounded-md card-shadow">
               <CardContent className="pt-4 pb-4 px-4 flex items-center justify-between">
                 <div>
                   <p className="text-xs text-[#94a3b8] font-mono uppercase">Active Instances</p>
                   <p className="text-2xl font-bold font-mono mt-0.5 text-[#10b981]">{agentStats?.active_instances ?? 5}</p>
                 </div>
-                <div className="h-9 w-9 rounded-md flex items-center justify-center border border-[#1e2235] bg-[#12141e] text-[#10b981]">
+                <div className="h-9 w-9 rounded-md flex items-center justify-center border border-[#272738] bg-[#161622] text-[#10b981]">
                   <Bot className="h-4.5 w-4.5" />
                 </div>
               </CardContent>
             </Card>
 
-            <Card className="bg-[#0c0d14] border-[#1e2235] rounded-md card-shadow">
+            <Card className="bg-[#12121a] border-[#272738] rounded-md card-shadow">
               <CardContent className="pt-4 pb-4 px-4 flex items-center justify-between">
                 <div>
                   <p className="text-xs text-[#94a3b8] font-mono uppercase">Architecture</p>
                   <p className="text-xs font-bold font-mono mt-1.5 text-white">LangGraph DAG</p>
                 </div>
-                <div className="h-9 w-9 rounded-md flex items-center justify-center border border-[#1e2235] bg-[#12141e] text-[#008ecc]">
+                <div className="h-9 w-9 rounded-md flex items-center justify-center border border-[#272738] bg-[#161622] text-[#f26625]">
                   <GitMerge className="h-4.5 w-4.5" />
                 </div>
               </CardContent>
             </Card>
 
-            <Card className="bg-[#0c0d14] border-[#1e2235] rounded-md card-shadow">
+            <Card className="bg-[#12121a] border-[#272738] rounded-md card-shadow">
               <CardContent className="pt-4 pb-4 px-4 flex items-center justify-between">
                 <div>
                   <p className="text-xs text-[#94a3b8] font-mono uppercase">Society Status</p>
@@ -653,7 +653,7 @@ export default function OrchestrationPage() {
                     ONLINE
                   </p>
                 </div>
-                <div className="h-9 w-9 rounded-xl flex items-center justify-center border border-[#3b3b52] bg-[#12141e] text-[#10b981]">
+                <div className="h-9 w-9 rounded-xl flex items-center justify-center border border-[#3b3b52] bg-[#161622] text-[#10b981]">
                   <ShieldCheck className="h-4.5 w-4.5" />
                 </div>
               </CardContent>
@@ -677,11 +677,11 @@ export default function OrchestrationPage() {
               { type: 'failover_dispatcher', name: 'Failover Dispatcher', description: 'Handles automatic provider migration and failover', capabilities: ['health_monitoring', 'circuit_breaking'], version: '1.0.0' },
               { type: 'technique_integrator', name: 'Technique Integrator', description: 'Integrates active heuristics from the research loop', capabilities: ['heuristic_tuning', 'loop_optimization'], version: '1.0.0' },
             ]).map((agent: any) => (
-              <Card key={agent.type} className="bg-[#0c0d14] border-[#1e2235] rounded-md card-shadow hover:border-[#3b3b52] transition-all">
+              <Card key={agent.type} className="bg-[#12121a] border-[#272738] rounded-md card-shadow hover:border-[#3b3b52] transition-all">
                 <CardContent className="p-4 space-y-3">
                   <div className="flex items-start justify-between gap-2">
                     <div className="flex items-center gap-2.5">
-                      <div className="h-9 w-9 rounded-xl bg-[#12141e] border border-[#3b3b52] flex items-center justify-center text-xs font-bold font-mono text-[#10b981] shrink-0">
+                      <div className="h-9 w-9 rounded-xl bg-[#161622] border border-[#3b3b52] flex items-center justify-center text-xs font-bold font-mono text-[#10b981] shrink-0">
                         <Bot className="h-4.5 w-4.5" />
                       </div>
                       <div className="min-w-0">
@@ -698,11 +698,11 @@ export default function OrchestrationPage() {
                     {agent.description}
                   </p>
 
-                  <div className="pt-2 border-t border-[#151722]">
+                  <div className="pt-2 border-t border-[#1c1c28]">
                     <p className="text-[10px] font-mono text-[#64748b] uppercase mb-1.5">Capabilities</p>
                     <div className="flex flex-wrap gap-1.5">
                       {(agent.capabilities || []).map((cap: string) => (
-                        <span key={cap} className="text-[10px] font-mono px-2 py-0.5 rounded bg-[#12141e] text-[#008ecc] border border-[#1e2235]">
+                        <span key={cap} className="text-[10px] font-mono px-2 py-0.5 rounded bg-[#161622] text-[#f26625] border border-[#272738]">
                           {cap.replace(/_/g, ' ')}
                         </span>
                       ))}
@@ -717,7 +717,7 @@ export default function OrchestrationPage() {
         {/* Tab 3: Autonomous Research Loop */}
         <TabsContent value="research" className="space-y-6 mt-0">
           {/* Header control */}
-          <div className="p-5 rounded-md bg-[#0c0d14] border border-[#1e2235] flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+          <div className="p-5 rounded-md bg-[#12121a] border border-[#272738] flex flex-col sm:flex-row sm:items-center justify-between gap-4">
             <div>
               <div className="flex items-center gap-2 mb-1">
                 <FlaskConical className="w-4 h-4 text-amber-400" />
@@ -743,30 +743,30 @@ export default function OrchestrationPage() {
           {/* Active Heuristics Grid */}
           <div className="space-y-3">
             <h4 className="text-xs font-bold font-mono uppercase text-white tracking-wider flex items-center gap-2">
-              <Sparkles className="w-3.5 h-3.5 text-[#008ecc]" />
+              <Sparkles className="w-3.5 h-3.5 text-[#f26625]" />
               Active Heuristic Configurations (TechniqueIntegrator)
             </h4>
 
             <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-4">
               {[
                 { name: 'MinHash LSH De-duplication', key: 'minhash_dedup', desc: 'Jaccard similarity threshold with 128 hash permutation bands', metric: 'Threshold: 0.85', color: 'text-[#10b981]' },
-                { name: 'Perplexity & Fluency Filtering', key: 'perplexity_filtering', desc: 'N-gram language model scoring with length penalty', metric: 'Max PPL: 45.0', color: 'text-[#008ecc]' },
+                { name: 'Perplexity & Fluency Filtering', key: 'perplexity_filtering', desc: 'N-gram language model scoring with length penalty', metric: 'Max PPL: 45.0', color: 'text-[#f26625]' },
                 { name: 'Self-Instruct Prompt Diversification', key: 'self_instruct', desc: 'Evolutionary instruction expansion and constraint deepening', metric: 'Depth Tier: 4', color: 'text-amber-400' },
-                { name: 'Evolutionary Prompt Mutation', key: 'evolutionary_prompting', desc: 'Multi-turn reasoning and domain-deepened constraint mutation', metric: 'Temp: 0.8', color: 'text-[#008ecc]' },
+                { name: 'Evolutionary Prompt Mutation', key: 'evolutionary_prompting', desc: 'Multi-turn reasoning and domain-deepened constraint mutation', metric: 'Temp: 0.8', color: 'text-[#f26625]' },
                 { name: 'Cross-Lingual Indic Alignment', key: 'cross_lingual', desc: 'Bhashini corpus alignment, script normalization, and translation', metric: 'Indic 22 Languages', color: 'text-emerald-400' },
                 { name: 'AST Syntax Sandbox Verification', key: 'ocr_correction', desc: 'Python AST compile checking and execution sandboxing for code SFT', metric: 'AST AST-Checked', color: 'text-cyan-400' },
               ].map(h => (
-                <Card key={h.key} className="bg-[#0c0d14] border-[#1e2235] rounded-md card-shadow">
+                <Card key={h.key} className="bg-[#12121a] border-[#272738] rounded-md card-shadow">
                   <CardContent className="p-4 space-y-2">
                     <div className="flex items-center justify-between">
                       <span className="text-[10px] font-mono text-[#94a3b8] uppercase">{h.key}</span>
-                      <span className={clsx('text-[10px] font-mono font-bold px-2 py-0.5 rounded-full bg-[#12141e] border border-[#1e2235]', h.color)}>
+                      <span className={clsx('text-[10px] font-mono font-bold px-2 py-0.5 rounded-full bg-[#161622] border border-[#272738]', h.color)}>
                         ACTIVE
                       </span>
                     </div>
                     <h5 className="text-xs font-bold text-white">{h.name}</h5>
                     <p className="text-[11px] text-[#94a3b8] leading-relaxed">{h.desc}</p>
-                    <div className="pt-2 border-t border-[#151722] flex justify-between items-center text-[10px] font-mono">
+                    <div className="pt-2 border-t border-[#1c1c28] flex justify-between items-center text-[10px] font-mono">
                       <span className="text-[#64748b]">Tuned Parameter</span>
                       <span className="font-bold text-white">{h.metric}</span>
                     </div>
@@ -778,25 +778,25 @@ export default function OrchestrationPage() {
 
           {/* Research Corpus & Recent Discoveries */}
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-            <Card className="bg-[#0c0d14] border-[#1e2235] rounded-md card-shadow">
-              <CardHeader className="pb-3 border-b border-[#1e2235]">
+            <Card className="bg-[#12121a] border-[#272738] rounded-md card-shadow">
+              <CardHeader className="pb-3 border-b border-[#272738]">
                 <CardTitle className="text-xs font-bold text-white uppercase font-mono tracking-wider flex items-center gap-2">
-                  <BookOpen className="w-4 h-4 text-[#008ecc]" />
+                  <BookOpen className="w-4 h-4 text-[#f26625]" />
                   Scanned Research Literature &amp; Corpora
                 </CardTitle>
               </CardHeader>
               <CardContent className="p-4 space-y-2 text-xs font-mono">
                 {researchHistoryList.map((item: string, idx: number) => (
-                  <div key={idx} className="p-2.5 rounded-lg bg-[#050508] border border-[#1e2235] text-[#94a3b8] flex items-center gap-2">
-                    <Search className="w-3.5 h-3.5 text-[#008ecc] shrink-0" />
+                  <div key={idx} className="p-2.5 rounded-lg bg-[#0a0a0f] border border-[#272738] text-[#94a3b8] flex items-center gap-2">
+                    <Search className="w-3.5 h-3.5 text-[#f26625] shrink-0" />
                     <span className="truncate">{item}</span>
                   </div>
                 ))}
               </CardContent>
             </Card>
 
-            <Card className="bg-[#0c0d14] border-[#1e2235] rounded-md card-shadow">
-              <CardHeader className="pb-3 border-b border-[#1e2235]">
+            <Card className="bg-[#12121a] border-[#272738] rounded-md card-shadow">
+              <CardHeader className="pb-3 border-b border-[#272738]">
                 <CardTitle className="text-xs font-bold text-white uppercase font-mono tracking-wider flex items-center gap-2">
                   <Zap className="w-4 h-4 text-emerald-400" />
                   Synthesized Pipeline Techniques
@@ -804,7 +804,7 @@ export default function OrchestrationPage() {
               </CardHeader>
               <CardContent className="p-4 space-y-2 text-xs font-mono">
                 {cachedTechniquesList.map((item: string, idx: number) => (
-                  <div key={idx} className="p-2.5 rounded-lg bg-[#050508] border border-[#1e2235] text-white flex items-center gap-2">
+                  <div key={idx} className="p-2.5 rounded-lg bg-[#0a0a0f] border border-[#272738] text-white flex items-center gap-2">
                     <CheckCircle2 className="w-3.5 h-3.5 text-emerald-400 shrink-0" />
                     <span className="truncate">{item}</span>
                   </div>
