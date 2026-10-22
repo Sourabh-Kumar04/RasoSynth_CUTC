@@ -2192,6 +2192,10 @@ async def delete_job_endpoint(job_id: str):
     return {"success": success, "message": f"Job {job_id} and associated data deleted"}
 
 
+class AcceptPreviewRequest(BaseModel):
+    edited_samples: Optional[list[dict]] = None
+
+
 class RejectPreviewRequest(BaseModel):
     updated_prompt: Optional[str] = None
     notes: Optional[str] = None
@@ -2216,10 +2220,10 @@ async def get_job_preview_samples(job_id: str):
 
 
 @app.post("/jobs/{job_id}/accept_preview", tags=["Jobs"])
-async def accept_job_preview(job_id: str):
-    """Accept early preview samples and advance pipeline with full capabilities."""
+async def accept_job_preview(job_id: str, payload: AcceptPreviewRequest = Body(default_factory=AcceptPreviewRequest)):
+    """Accept early preview samples, optionally with user edits, and advance pipeline with full capabilities."""
     if orchestrator and hasattr(orchestrator, "accept_preview"):
-        success = orchestrator.accept_preview(job_id)
+        success = orchestrator.accept_preview(job_id, edited_samples=payload.edited_samples)
         if success:
             return {"success": True, "message": f"Preview accepted for job {job_id}. Advancing pipeline."}
     if db:

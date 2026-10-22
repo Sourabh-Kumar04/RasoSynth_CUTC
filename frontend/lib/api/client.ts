@@ -360,8 +360,11 @@ class APIClient {
     return this.request<{ job_id: string; status: string; samples: any[]; sample_count: number }>(`/jobs/${jobId}/preview_samples`)
   }
 
-  async acceptPreview(jobId: string) {
-    return this.request<{ success: boolean; message: string }>(`/jobs/${jobId}/accept_preview`, { method: 'POST' })
+  async acceptPreview(jobId: string, editedSamples?: any[]) {
+    return this.request<{ success: boolean; message: string }>(`/jobs/${jobId}/accept_preview`, {
+      method: 'POST',
+      body: JSON.stringify({ edited_samples: editedSamples }),
+    })
   }
 
   async rejectPreview(jobId: string, updatedPrompt?: string) {

@@ -98,6 +98,24 @@ async def extract_intent(
         except Exception as cache_err:
             logger.warning(f"Redis read failed (non-fatal): {cache_err}")
 
+    if provider_router is None:
+        return UserIntent(
+            primary_task="instruction_tuning",
+            domain=raw_input,
+            modality="text",
+            anti_domains=[],
+            key_entities=[w for w in raw_input.split() if len(w) > 3],
+            specialized_queries=[
+                f"{raw_input} dataset",
+                f"{raw_input} benchmarks",
+                f"{raw_input} guide",
+            ],
+            constraints={"format": "alpaca"},
+            output_format="instruction_response",
+            confidence=0.85,
+            raw_input=raw_input,
+        )
+
     # --- LLM call ---
     try:
         response_obj = await provider_router.route(

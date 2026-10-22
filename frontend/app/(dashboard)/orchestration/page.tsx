@@ -135,11 +135,20 @@ export default function OrchestrationPage() {
 
   const [refinePrompt, setRefinePrompt] = useState('')
   const [previewSubmitting, setPreviewSubmitting] = useState(false)
+  const [editingSampleIndex, setEditingSampleIndex] = useState<number | null>(null)
+  const [editedSamples, setEditedSamples] = useState<Record<number, { instruction: string; response: string }>>({})
 
   const handleAcceptPreview = async (jobId: string) => {
     setPreviewSubmitting(true)
     try {
-      await api.acceptPreview(jobId)
+      const origSamples = selectedJob?.config?.preview_samples || []
+      const finalSamples = origSamples.map((s: any, idx: number) => {
+        if (editedSamples[idx]) {
+          return { ...s, ...editedSamples[idx] }
+        }
+        return s
+      })
+      await api.acceptPreview(jobId, finalSamples.length > 0 ? finalSamples : undefined)
       await fetchJobs()
     } catch (e: any) {
       console.error('Failed to accept preview:', e)
@@ -410,24 +419,85 @@ export default function OrchestrationPage() {
                   </div>
                 </div>
 
-                {/* Preview Samples List */}
-                <div className="space-y-2 max-h-60 overflow-y-auto">
-                  {(selectedJob.config?.preview_samples || []).map((sample: any, idx: number) => (
-                    <div key={idx} className="p-3 rounded-md bg-[#0a0a0f] border border-[#272738] space-y-1.5 font-mono text-xs">
-                      <div className="flex justify-between items-center text-[10px]">
-                        <span className="text-[#f26625] font-bold">Sample #{idx + 1}</span>
-                        <span className="text-emerald-400">Score: {Math.round((sample.metadata?.quality_score || 0.94) * 100)}%</span>
+                {/* Preview Samples List with Inline Interactive Editor */}
+                <div className="space-y-2 max-h-72 overflow-y-auto">
+                  {(selectedJob.config?.preview_samples || []).map((sample: any, idx: number) => {
+                    const isEditing = editingSampleIndex === idx
+                    const currentInstruction = editedSamples[idx]?.instruction ?? sample.instruction
+                    const currentResponse = editedSamples[idx]?.response ?? sample.response
+                    const isModified = Boolean(editedSamples[idx])
+
+                    return (
+                      <div key={idx} className="p-3 rounded-md bg-[#0a0a0f] border border-[#272738] space-y-2 font-mono text-xs">
+                        <div className="flex justify-between items-center text-[10px]">
+                          <div className="flex items-center gap-2">
+                            <span className="text-[#f26625] font-bold">Sample #{idx + 1}</span>
+                            {isModified && (
+                              <span className="px-1.5 py-0.2 rounded bg-amber-500/10 text-amber-400 border border-amber-500/30 text-[9px]">
+                                Custom Edited
+                              </span>
+                            )}
+                          </div>
+                          <div className="flex items-center gap-3">
+                            <span className="text-emerald-400">Score: {Math.round((sample.metadata?.quality_score || 0.94) * 100)}%</span>
+                            <button
+                              type="button"
+                              onClick={() => setEditingSampleIndex(isEditing ? null : idx)}
+                              className="text-[#f26625] hover:underline text-[10px]"
+                            >
+                              {isEditing ? 'Done Editing' : 'Edit Sample'}
+                            </button>
+                          </div>
+                        </div>
+
+                        {isEditing ? (
+                          <div className="space-y-2 pt-1 border-t border-[#1c1c28]">
+                            <div>
+                              <span className="text-[#94a3b8] block text-[10px] uppercase">Edit Instruction:</span>
+                              <textarea
+                                rows={2}
+                                value={currentInstruction}
+                                onChange={(e) => {
+                                  const val = e.target.value
+                                  setEditedSamples((prev) => ({
+                                    ...prev,
+                                    [idx]: { instruction: val, response: prev[idx]?.response ?? sample.response },
+                                  }))
+                                }}
+                                className="w-full mt-1 bg-[#161622] border border-[#272738] rounded p-2 text-xs font-mono text-white focus:outline-none focus:border-[#f26625]"
+                              />
+                            </div>
+                            <div>
+                              <span className="text-[#94a3b8] block text-[10px] uppercase">Edit Response:</span>
+                              <textarea
+                                rows={3}
+                                value={currentResponse}
+                                onChange={(e) => {
+                                  const val = e.target.value
+                                  setEditedSamples((prev) => ({
+                                    ...prev,
+                                    [idx]: { instruction: prev[idx]?.instruction ?? sample.instruction, response: val },
+                                  }))
+                                }}
+                                className="w-full mt-1 bg-[#161622] border border-[#272738] rounded p-2 text-xs font-mono text-white focus:outline-none focus:border-[#f26625]"
+                              />
+                            </div>
+                          </div>
+                        ) : (
+                          <>
+                            <div>
+                              <span className="text-[#94a3b8] block text-[10px] uppercase">Instruction:</span>
+                              <p className="text-white mt-0.5">{currentInstruction}</p>
+                            </div>
+                            <div>
+                              <span className="text-[#94a3b8] block text-[10px] uppercase">Response:</span>
+                              <p className="text-[#cbd5e1] mt-0.5 line-clamp-3">{currentResponse}</p>
+                            </div>
+                          </>
+                        )}
                       </div>
-                      <div>
-                        <span className="text-[#94a3b8] block text-[10px] uppercase">Instruction:</span>
-                        <p className="text-white mt-0.5">{sample.instruction}</p>
-                      </div>
-                      <div>
-                        <span className="text-[#94a3b8] block text-[10px] uppercase">Response:</span>
-                        <p className="text-[#cbd5e1] mt-0.5 line-clamp-3">{sample.response}</p>
-                      </div>
-                    </div>
-                  ))}
+                    )
+                  })}
                 </div>
 
                 {/* Inline Query Refinement */}

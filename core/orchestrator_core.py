@@ -359,10 +359,10 @@ class DatasetOrchestrator:
         self.redis_client = redis_client  # Redis client for intent caching (optional)
         self.persistent_checkpoint_manager = checkpoint_manager
 
-    def accept_preview(self, job_id: str) -> bool:
+    def accept_preview(self, job_id: str, edited_samples: Optional[list[dict]] = None) -> bool:
         """Signal early preview acceptance to advance the pipeline."""
         if job_id in self._preview_events:
-            self._preview_decisions[job_id] = {"accepted": True}
+            self._preview_decisions[job_id] = {"accepted": True, "edited_samples": edited_samples}
             self._preview_events[job_id].set()
             return True
         return False
@@ -623,7 +623,7 @@ class DatasetOrchestrator:
             preview_samples = config.get("approved_examples")
         else:
             try:
-                from pipeline.construction import SeedlessGenerator
+                from pipeline.synthetic_generator import SeedlessGenerator
                 gen = SeedlessGenerator(self.router, config)
                 preview_samples = await gen.generate_seeds(domain_name, count=3, language=language)
             except Exception as e:
@@ -647,18 +647,16 @@ class DatasetOrchestrator:
                 ]
 
         # Attach preview samples to job config in DB
-        if self.db_manager:
+        db_target = self.db_manager or self.db
+        if db_target:
             try:
-                job_record = await self.db_manager.get_job(job_id)
+                job_record = await db_target.get_job(job_id)
                 if job_record:
-                    cur_config = job_record.config or {}
+                    cur_config = getattr(job_record, "config", None) or (job_record.get("config") if isinstance(job_record, dict) else {}) or {}
                     cur_config["preview_samples"] = preview_samples
-                    await self.db_manager.update_job(job_id, {
-                        "config": cur_config,
-                        "current_stage": "preview_acceptance",
-                    })
-            except Exception:
-                pass
+                    await db_target.update_job(job_id, {"config": cur_config, "current_stage": "preview_acceptance"})
+            except Exception as e:
+                logger.debug(f"Could not persist preview samples to DB: {e}")
 
         if self.ws_manager:
             try:
@@ -686,6 +684,11 @@ class DatasetOrchestrator:
             finally:
                 self._preview_events.pop(job_id, None)
                 self._preview_decisions.pop(job_id, None)
+
+        if preview_decision.get("edited_samples"):
+            preview_samples = preview_decision["edited_samples"]
+            config["approved_examples"] = preview_samples
+            logger.info(f"[{job_id}] User edited {len(preview_samples)} early preview samples; set as approved exemplars.")
 
         return {
             **state,
@@ -1951,6 +1954,8 @@ class DatasetOrchestrator:
                 logger.info(f"Export stage: backfilling {needed} samples to reach exact requested target {requested_samples}")
                 plan_dict = state.get("dataset_plan")
                 if plan_dict:
+                    from pipeline.planner import DatasetPlan
+                    from pipeline.synthetic_generator import SeedlessGenerator
                     plan_obj = DatasetPlan(**plan_dict)
                     generator = SeedlessGenerator(self.router, job_config)
                     backfill_attempts = 0
@@ -2611,8 +2616,16 @@ class DatasetOrchestrator:
             saved_stage = getattr(saved_stage, "value", saved_stage)
             resume_metadata = resume_state.get("metadata") or {}
 
+        job_dict = job.to_dict() if hasattr(job, "to_dict") else {
+            "id": getattr(job, "id", None),
+            "config": getattr(job, "config", {}) or {},
+            "status": getattr(job, "status", "pending"),
+            "progress": getattr(job, "progress", 0.0),
+            "current_stage": getattr(job, "current_stage", "initializing"),
+        }
+
         initial_state = {
-            "job": job.to_dict(),
+            "job": job_dict,
             "sources": list((resume_state or {}).get("sources", resume_metadata.get("sources", []))),
             "extracted_content": list((resume_state or {}).get("extracted_content", [])),
             "filtered_samples": list((resume_state or {}).get("filtered_samples", [])),

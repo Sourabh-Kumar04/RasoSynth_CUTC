@@ -86,6 +86,10 @@ BUILTIN_MIGRATIONS: Dict[str, List[MigrationStep]] = {
     "004_add_dataset_indexes": [
         create_index("ix_datasets_job_id", "datasets", "job_id"),
     ],
+    "005_add_dataset_compliance_and_delivery": [
+        add_column("datasets", "compliance_summary", "TEXT"),
+        add_column("datasets", "delivery_manifest_url", "VARCHAR(512)"),
+    ],
 }
 
 

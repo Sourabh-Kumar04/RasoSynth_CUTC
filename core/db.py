@@ -47,6 +47,17 @@ class Job(Base):
 
     datasets = relationship("Dataset", back_populates="job", cascade="all, delete-orphan")
 
+    def to_dict(self) -> dict:
+        return {
+            "id": str(self.id),
+            "status": self.status,
+            "config": self.config or {},
+            "progress": self.progress,
+            "current_stage": self.current_stage,
+            "created_at": self.created_at.isoformat() if self.created_at else None,
+            "updated_at": self.updated_at.isoformat() if self.updated_at else None,
+        }
+
 
 class Dataset(Base):
     """Dataset model for storing generated datasets."""
@@ -345,12 +356,14 @@ class DatabaseManager:
                 _ = (job.id, job.status, job.created_at, job.updated_at, job.config, job.progress, job.current_stage)
             return job
 
-    async def update_job(self, job_id: str, **kwargs):
-        """Update job fields."""
+    async def update_job(self, job_id: str, status_data: Optional[dict] = None, **kwargs):
+        """Update job fields safely accepting either a dict or keyword arguments."""
+        fields = dict(status_data or {})
+        fields.update(kwargs)
         async with self.session_maker() as session:
             job = await session.get(Job, job_id)
             if job:
-                for key, value in kwargs.items():
+                for key, value in fields.items():
                     if hasattr(job, key):
                         setattr(job, key, value)
                 await self._commit_with_retry(session)
@@ -710,9 +723,9 @@ class AsyncDB:
         """Get a job by ID."""
         return await self.db.get_job(job_id)
 
-    async def update_job(self, job_id: str, **kwargs):
-        """Update job fields."""
-        await self.db.update_job(job_id, **kwargs)
+    async def update_job(self, job_id: str, status_data: Optional[dict] = None, **kwargs):
+        """Update job fields safely accepting either a dict or keyword arguments."""
+        await self.db.update_job(job_id, status_data, **kwargs)
 
     async def list_jobs(self, status: Optional[str] = None, limit: int = 50, cursor: Optional[str] = None) -> list[dict]:
         """List all jobs with complete configuration and domain metadata."""
