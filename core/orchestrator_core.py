@@ -535,6 +535,9 @@ class DatasetOrchestrator:
         mode = config.get("generation_mode", "strict_source")
         allow_fallback = config.get("allow_seedless_generation", False)
         
+        if config.get("require_early_preview") is True:
+            return "proceed"
+
         if mode == "synthetic":
             logger.info("Generation mode is set to synthetic. Proceeding directly to planning.")
             return "proceed_synthetic"
