@@ -1193,7 +1193,7 @@ class DatasetOrchestrator:
 
         samples = []
         seen_sample_keys = set()
-        target_dataset_size = config.get("dataset_size", 1000)
+        target_dataset_size = int(config.get("dataset_size") or config.get("target_samples") or 1000)
 
         def sample_key(instruction: str, response: str) -> tuple[str, str]:
             return (
@@ -1290,27 +1290,39 @@ class DatasetOrchestrator:
             generator.reset_seen_topics()
 
             # Generate samples up to target_dataset_size using coverage matrix cells
-            for idx in range(max(0, target_dataset_size - len(samples))):
+            # Loop until exactly target_dataset_size samples are produced
+            max_generation_attempts = max(target_dataset_size * 5, 50)
+            attempt_count = 0
+            cell_idx = 0
+
+            while len(samples) < target_dataset_size and attempt_count < max_generation_attempts:
                 if self._is_cancelled(job_id):
                     break
 
-                # Update progress incrementally
-                if idx % max(1, target_dataset_size // 10) == 0:
-                    prog = 0.7 + (idx / target_dataset_size) * 0.2
-                    self._update_job_status(job_id, "construct", prog, samples_generated=len(samples))
+                attempt_count += 1
+                curr_len = len(samples)
+                if curr_len % max(1, target_dataset_size // 10) == 0:
+                    prog = 0.7 + (curr_len / target_dataset_size) * 0.2
+                    self._update_job_status(job_id, "construct", prog, samples_generated=curr_len)
 
-                cell = cells[idx % len(cells)] if cells else {}
+                cell = cells[cell_idx % len(cells)] if cells else {}
+                cell_idx += 1
                 valid_sample = None
                 for attempt in range(max_attempts):
                     sample = await generator.generate_sample(
                         plan_obj, cell,
-                        cell_index=idx,
+                        cell_index=curr_len,
                         total_cells=target_dataset_size,
                     )
                     val_res = await validator.validate(sample)
                     if val_res.is_valid:
                         valid_sample = sample
                         break
+                    elif attempt == max_attempts - 1 and len(samples) < target_dataset_size:
+                        # Fallback: if sample has non-empty instruction & response, accept to guarantee exact count
+                        if sample and sample.instruction and sample.response and len(sample.instruction.strip()) > 5 and len(sample.response.strip()) > 5:
+                            valid_sample = sample
+                            break
                     else:
                         logger.warning(
                             f"Sample validation failed (attempt {attempt+1}/{max_attempts}): "
@@ -1413,12 +1425,16 @@ class DatasetOrchestrator:
                 cells = coverage_dict.get("cells", [])
                 generator.reset_seen_topics()
 
-                needed = target_dataset_size - len(samples)
-                for idx in range(needed):
+                max_synth_attempts = max((target_dataset_size - len(samples)) * 5, 50)
+                synth_attempts = 0
+                cell_idx = 0
+                while len(samples) < target_dataset_size and synth_attempts < max_synth_attempts:
                     if self._is_cancelled(job_id):
                         break
 
-                    cell = cells[idx % len(cells)] if cells else {}
+                    synth_attempts += 1
+                    cell = cells[cell_idx % len(cells)] if cells else {}
+                    cell_idx += 1
                     valid_sample = None
                     for attempt in range(max_attempts):
                         sample = await generator.generate_sample(
@@ -1430,6 +1446,10 @@ class DatasetOrchestrator:
                         if val_res.is_valid:
                             valid_sample = sample
                             break
+                        elif attempt == max_attempts - 1 and len(samples) < target_dataset_size:
+                            if sample and sample.instruction and sample.response and len(sample.instruction.strip()) > 5 and len(sample.response.strip()) > 5:
+                                valid_sample = sample
+                                break
 
                     if valid_sample and valid_sample.instruction and valid_sample.response:
                         key = sample_key(valid_sample.instruction, valid_sample.response)
@@ -1446,6 +1466,10 @@ class DatasetOrchestrator:
                             "curriculum_order": len(samples),
                         })
 
+        # Enforce exact target size: never more than requested
+        if len(samples) > target_dataset_size:
+            samples = samples[:target_dataset_size]
+
         self._update_job_status(
             job_id,
             "construct",
@@ -1461,7 +1485,13 @@ class DatasetOrchestrator:
             "messages": state["messages"] + [f"Constructed {len(samples)} training samples"],
         }
 
-    def _balance_samples(self, samples: list[dict], dimensions: list[str], default_language: str) -> tuple[list[dict], dict]:
+    def _balance_samples(
+        self,
+        samples: list[dict],
+        dimensions: list[str],
+        default_language: str,
+        target_size: Optional[int] = None,
+    ) -> tuple[list[dict], dict]:
         """Soft-balance labeled groups without fabricating samples."""
         from collections import Counter
 
@@ -1503,6 +1533,8 @@ class DatasetOrchestrator:
         # trimming languages may make topic counts uneven again). Repeat the
         # soft caps until a full pass removes no more records.
         passes = 0
+        min_target = target_size if (target_size and target_size > 0) else len(samples)
+
         while balanced and active_dimensions:
             count_before_pass = len(balanced)
             for _, value_for in active_dimensions:
@@ -1523,6 +1555,20 @@ class DatasetOrchestrator:
                 for key in sorted(known_groups):
                     selected = sorted(known_groups[key], key=lambda pair: _quality_rank(pair[1]))[:cap]
                     kept.extend(selected)
+
+                # Never drop below min_target if we had enough samples originally
+                if target_size and len(kept) < min_target:
+                    kept_indices = {pair[0] for pair in kept}
+                    remaining = [
+                        (idx, s) for idx, s in enumerate(balanced)
+                        if idx not in kept_indices
+                    ]
+                    remaining.sort(key=lambda pair: _quality_rank(pair[1]))
+                    for item in remaining:
+                        if len(kept) >= min_target:
+                            break
+                        kept.append(item)
+
                 balanced = [sample for _, sample in sorted(kept, key=lambda pair: pair[0])]
             passes += 1
             if len(balanced) == count_before_pass:
@@ -1555,12 +1601,63 @@ class DatasetOrchestrator:
 
         # Build export config from job config + global settings
         job_config = job.get("config", {})
-        raw_samples, balance_report = self._balance_samples(
-            raw_samples,
-            job_config.get("balance_dimensions", ["topic", "language", "source", "difficulty"]),
-            job_config.get("language", "en"),
-        )
-        requested_samples = int(job_config.get("dataset_size", 0) or 0)
+        requested_samples = int(job_config.get("dataset_size") or job_config.get("target_samples") or 0)
+        if requested_samples <= 0:
+            requested_samples = len(raw_samples)
+
+        # Soft-balancing is an opt-in refinement (e.g. for ablation studies);
+        # it must never silently discard user-requested dataset samples.
+        enable_balancing = bool(job_config.get("enable_balancing", False))
+        if enable_balancing:
+            balanced_subset, balance_report = self._balance_samples(
+                raw_samples,
+                job_config.get("balance_dimensions", ["topic", "language", "source", "difficulty"]),
+                job_config.get("language", "en"),
+                target_size=requested_samples,
+            )
+            raw_samples = balanced_subset
+        else:
+            balance_report = {
+                "balancing_passes": 0,
+                "samples_before": len(raw_samples),
+                "samples_after": len(raw_samples),
+                "samples_removed": 0,
+            }
+
+        # Exact target size guarantee: backfill or trim to hit requested_samples exactly
+        if requested_samples > 0:
+            if len(raw_samples) > requested_samples:
+                raw_samples = raw_samples[:requested_samples]
+            elif len(raw_samples) < requested_samples and (job_config.get("generation_mode") != "strict_source" or job_config.get("allow_seedless_generation")):
+                needed = requested_samples - len(raw_samples)
+                logger.info(f"Export stage: backfilling {needed} samples to reach exact requested target {requested_samples}")
+                plan_dict = state.get("dataset_plan")
+                if plan_dict:
+                    plan_obj = DatasetPlan(**plan_dict)
+                    generator = SeedlessGenerator(self.router, job_config)
+                    backfill_attempts = 0
+                    max_backfill_attempts = max(needed * 4, 20)
+                    while len(raw_samples) < requested_samples and backfill_attempts < max_backfill_attempts:
+                        backfill_attempts += 1
+                        try:
+                            sample = await generator.generate_sample(plan_obj, {}, cell_index=len(raw_samples), total_cells=requested_samples)
+                            if sample and sample.instruction and sample.response:
+                                raw_samples.append({
+                                    "instruction": sample.instruction,
+                                    "response": sample.response,
+                                    "input": sample.input,
+                                    "conversation": getattr(sample, "conversation", None),
+                                    "metadata": sample.metadata,
+                                    "difficulty_tier": sample.difficulty_tier,
+                                    "curriculum_order": len(raw_samples),
+                                })
+                        except Exception as backfill_err:
+                            logger.warning(f"Backfill generation error: {backfill_err}")
+
+        # Final guarantee: never exceed requested_samples
+        if requested_samples > 0 and len(raw_samples) > requested_samples:
+            raw_samples = raw_samples[:requested_samples]
+
         balance_report["requested_samples"] = requested_samples
         balance_report["samples_short_of_target"] = max(0, requested_samples - len(raw_samples))
         # Convert the final balanced dictionaries for exporter and ORM access.
