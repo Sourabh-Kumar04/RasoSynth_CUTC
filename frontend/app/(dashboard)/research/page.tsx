@@ -127,10 +127,10 @@ export default function ResearchPage() {
       )}
 
       {/* Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-[#272738] pb-4">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-[#1e2235] pb-4">
         <div>
           <div className="flex items-center gap-2.5 mb-1">
-            <span className="text-[10px] font-mono px-2 py-0.5 rounded-sm bg-[#f26625]/10 border border-[#f26625]/30 text-[#f26625] font-bold uppercase tracking-wider">
+            <span className="text-[10px] font-mono px-2 py-0.5 rounded-sm bg-[#008ecc]/10 border border-[#008ecc]/30 text-[#008ecc] font-bold uppercase tracking-wider">
               Autonomous Synthetics
             </span>
             <h1 className="text-2xl font-bold tracking-tight text-white font-display">
@@ -142,12 +142,12 @@ export default function ResearchPage() {
           </p>
         </div>
         <div className="flex gap-2">
-          <Button variant="default" size="sm" className="bg-[#f26625] hover:bg-[#de581a] border border-[#ea580c] text-white rounded-md font-mono text-xs font-bold glow-yc" onClick={handleTrigger} disabled={triggering}>
+          <Button variant="default" size="sm" className="bg-[#008ecc] hover:bg-[#00a4eb] border border-[#0077ab] text-white rounded-md font-mono text-xs font-bold glow-cerulean" onClick={handleTrigger} disabled={triggering}>
             {triggering ? <Loader2 className="h-3.5 w-3.5 animate-spin mr-1 text-white" /> : <Play className="h-3.5 w-3.5 mr-1 text-white fill-current" />}
             {triggering ? 'Running…' : 'Run Research'}
           </Button>
-          <Button variant="outline" size="sm" className="rounded-md border-[#272738] text-[#94a3b8] hover:text-white hover:bg-[#161622] font-mono text-xs" onClick={fetchAll} disabled={loading}>
-            <RefreshCw className={clsx('h-3.5 w-3.5 mr-1 text-[#f26625]', loading && 'animate-spin')} />
+          <Button variant="outline" size="sm" className="rounded-md border-[#1e2235] text-[#94a3b8] hover:text-white hover:bg-[#12141e] font-mono text-xs" onClick={fetchAll} disabled={loading}>
+            <RefreshCw className={clsx('h-3.5 w-3.5 mr-1 text-[#008ecc]', loading && 'animate-spin')} />
             Refresh
           </Button>
         </div>
@@ -166,43 +166,43 @@ export default function ResearchPage() {
       {/* Stat cards */}
       {!loading && (
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-          <Card className="bg-[#12121a] border-[#272738] rounded-md card-shadow">
+          <Card className="bg-[#0c0d14] border-[#1e2235] rounded-md card-shadow">
             <CardContent className="pt-4 pb-4 px-4 flex items-center justify-between">
               <div>
                 <p className="text-xs text-[#94a3b8] font-mono uppercase">Status</p>
-                <p className={clsx('text-xl font-bold font-mono capitalize mt-0.5 text-[#f26625]')}>
+                <p className={clsx('text-xl font-bold font-mono capitalize mt-0.5 text-[#008ecc]')}>
                   {status?.status ?? 'active'}
                 </p>
               </div>
-              <div className="h-9 w-9 rounded-xl bg-[#161622] border border-[#3b3b52] flex items-center justify-center">
+              <div className="h-9 w-9 rounded-xl bg-[#12141e] border border-[#3b3b52] flex items-center justify-center">
                 {status?.status === 'running'
-                  ? <Loader2 className="h-4.5 w-4.5 text-[#f26625] animate-spin" />
-                  : <Beaker className="h-4.5 w-4.5 text-[#f26625]" />}
+                  ? <Loader2 className="h-4.5 w-4.5 text-[#008ecc] animate-spin" />
+                  : <Beaker className="h-4.5 w-4.5 text-[#008ecc]" />}
               </div>
             </CardContent>
           </Card>
-          <Card className="bg-[#12121a] border-[#272738] rounded-md card-shadow">
+          <Card className="bg-[#0c0d14] border-[#1e2235] rounded-md card-shadow">
             <CardContent className="pt-4 pb-4 px-4 flex items-center justify-between">
               <div>
                 <p className="text-xs text-[#94a3b8] font-mono uppercase">Last Run</p>
-                <p className="text-lg font-bold font-mono text-[#f26625] mt-0.5">
+                <p className="text-lg font-bold font-mono text-[#008ecc] mt-0.5">
                   {status?.last_research
                     ? new Date(status.last_research).toLocaleDateString()
                     : 'Today'}
                 </p>
               </div>
-              <div className="h-9 w-9 rounded-xl bg-[#161622] border border-[#3b3b52] flex items-center justify-center">
-                <Clock className="h-4.5 w-4.5 text-[#f26625]" />
+              <div className="h-9 w-9 rounded-xl bg-[#12141e] border border-[#3b3b52] flex items-center justify-center">
+                <Clock className="h-4.5 w-4.5 text-[#008ecc]" />
               </div>
             </CardContent>
           </Card>
-          <Card className="bg-[#12121a] border-[#272738] rounded-md card-shadow">
+          <Card className="bg-[#0c0d14] border-[#1e2235] rounded-md card-shadow">
             <CardContent className="pt-4 pb-4 px-4 flex items-center justify-between">
               <div>
                 <p className="text-xs text-[#94a3b8] font-mono uppercase">Techniques</p>
-                <p className="text-xl font-bold font-mono text-[#f26625] mt-0.5">{cachedTechniques.length + techEntries.length || 12}</p>
+                <p className="text-xl font-bold font-mono text-[#008ecc] mt-0.5">{cachedTechniques.length + techEntries.length || 12}</p>
               </div>
-              <div className="h-9 w-9 rounded-xl bg-[#161622] border border-[#3b3b52] flex items-center justify-center">
+              <div className="h-9 w-9 rounded-xl bg-[#12141e] border border-[#3b3b52] flex items-center justify-center">
                 <Target className="h-4.5 w-4.5 text-emerald-600" />
               </div>
             </CardContent>
@@ -212,24 +212,24 @@ export default function ResearchPage() {
 
       {loading ? (
         <div className="flex items-center justify-center py-20 text-[#94a3b8] font-mono text-xs gap-2">
-          <Loader2 className="h-5 w-5 animate-spin text-[#f26625]" /> Loading research data…
+          <Loader2 className="h-5 w-5 animate-spin text-[#008ecc]" /> Loading research data…
         </div>
       ) : (
         <Tabs defaultValue="heuristics">
-          <TabsList className="bg-[#161622] rounded-md border border-[#272738] p-1 h-auto flex flex-wrap gap-1">
-            <TabsTrigger value="heuristics" className="rounded-sm text-xs font-mono data-[state=active]:bg-[#f26625] data-[state=active]:text-white data-[state=active]:glow-yc">Active Heuristics</TabsTrigger>
-            <TabsTrigger value="benchmarks" className="rounded-sm text-xs font-mono data-[state=active]:bg-[#f26625] data-[state=active]:text-white data-[state=active]:glow-yc">Quality Benchmarks &amp; ROI</TabsTrigger>
-            <TabsTrigger value="overview" className="rounded-sm text-xs font-mono data-[state=active]:bg-[#f26625] data-[state=active]:text-white data-[state=active]:glow-yc">Overview</TabsTrigger>
-            <TabsTrigger value="techniques" className="rounded-sm text-xs font-mono data-[state=active]:bg-[#f26625] data-[state=active]:text-white data-[state=active]:glow-yc">Techniques ({cachedTechniques.length || 4})</TabsTrigger>
-            <TabsTrigger value="history" className="rounded-sm text-xs font-mono data-[state=active]:bg-[#f26625] data-[state=active]:text-white data-[state=active]:glow-yc">Audit Trail ({history.length || 4})</TabsTrigger>
+          <TabsList className="bg-[#12141e] rounded-md border border-[#1e2235] p-1 h-auto flex flex-wrap gap-1">
+            <TabsTrigger value="heuristics" className="rounded-sm text-xs font-mono data-[state=active]:bg-[#008ecc] data-[state=active]:text-white data-[state=active]:glow-cerulean">Active Heuristics</TabsTrigger>
+            <TabsTrigger value="benchmarks" className="rounded-sm text-xs font-mono data-[state=active]:bg-[#008ecc] data-[state=active]:text-white data-[state=active]:glow-cerulean">Quality Benchmarks &amp; ROI</TabsTrigger>
+            <TabsTrigger value="overview" className="rounded-sm text-xs font-mono data-[state=active]:bg-[#008ecc] data-[state=active]:text-white data-[state=active]:glow-cerulean">Overview</TabsTrigger>
+            <TabsTrigger value="techniques" className="rounded-sm text-xs font-mono data-[state=active]:bg-[#008ecc] data-[state=active]:text-white data-[state=active]:glow-cerulean">Techniques ({cachedTechniques.length || 4})</TabsTrigger>
+            <TabsTrigger value="history" className="rounded-sm text-xs font-mono data-[state=active]:bg-[#008ecc] data-[state=active]:text-white data-[state=active]:glow-cerulean">Audit Trail ({history.length || 4})</TabsTrigger>
           </TabsList>
 
           {/* Quality Benchmarks & ROI */}
           <TabsContent value="benchmarks" className="mt-4 space-y-6">
-            <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 p-4 bg-[#12121a] border border-[#272738] rounded-xl">
+            <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 p-4 bg-[#0c0d14] border border-[#1e2235] rounded-xl">
               <div>
                 <h3 className="text-sm font-bold text-white flex items-center gap-2">
-                  <Gauge className="h-4 w-4 text-[#f26625]" />
+                  <Gauge className="h-4 w-4 text-[#008ecc]" />
                   Empirical Refinery &amp; Performance Benchmarks
                 </h3>
                 <p className="text-xs text-[#94a3b8] mt-0.5">
@@ -241,11 +241,11 @@ export default function ResearchPage() {
                 variant="outline"
                 onClick={runBenchmarkAudit}
                 disabled={benchmarking}
-                className="gap-2 font-mono text-xs rounded-md border-[#272738] hover:border-[#f26625]/40 hover:bg-[#161622] shrink-0 text-white"
+                className="gap-2 font-mono text-xs rounded-md border-[#1e2235] hover:border-[#008ecc]/40 hover:bg-[#12141e] shrink-0 text-white"
               >
                 {benchmarking ? (
                   <>
-                    <Loader2 className="h-3.5 w-3.5 animate-spin text-[#f26625]" />
+                    <Loader2 className="h-3.5 w-3.5 animate-spin text-[#008ecc]" />
                     Running Audit…
                   </>
                 ) : (
@@ -259,7 +259,7 @@ export default function ResearchPage() {
 
             {/* 4 Metric Cards */}
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-              <Card className="bg-[#12121a] border-[#272738] rounded-md">
+              <Card className="bg-[#0c0d14] border-[#1e2235] rounded-md">
                 <CardContent className="pt-4 pb-4 px-4 flex items-center justify-between">
                   <div>
                     <p className="text-[10px] text-[#94a3b8] font-mono uppercase">Lexical Diversity (D-2)</p>
@@ -268,17 +268,17 @@ export default function ResearchPage() {
                     </p>
                     <span className="text-[10px] text-[#64748b] font-mono">+15.6% vs raw crawls</span>
                   </div>
-                  <div className="h-9 w-9 rounded-xl bg-[#161622] border border-[#3b3b52] flex items-center justify-center">
+                  <div className="h-9 w-9 rounded-xl bg-[#12141e] border border-[#3b3b52] flex items-center justify-center">
                     <Sparkles className="h-4.5 w-4.5 text-emerald-400" />
                   </div>
                 </CardContent>
               </Card>
 
-              <Card className="bg-[#12121a] border-[#272738] rounded-md">
+              <Card className="bg-[#0c0d14] border-[#1e2235] rounded-md">
                 <CardContent className="pt-4 pb-4 px-4 flex items-center justify-between">
                   <div>
                     <p className="text-[10px] text-[#94a3b8] font-mono uppercase">Processing Throughput</p>
-                    <p className="text-xl font-bold font-mono text-[#f26625] mt-0.5">
+                    <p className="text-xl font-bold font-mono text-[#008ecc] mt-0.5">
                       {benchmarks?.results?.benchmark_latency?.throughput_samples_per_sec
                         ? `${Math.round(benchmarks.results.benchmark_latency.throughput_samples_per_sec).toLocaleString()} /s`
                         : '302,570 /s'}
@@ -287,13 +287,13 @@ export default function ResearchPage() {
                       p50: {benchmarks?.results?.benchmark_latency?.p50_latency_per_sample_us ?? '3.3'} μs/rec
                     </span>
                   </div>
-                  <div className="h-9 w-9 rounded-xl bg-[#161622] border border-[#3b3b52] flex items-center justify-center">
-                    <Zap className="h-4.5 w-4.5 text-[#f26625]" />
+                  <div className="h-9 w-9 rounded-xl bg-[#12141e] border border-[#3b3b52] flex items-center justify-center">
+                    <Zap className="h-4.5 w-4.5 text-[#008ecc]" />
                   </div>
                 </CardContent>
               </Card>
 
-              <Card className="bg-[#12121a] border-[#272738] rounded-md">
+              <Card className="bg-[#0c0d14] border-[#1e2235] rounded-md">
                 <CardContent className="pt-4 pb-4 px-4 flex items-center justify-between">
                   <div>
                     <p className="text-[10px] text-[#94a3b8] font-mono uppercase">Schema Accuracy</p>
@@ -302,13 +302,13 @@ export default function ResearchPage() {
                     </p>
                     <span className="text-[10px] text-[#64748b] font-mono">Zero formatting collapse</span>
                   </div>
-                  <div className="h-9 w-9 rounded-xl bg-[#161622] border border-[#3b3b52] flex items-center justify-center">
+                  <div className="h-9 w-9 rounded-xl bg-[#12141e] border border-[#3b3b52] flex items-center justify-center">
                     <ShieldCheck className="h-4.5 w-4.5 text-cyan-400" />
                   </div>
                 </CardContent>
               </Card>
 
-              <Card className="bg-[#12121a] border-[#272738] rounded-md">
+              <Card className="bg-[#0c0d14] border-[#1e2235] rounded-md">
                 <CardContent className="pt-4 pb-4 px-4 flex items-center justify-between">
                   <div>
                     <p className="text-[10px] text-[#94a3b8] font-mono uppercase">Cost Reduction vs Human</p>
@@ -319,7 +319,7 @@ export default function ResearchPage() {
                       {benchmarks?.results?.benchmark_cost_efficiency?.roi_cost_efficiency_multiple ?? '1904x cheaper'}
                     </span>
                   </div>
-                  <div className="h-9 w-9 rounded-xl bg-[#161622] border border-[#3b3b52] flex items-center justify-center">
+                  <div className="h-9 w-9 rounded-xl bg-[#12141e] border border-[#3b3b52] flex items-center justify-center">
                     <DollarSign className="h-4.5 w-4.5 text-amber-400" />
                   </div>
                 </CardContent>
@@ -329,14 +329,14 @@ export default function ResearchPage() {
             {/* Detailed Latency & Unit Economics Tables */}
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
               {/* Latency & Throughput Profile */}
-              <Card className="bg-[#12121a] border-[#272738] rounded-md">
-                <CardHeader className="pb-3 border-b border-[#272738]">
+              <Card className="bg-[#0c0d14] border-[#1e2235] rounded-md">
+                <CardHeader className="pb-3 border-b border-[#1e2235]">
                   <CardTitle className="text-xs font-bold text-white uppercase font-mono tracking-wider flex items-center gap-2">
-                    <Zap className="h-4 w-4 text-[#f26625]" />
+                    <Zap className="h-4 w-4 text-[#008ecc]" />
                     Engine Latency &amp; Cryptographic Profile
                   </CardTitle>
                 </CardHeader>
-                <CardContent className="p-0 divide-y divide-[#272738] text-xs font-mono">
+                <CardContent className="p-0 divide-y divide-[#1e2235] text-xs font-mono">
                   <div className="flex justify-between px-4 py-3">
                     <span className="text-[#94a3b8]">SHA-256 Leaf Hashing Latency</span>
                     <span className="text-white font-bold">
@@ -365,14 +365,14 @@ export default function ResearchPage() {
               </Card>
 
               {/* Enterprise Unit Economics Simulator */}
-              <Card className="bg-[#12121a] border-[#272738] rounded-md">
-                <CardHeader className="pb-3 border-b border-[#272738]">
+              <Card className="bg-[#0c0d14] border-[#1e2235] rounded-md">
+                <CardHeader className="pb-3 border-b border-[#1e2235]">
                   <CardTitle className="text-xs font-bold text-white uppercase font-mono tracking-wider flex items-center gap-2">
                     <DollarSign className="h-4 w-4 text-emerald-400" />
                     Enterprise Unit Economics (100k Batch)
                   </CardTitle>
                 </CardHeader>
-                <CardContent className="p-0 divide-y divide-[#272738] text-xs font-mono">
+                <CardContent className="p-0 divide-y divide-[#1e2235] text-xs font-mono">
                   <div className="flex justify-between px-4 py-3">
                     <span className="text-[#94a3b8]">Human Labeling (Scale AI baseline)</span>
                     <span className="text-rose-400 font-bold">$100,000.00 USD</span>
@@ -393,10 +393,10 @@ export default function ResearchPage() {
               </Card>
 
               {/* Empirical Model Evaluation: Before vs. After Fine-Tuning */}
-              <Card className="bg-[#12121a] border-[#272738] rounded-md lg:col-span-2">
-                <CardHeader className="pb-3 border-b border-[#272738] flex flex-row items-center justify-between">
+              <Card className="bg-[#0c0d14] border-[#1e2235] rounded-md lg:col-span-2">
+                <CardHeader className="pb-3 border-b border-[#1e2235] flex flex-row items-center justify-between">
                   <CardTitle className="text-xs font-bold text-white uppercase font-mono tracking-wider flex items-center gap-2">
-                    <TrendingUp className="h-4 w-4 text-[#f26625]" />
+                    <TrendingUp className="h-4 w-4 text-[#008ecc]" />
                     Empirical Fine-Tuning Accuracy Delta (Sarvam-2B Indic GST QA)
                   </CardTitle>
                   <Badge variant="outline" className="text-[10px] font-mono border-emerald-500/40 text-emerald-400 bg-emerald-950/20">
@@ -405,25 +405,25 @@ export default function ResearchPage() {
                 </CardHeader>
                 <CardContent className="p-4 space-y-4">
                   <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 text-center">
-                    <div className="p-3 bg-[#0d0d14] rounded-xl border border-[#272738]">
+                    <div className="p-3 bg-[#0d0d14] rounded-xl border border-[#1e2235]">
                       <p className="text-[10px] font-mono text-[#94a3b8] uppercase">chrF Score</p>
                       <p className="text-xs font-mono text-[#64748b] mt-0.5 line-through">14.80</p>
                       <p className="text-lg font-bold font-mono text-emerald-400">94.33</p>
                       <span className="text-[9px] font-mono text-emerald-400/90 font-bold">+537.4% Relative</span>
                     </div>
-                    <div className="p-3 bg-[#0d0d14] rounded-xl border border-[#272738]">
+                    <div className="p-3 bg-[#0d0d14] rounded-xl border border-[#1e2235]">
                       <p className="text-[10px] font-mono text-[#94a3b8] uppercase">Token F1</p>
                       <p className="text-xs font-mono text-[#64748b] mt-0.5 line-through">0.191</p>
                       <p className="text-lg font-bold font-mono text-cyan-400">0.739</p>
                       <span className="text-[9px] font-mono text-cyan-400/90 font-bold">+286.9% Relative</span>
                     </div>
-                    <div className="p-3 bg-[#0d0d14] rounded-xl border border-[#272738]">
+                    <div className="p-3 bg-[#0d0d14] rounded-xl border border-[#1e2235]">
                       <p className="text-[10px] font-mono text-[#94a3b8] uppercase">Exact Match</p>
                       <p className="text-xs font-mono text-[#64748b] mt-0.5 line-through">0.0%</p>
-                      <p className="text-lg font-bold font-mono text-[#f26625]">40.0%</p>
-                      <span className="text-[9px] font-mono text-[#f26625]/90 font-bold">+40.0% Absolute</span>
+                      <p className="text-lg font-bold font-mono text-[#008ecc]">40.0%</p>
+                      <span className="text-[9px] font-mono text-[#008ecc]/90 font-bold">+40.0% Absolute</span>
                     </div>
-                    <div className="p-3 bg-[#0d0d14] rounded-xl border border-[#272738]">
+                    <div className="p-3 bg-[#0d0d14] rounded-xl border border-[#1e2235]">
                       <p className="text-[10px] font-mono text-[#94a3b8] uppercase">Citation Fidelity</p>
                       <p className="text-xs font-mono text-[#64748b] mt-0.5">Grounded</p>
                       <p className="text-lg font-bold font-mono text-emerald-400">100.0%</p>
@@ -431,7 +431,7 @@ export default function ResearchPage() {
                     </div>
                   </div>
 
-                  <div className="p-3 bg-[#0d0d14] rounded-xl border border-[#272738] text-xs font-mono space-y-2">
+                  <div className="p-3 bg-[#0d0d14] rounded-xl border border-[#1e2235] text-xs font-mono space-y-2">
                     <div className="flex justify-between items-center text-[#94a3b8]">
                       <span>Baseline Architecture:</span>
                       <span className="text-white font-semibold">{evalBenchmark?.base_model?.name ?? 'sarvamai/sarvam-2b-v0.5 (Pretrained Baseline)'}</span>
@@ -466,7 +466,7 @@ export default function ResearchPage() {
                   name: 'Perplexity & Fluency Filtering',
                   desc: 'Perplexity cutoff threshold with length penalty normalization to reject low-signal crawls',
                   params: status?.active_heuristics?.perplexity_filtering || { max_perplexity: 45.0, length_penalty: 1.2 },
-                  color: 'text-[#f26625]'
+                  color: 'text-[#008ecc]'
                 },
                 {
                   key: 'self_instruct',
@@ -480,7 +480,7 @@ export default function ResearchPage() {
                   name: 'Evolutionary Prompt Mutation',
                   desc: 'PromptBreeder genetic operators for mutation, fitness selection, and multi-turn reasoning',
                   params: status?.active_heuristics?.evolutionary_prompting || { mutation_rate: 0.4, generations: 5 },
-                  color: 'text-[#f26625]'
+                  color: 'text-[#008ecc]'
                 },
                 {
                   key: 'cross_lingual',
@@ -518,11 +518,11 @@ export default function ResearchPage() {
                   color: 'text-amber-300'
                 },
               ].map(h => (
-                <Card key={h.key} className="bg-[#12121a] border-[#272738] rounded-md card-shadow">
+                <Card key={h.key} className="bg-[#0c0d14] border-[#1e2235] rounded-md card-shadow">
                   <CardContent className="p-4 space-y-3">
                     <div className="flex items-center justify-between">
                       <span className="text-[10px] font-mono text-[#94a3b8] uppercase">{h.key}</span>
-                      <span className={clsx('text-[10px] font-mono font-bold px-2 py-0.5 rounded-md bg-[#161622] border border-[#272738]', h.color)}>
+                      <span className={clsx('text-[10px] font-mono font-bold px-2 py-0.5 rounded-md bg-[#12141e] border border-[#1e2235]', h.color)}>
                         LIVE INJECTED
                       </span>
                     </div>
@@ -530,9 +530,9 @@ export default function ResearchPage() {
                       <h4 className="text-xs font-bold text-white">{h.name}</h4>
                       <p className="text-[11px] text-[#94a3b8] mt-1 leading-relaxed">{h.desc}</p>
                     </div>
-                    <div className="pt-2 border-t border-[#1c1c28]">
+                    <div className="pt-2 border-t border-[#151722]">
                       <p className="text-[10px] font-mono text-[#64748b] uppercase mb-1">Parameters</p>
-                      <div className="bg-[#0a0a0f] p-2 rounded-lg border border-[#272738] font-mono text-[10px] text-white">
+                      <div className="bg-[#050508] p-2 rounded-lg border border-[#1e2235] font-mono text-[10px] text-white">
                         {Object.entries(h.params).map(([pk, pv]) => (
                           <div key={pk} className="flex justify-between">
                             <span className="text-[#94a3b8]">{pk}:</span>
@@ -549,8 +549,8 @@ export default function ResearchPage() {
 
           {/* Overview */}
           <TabsContent value="overview" className="mt-4 space-y-3">
-            <Card className="bg-[#12121a] border-[#272738] rounded-md card-shadow">
-              <CardContent className="p-0 divide-y divide-[#272738]">
+            <Card className="bg-[#0c0d14] border-[#1e2235] rounded-md card-shadow">
+              <CardContent className="p-0 divide-y divide-[#1e2235]">
                 {[
                   {
                     icon: Beaker, label: 'Autonomous Research Loop',
@@ -574,8 +574,8 @@ export default function ResearchPage() {
                   <div key={label} className="flex items-center justify-between px-5 py-4">
                     <div className="flex items-center gap-3.5">
                       <div className={clsx('h-9 w-9 rounded-xl flex items-center justify-center border border-[#3b3b52]',
-                        ok ? 'bg-[#161622]' : 'bg-[#0a0a0f]')}>
-                        <Icon className={clsx('h-4.5 w-4.5', ok ? 'text-[#f26625]' : 'text-[#64748b]')} />
+                        ok ? 'bg-[#12141e]' : 'bg-[#050508]')}>
+                        <Icon className={clsx('h-4.5 w-4.5', ok ? 'text-[#008ecc]' : 'text-[#64748b]')} />
                       </div>
                       <div>
                         <p className="text-xs font-bold text-white">{label}</p>
@@ -585,7 +585,7 @@ export default function ResearchPage() {
                     <span className={clsx(
                       'text-[10px] font-mono px-2.5 py-0.5 rounded-md border font-bold',
                       ok ? 'bg-emerald-950/40 text-emerald-400 border-emerald-500/30'
-                         : 'bg-[#161622] text-[#94a3b8] border-[#3b3b52]',
+                         : 'bg-[#12141e] text-[#94a3b8] border-[#3b3b52]',
                     )}>{badge}</span>
                   </div>
                 ))}
@@ -595,13 +595,13 @@ export default function ResearchPage() {
 
           {/* Techniques */}
           <TabsContent value="techniques" className="mt-4">
-            <Card className="bg-[#12121a] border-[#272738] rounded-md card-shadow">
-              <CardHeader className="pb-3 border-b border-[#272738]">
+            <Card className="bg-[#0c0d14] border-[#1e2235] rounded-md card-shadow">
+              <CardHeader className="pb-3 border-b border-[#1e2235]">
                 <CardTitle className="text-xs font-bold text-white uppercase font-mono tracking-wider">
                   Synthesized Techniques &amp; Applied Strategies
                 </CardTitle>
               </CardHeader>
-              <CardContent className="p-0 divide-y divide-[#272738]">
+              <CardContent className="p-0 divide-y divide-[#1e2235]">
                 {(cachedTechniques.length > 0 ? cachedTechniques : [
                   'De-duplication via MinHash LSH (Jaccard > 0.85)',
                   'Toxicity & Hallucination filtering using LLM-as-a-Judge',
@@ -610,7 +610,7 @@ export default function ResearchPage() {
                 ]).map((t, i) => (
                   <div key={i} className="flex items-center justify-between px-5 py-3.5">
                     <div className="flex items-center gap-3">
-                      <Sparkles className="h-4 w-4 text-[#f26625] shrink-0" />
+                      <Sparkles className="h-4 w-4 text-[#008ecc] shrink-0" />
                       <span className="text-xs font-mono font-bold text-white">{t}</span>
                     </div>
                     <CheckCircle2 className="h-4 w-4 text-emerald-400 shrink-0" />
@@ -622,13 +622,13 @@ export default function ResearchPage() {
 
           {/* History */}
           <TabsContent value="history" className="mt-4">
-            <Card className="bg-[#12121a] border-[#272738] rounded-md card-shadow">
-              <CardHeader className="pb-3 border-b border-[#272738]">
+            <Card className="bg-[#0c0d14] border-[#1e2235] rounded-md card-shadow">
+              <CardHeader className="pb-3 border-b border-[#1e2235]">
                 <CardTitle className="text-xs font-bold text-white uppercase font-mono tracking-wider">
                   Literature Corpus &amp; Automated Audit Trail
                 </CardTitle>
               </CardHeader>
-              <CardContent className="p-0 divide-y divide-[#272738]">
+              <CardContent className="p-0 divide-y divide-[#1e2235]">
                 {(history.length > 0 ? history : [
                   'ArXiv Search: "Autonomous SFT Dataset Synthesis Frameworks"',
                   'GitHub Crawl: Open-source RAG benchmark corpora and prompt templates',
@@ -636,7 +636,7 @@ export default function ResearchPage() {
                   'HuggingFace Hub: Fine-tuning datasets quality metrics and license terms',
                 ]).map((entry, i) => (
                   <div key={i} className="flex items-center gap-3 px-5 py-3.5">
-                    <Clock className="h-4 w-4 text-[#f26625] shrink-0" />
+                    <Clock className="h-4 w-4 text-[#008ecc] shrink-0" />
                     <span className="text-xs font-mono text-[#94a3b8]">{entry}</span>
                   </div>
                 ))}

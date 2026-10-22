@@ -72,19 +72,19 @@ export function TopNav() {
 
   return (
     <>
-      <header className="sticky top-0 z-40 w-full border-b border-[#272738] bg-[#0a0a0f]/95 backdrop-blur-md">
+      <header className="sticky top-0 z-40 w-full border-b border-[#1e2235] bg-[#050508]/95 backdrop-blur-md">
         <div className="flex h-14 items-center justify-between px-4 lg:px-6 gap-4">
-          {/* Logo & Brand - YC Style */}
+          {/* Logo & Brand - Jet Black & Cerulean Blue */}
           <div className="flex items-center space-x-3 shrink-0">
             <Link href="/" className="flex items-center space-x-2.5 group">
-              <div className="w-8 h-8 rounded-md bg-[#f26625] flex items-center justify-center transition-all duration-200 shadow-sm relative overflow-hidden group-hover:bg-[#de581a]">
-                <span className="font-mono font-black text-white text-base tracking-tighter">Y</span>
+              <div className="w-8 h-8 rounded-md bg-[#008ecc] flex items-center justify-center transition-all duration-200 shadow-sm relative overflow-hidden group-hover:bg-[#00a4eb] glow-cerulean">
+                <span className="font-mono font-black text-white text-base tracking-tighter">R</span>
               </div>
               <div className="flex flex-col">
                 <span className="font-bold text-base tracking-tight text-white font-display leading-none">
-                  RasoSynth<span className="text-[#f26625]">Tune</span>
+                  RasoSynth<span className="text-[#008ecc]">Tune</span>
                 </span>
-                <span className="text-[10px] font-mono text-[#f26625] tracking-wider uppercase mt-0.5 font-semibold">
+                <span className="text-[10px] font-mono text-[#00a4eb] tracking-wider uppercase mt-0.5 font-semibold">
                   Autonomous Refinery
                 </span>
               </div>
@@ -92,10 +92,10 @@ export function TopNav() {
 
             <Link
               href="/datasets"
-              className="hidden sm:inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded text-[10px] font-mono font-medium bg-emerald-950/30 border border-emerald-500/30 text-[#10b981] hover:bg-emerald-950/50 transition-colors"
+              className="hidden sm:inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded text-[10px] font-mono font-medium bg-[#008ecc]/10 border border-[#008ecc]/30 text-[#00a4eb] hover:bg-[#008ecc]/20 transition-colors"
               title="Cryptographic DBOM Attestation Engine Active"
             >
-              <ShieldCheck className="w-3 h-3 text-[#10b981]" />
+              <ShieldCheck className="w-3 h-3 text-[#008ecc]" />
               <span>DBOM Verified</span>
             </Link>
           </div>
@@ -104,23 +104,23 @@ export function TopNav() {
           <div className="flex-1 max-w-md mx-2 hidden sm:block">
             <button
               onClick={() => setShowSearch(true)}
-              className="w-full flex items-center space-x-2 px-3 py-1.5 rounded-full bg-[#12121a] hover:bg-[#161622] border border-[#272738] hover:border-[#3b3b52] text-xs text-[#94a3b8] transition-all justify-between group"
+              className="w-full flex items-center space-x-2 px-3 py-1.5 rounded-full bg-[#090a0f] hover:bg-[#0c0d14] border border-[#1e2235] hover:border-[#008ecc]/40 text-xs text-[#8b949e] transition-all justify-between group"
             >
               <div className="flex items-center space-x-2">
-                <Search className="w-3.5 h-3.5 text-[#94a3b8] group-hover:text-white transition-colors" />
+                <Search className="w-3.5 h-3.5 text-[#8b949e] group-hover:text-[#00a4eb] transition-colors" />
                 <span className="truncate">Search studio, presets, datasets...</span>
               </div>
-              <kbd className="px-1.5 py-0.5 rounded bg-[#161622] border border-[#272738] text-[10px] font-mono text-[#94a3b8]">
+              <kbd className="px-1.5 py-0.5 rounded bg-[#0c0d14] border border-[#1e2235] text-[10px] font-mono text-[#8b949e]">
                 ⌘K
               </kbd>
             </button>
           </div>
 
-          {/* Right Actions */}
+          {/* Right Actions - Neon Red CTA Button */}
           <div className="flex items-center space-x-2.5">
             <button
               onClick={() => setShowSearch(true)}
-              className="sm:hidden p-2 rounded-lg text-[#94a3b8] hover:text-white hover:bg-[#161622] border border-[#272738]"
+              className="sm:hidden p-2 rounded-lg text-[#8b949e] hover:text-white hover:bg-[#0c0d14] border border-[#1e2235]"
               title="Search"
             >
               <Search className="w-4 h-4" />
@@ -128,16 +128,16 @@ export function TopNav() {
 
             <Link
               href="/studio"
-              className="inline-flex items-center space-x-1.5 px-3 py-1.5 rounded-md border border-[#272738] bg-transparent hover:bg-[#161622] text-zinc-300 hover:text-white text-xs font-mono font-medium transition-all active:scale-95"
+              className="inline-flex items-center space-x-1.5 px-3.5 py-1.5 rounded-md border border-[#cc002d] bg-[#ff0038] hover:bg-[#ff2654] text-white text-xs font-mono font-bold transition-all shadow-sm glow-neon-red active:scale-95"
             >
-              <FlaskConical className="w-3.5 h-3.5 text-[#f26625]" />
+              <FlaskConical className="w-3.5 h-3.5 text-white" />
               <span>New Dataset</span>
             </Link>
 
             {/* Mobile menu toggle */}
             <button
               onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
-              className="lg:hidden p-1.5 rounded-lg text-[#94a3b8] hover:text-white hover:bg-[#161622] border border-[#272738]"
+              className="lg:hidden p-1.5 rounded-lg text-[#8b949e] hover:text-white hover:bg-[#0c0d14] border border-[#1e2235]"
             >
               {mobileMenuOpen ? <X className="w-5 h-5" /> : <Menu className="w-5 h-5 text-white" />}
             </button>
@@ -146,7 +146,7 @@ export function TopNav() {
 
         {/* Mobile Navigation Drawer */}
         {mobileMenuOpen && (
-          <nav className="lg:hidden border-t border-[#272738] bg-[#0e0e13] p-4 space-y-1">
+          <nav className="lg:hidden border-t border-[#1e2235] bg-[#090a0f] p-4 space-y-1">
             {MOBILE_NAV_ITEMS.map((item) => {
               const active = pathname === item.href
               const Icon = item.icon
@@ -157,10 +157,10 @@ export function TopNav() {
                   onClick={() => setMobileMenuOpen(false)}
                   className={clsx(
                     'flex items-center space-x-2.5 px-3 py-2 rounded-md text-xs font-medium transition-colors',
-                    active ? 'bg-[#161622] text-[#f26625] border-l-2 border-[#f26625]' : 'text-[#94a3b8] hover:text-white hover:bg-[#161622]'
+                    active ? 'bg-[#0c0d14] text-[#00a4eb] border-l-2 border-[#008ecc]' : 'text-[#8b949e] hover:text-white hover:bg-[#0c0d14]'
                   )}
                 >
-                  <Icon className={clsx('w-4 h-4', active ? 'text-[#f26625]' : 'text-[#94a3b8]')} />
+                  <Icon className={clsx('w-4 h-4', active ? 'text-[#008ecc]' : 'text-[#8b949e]')} />
                   <span>{item.label}</span>
                 </Link>
               )

@@ -125,9 +125,9 @@ export function OnboardingModal({ open, onOpenChange }: { open?: boolean; onOpen
 
   return (
     <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/70 backdrop-blur-xs animate-fade-in">
-      <div className="w-full max-w-xl bg-[#12121a] border border-[#272738] rounded-3xl shadow-2xl overflow-hidden flex flex-col">
+      <div className="w-full max-w-xl bg-[#0c0d14] border border-[#1e2235] rounded-3xl shadow-2xl overflow-hidden flex flex-col">
         {/* Top Header Banner */}
-        <div className="bg-[#161622] text-white p-6 relative border-b border-[#272738]">
+        <div className="bg-[#12141e] text-white p-6 relative border-b border-[#1e2235]">
           <button
             onClick={handleClose}
             className="absolute top-4 right-4 text-[#94a3b8] hover:text-white transition-colors"
@@ -136,8 +136,8 @@ export function OnboardingModal({ open, onOpenChange }: { open?: boolean; onOpen
           </button>
 
           <div className="flex items-center gap-3 mb-2">
-            <div className="h-10 w-10 rounded-2xl bg-[#12121a] flex items-center justify-center border border-[#3b3b52]">
-              <Icon className="h-5 w-5 text-[#f26625]" />
+            <div className="h-10 w-10 rounded-2xl bg-[#0c0d14] flex items-center justify-center border border-[#3b3b52]">
+              <Icon className="h-5 w-5 text-[#008ecc]" />
             </div>
             <div>
               <span className="text-[10px] font-mono uppercase tracking-wider text-[#10b981] font-bold">
@@ -150,17 +150,17 @@ export function OnboardingModal({ open, onOpenChange }: { open?: boolean; onOpen
         </div>
 
         {/* Step Body Content */}
-        <div className="p-6 space-y-5 flex-1 bg-[#12121a]">
+        <div className="p-6 space-y-5 flex-1 bg-[#0c0d14]">
           <p className="text-xs text-[#94a3b8] leading-relaxed">{step.description}</p>
 
           {/* Key Capabilities Bullet Points */}
-          <div className="p-4 rounded-2xl bg-[#0a0a0f] border border-[#272738] space-y-2.5">
-            <p className="text-[11px] font-mono font-bold uppercase tracking-wider text-[#f26625]">
+          <div className="p-4 rounded-2xl bg-[#050508] border border-[#1e2235] space-y-2.5">
+            <p className="text-[11px] font-mono font-bold uppercase tracking-wider text-[#008ecc]">
               Key Highlights &amp; Capabilities
             </p>
             <div className="grid grid-cols-1 gap-2">
               {step.highlights.map((item, idx) => (
-                <div key={idx} className="flex items-start gap-2 text-xs text-[#f8fafc]">
+                <div key={idx} className="flex items-start gap-2 text-xs text-[#f4f6fa]">
                   <CheckCircle2 className="h-4 w-4 text-emerald-400 shrink-0 mt-0.5" />
                   <span>{item}</span>
                 </div>
@@ -175,7 +175,7 @@ export function OnboardingModal({ open, onOpenChange }: { open?: boolean; onOpen
                 key={idx}
                 onClick={() => setCurrentStep(idx)}
                 className={`h-2 rounded-full transition-all ${
-                  idx === currentStep ? 'w-8 bg-[#f26625]' : 'w-2 bg-[#3b3b52] hover:bg-[#64748b]'
+                  idx === currentStep ? 'w-8 bg-[#008ecc]' : 'w-2 bg-[#3b3b52] hover:bg-[#64748b]'
                 }`}
               />
             ))}
@@ -183,12 +183,12 @@ export function OnboardingModal({ open, onOpenChange }: { open?: boolean; onOpen
         </div>
 
         {/* Footer Actions */}
-        <div className="p-4 bg-[#0a0a0f] border-t border-[#272738] flex items-center justify-between gap-2">
+        <div className="p-4 bg-[#050508] border-t border-[#1e2235] flex items-center justify-between gap-2">
           <Button
             variant="ghost"
             size="sm"
             onClick={handleClose}
-            className="text-xs text-[#94a3b8] hover:text-[#f26625] rounded-full"
+            className="text-xs text-[#94a3b8] hover:text-[#008ecc] rounded-full"
           >
             Skip Tour
           </Button>
@@ -199,7 +199,7 @@ export function OnboardingModal({ open, onOpenChange }: { open?: boolean; onOpen
                 variant="outline"
                 size="sm"
                 onClick={() => setCurrentStep(c => c - 1)}
-                className="text-xs border-[#3b3b52] text-[#f26625] rounded-full"
+                className="text-xs border-[#3b3b52] text-[#008ecc] rounded-full"
               >
                 Previous
               </Button>
@@ -209,14 +209,14 @@ export function OnboardingModal({ open, onOpenChange }: { open?: boolean; onOpen
               <Button
                 size="sm"
                 onClick={() => setCurrentStep(c => c + 1)}
-                className="gap-1.5 bg-[#f26625] hover:bg-[#de581a] text-white text-xs rounded-full font-medium"
+                className="gap-1.5 bg-[#008ecc] hover:bg-[#00a4eb] text-white text-xs rounded-full font-medium"
               >
                 <span>Next Step</span>
                 <ArrowRight className="h-3.5 w-3.5" />
               </Button>
             ) : (
               <Link href={step.actionHref} onClick={handleClose}>
-                <Button size="sm" className="gap-1.5 bg-[#f26625] hover:bg-[#de581a] text-white text-xs rounded-full font-medium">
+                <Button size="sm" className="gap-1.5 bg-[#008ecc] hover:bg-[#00a4eb] text-white text-xs rounded-full font-medium">
                   <span>Explore Workspace</span>
                   <Zap className="h-3.5 w-3.5 text-emerald-400 fill-current" />
                 </Button>

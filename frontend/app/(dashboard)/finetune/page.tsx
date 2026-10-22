@@ -86,7 +86,7 @@ const STATUS_PILL: Record<FTJob['status'], string> = {
   running:   'bg-emerald-950/40 text-[#10b981] border-emerald-500/40',
   completed: 'bg-emerald-950/30 text-emerald-400 border-emerald-500/40',
   failed:    'bg-rose-950/30 text-rose-400 border-rose-500/40',
-  cancelled: 'bg-[#161622] text-[#94a3b8] border-[#272738]',
+  cancelled: 'bg-[#12141e] text-[#94a3b8] border-[#1e2235]',
 }
 
 const STATUS_STRIPE: Record<FTJob['status'], string> = {
@@ -120,11 +120,11 @@ function Section({
 }: { title: string; children: React.ReactNode; defaultOpen?: boolean }) {
   const [open, setOpen] = useState(defaultOpen)
   return (
-    <div className="rounded-md border border-[#272738] overflow-hidden bg-[#12121a]">
+    <div className="rounded-md border border-[#1e2235] overflow-hidden bg-[#0c0d14]">
       <button
         type="button"
         onClick={() => setOpen(o => !o)}
-        className="w-full flex items-center justify-between px-4 py-2.5 bg-[#0a0a0f] hover:bg-[#161622]/60 transition-colors text-left"
+        className="w-full flex items-center justify-between px-4 py-2.5 bg-[#050508] hover:bg-[#12141e]/60 transition-colors text-left"
       >
         <span className="text-xs font-bold text-white font-mono uppercase">{title}</span>
         {open
@@ -173,13 +173,13 @@ function LogRow({ line }: { line: LogLine }) {
 
 function JobSkeleton() {
   return (
-    <div className="rounded-md border-l-4 border-l-[#3b3b52] border border-[#272738] bg-[#12121a] p-3 space-y-2">
+    <div className="rounded-md border-l-4 border-l-[#3b3b52] border border-[#1e2235] bg-[#0c0d14] p-3 space-y-2">
       <div className="flex justify-between">
-        <Skeleton className="h-3.5 w-32 bg-[#161622]" />
-        <Skeleton className="h-4 w-14 rounded-full bg-[#161622]" />
+        <Skeleton className="h-3.5 w-32 bg-[#12141e]" />
+        <Skeleton className="h-4 w-14 rounded-full bg-[#12141e]" />
       </div>
-      <Skeleton className="h-3 w-48 bg-[#161622]" />
-      <Skeleton className="h-1.5 w-full rounded-full bg-[#161622]" />
+      <Skeleton className="h-3 w-48 bg-[#12141e]" />
+      <Skeleton className="h-1.5 w-full rounded-full bg-[#12141e]" />
     </div>
   )
 }
@@ -199,8 +199,8 @@ interface DetailPaneProps {
 function DetailPane({ job, logs, lossHistory, onCancel, onCopy, onReconnect, logsEndRef }: DetailPaneProps) {
   return (
     <div className="space-y-4">
-      <Card className="bg-[#12121a] border-[#272738] rounded-md card-shadow">
-        <CardHeader className="pb-2 border-b border-[#272738]">
+      <Card className="bg-[#0c0d14] border-[#1e2235] rounded-md card-shadow">
+        <CardHeader className="pb-2 border-b border-[#1e2235]">
           <div className="flex flex-wrap items-start justify-between gap-2">
             <CardTitle className="text-sm font-bold text-white truncate max-w-[200px]">
               {job.output_model_name || job.id.slice(0, 16)}
@@ -216,10 +216,10 @@ function DetailPane({ job, logs, lossHistory, onCancel, onCopy, onReconnect, log
           </div>
         </CardHeader>
         <CardContent className="space-y-3 p-4">
-          {job.status === 'running' && <Progress value={job.progress} className="h-2 bg-[#0a0a0f]" />}
+          {job.status === 'running' && <Progress value={job.progress} className="h-2 bg-[#050508]" />}
 
           {lossHistory.length > 1 && (
-            <div className="flex items-center gap-3 bg-[#0a0a0f] rounded-md px-3 py-2 border border-[#272738]">
+            <div className="flex items-center gap-3 bg-[#050508] rounded-md px-3 py-2 border border-[#1e2235]">
               <span className="text-xs text-[#94a3b8] font-mono shrink-0">Loss</span>
               <LossSparkline data={lossHistory} />
               <span className="text-xs font-mono text-[#10b981] font-bold shrink-0">
@@ -259,7 +259,7 @@ function DetailPane({ job, logs, lossHistory, onCancel, onCopy, onReconnect, log
 
           {job.output_path && (
             <div className="flex items-center gap-2">
-              <code className="text-xs font-mono bg-[#0a0a0f] text-[#f26625] px-2 py-0.5 rounded-md border border-[#272738] truncate max-w-[260px]">
+              <code className="text-xs font-mono bg-[#050508] text-[#008ecc] px-2 py-0.5 rounded-md border border-[#1e2235] truncate max-w-[260px]">
                 {job.output_path}
               </code>
               <Button variant="ghost" size="icon" className="h-6 w-6 shrink-0 rounded-md text-[#94a3b8] hover:text-white"
@@ -271,12 +271,12 @@ function DetailPane({ job, logs, lossHistory, onCancel, onCopy, onReconnect, log
         </CardContent>
       </Card>
 
-      <Card className="bg-[#12121a] border-[#272738] rounded-md card-shadow">
-        <CardHeader className="pb-2 border-b border-[#272738]">
+      <Card className="bg-[#0c0d14] border-[#1e2235] rounded-md card-shadow">
+        <CardHeader className="pb-2 border-b border-[#1e2235]">
           <div className="flex items-center justify-between">
             <CardTitle className="text-sm font-bold text-white">Training Execution Log</CardTitle>
             {job.status === 'running' && (
-              <Button variant="ghost" size="sm" className="h-7 text-xs rounded-md text-[#f26625] hover:bg-[#161622]"
+              <Button variant="ghost" size="sm" className="h-7 text-xs rounded-md text-[#008ecc] hover:bg-[#12141e]"
                 onClick={() => onReconnect(job.id)}>
                 <RefreshCw className="h-3 w-3 mr-1" />Reconnect
               </Button>
@@ -284,7 +284,7 @@ function DetailPane({ job, logs, lossHistory, onCancel, onCopy, onReconnect, log
           </div>
         </CardHeader>
         <CardContent className="p-3">
-          <ScrollArea className="h-52 sm:h-64 rounded-md bg-[#0a0a0f] border border-[#272738]">
+          <ScrollArea className="h-52 sm:h-64 rounded-md bg-[#050508] border border-[#1e2235]">
             <div className="p-3 space-y-0.5">
               {logs.length === 0
                 ? <p className="text-xs text-[#94a3b8] font-mono">
@@ -484,7 +484,7 @@ function FineTuneContent() {
             'pointer-events-auto flex items-center gap-2 px-4 py-2.5 rounded-full border shadow-lg text-xs font-semibold animate-slide-in',
             t.variant === 'success' && 'bg-emerald-950/80 text-white border-emerald-500/40',
             t.variant === 'error'   && 'bg-rose-950/80 text-white border-rose-500/40',
-            t.variant === 'info'    && 'bg-[#12121a] text-white border-[#272738]',
+            t.variant === 'info'    && 'bg-[#0c0d14] text-white border-[#1e2235]',
           )}>
             {t.variant === 'success' && <CheckCircle2 className="h-3.5 w-3.5 shrink-0 text-[#10b981]" />}
             {t.variant === 'error'   && <AlertCircle className="h-3.5 w-3.5 shrink-0 text-rose-400" />}
@@ -495,10 +495,10 @@ function FineTuneContent() {
 
       {/* Mobile bottom sheet */}
       <div className={clsx(
-        'fixed inset-x-0 bottom-0 z-40 bg-[#12121a] border-t border-[#272738] rounded-t-3xl shadow-2xl transition-transform duration-300 lg:hidden overflow-y-auto',
+        'fixed inset-x-0 bottom-0 z-40 bg-[#0c0d14] border-t border-[#1e2235] rounded-t-3xl shadow-2xl transition-transform duration-300 lg:hidden overflow-y-auto',
         mobileSheet && selectedJob ? 'translate-y-0' : 'translate-y-full',
       )} style={{ maxHeight: '88vh' }}>
-        <div className="flex items-center justify-between px-4 py-3 border-b border-[#272738] sticky top-0 bg-[#12121a] z-10">
+        <div className="flex items-center justify-between px-4 py-3 border-b border-[#1e2235] sticky top-0 bg-[#0c0d14] z-10">
           <span className="font-bold text-sm text-white truncate">
             {selectedJob?.output_model_name || selectedJob?.id.slice(0, 12)}
           </span>
@@ -519,10 +519,10 @@ function FineTuneContent() {
       </div>
 
       {/* Page header */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-[#272738] pb-4">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-[#1e2235] pb-4">
         <div>
           <div className="flex items-center gap-2.5 mb-1">
-            <span className="text-[10px] font-mono px-2 py-0.5 rounded-sm bg-[#f26625]/10 border border-[#f26625]/30 text-[#f26625] font-bold uppercase tracking-wider">
+            <span className="text-[10px] font-mono px-2 py-0.5 rounded-sm bg-[#008ecc]/10 border border-[#008ecc]/30 text-[#008ecc] font-bold uppercase tracking-wider">
               PEFT / LoRA Fine-Tuning
             </span>
             <h1 className="text-2xl font-bold tracking-tight text-white font-display">
@@ -546,7 +546,7 @@ function FineTuneContent() {
           <Button
             variant={tab === 'jobs' ? 'default' : 'outline'}
             size="sm"
-            className={clsx('rounded-md text-xs font-mono font-medium', tab === 'jobs' ? 'bg-[#f26625] text-white hover:bg-[#de581a] border border-[#ea580c] glow-yc' : 'border-[#272738] text-[#94a3b8] hover:text-white hover:bg-[#161622]')}
+            className={clsx('rounded-md text-xs font-mono font-medium', tab === 'jobs' ? 'bg-[#008ecc] text-white hover:bg-[#00a4eb] border border-[#0077ab] glow-cerulean' : 'border-[#1e2235] text-[#94a3b8] hover:text-white hover:bg-[#12141e]')}
             onClick={() => setTab('jobs')}
           >
             <List className="h-3.5 w-3.5 mr-1" />Jobs ({jobs.length})
@@ -554,7 +554,7 @@ function FineTuneContent() {
           <Button
             variant={tab === 'new' ? 'default' : 'outline'}
             size="sm"
-            className={clsx('rounded-md text-xs font-mono font-medium', tab === 'new' ? 'bg-[#f26625] text-white hover:bg-[#de581a] border border-[#ea580c] glow-yc' : 'border-[#272738] text-[#94a3b8] hover:text-white hover:bg-[#161622]')}
+            className={clsx('rounded-md text-xs font-mono font-medium', tab === 'new' ? 'bg-[#008ecc] text-white hover:bg-[#00a4eb] border border-[#0077ab] glow-cerulean' : 'border-[#1e2235] text-[#94a3b8] hover:text-white hover:bg-[#12141e]')}
             onClick={() => setTab('new')}
           >
             <Plus className="h-3.5 w-3.5 mr-1" />New Job
@@ -572,7 +572,7 @@ function FineTuneContent() {
             { key: 'failed',    label: 'Failed',    stripe: 'border-l-rose-500',    color: 'text-rose-400' },
           ] as const
         ).map(({ key, label, stripe, color }) => (
-          <Card key={key} className={clsx('border-l-4 bg-[#12121a] border-[#272738] rounded-md card-shadow', stripe)}>
+          <Card key={key} className={clsx('border-l-4 bg-[#0c0d14] border-[#1e2235] rounded-md card-shadow', stripe)}>
             <CardContent className="pt-4 pb-4 px-4">
               <p className="text-[10px] text-[#94a3b8] font-mono uppercase tracking-wider">{label}</p>
               <p className={clsx('text-2xl font-bold font-mono mt-0.5 tnum', color)}>{counts[key]}</p>
@@ -583,8 +583,8 @@ function FineTuneContent() {
 
       {/* ── New job form ── */}
       {tab === 'new' && (
-        <Card className="bg-[#12121a] border-[#272738] rounded-md card-shadow">
-          <CardHeader className="pb-3 border-b border-[#272738]">
+        <Card className="bg-[#0c0d14] border-[#1e2235] rounded-md card-shadow">
+          <CardHeader className="pb-3 border-b border-[#1e2235]">
             <CardTitle className="text-sm font-bold text-white">Configure Fine-Tuning Job</CardTitle>
           </CardHeader>
           <CardContent className="p-6">
@@ -597,10 +597,10 @@ function FineTuneContent() {
               )}
 
               {/* 3 Flagship Benchmark Presets */}
-              <div className="space-y-2 p-3.5 bg-[#0e0e14] border border-[#272738] rounded-md">
-                <div className="flex items-center justify-between pb-1 border-b border-[#1c1c28]">
+              <div className="space-y-2 p-3.5 bg-[#0e0e14] border border-[#1e2235] rounded-md">
+                <div className="flex items-center justify-between pb-1 border-b border-[#151722]">
                   <p className="text-xs font-bold text-white flex items-center gap-1.5 font-mono">
-                    <Sparkles className="h-3.5 w-3.5 text-[#f26625]" />
+                    <Sparkles className="h-3.5 w-3.5 text-[#008ecc]" />
                     1-Click Flagship Benchmark Presets
                   </p>
                   <span className="text-[10px] font-mono text-[#10b981] font-semibold">DBOM Merkle Verified</span>
@@ -626,11 +626,11 @@ function FineTuneContent() {
                       }))
                       toast('Loaded Flagship Indic GST fine-tuning preset', 'success')
                     }}
-                    className="p-2.5 rounded-md border border-[#272738] bg-[#12121a] hover:border-[#f26625]/50 hover:bg-[#161622] cursor-pointer transition-all space-y-1"
+                    className="p-2.5 rounded-md border border-[#1e2235] bg-[#0c0d14] hover:border-[#008ecc]/50 hover:bg-[#12141e] cursor-pointer transition-all space-y-1"
                   >
                     <div className="flex items-center justify-between">
-                      <span className="text-[10px] font-mono font-bold text-[#f26625]">AI Kosh / GST</span>
-                      <Zap className="h-3 w-3 text-[#f26625]" />
+                      <span className="text-[10px] font-mono font-bold text-[#008ecc]">AI Kosh / GST</span>
+                      <Zap className="h-3 w-3 text-[#008ecc]" />
                     </div>
                     <p className="text-xs font-semibold text-white">Indic GST Benchmark</p>
                     <p className="text-[10px] text-[#94a3b8] font-mono">Sarvam-2B · ChatML · +537% chrF</p>
@@ -655,7 +655,7 @@ function FineTuneContent() {
                       }))
                       toast('Loaded Flagship Clinical Reasoning preset', 'success')
                     }}
-                    className="p-2.5 rounded-md border border-[#272738] bg-[#12121a] hover:border-[#f26625]/50 hover:bg-[#161622] cursor-pointer transition-all space-y-1"
+                    className="p-2.5 rounded-md border border-[#1e2235] bg-[#0c0d14] hover:border-[#008ecc]/50 hover:bg-[#12141e] cursor-pointer transition-all space-y-1"
                   >
                     <div className="flex items-center justify-between">
                       <span className="text-[10px] font-mono font-bold text-emerald-400">Clinical PubMed</span>
@@ -684,7 +684,7 @@ function FineTuneContent() {
                       }))
                       toast('Loaded Flagship Corporate Law preset', 'success')
                     }}
-                    className="p-2.5 rounded-md border border-[#272738] bg-[#12121a] hover:border-[#f26625]/50 hover:bg-[#161622] cursor-pointer transition-all space-y-1"
+                    className="p-2.5 rounded-md border border-[#1e2235] bg-[#0c0d14] hover:border-[#008ecc]/50 hover:bg-[#12141e] cursor-pointer transition-all space-y-1"
                   >
                     <div className="flex items-center justify-between">
                       <span className="text-[10px] font-mono font-bold text-cyan-400">ITAT &amp; MCA</span>
@@ -700,13 +700,13 @@ function FineTuneContent() {
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                   <div>
                     <label className="text-[10px] mb-1 block font-bold font-mono uppercase text-[#94a3b8]">JSONL file path</label>
-                    <Input placeholder="outputs/my-dataset.jsonl" className="rounded-md border-[#272738] bg-[#0a0a0f] text-white focus:border-[#f26625] text-xs font-mono"
+                    <Input placeholder="outputs/my-dataset.jsonl" className="rounded-md border-[#1e2235] bg-[#050508] text-white focus:border-[#008ecc] text-xs font-mono"
                       value={form.dataset_path}
                       onChange={e => f('dataset_path', e.target.value)} />
                   </div>
                   <div>
                     <label className="text-[10px] mb-1 block font-bold font-mono uppercase text-[#94a3b8]">Or Dataset ID (from DB)</label>
-                    <Input placeholder="17487774-1b8e-..." className="rounded-md border-[#272738] bg-[#0a0a0f] text-white focus:border-[#f26625] text-xs font-mono"
+                    <Input placeholder="17487774-1b8e-..." className="rounded-md border-[#1e2235] bg-[#050508] text-white focus:border-[#008ecc] text-xs font-mono"
                       value={form.dataset_id}
                       onChange={e => f('dataset_id', e.target.value)} />
                   </div>
@@ -719,8 +719,8 @@ function FineTuneContent() {
                     <label className="text-[10px] mb-1 block font-bold font-mono uppercase text-[#94a3b8]">Model Architecture</label>
                     <Select value={form.base_model}
                       onValueChange={v => f('base_model', v)}>
-                      <SelectTrigger className="rounded-md border-[#272738] bg-[#0a0a0f] text-white text-xs font-mono"><SelectValue /></SelectTrigger>
-                      <SelectContent className="bg-[#12121a] border-[#272738] text-white text-xs font-mono">
+                      <SelectTrigger className="rounded-md border-[#1e2235] bg-[#050508] text-white text-xs font-mono"><SelectValue /></SelectTrigger>
+                      <SelectContent className="bg-[#0c0d14] border-[#1e2235] text-white text-xs font-mono">
                         {models.map(m => (
                           <SelectItem key={m.id} value={m.id}>
                             {m.name} ({m.params}) {m.requires_gpu ? '🖥' : '💻'}
@@ -731,7 +731,7 @@ function FineTuneContent() {
                   </div>
                   <div>
                     <label className="text-[10px] mb-1 block font-bold font-mono uppercase text-[#94a3b8]">Output model tag</label>
-                    <Input placeholder="my-finetuned-model" className="rounded-md border-[#272738] bg-[#0a0a0f] text-white focus:border-[#f26625] text-xs font-mono"
+                    <Input placeholder="my-finetuned-model" className="rounded-md border-[#1e2235] bg-[#050508] text-white focus:border-[#008ecc] text-xs font-mono"
                       value={form.output_model_name}
                       onChange={e => f('output_model_name', e.target.value)} />
                   </div>
@@ -739,8 +739,8 @@ function FineTuneContent() {
                     <label className="text-[10px] mb-1 block font-bold font-mono uppercase text-[#94a3b8]">Chat template</label>
                     <Select value={form.chat_template}
                       onValueChange={v => f('chat_template', v)}>
-                      <SelectTrigger className="rounded-md border-[#272738] bg-[#0a0a0f] text-white text-xs font-mono"><SelectValue /></SelectTrigger>
-                      <SelectContent className="bg-[#12121a] border-[#272738] text-white text-xs font-mono">
+                      <SelectTrigger className="rounded-md border-[#1e2235] bg-[#050508] text-white text-xs font-mono"><SelectValue /></SelectTrigger>
+                      <SelectContent className="bg-[#0c0d14] border-[#1e2235] text-white text-xs font-mono">
                         <SelectItem value="alpaca">Alpaca</SelectItem>
                         <SelectItem value="sharegpt">ShareGPT</SelectItem>
                         <SelectItem value="chatml">ChatML</SelectItem>
@@ -768,7 +768,7 @@ function FineTuneContent() {
                       </label>
                       <Input
                         type="number"
-                        className="rounded-md border-[#272738] bg-[#0a0a0f] text-white focus:border-[#f26625] text-xs font-mono"
+                        className="rounded-md border-[#1e2235] bg-[#050508] text-white focus:border-[#008ecc] text-xs font-mono"
                         step={isInt ? 1 : 0.00001}
                         value={(form as Record<string, unknown>)[key] as number}
                         onChange={e => f(
@@ -810,13 +810,13 @@ function FineTuneContent() {
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                     <div>
                       <label className="text-[10px] mb-1 block font-bold font-mono uppercase text-[#94a3b8]">HF Token</label>
-                      <Input type="password" placeholder="hf_..." className="rounded-md border-[#272738] bg-[#0a0a0f] text-white focus:border-[#f26625] text-xs font-mono"
+                      <Input type="password" placeholder="hf_..." className="rounded-md border-[#1e2235] bg-[#050508] text-white focus:border-[#008ecc] text-xs font-mono"
                         value={form.hf_token}
                         onChange={e => f('hf_token', e.target.value)} />
                     </div>
                     <div>
                       <label className="text-[10px] mb-1 block font-bold font-mono uppercase text-[#94a3b8]">Org / Namespace (optional)</label>
-                      <Input placeholder="my-org" className="rounded-md border-[#272738] bg-[#0a0a0f] text-white focus:border-[#f26625] text-xs font-mono"
+                      <Input placeholder="my-org" className="rounded-md border-[#1e2235] bg-[#050508] text-white focus:border-[#008ecc] text-xs font-mono"
                         value={form.hf_org}
                         onChange={e => f('hf_org', e.target.value)} />
                     </div>
@@ -827,7 +827,7 @@ function FineTuneContent() {
               <Button
                 type="submit"
                 disabled={submitting}
-                className="w-full bg-[#f26625] hover:bg-[#de581a] border border-[#ea580c] text-white rounded-md font-mono text-xs font-bold h-9 shadow-sm glow-yc flex items-center justify-center gap-2 transition-colors"
+                className="w-full bg-[#008ecc] hover:bg-[#00a4eb] border border-[#0077ab] text-white rounded-md font-mono text-xs font-bold h-9 shadow-sm glow-cerulean flex items-center justify-center gap-2 transition-colors"
               >
                 {submitting ? (
                   <><Loader2 className="h-4 w-4 animate-spin text-white mr-2" />Starting Session…</>
@@ -849,12 +849,12 @@ function FineTuneContent() {
               ? Array.from({ length: 4 }).map((_, i) => <JobSkeleton key={i} />)
               : jobs.length === 0
                 ? (
-                  <div className="flex flex-col items-center justify-center py-16 space-y-4 bg-[#12121a] rounded-md border border-[#272738]">
-                    <div className="w-14 h-14 rounded-lg bg-[#161622] border border-[#272738] flex items-center justify-center">
-                      <Cpu className="h-7 w-7 text-[#f26625]" />
+                  <div className="flex flex-col items-center justify-center py-16 space-y-4 bg-[#0c0d14] rounded-md border border-[#1e2235]">
+                    <div className="w-14 h-14 rounded-lg bg-[#12141e] border border-[#1e2235] flex items-center justify-center">
+                      <Cpu className="h-7 w-7 text-[#008ecc]" />
                     </div>
                     <p className="text-xs text-[#94a3b8] font-mono">No fine-tuning sessions recorded</p>
-                    <Button size="sm" className="bg-[#f26625] hover:bg-[#de581a] border border-[#ea580c] text-white rounded-md font-mono text-xs glow-yc" onClick={() => setTab('new')}>
+                    <Button size="sm" className="bg-[#008ecc] hover:bg-[#00a4eb] border border-[#0077ab] text-white rounded-md font-mono text-xs glow-cerulean" onClick={() => setTab('new')}>
                       <Plus className="h-3.5 w-3.5 mr-1 text-white" />Create first job
                     </Button>
                   </div>
@@ -865,10 +865,10 @@ function FineTuneContent() {
                     onClick={() => handleSelectJob(job)}
                     className={clsx(
                       'border-l-4 rounded-lg p-3.5 cursor-pointer transition-all',
-                      'bg-[#12121a] border border-[#272738] card-shadow',
-                      'hover:border-[#3b3b52] hover:bg-[#0a0a0f]',
+                      'bg-[#0c0d14] border border-[#1e2235] card-shadow',
+                      'hover:border-[#3b3b52] hover:bg-[#050508]',
                       STATUS_STRIPE[job.status],
-                      selectedJob?.id === job.id && 'border-[#f26625] bg-[#161622]/90 shadow-sm',
+                      selectedJob?.id === job.id && 'border-[#008ecc] bg-[#12141e]/90 shadow-sm',
                     )}
                   >
                     <div className="flex items-start justify-between gap-2">
@@ -884,7 +884,7 @@ function FineTuneContent() {
                     </div>
                     {job.status === 'running' && (
                       <div className="mt-2 space-y-1">
-                        <Progress value={job.progress ?? 0} className="h-1.5 bg-[#0a0a0f]" />
+                        <Progress value={job.progress ?? 0} className="h-1.5 bg-[#050508]" />
                         <p className="text-[11px] font-mono text-[#94a3b8]">
                           {(job.progress ?? 0).toFixed(0)}% · epoch {job.current_epoch}/{job.total_epochs}
                         </p>
@@ -909,7 +909,7 @@ function FineTuneContent() {
                 />
               )
               : (
-                <div className="flex flex-col items-center justify-center h-full min-h-[420px] border border-dashed border-[#272738] bg-[#12121a] rounded-md gap-3">
+                <div className="flex flex-col items-center justify-center h-full min-h-[420px] border border-dashed border-[#1e2235] bg-[#0c0d14] rounded-md gap-3">
                   <Cpu className="h-10 w-10 text-[#64748b]" />
                   <p className="text-xs text-[#94a3b8] font-mono">
                     Select a job to view details &amp; live training telemetry
@@ -928,7 +928,7 @@ export default function FineTunePage() {
     <Suspense
       fallback={
         <div className="flex items-center justify-center min-h-[60vh]">
-          <Loader2 className="h-8 w-8 animate-spin text-[#f26625]" />
+          <Loader2 className="h-8 w-8 animate-spin text-[#008ecc]" />
         </div>
       }
     >

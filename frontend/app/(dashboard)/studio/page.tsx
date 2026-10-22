@@ -278,7 +278,7 @@ function StudioContent() {
   return (
     <div className="w-full max-w-[1600px] mx-auto space-y-8">
       {/* Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-[#272738] pb-5">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-[#1e2235] pb-5">
         <div>
           <h1 className="text-2xl font-bold tracking-tight text-white font-display mb-1">
             Autonomous Dataset Studio
@@ -291,7 +291,7 @@ function StudioContent() {
         <Button
           onClick={handleGenerate}
           disabled={isSubmitting}
-          className="bg-[#f26625] hover:bg-[#de581a] border border-[#ea580c] text-white font-mono text-xs font-bold h-9 px-5 shadow-sm glow-yc flex items-center gap-2 rounded-md self-start sm:self-auto"
+          className="bg-[#ff0038] hover:bg-[#ff2654] border border-[#cc002d] text-white font-mono text-xs font-bold h-9 px-5 shadow-sm glow-neon-red flex items-center gap-2 rounded-md self-start sm:self-auto"
         >
           {isSubmitting ? <Loader2 className="w-4 h-4 animate-spin" /> : <Play className="w-3.5 h-3.5 fill-current" />}
           <span>Launch Pipeline</span>
@@ -302,7 +302,7 @@ function StudioContent() {
       <div className="space-y-3">
         <div className="flex items-center justify-between">
           <span className="text-xs font-mono font-bold uppercase tracking-wider text-white flex items-center gap-1.5">
-            <Sparkles className="w-3.5 h-3.5 text-[#f26625]" />
+            <Sparkles className="w-3.5 h-3.5 text-[#008ecc]" />
             Industry Presets
           </span>
           <span className="text-[11px] font-mono text-[#10b981]">Grounded Schemas</span>
@@ -337,12 +337,12 @@ function StudioContent() {
                 className={clsx(
                   'p-3.5 rounded-md border text-left transition-all space-y-2 relative overflow-hidden',
                   isSelected
-                    ? 'bg-[#161622] border-[#f26625] shadow-sm glow-yc'
-                    : 'bg-[#12121a] border-[#272738] hover:border-[#f26625]/40 hover:bg-[#161622]/60'
+                    ? 'bg-[#12141e] border-[#008ecc] shadow-sm glow-cerulean'
+                    : 'bg-[#0c0d14] border-[#1e2235] hover:border-[#008ecc]/40 hover:bg-[#12141e]/60'
                 )}
               >
                 <div className="flex justify-between items-start">
-                  <span className="text-[10px] font-mono font-bold uppercase text-[#f26625] truncate">
+                  <span className="text-[10px] font-mono font-bold uppercase text-[#008ecc] truncate">
                     {preset.source}
                   </span>
                   <span className="text-[10px] font-mono text-[#10b981] font-semibold">
@@ -351,10 +351,10 @@ function StudioContent() {
                 </div>
                 <h4 className="text-xs font-semibold text-white truncate">{preset.title}</h4>
                 <div className="flex items-center gap-1 text-[10px] font-mono text-[#94a3b8]">
-                  <span className="px-1.5 py-0.5 rounded-sm bg-[#0a0a0f] border border-[#272738] uppercase">
+                  <span className="px-1.5 py-0.5 rounded-sm bg-[#050508] border border-[#1e2235] uppercase">
                     {preset.type}
                   </span>
-                  <span className="px-1.5 py-0.5 rounded-sm bg-[#0a0a0f] border border-[#272738]">
+                  <span className="px-1.5 py-0.5 rounded-sm bg-[#050508] border border-[#1e2235]">
                     {preset.language}
                   </span>
                 </div>
@@ -368,22 +368,22 @@ function StudioContent() {
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
         
         {/* Left Column: Intent, Prompt & Grounding Invariants */}
-        <div className="lg:col-span-7 p-5 rounded-md bg-[#12121a] border border-[#272738] space-y-5">
-          <div className="flex items-center justify-between pb-3 border-b border-[#1c1c28]">
+        <div className="lg:col-span-7 p-5 rounded-md bg-[#0c0d14] border border-[#1e2235] space-y-5">
+          <div className="flex items-center justify-between pb-3 border-b border-[#151722]">
             <div className="flex items-center space-x-2">
-              <FlaskConical className="w-4 h-4 text-[#f26625]" />
+              <FlaskConical className="w-4 h-4 text-[#008ecc]" />
               <h3 className="text-xs font-bold font-mono uppercase tracking-wider text-white">
                 Dataset Intent &amp; Scope
               </h3>
             </div>
-            <div className="inline-flex p-0.5 rounded bg-[#0a0a0f] border border-[#272738]">
+            <div className="inline-flex p-0.5 rounded bg-[#050508] border border-[#1e2235]">
               <button
                 type="button"
                 onClick={() => setGenerationMode('grounded')}
                 className={clsx(
                   'px-3 py-1 rounded text-xs font-mono transition-all',
                   generationMode === 'grounded'
-                    ? 'bg-[#1a1a24] text-white font-semibold border border-[#272738] shadow-sm'
+                    ? 'bg-[#1a1a24] text-white font-semibold border border-[#1e2235] shadow-sm'
                     : 'text-[#94a3b8] hover:text-white'
                 )}
               >
@@ -395,7 +395,7 @@ function StudioContent() {
                 className={clsx(
                   'px-3 py-1 rounded text-xs font-mono transition-all',
                   generationMode === 'synthetic'
-                    ? 'bg-[#1a1a24] text-white font-semibold border border-[#272738] shadow-sm'
+                    ? 'bg-[#1a1a24] text-white font-semibold border border-[#1e2235] shadow-sm'
                     : 'text-[#94a3b8] hover:text-white'
                 )}
               >
@@ -412,7 +412,7 @@ function StudioContent() {
               <Input
                 value={targetDomain}
                 onChange={(e) => setTargetDomain(e.target.value)}
-                className="bg-[#0a0a0f] border-[#272738] focus:border-[#f26625] text-xs font-mono text-white rounded-md"
+                className="bg-[#050508] border-[#1e2235] focus:border-[#008ecc] text-xs font-mono text-white rounded-md"
                 placeholder="e.g. Aerospace Engineering or Finance & Taxation"
               />
             </div>
@@ -425,7 +425,7 @@ function StudioContent() {
                 value={prompt}
                 onChange={(e) => setPrompt(e.target.value)}
                 rows={4}
-                className="w-full bg-[#0a0a0f] border border-[#272738] focus:border-[#f26625] rounded-md p-3 text-xs font-mono text-white placeholder:text-[#94a3b8] focus:outline-none transition-colors resize-none"
+                className="w-full bg-[#050508] border border-[#1e2235] focus:border-[#008ecc] rounded-md p-3 text-xs font-mono text-white placeholder:text-[#94a3b8] focus:outline-none transition-colors resize-none"
                 placeholder="Describe instruction schema, target personas, and validation constraints..."
               />
               <div className="flex flex-wrap items-center justify-between gap-2 pt-2">
@@ -435,9 +435,9 @@ function StudioContent() {
                   variant="outline"
                   onClick={handleAutoDetect}
                   disabled={isAutoDetecting}
-                  className="h-8 px-3.5 text-xs font-mono font-bold border-[#f26625]/40 text-[#f26625] bg-[#f26625]/10 hover:bg-[#f26625]/20 rounded-md flex items-center gap-1.5 glow-yc transition-all"
+                  className="h-8 px-3.5 text-xs font-mono font-bold border-[#008ecc]/40 text-[#008ecc] bg-[#008ecc]/10 hover:bg-[#008ecc]/20 rounded-md flex items-center gap-1.5 glow-cerulean transition-all"
                 >
-                  {isAutoDetecting ? <Loader2 className="w-3.5 h-3.5 animate-spin text-[#f26625]" /> : <Sparkles className="w-3.5 h-3.5 text-[#f26625]" />}
+                  {isAutoDetecting ? <Loader2 className="w-3.5 h-3.5 animate-spin text-[#008ecc]" /> : <Sparkles className="w-3.5 h-3.5 text-[#008ecc]" />}
                   <span>{isAutoDetecting ? 'Discovering Invariants…' : 'Auto-Detect Terms & Sources'}</span>
                 </Button>
                 {autoDetectNotice && (
@@ -450,7 +450,7 @@ function StudioContent() {
             </div>
 
             {/* Preserved Domain Terms / Glossary */}
-            <div className="space-y-2 pt-2 border-t border-[#1c1c28]">
+            <div className="space-y-2 pt-2 border-t border-[#151722]">
               <label className="text-[10px] font-mono uppercase text-[#94a3b8] block">
                 Preserved Domain Terms (Invariants)
               </label>
@@ -459,7 +459,7 @@ function StudioContent() {
                 value={preservedTermsInput}
                 onChange={(e) => setPreservedTermsInput(e.target.value)}
                 placeholder="e.g. NACA 0012, Mach 0.82, Section 16(4), ITC, GSTR-3B"
-                className="bg-[#0a0a0f] border-[#272738] focus:border-[#f26625] text-xs font-mono text-white rounded-md"
+                className="bg-[#050508] border-[#1e2235] focus:border-[#008ecc] text-xs font-mono text-white rounded-md"
               />
               {preservedTermsInput && (
                 <div className="flex flex-wrap gap-1.5 pt-1 max-h-24 overflow-y-auto">
@@ -470,7 +470,7 @@ function StudioContent() {
                     .map((term, i) => (
                       <span
                         key={i}
-                        className="inline-flex items-center gap-1 px-2 py-0.5 rounded-sm bg-[#161622] border border-[#f26625]/30 text-[#f26625] text-[10px] font-mono"
+                        className="inline-flex items-center gap-1 px-2 py-0.5 rounded-sm bg-[#12141e] border border-[#008ecc]/30 text-[#008ecc] text-[10px] font-mono"
                       >
                         {term}
                         <button
@@ -494,7 +494,7 @@ function StudioContent() {
 
             {/* Discovered Authoritative Sources */}
             {discoveredSources.length > 0 && (
-              <div className="space-y-1.5 pt-2 border-t border-[#1c1c28]">
+              <div className="space-y-1.5 pt-2 border-t border-[#151722]">
                 <span className="text-[10px] font-mono uppercase text-[#94a3b8] block">
                   Authoritative Grounding Sources ({discoveredSources.length}):
                 </span>
@@ -502,7 +502,7 @@ function StudioContent() {
                   {discoveredSources.map((s, idx) => (
                     <span
                       key={idx}
-                      className="px-2 py-0.5 rounded-sm bg-[#0a0a0f] border border-[#272738] text-[10px] font-mono text-emerald-400 truncate max-w-[220px]"
+                      className="px-2 py-0.5 rounded-sm bg-[#050508] border border-[#1e2235] text-[10px] font-mono text-emerald-400 truncate max-w-[220px]"
                       title={s.name}
                     >
                       {s.name}
@@ -513,7 +513,7 @@ function StudioContent() {
             )}
 
             {/* Collapsible Few-Shot Anchor Examples */}
-            <div className="pt-2 border-t border-[#1c1c28]">
+            <div className="pt-2 border-t border-[#151722]">
               <button
                 type="button"
                 onClick={() => setShowAnchors(!showAnchors)}
@@ -528,8 +528,8 @@ function StudioContent() {
               {showAnchors && (
                 <div className="space-y-3 pt-3">
                   {idealSamples.map((sample, idx) => (
-                    <div key={idx} className="p-3 rounded-md bg-[#0a0a0f] border border-[#272738] space-y-2">
-                      <div className="flex items-center justify-between text-[10px] font-mono text-[#f26625]">
+                    <div key={idx} className="p-3 rounded-md bg-[#050508] border border-[#1e2235] space-y-2">
+                      <div className="flex items-center justify-between text-[10px] font-mono text-[#008ecc]">
                         <span>Anchor #{idx + 1}</span>
                         <button
                           type="button"
@@ -547,7 +547,7 @@ function StudioContent() {
                           setIdealSamples(updated)
                         }}
                         placeholder="User instruction..."
-                        className="bg-[#12121a] border-[#272738] text-xs font-mono text-white h-7"
+                        className="bg-[#0c0d14] border-[#1e2235] text-xs font-mono text-white h-7"
                       />
                       <textarea
                         value={sample.response}
@@ -558,7 +558,7 @@ function StudioContent() {
                         }}
                         rows={2}
                         placeholder="Target model response..."
-                        className="w-full bg-[#12121a] border border-[#272738] rounded-md p-2 text-xs font-mono text-white placeholder:text-[#64748b] focus:outline-none resize-none"
+                        className="w-full bg-[#0c0d14] border border-[#1e2235] rounded-md p-2 text-xs font-mono text-white placeholder:text-[#64748b] focus:outline-none resize-none"
                       />
                     </div>
                   ))}
@@ -569,7 +569,7 @@ function StudioContent() {
                       variant="outline"
                       size="sm"
                       onClick={() => setIdealSamples([...idealSamples, { instruction: '', response: '' }])}
-                      className="h-7 text-xs font-mono border-[#272738] bg-[#0a0a0f] hover:bg-[#161622] text-[#94a3b8] hover:text-white"
+                      className="h-7 text-xs font-mono border-[#1e2235] bg-[#050508] hover:bg-[#12141e] text-[#94a3b8] hover:text-white"
                     >
                       <Plus className="w-3 h-3 mr-1" />
                       Add Anchor Sample
@@ -582,11 +582,11 @@ function StudioContent() {
         </div>
 
         {/* Right Column: Parameters & Launch */}
-        <div className="lg:col-span-5 p-5 rounded-md bg-[#12121a] border border-[#272738] flex flex-col justify-between space-y-6">
+        <div className="lg:col-span-5 p-5 rounded-md bg-[#0c0d14] border border-[#1e2235] flex flex-col justify-between space-y-6">
           <div className="space-y-4">
-            <div className="flex items-center justify-between pb-3 border-b border-[#1c1c28]">
+            <div className="flex items-center justify-between pb-3 border-b border-[#151722]">
               <div className="flex items-center space-x-2">
-                <Settings2 className="w-4 h-4 text-[#f26625]" />
+                <Settings2 className="w-4 h-4 text-[#008ecc]" />
                 <h3 className="text-xs font-bold font-mono uppercase tracking-wider text-white">
                   Dataset Parameters
                 </h3>
@@ -603,7 +603,7 @@ function StudioContent() {
                 <select
                   value={datasetType}
                   onChange={(e) => setDatasetType(e.target.value)}
-                  className="w-full bg-[#0a0a0f] border border-[#272738] focus:border-[#f26625] rounded-md p-2 text-xs font-mono text-white focus:outline-none"
+                  className="w-full bg-[#050508] border border-[#1e2235] focus:border-[#008ecc] rounded-md p-2 text-xs font-mono text-white focus:outline-none"
                 >
                   <option value="sft">Supervised Fine-Tuning (SFT / Dialogue)</option>
                   <option value="reasoning">Chain-of-Thought Reasoning (CoT)</option>
@@ -622,7 +622,7 @@ function StudioContent() {
                 <select
                   value={language}
                   onChange={(e) => setLanguage(e.target.value)}
-                  className="w-full bg-[#0a0a0f] border border-[#272738] focus:border-[#f26625] rounded-md p-2 text-xs font-mono text-white focus:outline-none"
+                  className="w-full bg-[#050508] border border-[#1e2235] focus:border-[#008ecc] rounded-md p-2 text-xs font-mono text-white focus:outline-none"
                 >
                   <option value="en">English</option>
                   <option value="hi">Hindi (हिन्दी)</option>
@@ -638,7 +638,7 @@ function StudioContent() {
               <div>
                 <div className="flex justify-between items-center mb-1.5">
                   <label className="text-[10px] font-mono uppercase text-[#94a3b8]">Target Size</label>
-                  <span className="text-xs font-mono text-[#f26625] font-bold">
+                  <span className="text-xs font-mono text-[#008ecc] font-bold">
                     {datasetSize.toLocaleString()} rows
                   </span>
                 </div>
@@ -649,21 +649,21 @@ function StudioContent() {
                   step={500}
                   value={datasetSize}
                   onChange={(e) => setDatasetSize(Number(e.target.value))}
-                  className="w-full accent-[#f26625] bg-[#0a0a0f] cursor-pointer"
+                  className="w-full accent-[#008ecc] bg-[#050508] cursor-pointer"
                 />
               </div>
 
               {/* Quality & Human Review Gates */}
-              <div className="pt-3 border-t border-[#1c1c28] space-y-3">
+              <div className="pt-3 border-t border-[#151722] space-y-3">
                 <div className="flex items-center justify-between">
                   <span className="text-[10px] font-mono uppercase text-[#94a3b8] font-bold">
                     Pipeline Gates &amp; Sources
                   </span>
-                  <span className="text-[10px] font-mono text-[#f26625]">Quality Control</span>
+                  <span className="text-[10px] font-mono text-[#008ecc]">Quality Control</span>
                 </div>
 
                 {/* HITL Review Toggle */}
-                <div className="p-2.5 rounded-md bg-[#0a0a0f] border border-[#272738] space-y-2">
+                <div className="p-2.5 rounded-md bg-[#050508] border border-[#1e2235] space-y-2">
                   <label className="flex items-center justify-between text-xs font-mono text-white cursor-pointer">
                     <div className="flex flex-col">
                       <span className="font-semibold text-white">Stratified HITL Review</span>
@@ -675,15 +675,15 @@ function StudioContent() {
                       type="checkbox"
                       checked={humanReview}
                       onChange={(e) => setHumanReview(e.target.checked)}
-                      className="w-4 h-4 accent-[#f26625] cursor-pointer"
+                      className="w-4 h-4 accent-[#008ecc] cursor-pointer"
                     />
                   </label>
 
                   {humanReview && (
-                    <div className="pt-2 border-t border-[#1c1c28] space-y-1.5">
+                    <div className="pt-2 border-t border-[#151722] space-y-1.5">
                       <div className="flex justify-between items-center text-[10px] font-mono">
                         <span className="text-[#94a3b8]">Sampling Ratio</span>
-                        <span className="text-[#f26625] font-bold">{humanReviewPercentage}% of dataset</span>
+                        <span className="text-[#008ecc] font-bold">{humanReviewPercentage}% of dataset</span>
                       </div>
                       <input
                         type="range"
@@ -692,14 +692,14 @@ function StudioContent() {
                         step={1}
                         value={humanReviewPercentage}
                         onChange={(e) => setHumanReviewPercentage(Number(e.target.value))}
-                        className="w-full accent-[#f26625] bg-[#12121a] cursor-pointer"
+                        className="w-full accent-[#008ecc] bg-[#0c0d14] cursor-pointer"
                       />
                     </div>
                   )}
                 </div>
 
                 {/* AI Kosh Prioritization Toggle */}
-                <div className="p-2.5 rounded-md bg-[#0a0a0f] border border-[#272738]">
+                <div className="p-2.5 rounded-md bg-[#050508] border border-[#1e2235]">
                   <label className="flex items-center justify-between text-xs font-mono text-white cursor-pointer">
                     <div className="flex flex-col">
                       <span className="font-semibold text-white">Prioritize AI Kosh &amp; IndiaAI</span>
@@ -711,14 +711,14 @@ function StudioContent() {
                       type="checkbox"
                       checked={prioritizeAiKosh}
                       onChange={(e) => setPrioritizeAiKosh(e.target.checked)}
-                      className="w-4 h-4 accent-[#f26625] cursor-pointer"
+                      className="w-4 h-4 accent-[#008ecc] cursor-pointer"
                     />
                   </label>
                 </div>
               </div>
 
               {/* Collapsible Advanced Configuration */}
-              <div className="pt-2 border-t border-[#1c1c28]">
+              <div className="pt-2 border-t border-[#151722]">
                 <button
                   type="button"
                   onClick={() => setShowAdvanced(!showAdvanced)}
@@ -739,7 +739,7 @@ function StudioContent() {
                       <select
                         value={scriptMode}
                         onChange={(e) => setScriptMode(e.target.value as any)}
-                        className="w-full bg-[#0a0a0f] border border-[#272738] rounded-md p-2 text-xs font-mono text-white focus:outline-none"
+                        className="w-full bg-[#050508] border border-[#1e2235] rounded-md p-2 text-xs font-mono text-white focus:outline-none"
                       >
                         <option value="native">Native Script</option>
                         <option value="romanized">Romanized / Phonetic</option>
@@ -754,7 +754,7 @@ function StudioContent() {
                       <select
                         value={formalityRegister}
                         onChange={(e) => setFormalityRegister(e.target.value as any)}
-                        className="w-full bg-[#0a0a0f] border border-[#272738] rounded-md p-2 text-xs font-mono text-white focus:outline-none"
+                        className="w-full bg-[#050508] border border-[#1e2235] rounded-md p-2 text-xs font-mono text-white focus:outline-none"
                       >
                         <option value="formal">Formal / Honorific (आप)</option>
                         <option value="neutral">Professional Neutral</option>
@@ -764,49 +764,49 @@ function StudioContent() {
 
                     {/* Checkbox Options */}
                     <div className="space-y-2 pt-1">
-                      <label className="flex items-center justify-between p-2 rounded-md bg-[#0a0a0f] border border-[#272738] text-xs font-mono text-white cursor-pointer">
+                      <label className="flex items-center justify-between p-2 rounded-md bg-[#050508] border border-[#1e2235] text-xs font-mono text-white cursor-pointer">
                         <span>Indian DPDP PII Masking</span>
                         <input
                           type="checkbox"
                           checked={maskIndianPii}
                           onChange={(e) => setMaskIndianPii(e.target.checked)}
-                          className="w-4 h-4 accent-[#f26625]"
+                          className="w-4 h-4 accent-[#008ecc]"
                         />
                       </label>
 
-                      <label className="flex items-center justify-between p-2 rounded-md bg-[#0a0a0f] border border-[#272738] text-xs font-mono text-white cursor-pointer">
+                      <label className="flex items-center justify-between p-2 rounded-md bg-[#050508] border border-[#1e2235] text-xs font-mono text-white cursor-pointer">
                         <span>DPO Refusal Pairs</span>
                         <input
                           type="checkbox"
                           checked={generateDpoRefusalPairs}
                           onChange={(e) => setGenerateDpoRefusalPairs(e.target.checked)}
-                          className="w-4 h-4 accent-[#f26625]"
+                          className="w-4 h-4 accent-[#008ecc]"
                         />
                       </label>
 
-                      <label className="flex items-center justify-between p-2 rounded-md bg-[#0a0a0f] border border-[#272738] text-xs font-mono text-white cursor-pointer">
+                      <label className="flex items-center justify-between p-2 rounded-md bg-[#050508] border border-[#1e2235] text-xs font-mono text-white cursor-pointer">
                         <span>CoT Reasoning &lt;thought&gt;</span>
                         <input
                           type="checkbox"
                           checked={enableCotReasoning}
                           onChange={(e) => setEnableCotReasoning(e.target.checked)}
-                          className="w-4 h-4 accent-[#f26625]"
+                          className="w-4 h-4 accent-[#008ecc]"
                         />
                       </label>
 
-                      <label className="flex items-center justify-between p-2 rounded-md bg-[#0a0a0f] border border-[#272738] text-xs font-mono text-white cursor-pointer">
+                      <label className="flex items-center justify-between p-2 rounded-md bg-[#050508] border border-[#1e2235] text-xs font-mono text-white cursor-pointer">
                         <span>Parallel Bilingual Bitext</span>
                         <input
                           type="checkbox"
                           checked={parallelBilingual}
                           onChange={(e) => setParallelBilingual(e.target.checked)}
-                          className="w-4 h-4 accent-[#f26625]"
+                          className="w-4 h-4 accent-[#008ecc]"
                         />
                       </label>
                     </div>
 
                     {/* Tokenizer Fertility */}
-                    <div className="p-2.5 rounded-md bg-[#0a0a0f] border border-[#272738] font-mono text-[11px] space-y-1">
+                    <div className="p-2.5 rounded-md bg-[#050508] border border-[#1e2235] font-mono text-[11px] space-y-1">
                       <div className="flex justify-between items-center text-[10px]">
                         <span className="text-[#94a3b8] uppercase font-bold">Tokenizer Efficiency</span>
                         <span className="text-[#10b981] font-bold">
@@ -827,7 +827,7 @@ function StudioContent() {
           <Button
             onClick={handleGenerate}
             disabled={isSubmitting}
-            className="w-full bg-[#f26625] hover:bg-[#de581a] border border-[#ea580c] text-white font-mono font-bold text-xs h-10 rounded-md shadow-sm glow-yc flex items-center justify-center gap-2"
+            className="w-full bg-[#ff0038] hover:bg-[#ff2654] border border-[#cc002d] text-white font-mono font-bold text-xs h-10 rounded-md shadow-sm glow-neon-red flex items-center justify-center gap-2"
           >
             {isSubmitting ? <Loader2 className="w-4 h-4 animate-spin" /> : <Play className="w-4 h-4 fill-current" />}
             <span>Execute Generation Run</span>
@@ -843,7 +843,7 @@ export default function StudioPage() {
     <Suspense
       fallback={
         <div className="flex items-center justify-center min-h-[60vh]">
-          <Loader2 className="h-8 w-8 animate-spin text-[#f26625]" />
+          <Loader2 className="h-8 w-8 animate-spin text-[#008ecc]" />
         </div>
       }
     >

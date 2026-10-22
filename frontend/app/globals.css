@@ -6,42 +6,53 @@
 
 @layer base {
   :root {
-    /* Obsidian Cybernetic Studio Palette */
-    --background: #0a0a0f;
-    --background-secondary: #12121a;
-    --background-tertiary: #1a1a24;
-    --foreground: #f8fafc;
-    --surface: #12121a;
-    --surface-hover: #1a1a24;
-    --border: #272738;
-    --border-subtle: #1c1c28;
-    --muted-foreground: #94a3b8;
+    /* Jet Black Cybernetic Studio Palette */
+    --background: #050508;
+    --background-secondary: #090a0f;
+    --background-tertiary: #0f111a;
+    --foreground: #f4f6fa;
+    --surface: #090a0f;
+    --surface-hover: #12141e;
+    --border: #1e2235;
+    --border-subtle: #141622;
+    --muted-foreground: #8b949e;
     
-    /* Authentic YC Signal Orange Palette */
-    --accent: #f26625;
-    --accent-hover: #de581a;
-    --accent-muted: #ea580c;
+    /* Cerulean Blue Palette */
+    --cerulean: #008ecc;
+    --cerulean-hover: #00a4eb;
+    --cerulean-muted: #006694;
+    --cerulean-glow: rgba(0, 142, 204, 0.45);
+    
+    /* Neon Red Palette */
+    --neon-red: #ff0038;
+    --neon-red-hover: #ff2654;
+    --neon-red-muted: #990022;
+    --neon-red-glow: rgba(255, 0, 56, 0.55);
+
+    --accent: #008ecc;
+    --accent-hover: #00a4eb;
+    --accent-muted: #006694;
     
     --success: #10b981;
     --warning: #f59e0b;
-    --error: #f43f5e;
-    --info: #38bdf8;
-    --card: #12121a;
-    --card-foreground: #f8fafc;
-    --popover: #161622;
-    --popover-foreground: #f8fafc;
+    --error: #ff0038;
+    --info: #008ecc;
+    --card: #0c0d14;
+    --card-foreground: #f4f6fa;
+    --popover: #0c0d14;
+    --popover-foreground: #f4f6fa;
     --radius: 0.375rem;
   }
 }
 
 @layer base {
   * {
-    border-color: #272738;
+    border-color: #1e2235;
   }
 
   body {
-    background-color: #0a0a0f;
-    color: #f8fafc;
+    background-color: #050508;
+    color: #f4f6fa;
     font-family: 'Plus Jakarta Sans', 'Inter', system-ui, sans-serif;
     font-feature-settings: "cv02", "cv03", "cv04", "cv11", "tnum";
     overflow-x: hidden;
@@ -54,16 +65,16 @@
   }
 
   ::-webkit-scrollbar-track {
-    background-color: #0a0a0f;
+    background-color: #050508;
   }
 
   ::-webkit-scrollbar-thumb {
-    background-color: #272738;
+    background-color: #1e2235;
     border-radius: 9999px;
   }
 
   ::-webkit-scrollbar-thumb:hover {
-    background-color: #f26625;
+    background-color: #008ecc;
   }
 }
 
@@ -72,15 +83,23 @@
     text-wrap: balance;
   }
 
-  /* Dot-Grid Background Canvas */
+  /* Dot-Grid Background Canvas in Jet Black */
   .bg-dot-grid {
-    background-image: radial-gradient(#272738 1px, transparent 1px);
+    background-image: radial-gradient(#1e2235 1px, transparent 1px);
     background-size: 24px 24px;
   }
 
-  /* Cybernetic Glows */
+  /* Cybernetic Glows: Cerulean Blue & Neon Red */
+  .glow-cerulean {
+    box-shadow: 0 0 20px -2px rgba(0, 142, 204, 0.45);
+  }
+
+  .glow-neon-red {
+    box-shadow: 0 0 22px -2px rgba(255, 0, 56, 0.55);
+  }
+
   .glow-indigo {
-    box-shadow: 0 0 20px -3px rgba(99, 102, 241, 0.35);
+    box-shadow: 0 0 20px -3px rgba(0, 142, 204, 0.45);
   }
 
   .glow-emerald {
@@ -92,30 +111,92 @@
   }
 
   .glow-cyan {
-    box-shadow: 0 0 20px -3px rgba(0, 210, 255, 0.35);
+    box-shadow: 0 0 20px -3px rgba(0, 142, 204, 0.45);
   }
 
   .glow-yc {
-    box-shadow: 0 0 22px -3px rgba(242, 102, 37, 0.45);
+    box-shadow: 0 0 20px -2px rgba(0, 142, 204, 0.45);
   }
 
-  /* YC Minimal Proof-Carrying & Systematic Proof System (Stitch MCP Reference) */
-  .btn-yc {
-    background-color: #f26625;
+  /* High-Velocity Cerulean Blue & Neon Red Controls */
+  .btn-cerulean {
+    background-color: #008ecc;
     color: #ffffff;
     font-family: 'JetBrains Mono', monospace;
     font-weight: 600;
     font-size: 11px;
     letter-spacing: -0.01em;
     border-radius: 4px;
-    border: 1px solid #ea580c;
-    box-shadow: 0 1px 2px rgba(15, 23, 42, 0.08);
+    border: 1px solid #0077ab;
+    box-shadow: 0 0 16px -2px rgba(0, 142, 204, 0.45);
+    transition: all 0.15s cubic-bezier(0.16, 1, 0.3, 1);
+  }
+
+  .btn-cerulean:hover {
+    background-color: #00a4eb;
+    box-shadow: 0 0 24px 0 rgba(0, 142, 204, 0.65);
+  }
+
+  .btn-neon-red {
+    background-color: #ff0038;
+    color: #ffffff;
+    font-family: 'JetBrains Mono', monospace;
+    font-weight: 700;
+    font-size: 11px;
+    letter-spacing: -0.01em;
+    border-radius: 4px;
+    border: 1px solid #cc002d;
+    box-shadow: 0 0 18px -2px rgba(255, 0, 56, 0.55);
+    transition: all 0.15s cubic-bezier(0.16, 1, 0.3, 1);
+  }
+
+  .btn-neon-red:hover {
+    background-color: #ff2654;
+    box-shadow: 0 0 26px 2px rgba(255, 0, 56, 0.75);
+  }
+
+  .badge-cerulean {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 10px;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    padding: 2px 7px;
+    border-radius: 3px;
+    background: rgba(0, 142, 204, 0.12);
+    border: 1px solid rgba(0, 142, 204, 0.35);
+    color: #00a4eb;
+    font-weight: 600;
+  }
+
+  .badge-neon-red {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 10px;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    padding: 2px 7px;
+    border-radius: 3px;
+    background: rgba(255, 0, 56, 0.12);
+    border: 1px solid rgba(255, 0, 56, 0.35);
+    color: #ff0038;
+    font-weight: 700;
+  }
+
+  .btn-yc {
+    background-color: #008ecc;
+    color: #ffffff;
+    font-family: 'JetBrains Mono', monospace;
+    font-weight: 600;
+    font-size: 11px;
+    letter-spacing: -0.01em;
+    border-radius: 4px;
+    border: 1px solid #0077ab;
+    box-shadow: 0 0 16px -2px rgba(0, 142, 204, 0.45);
     transition: all 0.15s cubic-bezier(0.16, 1, 0.3, 1);
   }
 
   .btn-yc:hover {
-    background-color: #de581a;
-    box-shadow: 0 0 16px -2px rgba(242, 102, 37, 0.5);
+    background-color: #00a4eb;
+    box-shadow: 0 0 22px 0 rgba(0, 142, 204, 0.65);
   }
 
   .badge-yc {
@@ -125,21 +206,21 @@
     letter-spacing: 0.04em;
     padding: 2px 7px;
     border-radius: 3px;
-    background: rgba(242, 102, 37, 0.12);
-    border: 1px solid rgba(242, 102, 37, 0.35);
-    color: #f26625;
+    background: rgba(0, 142, 204, 0.12);
+    border: 1px solid rgba(0, 142, 204, 0.35);
+    color: #00a4eb;
     font-weight: 600;
   }
 
   .card-yc {
-    background-color: #12121a;
-    border: 1px solid #272738;
+    background-color: #0c0d14;
+    border: 1px solid #1e2235;
     border-radius: 6px;
     box-shadow: inset 0 1px 0 0 rgba(255, 255, 255, 0.04);
   }
 
   .card-yc:hover {
-    border-color: rgba(242, 102, 37, 0.45);
+    border-color: rgba(0, 142, 204, 0.45);
   }
 
   .glow-merkle {
