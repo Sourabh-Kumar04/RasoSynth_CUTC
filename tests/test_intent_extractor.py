@@ -5,7 +5,14 @@ from unittest.mock import AsyncMock, MagicMock
 import pytest
 
 from core.intent import IntentExtractionError, UserIntent
+from core import intent_extractor
 from core.intent_extractor import extract_intent
+
+
+@pytest.fixture
+def strict_intent(monkeypatch):
+    """Disable soft fallback so extraction errors raise (legacy strict mode)."""
+    monkeypatch.setattr(intent_extractor, "_FALLBACK_ON_ERROR", False)
 
 
 # ---- Unit tests (mock provider router) ----
@@ -80,7 +87,7 @@ async def test_extract_intent_markdown_fences():
 
 
 @pytest.mark.asyncio
-async def test_extract_intent_low_confidence():
+async def test_extract_intent_low_confidence(strict_intent):
     """Test that confidence below threshold raises IntentExtractionError."""
     mock_provider = AsyncMock()
     mock_response = MagicMock()
@@ -104,7 +111,7 @@ async def test_extract_intent_low_confidence():
 
 
 @pytest.mark.asyncio
-async def test_extract_intent_missing_field():
+async def test_extract_intent_missing_field(strict_intent):
     """Test that missing required fields raises IntentExtractionError."""
     mock_provider = AsyncMock()
     mock_response = MagicMock()
@@ -128,14 +135,13 @@ async def test_extract_intent_missing_field():
 
 
 @pytest.mark.asyncio
-async def test_extract_intent_malformed_json():
+async def test_extract_intent_malformed_json(strict_intent):
     """Test that malformed JSON raises IntentExtractionError."""
     mock_provider = AsyncMock()
     mock_response = MagicMock()
     mock_response.content = "not json {"
     mock_provider.route = AsyncMock(return_value=mock_response)
     redis_mock = AsyncMock()
-    redis_mok = None  # not used but for placeholder
     redis_mock.get.return_value = None
 
     with pytest.raises(IntentExtractionError, match="LLM returned non-JSON response"):
@@ -143,7 +149,24 @@ async def test_extract_intent_malformed_json():
 
 
 @pytest.mark.asyncio
-async def test_extract_intent_provider_exception():
+async def test_extract_intent_malformed_json_falls_back():
+    """With soft fallback (default), unrepairable JSON returns a usable UserIntent."""
+    mock_provider = AsyncMock()
+    mock_response = MagicMock()
+    mock_response.content = "definitely not json at all"
+    mock_provider.route = AsyncMock(return_value=mock_response)
+    redis_mock = AsyncMock()
+    redis_mock.get.return_value = None
+
+    intent = await extract_intent("owasp top 10", mock_provider, redis_mock)
+    assert isinstance(intent, UserIntent)
+    assert intent.primary_task == "dataset_generation"
+    assert intent.raw_input == "owasp top 10"
+    assert intent.specialized_queries
+
+
+@pytest.mark.asyncio
+async def test_extract_intent_provider_exception(strict_intent):
     """Test that provider exception propagates as IntentExtractionError."""
     mock_provider = AsyncMock()
     mock_route = AsyncMock(side_effect=Exception("provider down"))
@@ -245,7 +268,7 @@ async def test_extract_intent_anti_domains_processing():
 
 
 @pytest.mark.asyncio
-async def test_extract_intent_queries_processing():
+async def test_extract_intent_queries_processing(strict_intent):
     """Test that queries are stripped, length‑filtered, deduplicated, and anti‑domain guarded."""
     mock_provider = AsyncMock()
     mock_response = MagicMock()
@@ -259,7 +282,7 @@ async def test_extract_intent_queries_processing():
             "ok query",
             "   another ok   ",
             "this query contains forbidden term inside",
-            "a" * 201,  # too long
+            "a" * 201,  # too long — discarded in strict mode
             "ok query",  # duplicate
         ],
         "constraints": [],

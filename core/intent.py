@@ -1,6 +1,6 @@
 """Structured representation of the user's request."""
-from dataclasses import dataclass, field
-from typing import List
+from dataclasses import asdict, dataclass, field
+from typing import List, Optional
 
 
 @dataclass
@@ -42,6 +42,33 @@ class UserIntent:
 
     """Instruction/chat schema format: alpaca | sharegpt | chatml | openai_jsonl."""
     instruction_format: str = "alpaca"
+
+    def model_dump(self) -> dict:
+        """Serialize for agents / APIs (Pydantic-compatible name)."""
+        return asdict(self)
+
+    @classmethod
+    def from_fallback(
+        cls,
+        raw_input: Optional[str] = None,
+        *,
+        primary_task: str = "dataset_generation",
+        confidence: float = 0.5,
+    ) -> "UserIntent":
+        """Build a complete UserIntent when LLM extraction fails."""
+        raw = (raw_input or "").strip() or "general"
+        return cls(
+            primary_task=primary_task,
+            domain=raw,
+            modality="text",
+            anti_domains=[],
+            key_entities=[raw] if raw != "general" else [],
+            specialized_queries=[raw],
+            constraints=[],
+            output_format="jsonl",
+            confidence=confidence,
+            raw_input=raw,
+        )
 
 
 class IntentExtractionError(Exception):

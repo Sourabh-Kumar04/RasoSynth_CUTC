@@ -302,13 +302,16 @@ class ProviderRouter:
             if cp not in base_providers and cp in self._providers:
                 base_providers.append(cp)
 
-        # Prioritize providers that actually have configured credentials
-        def provider_sort_key(p_name: str) -> int:
+        # Prioritize providers that actually have configured credentials,
+        # preserving the task-mapping order within the credentialed set.
+        def provider_sort_key(p_name: str) -> tuple:
             cfg = self._provider_configs.get(p_name, {})
-            has_key = bool(cfg.get("api_key"))
-            if p_name in ("ollama", "vllm") and cfg.get("base_url"):
-                has_key = True
-            return 0 if has_key else 1
+            has_key = bool(cfg.get("api_key")) or (
+                p_name in ("ollama", "vllm") and bool(cfg.get("base_url"))
+            )
+            # (no-key=1, has-key=0) × (position in base_providers list)
+            pos = base_providers.index(p_name) if p_name in base_providers else len(base_providers)
+            return (0 if has_key else 1, pos)
 
         providers = sorted(base_providers, key=provider_sort_key)
 
@@ -387,7 +390,12 @@ class ProviderRouter:
                         max_tokens=max_tokens or 4096,
                     )
 
-                    response = await provider.generate(request)
+                    # Forward structured-output / tool kwargs to the provider
+                    gen_kwargs = {
+                        k: v for k, v in kwargs.items()
+                        if k in ("response_format", "reasoning_effort", "tools", "model")
+                    }
+                    response = await provider.generate(request, **gen_kwargs)
 
                     latency = (time.time() - start_time) * 1000
                     self._update_stats(provider_name, response, latency, success=True)

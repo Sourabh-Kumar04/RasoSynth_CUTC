@@ -15,7 +15,8 @@ _MIN_CONFIDENCE = float(os.getenv("INTENT_MIN_CONFIDENCE", "0.6"))
 _MAX_QUERY_LEN = int(os.getenv("INTENT_MAX_QUERY_LEN", "200"))
 _MAX_ANTI_DOMAINS = int(os.getenv("INTENT_MAX_ANTI_DOMAINS", "15"))
 _CACHE_TTL = int(os.getenv("INTENT_CACHE_TTL", "3600"))
-_FALLBACK_ON_ERROR = os.getenv("INTENT_FALLBACK_ON_ERROR", "false").lower() == "true"
+# Default true so truncated/non-JSON LLM replies don't crash the pipeline
+_FALLBACK_ON_ERROR = os.getenv("INTENT_FALLBACK_ON_ERROR", "true").lower() == "true"
 
 _REQUIRED_FIELDS = {
     "primary_task", "domain", "modality", "anti_domains",
@@ -110,8 +111,8 @@ async def extract_intent(
                 f"{raw_input} benchmarks",
                 f"{raw_input} guide",
             ],
-            constraints={"format": "alpaca"},
-            output_format="instruction_response",
+            constraints=[],
+            output_format="jsonl",
             confidence=0.85,
             raw_input=raw_input,
         )
@@ -123,7 +124,9 @@ async def extract_intent(
             prompt=f'User request: "{raw_input}"',
             system_prompt=INTENT_SYSTEM_PROMPT,
             temperature=0.0,
-            max_tokens=1024,  # Increased to prevent JSON truncation
+            max_tokens=2048,  # Prevent JSON truncation on verbose/reasoning models
+            response_format={"type": "json_object"},
+            reasoning_effort="low",
         )
     except Exception as llm_err:
         if not _FALLBACK_ON_ERROR:
@@ -135,20 +138,7 @@ async def extract_intent(
     if response_obj is None:
         if not _FALLBACK_ON_ERROR:
             raise IntentExtractionError("All providers failed to respond")
-        # Fall back to raw input search immediately
-        return UserIntent(
-            primary_task="unknown",
-            domain="unknown",
-            modality="text",
-            anti_domains=[],
-            key_entities=[],
-            specialized_queries=[raw_input.strip()],
-            constraints=[],
-            output_format="unknown",
-            confidence=_MIN_CONFIDENCE,
-            raw_input=raw_input,
-            instruction_format="alpaca",
-        )
+        return UserIntent.from_fallback(raw_input, confidence=_MIN_CONFIDENCE)
 
     response_text = response_obj.content
 
@@ -164,14 +154,19 @@ async def extract_intent(
     try:
         data = json.loads(clean)
     except json.JSONDecodeError as parse_err:
-        # Attempt robust auto-repair for unclosed quotes or missing closing braces
+        # Attempt robust auto-repair for truncated JSON (unterminated strings / braces)
         repaired_data = None
         try:
             repaired = clean.strip()
             if repaired.count('"') % 2 != 0:
                 repaired += '"'
+            # Close open arrays/objects from truncated completions
+            open_brackets = repaired.count("[") - repaired.count("]")
+            open_braces = repaired.count("{") - repaired.count("}")
+            repaired += "]" * max(0, open_brackets)
+            repaired += "}" * max(0, open_braces)
             if not repaired.endswith("}"):
-                repaired += '}'
+                repaired += "}"
             repaired_data = json.loads(repaired)
         except Exception:
             repaired_data = None
@@ -187,17 +182,8 @@ async def extract_intent(
                 f"LLM returned non-JSON response for intent extraction: {parse_err}. "
                 f"Applying robust fallback intent for prompt."
             )
-            data = {
-                "primary_task": "dataset_generation",
-                "domain": "cybersecurity" if "security" in raw_input.lower() or "owasp" in raw_input.lower() else "general",
-                "modality": "code" if "code" in raw_input.lower() or "c++" in raw_input.lower() or "python" in raw_input.lower() else "text",
-                "anti_domains": [],
-                "key_entities": [],
-                "specialized_queries": [raw_input.strip()[:200]],
-                "constraints": [],
-                "output_format": "jsonl",
-                "confidence": _MIN_CONFIDENCE
-            }
+            # Do not raise — return via UserIntent.from_fallback path below
+            return UserIntent.from_fallback(raw_input, confidence=_MIN_CONFIDENCE)
 
     # --- Validate required fields ---
     missing = _REQUIRED_FIELDS - data.keys()

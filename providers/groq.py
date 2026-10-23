@@ -35,83 +35,65 @@ from providers.core_lib.plugin import (
 logger = logging.getLogger(__name__)
 
 
-# Groq model configurations (verified active Oct 2026)
+# Groq model configurations (verified active Oct 2026).
+# llama-3.1-8b-instant / llama-3.3-70b-versatile shut down for free/dev tiers 2026-08-16.
 GROQ_MODELS = {
-    "llama-3.3-70b-versatile": ModelMetadata(
-        model_id="llama-3.3-70b-versatile",
+    "openai/gpt-oss-20b": ModelMetadata(
+        model_id="openai/gpt-oss-20b",
         provider="groq",
-        display_name="Llama 3.3 70B Versatile",
-        description="Latest Llama 3.3 70B — primary production model on Groq",
+        display_name="GPT OSS 20B (via Groq)",
+        description="Primary Groq chat model — fast, structured-output capable",
         modalities=[Modality.TEXT],
-        max_tokens=8192,
-        context_window=128000,
+        max_tokens=65536,
+        context_window=131072,
         supports_streaming=True,
         supports_tools=True,
         supports_structured_output=True,
-        avg_latency_ms=200,
-        throughput_tps=200,
-        cost_per_1k_input=0.00036,
-        cost_per_1k_output=0.00040,
-        reasoning_quality=0.87,
-        coding_quality=0.82,
-        multilingual_quality=0.87,
-    ),
-    "llama-3.1-8b-instant": ModelMetadata(
-        model_id="llama-3.1-8b-instant",
-        provider="groq",
-        display_name="Llama 3.1 8B Instant",
-        description="Ultra-fast small model — active on Groq",
-        modalities=[Modality.TEXT],
-        max_tokens=8192,
-        context_window=128000,
-        supports_streaming=True,
-        supports_tools=False,
-        supports_structured_output=True,
-        avg_latency_ms=50,
-        throughput_tps=500,
-        cost_per_1k_input=0.00005,
-        cost_per_1k_output=0.00008,
-        reasoning_quality=0.65,
-        coding_quality=0.60,
-        multilingual_quality=0.70,
+        avg_latency_ms=100,
+        throughput_tps=1000,
+        cost_per_1k_input=0.000075,
+        cost_per_1k_output=0.00030,
+        reasoning_quality=0.78,
+        coding_quality=0.75,
+        multilingual_quality=0.78,
     ),
     "openai/gpt-oss-120b": ModelMetadata(
         model_id="openai/gpt-oss-120b",
         provider="groq",
         display_name="GPT OSS 120B (via Groq)",
-        description="OpenAI open-weight 120B model on Groq infrastructure",
+        description="Larger Groq chat model for harder reasoning tasks",
         modalities=[Modality.TEXT],
-        max_tokens=8192,
-        context_window=128000,
+        max_tokens=65536,
+        context_window=131072,
         supports_streaming=True,
         supports_tools=True,
         supports_structured_output=True,
         avg_latency_ms=300,
-        throughput_tps=100,
-        cost_per_1k_input=0.00080,
-        cost_per_1k_output=0.00080,
+        throughput_tps=500,
+        cost_per_1k_input=0.00015,
+        cost_per_1k_output=0.00060,
         reasoning_quality=0.90,
         coding_quality=0.88,
         multilingual_quality=0.88,
     ),
-    "openai/gpt-oss-20b": ModelMetadata(
-        model_id="openai/gpt-oss-20b",
+    "qwen/qwen3.8-27b": ModelMetadata(
+        model_id="qwen/qwen3.8-27b",
         provider="groq",
-        display_name="GPT OSS 20B (via Groq)",
-        description="OpenAI open-weight 20B model on Groq infrastructure",
+        display_name="Qwen3.8 27B (via Groq)",
+        description="Qwen 27B on Groq — strong multilingual / coding fallback",
         modalities=[Modality.TEXT],
         max_tokens=8192,
-        context_window=128000,
+        context_window=131072,
         supports_streaming=True,
         supports_tools=True,
         supports_structured_output=True,
-        avg_latency_ms=100,
-        throughput_tps=300,
-        cost_per_1k_input=0.00020,
-        cost_per_1k_output=0.00020,
-        reasoning_quality=0.78,
-        coding_quality=0.75,
-        multilingual_quality=0.78,
+        avg_latency_ms=200,
+        throughput_tps=200,
+        cost_per_1k_input=0.00080,
+        cost_per_1k_output=0.00400,
+        reasoning_quality=0.85,
+        coding_quality=0.88,
+        multilingual_quality=0.92,
     ),
 }
 
@@ -136,7 +118,7 @@ class GroqProvider(BaseProvider):
         ProviderCapability.FAST_INFERENCE,
     ]
 
-    def __init__(self, config: Optional[Any] = None, model: str = "llama-3.3-70b-versatile"):  # noqa: E501
+    def __init__(self, config: Optional[Any] = None, model: str = "openai/gpt-oss-20b"):  # noqa: E501
         import os
         if isinstance(config, dict):
             provider_config = ProviderConfig(
@@ -239,8 +221,8 @@ class GroqProvider(BaseProvider):
         candidate_models = []
         if model:
             candidate_models.append(model)
-        # Fallback chain — only verified-active Groq models (Oct 2026)
-        for m in (self.model, "llama-3.3-70b-versatile", "llama-3.1-8b-instant", "openai/gpt-oss-20b"):
+        # Fallback chain — production models available on free/dev tiers (Oct 2026)
+        for m in (self.model, "openai/gpt-oss-20b", "openai/gpt-oss-120b", "qwen/qwen3.8-27b"):
             if m not in candidate_models:
                 candidate_models.append(m)
 
@@ -255,6 +237,13 @@ class GroqProvider(BaseProvider):
             }
             if kwargs.get("tools"):
                 payload["tools"] = kwargs["tools"]
+            if kwargs.get("response_format"):
+                payload["response_format"] = kwargs["response_format"]
+            # Keep reasoning models from burning tokens on chain-of-thought for JSON tasks
+            if kwargs.get("reasoning_effort"):
+                payload["reasoning_effort"] = kwargs["reasoning_effort"]
+            elif "gpt-oss" in cand_model and kwargs.get("response_format"):
+                payload["reasoning_effort"] = "low"
 
             try:
                 response = await self._client.post("/chat/completions", json=payload)
@@ -303,12 +292,17 @@ class GroqProvider(BaseProvider):
         if isinstance(prompt_or_request, LLMRequest):
             req = prompt_or_request
             prompt_str = req.input if isinstance(req.input, str) else str(req.input)
+            # Prefer explicit kwargs; fall back to LLMRequest.output_schema as json_object
+            if "response_format" not in kwargs and getattr(req, "output_schema", None):
+                kwargs = {**kwargs, "response_format": {"type": "json_object"}}
+            if "tools" not in kwargs and getattr(req, "tools", None):
+                kwargs = {**kwargs, "tools": req.tools}
             model_resp = await self._execute_generate(
                 prompt=prompt_str,
                 system_prompt=req.system_prompt,
                 temperature=req.temperature,
                 max_tokens=req.max_tokens,
-                model=model,
+                model=model or getattr(req, "preferred_model", None),
                 **kwargs
             )
             return LLMResponse(

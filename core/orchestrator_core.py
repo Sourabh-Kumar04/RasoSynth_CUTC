@@ -577,12 +577,9 @@ class DatasetOrchestrator:
                 )
             except Exception as e:
                 logger.warning(f"Query optimizer intent extraction fallback: {e}")
-                intent = UserIntent(
-                    domain=target_domain or "General Knowledge",
-                    key_entities=[target_domain] if target_domain else [],
-                    specialized_queries=[target_domain] if target_domain else [],
-                    anti_domains=[],
-                    raw_input=target_domain,
+                intent = UserIntent.from_fallback(
+                    str(target_domain) if target_domain else None,
+                    confidence=0.5,
                 )
 
         approved_queries = config.get("specialized_queries") or []
@@ -2807,18 +2804,10 @@ class DatasetOrchestrator:
                     )
                 except Exception as e:
                     logger.warning(f"Intent extraction fallback for job {job_id}: {e}")
-                    target = str(job.config.get("target_domain", "")).strip()
-                    intent = UserIntent(
-                        primary_task=target or "data synthesis",
-                        domain=target or "General Knowledge",
-                        modality="text",
-                        anti_domains=[],
-                        key_entities=[target] if target else [],
-                        specialized_queries=[target] if target else [],
-                        constraints=[],
-                        output_format="jsonl",
+                    intent = UserIntent.from_fallback(
+                        str(job.config.get("target_domain", "")),
+                        primary_task="data synthesis",
                         confidence=0.7,
-                        raw_input=target,
                     )
             approved_queries = job.config.get("specialized_queries") or []
             if approved_queries:
@@ -2829,18 +2818,10 @@ class DatasetOrchestrator:
             initial_state["intent"] = intent
         except Exception as e:
             logger.error(f"Unexpected error constructing initial intent for job {job_id}: {e}")
-            target = str(job.config.get("target_domain", "")).strip()
-            initial_state["intent"] = UserIntent(
-                primary_task=target or "data synthesis",
-                domain=target or "General Knowledge",
-                modality="text",
-                anti_domains=[],
-                key_entities=[target] if target else [],
-                specialized_queries=[target] if target else [],
-                constraints=[],
-                output_format="jsonl",
+            initial_state["intent"] = UserIntent.from_fallback(
+                str(job.config.get("target_domain", "")),
+                primary_task="data synthesis",
                 confidence=0.7,
-                raw_input=target,
             )
 
 
