@@ -168,6 +168,26 @@ characters in the password used by `POSTGRES_URL` for local app runs. Existing r
 to PostgreSQL. If the SQLite database contains data you need, migrate it before
 changing the deployment's database URL.
 
+### HuggingFace Spaces — Persistent PostgreSQL via Supabase
+
+By default, the HF Space uses SQLite (ephemeral — resets on Space restart). To enable persistent PostgreSQL:
+
+1. Go to [Supabase Dashboard](https://supabase.com) → your project → **Project Settings → Database → Connection string → URI**
+2. Copy the **Session Mode Pooler** URI (port `6543`) — it looks like:
+   ```
+   postgresql://postgres.wzpkksriijldpcaywmnp:[PASSWORD]@aws-0-ap-south-1.pooler.supabase.com:6543/postgres
+   ```
+3. Change `postgresql://` → `postgresql+asyncpg://` (required by asyncpg/SQLAlchemy)
+4. In your HF Space: **Settings → Variables and secrets → New secret** → add:
+
+   | Secret name | Value |
+   |-------------|-------|
+   | `DATABASE_URL` | `postgresql+asyncpg://postgres.wzpkksriijldpcaywmnp:[YOUR_DB_PASSWORD]@aws-0-ap-south-1.pooler.supabase.com:6543/postgres` |
+
+5. Restart the Space — the startup log will show `✓ AsyncDB initialized (PostgreSQL: ...)` instead of the SQLite fallback message.
+
+> **Note**: The backend accepts both `DATABASE_URL` and `POSTGRES_URL` as equivalent secret names.
+
 ## Dataset Generation & Grounded Pipeline
 
 RasoSynthTune prioritizes **grounded, real-world context** over purely synthetic generation by default (`synthetic_ratio = 0.0`):
