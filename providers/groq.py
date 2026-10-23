@@ -35,6 +35,25 @@ from providers.core_lib.plugin import (
 logger = logging.getLogger(__name__)
 
 
+# Deprecated free/dev-tier models (shutdown 2026-08-16) → current replacements
+_DEPRECATED_GROQ_MODELS = {
+    "llama-3.1-8b-instant": "openai/gpt-oss-20b",
+    "llama-3.3-70b-versatile": "openai/gpt-oss-120b",
+    "llama3-70b-8192": "openai/gpt-oss-120b",
+    "llama3-8b-8192": "openai/gpt-oss-20b",
+    "mixtral-8x7b-32768": "openai/gpt-oss-20b",
+    "gemma2-9b-it": "openai/gpt-oss-20b",
+}
+
+
+def _resolve_groq_model(model: str) -> str:
+    """Map shut-down Groq model IDs to current free/dev replacements."""
+    resolved = _DEPRECATED_GROQ_MODELS.get(model, model)
+    if resolved != model:
+        logger.warning("Groq model %s is deprecated; using %s instead", model, resolved)
+    return resolved
+
+
 # Groq model configurations (verified active Oct 2026).
 # llama-3.1-8b-instant / llama-3.3-70b-versatile shut down for free/dev tiers 2026-08-16.
 GROQ_MODELS = {
@@ -126,13 +145,17 @@ class GroqProvider(BaseProvider):
                 base_url=config.get("base_url") or "https://api.groq.com/openai/v1",
                 timeout=config.get("timeout", 60),
             )
+            model = config.get("model") or model
         elif config is None:
             provider_config = ProviderConfig(
                 api_key=os.environ.get("GROQ_API_KEY", ""),
                 base_url=os.environ.get("GROQ_BASE_URL", "https://api.groq.com/openai/v1"),
             )
+            model = os.environ.get("GROQ_MODEL") or model
         else:
             provider_config = config
+            model = getattr(config, "model", None) or os.environ.get("GROQ_MODEL") or model
+        model = _resolve_groq_model(model)
         super().__init__(provider_config, "groq")
         self.groq_config = provider_config
         self.base_url = getattr(provider_config, "base_url", "https://api.groq.com/openai/v1")
@@ -220,9 +243,10 @@ class GroqProvider(BaseProvider):
 
         candidate_models = []
         if model:
-            candidate_models.append(model)
+            candidate_models.append(_resolve_groq_model(model))
         # Fallback chain — production models available on free/dev tiers (Oct 2026)
         for m in (self.model, "openai/gpt-oss-20b", "openai/gpt-oss-120b", "qwen/qwen3.8-27b"):
+            m = _resolve_groq_model(m)
             if m not in candidate_models:
                 candidate_models.append(m)
 
