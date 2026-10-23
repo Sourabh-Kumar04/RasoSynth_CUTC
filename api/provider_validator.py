@@ -100,7 +100,7 @@ class ProviderValidator:
 
             client = genai.Client(api_key=api_key)
             client.models.generate_content(
-                model="gemini-2.0-flash",
+                model="gemini-3.8-flash",
                 contents="hi",
                 config=genai.types.GenerateContentConfig(max_output_tokens=1),
             )

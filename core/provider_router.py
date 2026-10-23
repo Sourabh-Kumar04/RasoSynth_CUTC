@@ -22,7 +22,7 @@ from providers.core_lib.plugin import PluginRegistry, AbstractProviderPlugin
 class RouterConfig:
     """Router configuration with self-improvement settings."""
     provider_priority: list[str] = field(default_factory=lambda: [
-        "google_gemini", "nvidia_nim", "anthropic", "openai", "huggingface", "groq", "fireworks", "featherless", "xai", "ollama", "vllm"
+        "fireworks", "google_gemini", "groq", "nvidia_nim", "anthropic", "openai", "huggingface", "featherless", "xai", "ollama", "vllm"
     ])
     max_retries: int = 3
     retry_base_delay: float = 2.0

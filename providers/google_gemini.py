@@ -23,10 +23,12 @@ class GoogleGeminiProvider(BaseProvider):
     """Google Gemini AI provider."""
 
     SUPPORTED_MODELS = {
-        "gemini-2.0-flash": {"max_tokens": 8192, "cost": 0.0001},
-        "gemini-1.5-flash": {"max_tokens": 8192, "cost": 0.000075},
-        "gemini-1.5-pro": {"max_tokens": 32768, "cost": 0.00125},
-        "gemini-1.0-pro": {"max_tokens": 30720, "cost": 0.0005},
+        # Current production models (Oct 2026)
+        "gemini-3.8-flash": {"max_tokens": 8192, "cost": 0.0001},
+        "gemini-3.5-flash-lite": {"max_tokens": 8192, "cost": 0.00005},
+        "gemini-2.5-flash": {"max_tokens": 8192, "cost": 0.0001},
+        "gemini-2.5-pro": {"max_tokens": 65536, "cost": 0.00125},
+        # NOTE: gemini-2.0-flash, gemini-1.5-*, gemini-1.0-pro are RETIRED by Google
     }
 
     EMBEDDING_MODELS = {
@@ -50,7 +52,7 @@ class GoogleGeminiProvider(BaseProvider):
             provider_config = config
 
         super().__init__(provider_config, "google_gemini")
-        self.default_model = "gemini-2.0-flash"
+        self.default_model = "gemini-3.8-flash"
         self.default_embedding_model = "text-embedding-004"
         self._client = None
 
@@ -107,7 +109,7 @@ class GoogleGeminiProvider(BaseProvider):
         candidate_models = []
         if model:
             candidate_models.append(model)
-        for m_name in (self.default_model, "gemini-2.0-flash", "gemini-1.5-flash", "gemini-1.5-pro"):
+        for m_name in (self.default_model, "gemini-3.8-flash", "gemini-3.5-flash-lite", "gemini-2.5-flash"):
             if m_name and m_name not in candidate_models:
                 candidate_models.append(m_name)
 
@@ -245,7 +247,7 @@ class GoogleGeminiProvider(BaseProvider):
         candidate_models = []
         if model:
             candidate_models.append(model)
-        for m_name in (self.default_model, "gemini-2.0-flash", "gemini-1.5-flash", "gemini-1.5-pro"):
+        for m_name in (self.default_model, "gemini-3.8-flash", "gemini-3.5-flash-lite", "gemini-2.5-flash"):
             if m_name and m_name not in candidate_models:
                 candidate_models.append(m_name)
 
@@ -314,7 +316,7 @@ class GoogleGeminiProvider(BaseProvider):
         candidate_models = []
         if model:
             candidate_models.append(model)
-        for m_name in (self.default_model, "gemini-2.0-flash", "gemini-1.5-flash", "gemini-1.5-pro"):
+        for m_name in (self.default_model, "gemini-3.8-flash", "gemini-3.5-flash-lite", "gemini-2.5-flash"):
             if m_name and m_name not in candidate_models:
                 candidate_models.append(m_name)
 

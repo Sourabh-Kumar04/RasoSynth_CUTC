@@ -35,13 +35,13 @@ from providers.core_lib.plugin import (
 logger = logging.getLogger(__name__)
 
 
-# Groq model configurations
+# Groq model configurations (verified active Oct 2026)
 GROQ_MODELS = {
     "llama-3.3-70b-versatile": ModelMetadata(
         model_id="llama-3.3-70b-versatile",
         provider="groq",
         display_name="Llama 3.3 70B Versatile",
-        description="Fast versatile model for general tasks",
+        description="Latest Llama 3.3 70B — primary production model on Groq",
         modalities=[Modality.TEXT],
         max_tokens=8192,
         context_window=128000,
@@ -52,34 +52,15 @@ GROQ_MODELS = {
         throughput_tps=200,
         cost_per_1k_input=0.00036,
         cost_per_1k_output=0.00040,
-        reasoning_quality=0.85,
-        coding_quality=0.80,
-        multilingual_quality=0.85,
-    ),
-    "llama-3.1-70b-versatile": ModelMetadata(
-        model_id="llama-3.1-70b-versatile",
-        provider="groq",
-        display_name="Llama 3.1 70B",
-        description="Previous generation fast model",
-        modalities=[Modality.TEXT],
-        max_tokens=8192,
-        context_window=128000,
-        supports_streaming=True,
-        supports_tools=True,
-        supports_structured_output=True,
-        avg_latency_ms=250,
-        throughput_tps=150,
-        cost_per_1k_input=0.00035,
-        cost_per_1k_output=0.00040,
-        reasoning_quality=0.82,
-        coding_quality=0.78,
-        multilingual_quality=0.82,
+        reasoning_quality=0.87,
+        coding_quality=0.82,
+        multilingual_quality=0.87,
     ),
     "llama-3.1-8b-instant": ModelMetadata(
         model_id="llama-3.1-8b-instant",
         provider="groq",
         display_name="Llama 3.1 8B Instant",
-        description="Ultra-fast small model",
+        description="Ultra-fast small model — active on Groq",
         modalities=[Modality.TEXT],
         max_tokens=8192,
         context_window=128000,
@@ -94,23 +75,42 @@ GROQ_MODELS = {
         coding_quality=0.60,
         multilingual_quality=0.70,
     ),
-    "mixtral-8x7b-32768": ModelMetadata(
-        model_id="mixtral-8x7b-32768",
+    "openai/gpt-oss-120b": ModelMetadata(
+        model_id="openai/gpt-oss-120b",
         provider="groq",
-        display_name="Mixtral 8x7B",
-        description="Mixture of experts fast model",
+        display_name="GPT OSS 120B (via Groq)",
+        description="OpenAI open-weight 120B model on Groq infrastructure",
         modalities=[Modality.TEXT],
-        max_tokens=32768,
-        context_window=32768,
+        max_tokens=8192,
+        context_window=128000,
         supports_streaming=True,
-        supports_tools=False,
+        supports_tools=True,
         supports_structured_output=True,
-        avg_latency_ms=150,
-        throughput_tps=250,
-        cost_per_1k_input=0.00024,
-        cost_per_1k_output=0.00024,
-        reasoning_quality=0.75,
-        coding_quality=0.72,
+        avg_latency_ms=300,
+        throughput_tps=100,
+        cost_per_1k_input=0.00080,
+        cost_per_1k_output=0.00080,
+        reasoning_quality=0.90,
+        coding_quality=0.88,
+        multilingual_quality=0.88,
+    ),
+    "openai/gpt-oss-20b": ModelMetadata(
+        model_id="openai/gpt-oss-20b",
+        provider="groq",
+        display_name="GPT OSS 20B (via Groq)",
+        description="OpenAI open-weight 20B model on Groq infrastructure",
+        modalities=[Modality.TEXT],
+        max_tokens=8192,
+        context_window=128000,
+        supports_streaming=True,
+        supports_tools=True,
+        supports_structured_output=True,
+        avg_latency_ms=100,
+        throughput_tps=300,
+        cost_per_1k_input=0.00020,
+        cost_per_1k_output=0.00020,
+        reasoning_quality=0.78,
+        coding_quality=0.75,
         multilingual_quality=0.78,
     ),
 }
@@ -136,7 +136,7 @@ class GroqProvider(BaseProvider):
         ProviderCapability.FAST_INFERENCE,
     ]
 
-    def __init__(self, config: Optional[Any] = None, model: str = "llama-3.3-70b-versatile"):
+    def __init__(self, config: Optional[Any] = None, model: str = "llama-3.3-70b-versatile"):  # noqa: E501
         import os
         if isinstance(config, dict):
             provider_config = ProviderConfig(
@@ -239,7 +239,8 @@ class GroqProvider(BaseProvider):
         candidate_models = []
         if model:
             candidate_models.append(model)
-        for m in (self.model, "llama-3.3-70b-versatile", "llama-3.1-8b-instant", "mixtral-8x7b-32768"):
+        # Fallback chain — only verified-active Groq models (Oct 2026)
+        for m in (self.model, "llama-3.3-70b-versatile", "llama-3.1-8b-instant", "openai/gpt-oss-20b"):
             if m not in candidate_models:
                 candidate_models.append(m)
 
