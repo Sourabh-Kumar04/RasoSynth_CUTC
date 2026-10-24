@@ -241,8 +241,8 @@ class ConstraintAnalyzer:
         """Check if domain is likely low-resource."""
         return len(domain.split()) > 8
 
-    def _is_source_domain_relevant(self, source: dict, target_domain: str) -> bool:
-        """Verify whether a discovered source is genuinely relevant to target_domain."""
+    def _is_source_domain_relevant(self, source: dict, target_domain: str, raw_input: str = "") -> bool:
+        """Verify whether a discovered source is genuinely relevant to target_domain and query context."""
         if not target_domain or target_domain.lower() in ("general", "custom", "all", "sft"):
             return True
 
@@ -260,9 +260,40 @@ class ConstraintAnalyzer:
         ]):
             return False
 
+        # Check jurisdictional conflict and cross-discipline homonym collisions
+        cfg_domain = str(self.config.get("target_domain", "")).lower()
+        combined_context = f"{target_domain.lower()} {raw_input.lower()} {cfg_domain}"
+        is_indian_tax = any(k in combined_context for k in [
+            "indian", "india", "cgst", "sgst", "igst", "itat", "gstr", "cbic", "cbdt", "16(4)", "194q"
+        ]) or ("tax" in combined_context and ("gst" in combined_context or "indian" in combined_context))
+
+        if is_indian_tax:
+            # Foreign tax jurisdictions that pollute Indian tax queries
+            foreign_jurisdictions = [
+                "uzbekistan", "uzbek", "united states", "internal revenue service", "irs ", "subpart rr",
+                "45q", "australia", "australian", "hmrc", "iras", "singapore tax", "south africa", "canadian tax",
+                "republic of uzbekistan"
+            ]
+            if any(fj in full_content for fj in foreign_jurisdictions):
+                return False
+
+            # Biomedical, biochemical, and physical science homonym collisions (e.g. GST = Glutathione S-transferase)
+            biomed_physics_collisions = [
+                "glutathione", "s-transferase", "nrf2", "fistula", "hemelb", "molecular dynamics",
+                "docking", "arteriovenous", "cmip6", "ipcc", "climate change", "carbon storage",
+                "carbon sequestration", "therapeutic", "biomedical", "cardiac", "retina"
+            ]
+            if any(bp in full_content for bp in biomed_physics_collisions):
+                return False
+
+        stop_words = {
+            "the", "and", "for", "with", "from", "that", "this", "are", "was", "not", "but",
+            "all", "dataset", "data", "file", "download", "train", "synthetic", "example",
+            "examples", "using", "into", "over", "under", "about", "such"
+        }
         domain_keywords = [
             w for w in re.split(r'\W+', target_domain.lower())
-            if len(w) > 3 and w not in ("dataset", "data", "file", "download", "train", "synthetic", "example", "examples")
+            if len(w) >= 3 and w not in stop_words
         ]
 
         if not domain_keywords:
@@ -379,7 +410,7 @@ class DatasetOrchestrator:
     def _is_source_relevant(self, source, intent: UserIntent | None) -> bool:
         """
         Reject a source if any term from intent.anti_domains appears
-        in its title, description, or URL.
+        in its title, description, or URL, or if it fails domain relevance / collision checks.
         """
         if intent is None:
             # Defensive: should never happen in normal flow
@@ -388,16 +419,34 @@ class DatasetOrchestrator:
             title = (source.get("title") or "").lower()
             description = (source.get("description") or "").lower()
             url = (source.get("url") or "").lower()
+            text = (source.get("text") or source.get("content") or "").lower()
         else:
             # DiscoveredSource / any object with .title, .url, .description
             title = (getattr(source, "title", None) or "").lower()
             description = (getattr(source, "description", None) or "").lower()
             url = (getattr(source, "url", None) or "").lower()
-        combined = f"{title} {description} {url}"
+            text = (getattr(source, "text", None) or getattr(source, "content", None) or "").lower()
+        combined = f"{title} {description} {url} {text[:2000]}"
         for anti in intent.anti_domains:
             if anti in combined:
                 logger.debug(f"Rejected source '{title}' – matched anti-domain '{anti}'")
                 return False
+
+        # Domain relevance & collision validation via constraint analyzer
+        source_dict = {
+            "title": title,
+            "description": description,
+            "url": url,
+            "text": text,
+        }
+        target_domain = getattr(intent, "domain", "") or ""
+        raw_input = getattr(intent, "raw_input", "") or ""
+        if hasattr(self, "constraint_analyzer") and not self.constraint_analyzer._is_source_domain_relevant(
+            source_dict, target_domain, raw_input=raw_input
+        ):
+            logger.debug(f"Rejected source '{title}' – failed domain relevance or collision check")
+            return False
+
         return True
 
     def _build_graph(self) -> StateGraph:
@@ -1472,9 +1521,10 @@ class DatasetOrchestrator:
         # Check domain relevance of extracted items before bypassing
         if len(filtered) == 0 and len(extracted) > 0:
             analyzer = ConstraintAnalyzer(job["config"])
+            raw_input = intent.raw_input if intent else job["config"].get("raw_input", "")
             relevant_extracted = [
                 item for item in extracted
-                if analyzer._is_source_domain_relevant(item, target_domain)
+                if analyzer._is_source_domain_relevant(item, target_domain, raw_input=raw_input)
             ]
 
             if relevant_extracted:

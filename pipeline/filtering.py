@@ -294,6 +294,46 @@ class FilteringPipeline:
             if not return_all:
                 return None
 
+        # --- 5. Domain anti-domain & collision filtering ---
+        if intent and intent.anti_domains:
+            content_lower = content_text.lower()
+            url_lower = (getattr(content, 'url', None) or '').lower()
+            matched_anti = [anti for anti in intent.anti_domains if anti in content_lower or anti in url_lower]
+            if matched_anti:
+                sample.issues.append(f"matched_anti_domain: {', '.join(matched_anti)}")
+                sample.filter_reason = "anti_domain_matched"
+                sample.passed = False
+                if not return_all:
+                    return None
+
+        # Cross-jurisdiction and scientific homonym collision guard
+        target_domain = getattr(intent, 'domain', '') or ''
+        raw_input = getattr(intent, 'raw_input', '') or ''
+        combined_ctx = f"{target_domain} {raw_input}".lower()
+        is_indian_tax = any(k in combined_ctx for k in [
+            "indian", "india", "cgst", "sgst", "igst", "itat", "gstr", "cbic", "cbdt", "16(4)", "194q"
+        ]) or ("tax" in combined_ctx and ("gst" in combined_ctx or "indian" in combined_ctx))
+        if is_indian_tax:
+            content_lower = content_text.lower()
+            url_lower = (getattr(content, 'url', None) or '').lower()
+            full_check = f"{url_lower} {content_lower[:4000]}"
+            foreign_jurisdictions = [
+                "uzbekistan", "uzbek", "united states", "internal revenue service", "irs ", "subpart rr",
+                "45q", "australia", "australian", "hmrc", "iras", "singapore tax", "south africa", "canadian tax",
+                "republic of uzbekistan"
+            ]
+            biomed_collisions = [
+                "glutathione", "s-transferase", "nrf2", "fistula", "hemelb", "molecular dynamics",
+                "docking", "arteriovenous", "cmip6", "ipcc", "climate change", "carbon storage",
+                "carbon sequestration", "therapeutic", "biomedical", "cardiac", "retina"
+            ]
+            if any(fj in full_check for fj in foreign_jurisdictions) or any(bc in full_check for bc in biomed_collisions):
+                sample.issues.append("domain_jurisdiction_or_homonym_collision")
+                sample.filter_reason = "domain_jurisdiction_collision"
+                sample.passed = False
+                if not return_all:
+                    return None
+
         # Relevance scoring
         sample.relevance_score = llm_judge_score
 
@@ -403,7 +443,7 @@ class FilteringPipeline:
         sample.warnings = self._generate_warnings(sample, thresholds)
 
         # Apply filters based on thresholds
-        should_filter = self._should_filter(sample, thresholds)
+        should_filter = (not sample.passed) or self._should_filter(sample, thresholds)
         sample.passed = not should_filter
 
         if should_filter:
@@ -1182,6 +1222,9 @@ class FilteringPipeline:
 
     def _should_filter(self, sample: FilteredSample, thresholds: FilterThresholds) -> bool:
         """Final pass/fail determination (called after per-dimension checks)."""
+        if not getattr(sample, "passed", True):
+            return True
+
         # Hard filters
         if sample.toxicity_score > thresholds.toxicity:
             sample.filter_reason = "toxicity_exceeds_threshold"

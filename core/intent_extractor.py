@@ -13,7 +13,7 @@ logger = logging.getLogger(__name__)
 
 _MIN_CONFIDENCE = float(os.getenv("INTENT_MIN_CONFIDENCE", "0.6"))
 _MAX_QUERY_LEN = int(os.getenv("INTENT_MAX_QUERY_LEN", "200"))
-_MAX_ANTI_DOMAINS = int(os.getenv("INTENT_MAX_ANTI_DOMAINS", "15"))
+_MAX_ANTI_DOMAINS = int(os.getenv("INTENT_MAX_ANTI_DOMAINS", "30"))
 _CACHE_TTL = int(os.getenv("INTENT_CACHE_TTL", "3600"))
 # Default true so truncated/non-JSON LLM replies don't crash the pipeline
 _FALLBACK_ON_ERROR = os.getenv("INTENT_FALLBACK_ON_ERROR", "true").lower() == "true"
@@ -222,7 +222,25 @@ async def extract_intent(
         data["specialized_queries"] = fallback_queries
 
     # --- Post-process: clean up lists ---
-    anti_domains = [a.lower().strip() for a in data.get("anti_domains", [])][:_MAX_ANTI_DOMAINS]
+    raw_lower = raw_input.lower()
+    domain_lower = str(data.get("domain", "")).lower()
+    combined_check = f"{raw_lower} {domain_lower}"
+    is_indian_tax = any(k in combined_check for k in [
+        "indian", "india", "cgst", "sgst", "igst", "itat", "gstr", "cbic", "cbdt", "16(4)", "194q"
+    ]) or ("tax" in combined_check and ("gst" in combined_check or "indian" in combined_check))
+
+    anti_domains = [a.lower().strip() for a in data.get("anti_domains", [])]
+    if is_indian_tax:
+        tax_anti_domains = [
+            "glutathione", "s-transferase", "nrf2", "fistula", "hemelb",
+            "uzbekistan", "united states", "irs", "45q", "carbon storage",
+            "australia", "hmrc"
+        ]
+        for term in tax_anti_domains:
+            if term not in anti_domains:
+                anti_domains.append(term)
+
+    anti_domains = anti_domains[:_MAX_ANTI_DOMAINS]
     anti_domains = list(dict.fromkeys(anti_domains))  # deduplicate, preserve order
 
     queries = [q.strip() for q in data.get("specialized_queries", []) if q.strip()]

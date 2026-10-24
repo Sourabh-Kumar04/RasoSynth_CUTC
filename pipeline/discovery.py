@@ -1169,7 +1169,8 @@ class DiscoveryPipeline:
                                     "title": self._extract_title_from_html(response.text) or self._clean_url_title(url),
                                     "description": text_content[:500] + ("..." if len(text_content) > 500 else "")
                                 },
-                                target_domain
+                                target_domain,
+                                raw_input=self.config.get("raw_input", "")
                             ):
                                 source = DiscoveredSource(
                                     url=url,

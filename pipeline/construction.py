@@ -58,6 +58,42 @@ def _is_garbage_content(text: str) -> bool:
     return False
 
 
+def _is_chunk_domain_relevant(
+    text: str,
+    target_domain: str = "",
+    generation_brief: dict | None = None,
+    config: dict | None = None,
+) -> bool:
+    """Return False if text contains conflicting foreign jurisdictions or scientific homonyms."""
+    if not text:
+        return False
+    import json
+    combined_ctx = f"{target_domain} {json.dumps(generation_brief or {})} {json.dumps(config or {}) if config else ''}".lower()
+    is_indian_tax = any(k in combined_ctx for k in [
+        "indian", "india", "cgst", "sgst", "igst", "itat", "gstr", "cbic", "cbdt", "16(4)", "194q"
+    ]) or ("tax" in combined_ctx and ("gst" in combined_ctx or "indian" in combined_ctx))
+
+    if is_indian_tax:
+        text_lower = text.lower()
+        foreign_jurisdictions = [
+            "uzbekistan", "uzbek", "united states", "internal revenue service", "irs ", "subpart rr",
+            "45q", "australia", "australian", "hmrc", "iras", "singapore tax", "south africa", "canadian tax",
+            "republic of uzbekistan"
+        ]
+        if any(fj in text_lower for fj in foreign_jurisdictions):
+            return False
+
+        biomed_physics_collisions = [
+            "glutathione", "s-transferase", "nrf2", "fistula", "hemelb", "molecular dynamics",
+            "docking", "arteriovenous", "cmip6", "ipcc", "climate change", "carbon storage",
+            "carbon sequestration", "therapeutic", "biomedical", "cardiac", "retina"
+        ]
+        if any(bp in text_lower for bp in biomed_physics_collisions):
+            return False
+
+    return True
+
+
 def _sanitize_target_domain(raw: str) -> str:
     """If *raw* looks like a dumped JSON config, extract the real domain."""
     if not raw:
@@ -312,6 +348,9 @@ class ConstructionPipeline:
         if _is_garbage_content(content):
             return
 
+        if not _is_chunk_domain_relevant(content, target_domain, generation_brief, self.config):
+            return
+
         # Split into logical chunks
         chunks = self._adaptive_chunk(content, max_length=1500)
 
@@ -321,6 +360,9 @@ class ConstructionPipeline:
             import json
             logger = logging.getLogger(__name__)
             for i, chunk in enumerate(chunks):  # Process chunks to construct samples
+                if not _is_chunk_domain_relevant(chunk, target_domain, generation_brief, self.config):
+                    logger.debug("Skipping chunk due to domain / jurisdiction collision check")
+                    continue
                 difficulty = self._assess_chunk_difficulty(chunk)
 
                 # Check if chunk content has domain keyword alignment

@@ -297,3 +297,33 @@ async def test_extract_intent_queries_processing(strict_intent):
 
     # Should be stripped, length‑filtered, deduplicated, and anti‑domain term removed
     assert intent.specialized_queries == ["ok query", "another ok"]
+
+
+@pytest.mark.asyncio
+async def test_extract_intent_indian_tax_collision_injection():
+    """Test that Indian tax queries automatically inject homonym and jurisdiction anti-domains."""
+    mock_provider = AsyncMock()
+    mock_response = MagicMock()
+    mock_response.content = json.dumps({
+        "primary_task": "tax compliance advisory",
+        "domain": "tax law",
+        "modality": "text",
+        "anti_domains": ["general accounting"],
+        "key_entities": ["Section 16(4) CGST"],
+        "specialized_queries": ["GST ITC reconciliation Section 16(4)"],
+        "constraints": [],
+        "output_format": "jsonl",
+        "confidence": 0.95
+    })
+    mock_provider.route = AsyncMock(return_value=mock_response)
+    redis_mock = AsyncMock()
+    redis_mock.get.return_value = None
+
+    prompt = "Synthesize curriculum SFT dataset for Indian GST ITC reconciliation under Section 16(4)"
+    intent = await extract_intent(prompt, mock_provider, redis_mock)
+
+    assert "general accounting" in intent.anti_domains
+    assert "uzbekistan" in intent.anti_domains
+    assert "glutathione" in intent.anti_domains
+    assert "s-transferase" in intent.anti_domains
+    assert "nrf2" in intent.anti_domains
