@@ -2652,6 +2652,24 @@ async def get_job_records(job_id: str, limit: int = 10):
             if len(records) >= limit:
                 break
 
+        # Fallback to early preview samples if export has not completed yet
+        if not records:
+            job = await db.get_job_status(job_id)
+            if job and job.get("config"):
+                cfg = job["config"]
+                preview_samples = cfg.get("preview_samples") or []
+                for idx, ps in enumerate(preview_samples[:limit]):
+                    records.append({
+                        "id": f"preview-{idx}",
+                        "dataset_id": job_id,
+                        "instruction": ps.get("instruction", ""),
+                        "response": ps.get("response", ""),
+                        "input": ps.get("input", ""),
+                        "quality_score": ps.get("metadata", {}).get("quality_score", 0.95),
+                        "difficulty_tier": ps.get("metadata", {}).get("difficulty_tier", 3),
+                        "created_at": job.get("created_at"),
+                    })
+
         return {
             "records": records[:limit],
             "count": len(records[:limit]),

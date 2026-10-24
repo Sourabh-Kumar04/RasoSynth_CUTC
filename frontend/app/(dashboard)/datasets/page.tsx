@@ -1229,8 +1229,21 @@ export default function DatasetsPage() {
                   Failed to load preview: {recordsError}
                 </div>
               ) : records.length === 0 ? (
-                <div className="p-8 text-center bg-[#0a0a0f] rounded-md border border-[#272738] text-xs text-[#94a3b8] font-mono">
-                  No preview records available. Ensure pipeline has completed and exported files successfully.
+                <div className="p-8 text-center bg-[#0a0a0f] rounded-md border border-[#272738] text-xs font-mono space-y-2">
+                  {selected?.status === 'processing' || selected?.status === 'running' ? (
+                    <>
+                      <div className="flex items-center justify-center gap-2 text-amber-400 font-semibold">
+                        <Loader2 className="h-4 w-4 animate-spin text-[#f26625]" />
+                        <span>Pipeline In-Flight (Stage: {selected?.current_stage || 'processing'})</span>
+                      </div>
+                      <p className="text-[#94a3b8] max-w-md mx-auto">
+                        Synthesized {selected?.records || 0} samples ({selected?.quality || 0}% progress).
+                        Full verified records and cryptographic DBOM manifest will become available as soon as packaging &amp; export completes.
+                      </p>
+                    </>
+                  ) : (
+                    <span>No preview records available. Ensure pipeline has completed and exported files successfully.</span>
+                  )}
                 </div>
               ) : (
                 <div className="max-h-[360px] overflow-y-auto space-y-3 rounded-md border border-[#272738] bg-[#0a0a0f] p-3">
