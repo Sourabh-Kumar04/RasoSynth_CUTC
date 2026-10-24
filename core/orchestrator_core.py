@@ -262,29 +262,16 @@ class ConstraintAnalyzer:
 
         # Check jurisdictional conflict and cross-discipline homonym collisions
         cfg_domain = str(self.config.get("target_domain", "")).lower()
-        combined_context = f"{target_domain.lower()} {raw_input.lower()} {cfg_domain}"
-        is_indian_tax = any(k in combined_context for k in [
-            "indian", "india", "cgst", "sgst", "igst", "itat", "gstr", "cbic", "cbdt", "16(4)", "194q"
-        ]) or ("tax" in combined_context and ("gst" in combined_context or "indian" in combined_context))
-
-        if is_indian_tax:
-            # Foreign tax jurisdictions that pollute Indian tax queries
-            foreign_jurisdictions = [
-                "uzbekistan", "uzbek", "united states", "internal revenue service", "irs ", "subpart rr",
-                "45q", "australia", "australian", "hmrc", "iras", "singapore tax", "south africa", "canadian tax",
-                "republic of uzbekistan"
-            ]
-            if any(fj in full_content for fj in foreign_jurisdictions):
-                return False
-
-            # Biomedical, biochemical, and physical science homonym collisions (e.g. GST = Glutathione S-transferase)
-            biomed_physics_collisions = [
-                "glutathione", "s-transferase", "nrf2", "fistula", "hemelb", "molecular dynamics",
-                "docking", "arteriovenous", "cmip6", "ipcc", "climate change", "carbon storage",
-                "carbon sequestration", "therapeutic", "biomedical", "cardiac", "retina"
-            ]
-            if any(bp in full_content for bp in biomed_physics_collisions):
-                return False
+        from core.discipline_matrix import is_content_discipline_compatible
+        compat, reason = is_content_discipline_compatible(
+            content=full_content,
+            domain=target_domain,
+            raw_input=raw_input or cfg_domain,
+            title=title,
+            url=url
+        )
+        if not compat:
+            return False
 
         stop_words = {
             "the", "and", "for", "with", "from", "that", "this", "are", "was", "not", "but",

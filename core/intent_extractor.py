@@ -62,10 +62,18 @@ Good example for "code translation Python to C dataset":
    "HumanEval-X Python C pairs", "code migration Python C parallel corpus"]
 
 Rules for anti_domains:
-- These must be topics that share vocabulary with this request but are
-  completely unrelated fields
+- These must be topics, scientific fields, or concepts that share vocabulary with
+  this request but belong to completely different disciplines or incompatible jurisdictions.
+- Actively check every acronym, library name, framework, or keyword for homonym collisions:
+  * Acronyms (e.g. GST = Glutathione S-Transferase vs Goods and Services Tax; CAN = controller area network vs tin cans; SEC = football conference vs securities filings; CAT = feline vs CT scan)
+  * Polysemy & dual meanings (e.g. Rust language vs plant fungus/corrosion; Pandas dataframe vs giant panda bear; Go programming vs board game; Transformer attention vs electrical substation; Swift iOS vs bird/literature)
+  * Incompatible jurisdictions (e.g. if asking for Indian law, exclude Uzbekistan, US, UK tax)
 - Lower-case all items
-- Max 15 items
+- 5 to 15 items
+Good example for "Rust async tokio concurrency dataset":
+  ["plant pathology", "wheat rust fungus", "puccinia", "corrosion metallurgy", "iron oxidation"]
+Good example for "Indian GST ITC reconciliation under Section 16(4)":
+  ["glutathione s-transferase", "nrf2 enzyme", "uzbekistan vat", "irs section 45q", "arteriovenous fistula"]
 Good example for "sentiment analysis":
   ["financial market sentiment index", "chemistry analysis", "geological survey"]
 Good example for "image segmentation":
@@ -222,32 +230,25 @@ async def extract_intent(
         data["specialized_queries"] = fallback_queries
 
     # --- Post-process: clean up lists ---
-    raw_lower = raw_input.lower()
-    domain_lower = str(data.get("domain", "")).lower()
-    combined_check = f"{raw_lower} {domain_lower}"
-    is_indian_tax = any(k in combined_check for k in [
-        "indian", "india", "cgst", "sgst", "igst", "itat", "gstr", "cbic", "cbdt", "16(4)", "194q"
-    ]) or ("tax" in combined_check and ("gst" in combined_check or "indian" in combined_check))
-
+    from core.discipline_matrix import get_polysemy_anti_domains, anchor_query
     anti_domains = [a.lower().strip() for a in data.get("anti_domains", [])]
-    if is_indian_tax:
-        tax_anti_domains = [
-            "glutathione", "s-transferase", "nrf2", "fistula", "hemelb",
-            "uzbekistan", "united states", "irs", "45q", "carbon storage",
-            "australia", "hmrc"
-        ]
-        for term in tax_anti_domains:
-            if term not in anti_domains:
-                anti_domains.append(term)
+    auto_anti = get_polysemy_anti_domains(data.get("domain", ""), raw_input=raw_input)
+    for term in auto_anti:
+        if term not in anti_domains:
+            anti_domains.append(term)
 
     anti_domains = anti_domains[:_MAX_ANTI_DOMAINS]
     anti_domains = list(dict.fromkeys(anti_domains))  # deduplicate, preserve order
 
-    queries = [q.strip() for q in data.get("specialized_queries", []) if q.strip()]
+    raw_queries = [q.strip() for q in data.get("specialized_queries", []) if q.strip()]
+    anchored_queries = [
+        anchor_query(q, data.get("domain", ""), raw_input=raw_input)
+        for q in raw_queries
+    ]
     if _FALLBACK_ON_ERROR:
-        queries = [q[:_MAX_QUERY_LEN].strip() for q in queries]  # Truncate cleanly
+        queries = [q[:_MAX_QUERY_LEN].strip() for q in anchored_queries]  # Truncate cleanly
     else:
-        queries = [q for q in queries if len(q) <= _MAX_QUERY_LEN]  # Discard as per default test expectations
+        queries = [q for q in anchored_queries if len(q) <= _MAX_QUERY_LEN]  # Discard as per default test expectations
     queries = list(dict.fromkeys(queries))  # deduplicate
     # Remove any query that contains an anti-domain term (self-sabotage guard)
     queries = [

@@ -309,30 +309,19 @@ class FilteringPipeline:
         # Cross-jurisdiction and scientific homonym collision guard
         target_domain = getattr(intent, 'domain', '') or ''
         raw_input = getattr(intent, 'raw_input', '') or ''
-        combined_ctx = f"{target_domain} {raw_input}".lower()
-        is_indian_tax = any(k in combined_ctx for k in [
-            "indian", "india", "cgst", "sgst", "igst", "itat", "gstr", "cbic", "cbdt", "16(4)", "194q"
-        ]) or ("tax" in combined_ctx and ("gst" in combined_ctx or "indian" in combined_ctx))
-        if is_indian_tax:
-            content_lower = content_text.lower()
-            url_lower = (getattr(content, 'url', None) or '').lower()
-            full_check = f"{url_lower} {content_lower[:4000]}"
-            foreign_jurisdictions = [
-                "uzbekistan", "uzbek", "united states", "internal revenue service", "irs ", "subpart rr",
-                "45q", "australia", "australian", "hmrc", "iras", "singapore tax", "south africa", "canadian tax",
-                "republic of uzbekistan"
-            ]
-            biomed_collisions = [
-                "glutathione", "s-transferase", "nrf2", "fistula", "hemelb", "molecular dynamics",
-                "docking", "arteriovenous", "cmip6", "ipcc", "climate change", "carbon storage",
-                "carbon sequestration", "therapeutic", "biomedical", "cardiac", "retina"
-            ]
-            if any(fj in full_check for fj in foreign_jurisdictions) or any(bc in full_check for bc in biomed_collisions):
-                sample.issues.append("domain_jurisdiction_or_homonym_collision")
-                sample.filter_reason = "domain_jurisdiction_collision"
-                sample.passed = False
-                if not return_all:
-                    return None
+        from core.discipline_matrix import is_content_discipline_compatible
+        compat, reason = is_content_discipline_compatible(
+            content=content_text,
+            domain=target_domain,
+            raw_input=raw_input,
+            url=getattr(content, 'url', None) or ''
+        )
+        if not compat:
+            sample.issues.append(reason)
+            sample.filter_reason = "cross_discipline_collision"
+            sample.passed = False
+            if not return_all:
+                return None
 
         # Relevance scoring
         sample.relevance_score = llm_judge_score

@@ -64,34 +64,22 @@ def _is_chunk_domain_relevant(
     generation_brief: dict | None = None,
     config: dict | None = None,
 ) -> bool:
-    """Return False if text contains conflicting foreign jurisdictions or scientific homonyms."""
+    """Return False if text contains conflicting cross-discipline or homonym collisions."""
     if not text:
         return False
-    import json
-    combined_ctx = f"{target_domain} {json.dumps(generation_brief or {})} {json.dumps(config or {}) if config else ''}".lower()
-    is_indian_tax = any(k in combined_ctx for k in [
-        "indian", "india", "cgst", "sgst", "igst", "itat", "gstr", "cbic", "cbdt", "16(4)", "194q"
-    ]) or ("tax" in combined_ctx and ("gst" in combined_ctx or "indian" in combined_ctx))
+    from core.discipline_matrix import is_content_discipline_compatible
+    raw_input = ""
+    if generation_brief and isinstance(generation_brief, dict):
+        raw_input = str(generation_brief.get("user_prompt", "") or generation_brief.get("raw_input", ""))
+    if not raw_input and config and isinstance(config, dict):
+        raw_input = str(config.get("raw_input", ""))
 
-    if is_indian_tax:
-        text_lower = text.lower()
-        foreign_jurisdictions = [
-            "uzbekistan", "uzbek", "united states", "internal revenue service", "irs ", "subpart rr",
-            "45q", "australia", "australian", "hmrc", "iras", "singapore tax", "south africa", "canadian tax",
-            "republic of uzbekistan"
-        ]
-        if any(fj in text_lower for fj in foreign_jurisdictions):
-            return False
-
-        biomed_physics_collisions = [
-            "glutathione", "s-transferase", "nrf2", "fistula", "hemelb", "molecular dynamics",
-            "docking", "arteriovenous", "cmip6", "ipcc", "climate change", "carbon storage",
-            "carbon sequestration", "therapeutic", "biomedical", "cardiac", "retina"
-        ]
-        if any(bp in text_lower for bp in biomed_physics_collisions):
-            return False
-
-    return True
+    compat, _ = is_content_discipline_compatible(
+        content=text,
+        domain=target_domain,
+        raw_input=raw_input
+    )
+    return compat
 
 
 def _sanitize_target_domain(raw: str) -> str:

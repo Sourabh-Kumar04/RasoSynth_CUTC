@@ -1229,7 +1229,8 @@ class DiscoveryPipeline:
             extraction.method, extraction.model, extraction.confidence,
             extraction.query, len(query),
         )
-        sanitised_query = extraction.query
+        from core.discipline_matrix import anchor_query
+        sanitised_query = anchor_query(extraction.query, target_domain, raw_input=self.config.get("raw_input", ""))
 
         # ── Defensively sanitise target_domain ──────────────────────────
         _DIRTY_MARKERS = ("Dataset Name:", "Goal:", "Domains:", "Target Size:")
