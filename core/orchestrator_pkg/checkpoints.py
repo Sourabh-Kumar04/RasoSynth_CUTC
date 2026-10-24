@@ -121,6 +121,7 @@ class CheckpointStore:
                     self.postgres_url,
                     min_size=2,
                     max_size=10,
+                    statement_cache_size=0,
                 )
                 await self._ensure_tables()
                 logger.info("Checkpoint store connected to PostgreSQL")

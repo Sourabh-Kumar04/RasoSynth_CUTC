@@ -241,7 +241,12 @@ class DatabaseManager:
     """Database manager for async SQLAlchemy operations."""
 
     def __init__(self, database_url: str):
-        self.engine = create_async_engine(database_url, echo=False)
+        connect_args = {}
+        if "postgresql" in database_url:
+            # Disable prepared statement caching for Supabase Connection Pooler / pgbouncer
+            connect_args["statement_cache_size"] = 0
+            connect_args["prepared_statement_cache_size"] = 0
+        self.engine = create_async_engine(database_url, echo=False, connect_args=connect_args)
         self.session_maker = async_sessionmaker(self.engine, class_=AsyncSession, expire_on_commit=False)
 
     async def close(self):
