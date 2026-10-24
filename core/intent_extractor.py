@@ -86,7 +86,7 @@ specialized queries (e.g., a single ambiguous word with no context).
 
 async def extract_intent(
     raw_input: str,
-    provider_router: ProviderRouter,
+    provider_router: Optional[ProviderRouter] = None,
     redis_client: Optional[Any] = None,
 ) -> UserIntent:
     """
@@ -108,17 +108,20 @@ async def extract_intent(
             logger.warning(f"Redis read failed (non-fatal): {cache_err}")
 
     if provider_router is None:
+        poly_anti = get_polysemy_anti_domains(raw_input, raw_input)
+        raw_queries = [
+            f"{raw_input} dataset",
+            f"{raw_input} benchmarks",
+            f"{raw_input} guide",
+        ]
+        anchored_queries = [anchor_query(q, raw_input, raw_input=raw_input) for q in raw_queries]
         return UserIntent(
             primary_task="instruction_tuning",
             domain=raw_input,
             modality="text",
-            anti_domains=[],
+            anti_domains=poly_anti,
             key_entities=[w for w in raw_input.split() if len(w) > 3],
-            specialized_queries=[
-                f"{raw_input} dataset",
-                f"{raw_input} benchmarks",
-                f"{raw_input} guide",
-            ],
+            specialized_queries=anchored_queries,
             constraints=[],
             output_format="jsonl",
             confidence=0.85,

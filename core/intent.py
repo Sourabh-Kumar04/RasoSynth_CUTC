@@ -57,13 +57,16 @@ class UserIntent:
     ) -> "UserIntent":
         """Build a complete UserIntent when LLM extraction fails."""
         raw = (raw_input or "").strip() or "general"
+        from core.discipline_matrix import get_polysemy_anti_domains, anchor_query
+        poly_anti = get_polysemy_anti_domains(raw, raw)
+        anchored_q = [anchor_query(raw, raw, raw_input=raw)]
         return cls(
             primary_task=primary_task,
             domain=raw,
             modality="text",
-            anti_domains=[],
+            anti_domains=poly_anti,
             key_entities=[raw] if raw != "general" else [],
-            specialized_queries=[raw],
+            specialized_queries=anchored_q,
             constraints=[],
             output_format="jsonl",
             confidence=confidence,

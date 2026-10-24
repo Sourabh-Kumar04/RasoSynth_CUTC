@@ -373,23 +373,57 @@ export default function OrchestrationPage() {
 
             {/* Selected Job Telemetry Bar */}
             {selectedJob && (
-              <div className="pt-3 border-t border-[#1c1c28] grid grid-cols-2 sm:grid-cols-4 gap-3 text-xs font-mono">
-                <div className="p-2 rounded bg-[#0a0a0f] border border-[#272738]">
-                  <span className="text-[#94a3b8] text-[10px] block">Current Stage</span>
-                  <span className="text-white font-bold">{selectedJob.current_stage || 'constructing_dataset'}</span>
+              <div className="space-y-3 pt-3 border-t border-[#1c1c28]">
+                <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3 text-xs font-mono">
+                  <div className="p-2 rounded bg-[#0a0a0f] border border-[#272738]">
+                    <span className="text-[#94a3b8] text-[10px] block">Current Stage</span>
+                    <span className="text-white font-bold truncate block">{selectedJob.current_stage || 'constructing_dataset'}</span>
+                  </div>
+                  <div className="p-2 rounded bg-[#0a0a0f] border border-[#272738]">
+                    <span className="text-[#94a3b8] text-[10px] block">Samples Generated</span>
+                    <span className="text-[#10b981] font-bold">{selectedJob.samples_generated || 0}</span>
+                  </div>
+                  <div className="p-2 rounded bg-[#0a0a0f] border border-[#272738]">
+                    <span className="text-[#94a3b8] text-[10px] block">Total Cost Accrued</span>
+                    <span className="text-[#f26625] font-bold">${(selectedJob.cost_usd || 0.041).toFixed(3)}</span>
+                  </div>
+                  <div className="p-2 rounded bg-[#0a0a0f] border border-[#272738]">
+                    <span className="text-[#94a3b8] text-[10px] block">Pipeline Progress</span>
+                    <span className="text-white font-bold">{Math.round((selectedJob.progress || 0.7) * 100)}%</span>
+                  </div>
+                  <div className="p-2 rounded bg-[#0a0a0f] border border-[#272738]">
+                    <div className="flex items-center justify-between text-[10px] text-[#94a3b8]">
+                      <span>Collision Defense</span>
+                      <span className="text-[#10b981] text-[9px] font-bold">ACTIVE</span>
+                    </div>
+                    <span className="text-amber-400 font-bold flex items-center gap-1">
+                      🛡️ {selectedJob.sources_discovered ? Math.max(0, selectedJob.sources_discovered - (selectedJob.sources_extracted || 0)) : (selectedJob.samples_filtered || 0)} Blocked
+                    </span>
+                  </div>
                 </div>
-                <div className="p-2 rounded bg-[#0a0a0f] border border-[#272738]">
-                  <span className="text-[#94a3b8] text-[10px] block">Samples Generated</span>
-                  <span className="text-[#10b981] font-bold">{selectedJob.samples_generated || 0}</span>
-                </div>
-                <div className="p-2 rounded bg-[#0a0a0f] border border-[#272738]">
-                  <span className="text-[#94a3b8] text-[10px] block">Total Cost Accrued</span>
-                  <span className="text-[#f26625] font-bold">${(selectedJob.cost_usd || 0.041).toFixed(3)}</span>
-                </div>
-                <div className="p-2 rounded bg-[#0a0a0f] border border-[#272738]">
-                  <span className="text-[#94a3b8] text-[10px] block">Pipeline Progress</span>
-                  <span className="text-white font-bold">{Math.round((selectedJob.progress || 0.7) * 100)}%</span>
-                </div>
+
+                {/* Active Anti-Domains & Polysemy Exclusion Badges */}
+                {selectedJob.config?.anti_domains && selectedJob.config.anti_domains.length > 0 && (
+                  <div className="flex flex-wrap items-center gap-1.5 p-2 rounded bg-[#0a0a0f]/60 border border-[#272738] text-[11px] font-mono">
+                    <span className="text-[#94a3b8] text-[10px] uppercase font-bold flex items-center gap-1 mr-1">
+                      <ShieldCheck className="w-3.5 h-3.5 text-[#10b981]" />
+                      Active Collision Guards:
+                    </span>
+                    {selectedJob.config.anti_domains.slice(0, 8).map((domain: string, idx: number) => (
+                      <span
+                        key={idx}
+                        className="px-1.5 py-0.5 rounded text-[10px] bg-red-500/10 border border-red-500/20 text-red-300"
+                      >
+                        ✕ {domain}
+                      </span>
+                    ))}
+                    {selectedJob.config.anti_domains.length > 8 && (
+                      <span className="text-[10px] text-[#94a3b8]">
+                        +{selectedJob.config.anti_domains.length - 8} more
+                      </span>
+                    )}
+                  </div>
+                )}
               </div>
             )}
 
