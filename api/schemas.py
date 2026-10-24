@@ -160,6 +160,7 @@ class JobRequest(BaseModel):
     region_restrictions: list[str] = Field(default_factory=list)
     allowed_domains: list[str] = Field(default_factory=list)
     blocked_domains: list[str] = Field(default_factory=list)
+    anti_domains: list[str] = Field(default_factory=list, description="Explicit collision terms and anti-domains to exclude")
     licensing_requirements: LicenseRequirement = Field(default=LicenseRequirement.ANY)
     toxicity_threshold: float = Field(default=0.7, ge=0.0, le=1.0)
     dedup_threshold: float = Field(default=0.85, ge=0.0, le=1.0)

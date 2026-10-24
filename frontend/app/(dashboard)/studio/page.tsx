@@ -15,6 +15,7 @@ import {
   CheckCircle2,
   ExternalLink,
   Layers,
+  ShieldCheck,
 } from 'lucide-react'
 import { clsx } from 'clsx'
 import { Button } from '@/components/ui/button'
@@ -35,6 +36,7 @@ const INDUSTRY_PRESETS = [
     scriptMode: 'romanized',
     formalityRegister: 'formal',
     preservedTerms: ['ITC', 'GSTR-3B', 'Section 16(4)', 'Challan'],
+    antiDomains: ['glutathione', 's-transferase', 'nrf2', 'uzbekistan', 'irs 45q', 'arteriovenous fistula'],
     size: 20000,
     sources: ['AI Kosh', 'OpenML', 'India.gov.in'],
   },
@@ -49,6 +51,7 @@ const INDUSTRY_PRESETS = [
     scriptMode: 'native',
     formalityRegister: 'formal',
     preservedTerms: ['NACA 0012', 'Mach 0.82', 'FAR §25.107', 'Supercritical Airfoil', 'Lift-to-Drag (L/D)'],
+    antiDomains: ['undergraduate textbook', 'retracted nasa reports', 'superseded far revisions'],
     size: 15000,
     sources: ['NASA Technical Reports', 'FAA Regulations', 'AIAA'],
   },
@@ -63,6 +66,7 @@ const INDUSTRY_PRESETS = [
     scriptMode: 'native',
     formalityRegister: 'formal',
     parallelBilingual: true,
+    antiDomains: ['machine-translated pairs without human editing', 'unsupervised medical diagnosis'],
     size: 25000,
     sources: ['Bhashini', 'AI Kosh', 'HuggingFace'],
   },
@@ -74,6 +78,7 @@ const INDUSTRY_PRESETS = [
     prompt: 'Generate a code-first SFT dataset for Python software engineering tasks at production quality. Cover: (1) algorithmically optimal solutions to competitive-programming-grade problems with time-space complexity proof; (2) async/await concurrency patterns with asyncio and structured concurrency; (3) type-annotated API design with Pydantic v2 and FastAPI; (4) data-pipeline construction with pandas, polars, and Apache Arrow; (5) ML engineering utilities including custom PyTorch training loops and HuggingFace Trainer extensions. Each sample: instruction is a realistic engineering task with explicit acceptance criteria and constraints; response includes fully runnable code with docstrings, PEP 484 type hints, and inline comments explaining non-obvious design decisions. Apply difficulty split: (easy) single-function implementations with clear spec; (medium) module-level design with pytest test suite covering edge cases; (hard) system-design-level problems requiring architectural reasoning and trade-off justification. Anti-domain: exclude trivial Hello World examples, deprecated Python 2 syntax, and any hallucinated library APIs not verifiable in official PyPI documentation.',
     type: 'coding',
     language: 'en',
+    antiDomains: ['hello world', 'python 2 syntax', 'hallucinated pypi apis', 'giant panda bear'],
     size: 15000,
     sources: ['HuggingFace', 'GitHub', 'ArXiv'],
   },
@@ -85,6 +90,7 @@ const INDUSTRY_PRESETS = [
     prompt: 'Synthesize a chain-of-thought clinical reasoning dataset following the diagnostic framework taught in evidence-based medicine residency programs. Cover: (1) systematic differential-diagnosis generation using Bayesian pre-test probability reasoning and illness-script matching; (2) interpretation of lab panels (CBC, CMP, LFTs, troponin curves, ABG) in full clinical context; (3) drug-drug interaction analysis using Beers Criteria-style structured reasoning; (4) SOAP note construction for complex multi-morbidity presentations. Difficulty tiers: (easy) single-system presentations with classic textbook findings and a clear primary diagnosis; (medium) atypical presentations requiring exclusion reasoning and confirmatory test selection; (hard) critically ill multi-system cases with time-sensitive decision-making under diagnostic uncertainty. Each sample: instruction presents a de-identified patient vignette with vitals, HPI, and relevant labs; response applies a structured reasoning chain — illness script → problem representation → differential ranking → diagnostic workup plan → treatment rationale. Ground responses in UpToDate-equivalent clinical guidelines (AHA, ATS, IDSA, ACC). Anti-domain: never generate specific drug dosages without advisory disclaimers; exclude any case vignette containing real or identifiable patient information.',
     type: 'reasoning',
     language: 'en',
+    antiDomains: ['real patient identifiers', 'prescriptions without disclaimers', 'tax law', 'software bugs'],
     size: 10000,
     sources: ['PubMed', 'ArXiv', 'Zenodo'],
   },
@@ -117,6 +123,7 @@ function StudioContent() {
   const [enableCotReasoning, setEnableCotReasoning] = useState<boolean>(false)
   const [curriculumSort, setCurriculumSort] = useState<'none' | 'ascending' | 'staged_curriculum' | 'replay_interleaved'>('none')
   const [preservedTermsInput, setPreservedTermsInput] = useState<string>('')
+  const [antiDomainsInput, setAntiDomainsInput] = useState<string>('glutathione, s-transferase, nrf2, uzbekistan, irs 45q, arteriovenous fistula')
   const [parallelBilingual, setParallelBilingual] = useState<boolean>(false)
   const [datasetSize, setDatasetSize] = useState(10000)
   const [generationMode, setGenerationMode] = useState<'grounded' | 'synthetic'>('grounded')
@@ -189,6 +196,11 @@ function StudioContent() {
         const allTerms = Array.from(new Set([...mergedTerms, ...intentEntities]))
         setPreservedTermsInput(allTerms.join(', '))
 
+        const intentAnti: string[] = previewRes.query_plan?.anti_domains || previewRes.query_plan?.intent?.anti_domains || []
+        if (intentAnti.length > 0) {
+          setAntiDomainsInput(intentAnti.join(', '))
+        }
+
         if (Array.isArray(previewRes.sources) && previewRes.sources.length > 0) {
           setDiscoveredSources(previewRes.sources.map((s: any) => ({
             name: s.name || s.domain || 'Verified Domain Repository',
@@ -228,6 +240,11 @@ function StudioContent() {
         .map((t) => t.trim())
         .filter(Boolean)
 
+      const antiDomains = antiDomainsInput
+        .split(',')
+        .map((t) => t.trim())
+        .filter(Boolean)
+
       const payload: Record<string, any> = {
         target_domain: prompt.trim() || targetDomain,
         dataset_name: targetDomain,
@@ -247,6 +264,7 @@ function StudioContent() {
         enable_cot_reasoning: enableCotReasoning,
         curriculum_sort: curriculumSort,
         preserved_terms: preservedTerms,
+        ...(antiDomains.length > 0 ? { anti_domains: antiDomains } : {}),
         parallel_bilingual: parallelBilingual,
         dataset_size: datasetSize,
         quality_level: 'standard',
@@ -326,6 +344,11 @@ function StudioContent() {
                   if ((preset as any).formalityRegister) setFormalityRegister((preset as any).formalityRegister)
                   if ((preset as any).preservedTerms) {
                     setPreservedTermsInput(((preset as any).preservedTerms || []).join(', '))
+                  }
+                  if ((preset as any).antiDomains) {
+                    setAntiDomainsInput(((preset as any).antiDomains || []).join(', '))
+                  } else {
+                    setAntiDomainsInput('')
                   }
                   if ((preset as any).parallelBilingual !== undefined) {
                     setParallelBilingual(Boolean((preset as any).parallelBilingual))
@@ -495,9 +518,15 @@ function StudioContent() {
             {/* Discovered Authoritative Sources */}
             {discoveredSources.length > 0 && (
               <div className="space-y-1.5 pt-2 border-t border-[#1c1c28]">
-                <span className="text-[10px] font-mono uppercase text-[#94a3b8] block">
-                  Authoritative Grounding Sources ({discoveredSources.length}):
-                </span>
+                <div className="flex items-center justify-between">
+                  <span className="text-[10px] font-mono uppercase text-[#94a3b8]">
+                    Authoritative Grounding Sources ({discoveredSources.length}):
+                  </span>
+                  <span className="px-1.5 py-0.5 rounded-sm bg-emerald-950/60 border border-emerald-800/60 text-[9px] font-mono text-emerald-400 flex items-center gap-1">
+                    <ShieldCheck className="w-3 h-3 text-emerald-400" />
+                    Polysemy Filtered
+                  </span>
+                </div>
                 <div className="flex flex-wrap gap-1.5">
                   {discoveredSources.map((s, idx) => (
                     <span
@@ -760,6 +789,25 @@ function StudioContent() {
                         <option value="neutral">Professional Neutral</option>
                         <option value="casual">Casual (तुम)</option>
                       </select>
+                    </div>
+
+                    <div>
+                      <div className="flex items-center justify-between mb-1">
+                        <label className="text-[10px] font-mono uppercase text-[#94a3b8] flex items-center gap-1.5">
+                          <ShieldCheck className="w-3.5 h-3.5 text-emerald-400" />
+                          Anti-Domains &amp; Homonym Exclusions
+                        </label>
+                        <span className="text-[9px] font-mono text-emerald-400">Polysemy Guard Active</span>
+                      </div>
+                      <Input
+                        value={antiDomainsInput}
+                        onChange={(e) => setAntiDomainsInput(e.target.value)}
+                        placeholder="e.g. glutathione, puccinia, uzbekistan (comma-separated)"
+                        className="bg-[#0a0a0f] border-[#272738] text-xs font-mono text-white h-8"
+                      />
+                      <p className="text-[10px] font-mono text-[#64748b] mt-1">
+                        Excludes cross-discipline collisions, foreign statutory codes, and unrelated scientific homonyms.
+                      </p>
                     </div>
 
                     {/* Checkbox Options */}

@@ -1777,6 +1777,8 @@ async def preview_job_sources(request: SourcePreviewRequest):
         ):
             if source.url in seen:
                 continue
+            if orchestrator and hasattr(orchestrator, "_is_source_relevant") and not orchestrator._is_source_relevant(source, intent):
+                continue
             seen.add(source.url)
             metadata = source.metadata or {}
             reported_license = source.license or metadata.get("license") or metadata.get("license_title")
