@@ -101,7 +101,7 @@ async def test_filtering_pipeline_rejects_foreign_and_homonyms():
     uzbek_sample = MockContent("Uzbekistan Tax Code 2020 reforms for VAT administration.")
     res_uzbek = await pipeline.filter(uzbek_sample, intent, return_all=True)
     assert not res_uzbek.passed
-    assert "anti_domain" in res_uzbek.filter_reason or "domain_jurisdiction" in res_uzbek.filter_reason
+    assert any(k in res_uzbek.filter_reason for k in ["anti_domain", "domain_jurisdiction", "cross_discipline"])
 
     biomed_sample = MockContent("Glutathione S-transferase (GST) polymorphism analysis in clinical pharmacology.")
     res_biomed = await pipeline.filter(biomed_sample, intent, return_all=True)

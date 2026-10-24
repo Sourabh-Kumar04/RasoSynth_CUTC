@@ -276,10 +276,11 @@ class ConstraintAnalyzer:
         stop_words = {
             "the", "and", "for", "with", "from", "that", "this", "are", "was", "not", "but",
             "all", "dataset", "data", "file", "download", "train", "synthetic", "example",
-            "examples", "using", "into", "over", "under", "about", "such"
+            "examples", "using", "into", "over", "under", "about", "such", "synthesize", "generate"
         }
+        context_for_keywords = f"{target_domain} {raw_input}".lower() if raw_input else target_domain.lower()
         domain_keywords = [
-            w for w in re.split(r'\W+', target_domain.lower())
+            w for w in re.split(r'\W+', context_for_keywords)
             if len(w) >= 3 and w not in stop_words
         ]
 

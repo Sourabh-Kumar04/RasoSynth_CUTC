@@ -6,7 +6,7 @@ vs dataframe library) across discovery, filtering, and dataset construction.
 """
 from enum import Enum
 import re
-from typing import Optional, Tuple, List, Dict, Set
+from typing import Optional, Tuple, List, Dict, Set, Any
 
 
 class Discipline(str, Enum):
@@ -258,7 +258,7 @@ def detect_discipline(domain: str, raw_input: str = "") -> Discipline:
 
 
 def get_polysemy_anti_domains(domain: str, raw_input: str = "") -> List[str]:
-    """Extract applicable anti-domains for polysemous terms and broad disciplines."""
+    """Extract applicable anti-domains for polysemous terms and jurisdiction constraints."""
     discipline = detect_discipline(domain, raw_input)
     combined = f"{str(domain).lower()} {str(raw_input).lower()}"
     anti_domains: List[str] = []
@@ -270,11 +270,7 @@ def get_polysemy_anti_domains(domain: str, raw_input: str = "") -> List[str]:
             if discipline in disc_map:
                 anti_domains.extend(disc_map[discipline].get("forbidden", []))
 
-    # 2. Broad discipline collisions
-    if discipline in _DISCIPLINE_COLLISIONS:
-        anti_domains.extend(_DISCIPLINE_COLLISIONS[discipline])
-
-    # 3. Jurisdictional isolation for tax/legal queries
+    # 2. Jurisdictional isolation for tax/legal queries
     if discipline == Discipline.LAW_TAX:
         is_indian = any(k in combined for k in ["indian", "india", "cgst", "sgst", "igst", "itat", "gstr", "cbic", "cbdt", "16(4)", "194q"])
         if is_indian:
@@ -293,7 +289,7 @@ def get_polysemy_anti_domains(domain: str, raw_input: str = "") -> List[str]:
 
 def anchor_query(query: str, domain: str, raw_input: str = "") -> str:
     """Disambiguate short or ambiguous query terms with a discipline anchor."""
-    discipline = detect_discipline(domain, raw_input)
+    discipline = detect_discipline(domain, raw_input or query)
     q_lower = query.lower().strip()
     tokens = set(re.findall(r'\b[a-z0-9_-]+\b', q_lower))
 
@@ -301,8 +297,11 @@ def anchor_query(query: str, domain: str, raw_input: str = "") -> str:
         if term in tokens:
             if discipline in disc_map:
                 anchor = disc_map[discipline].get("anchor")
-                if anchor and not any(part in q_lower for part in anchor.split()[:2]):
-                    return f"{query} {anchor}"
+                if anchor:
+                    # Check if the disambiguating qualifier keywords (excluding the term itself) are already present
+                    qualifiers = [p for p in anchor.split() if p.lower() != term]
+                    if not any(q in q_lower for q in qualifiers[:2]):
+                        return f"{query} {anchor}"
 
     return query
 
@@ -321,14 +320,19 @@ def is_content_discipline_compatible(
     if not content and not title:
         return True, None
 
-    anti_terms = get_polysemy_anti_domains(domain, raw_input)
-    if not anti_terms:
-        return True, None
-
+    discipline = detect_discipline(domain, raw_input)
     check_text = f"{title.lower()} {url.lower()} {content[:4000].lower()}"
 
+    # 1. Check specific polysemy anti-domains
+    anti_terms = get_polysemy_anti_domains(domain, raw_input)
     for anti in anti_terms:
         if anti in check_text:
             return False, f"cross_discipline_collision: {anti}"
+
+    # 2. Check broad discipline collisions
+    if discipline in _DISCIPLINE_COLLISIONS:
+        for broad_anti in _DISCIPLINE_COLLISIONS[discipline]:
+            if broad_anti in check_text:
+                return False, f"broad_discipline_collision: {broad_anti}"
 
     return True, None
