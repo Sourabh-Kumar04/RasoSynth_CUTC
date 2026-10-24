@@ -243,6 +243,8 @@ class DatabaseManager:
     def __init__(self, database_url: str):
         connect_args = {}
         if "postgresql" in database_url:
+            if "sslmode=" in database_url:
+                database_url = database_url.replace("sslmode=", "ssl=")
             # Disable prepared statement caching for Supabase Connection Pooler / pgbouncer
             connect_args["statement_cache_size"] = 0
             connect_args["prepared_statement_cache_size"] = 0

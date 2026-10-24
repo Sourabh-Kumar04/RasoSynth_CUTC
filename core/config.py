@@ -104,9 +104,12 @@ class Settings(BaseSettings):
         val = str(v).strip()
         # Automatically upgrade standard connection URIs (e.g. Neon, Supabase) to asyncpg
         if val.startswith("postgres://"):
-            return val.replace("postgres://", "postgresql+asyncpg://", 1)
-        if val.startswith("postgresql://") and not val.startswith("postgresql+asyncpg://"):
-            return val.replace("postgresql://", "postgresql+asyncpg://", 1)
+            val = val.replace("postgres://", "postgresql+asyncpg://", 1)
+        elif val.startswith("postgresql://") and not val.startswith("postgresql+asyncpg://"):
+            val = val.replace("postgresql://", "postgresql+asyncpg://", 1)
+        # asyncpg requires ?ssl=... instead of ?sslmode=...
+        if "sslmode=" in val:
+            val = val.replace("sslmode=", "ssl=")
         return val
     # JWT Secret (required for security)
     jwt_secret: str = Field(default_factory=lambda: os.getenv("JWT_SECRET") or "rasosynthtune-sovereign-production-jwt-token-secret-key-32b-secure")
