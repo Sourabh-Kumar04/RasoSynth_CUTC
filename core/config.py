@@ -95,6 +95,19 @@ class Settings(BaseSettings):
         default="postgresql+asyncpg://dataset_user:dataset_pass@postgres:5432/dataset_engine",
         validation_alias=AliasChoices("postgres_url", "database_url")
     )
+
+    @field_validator("postgres_url", mode="before")
+    @classmethod
+    def normalize_postgres_url(cls, v: Optional[str]) -> str:
+        if not v:
+            return "postgresql+asyncpg://dataset_user:dataset_pass@postgres:5432/dataset_engine"
+        val = str(v).strip()
+        # Automatically upgrade standard connection URIs (e.g. Neon, Supabase) to asyncpg
+        if val.startswith("postgres://"):
+            return val.replace("postgres://", "postgresql+asyncpg://", 1)
+        if val.startswith("postgresql://") and not val.startswith("postgresql+asyncpg://"):
+            return val.replace("postgresql://", "postgresql+asyncpg://", 1)
+        return val
     # JWT Secret (required for security)
     jwt_secret: str = Field(default_factory=lambda: os.getenv("JWT_SECRET") or "rasosynthtune-sovereign-production-jwt-token-secret-key-32b-secure")
     qdrant_url: str = Field(default="http://qdrant:6333")
@@ -179,6 +192,18 @@ class Settings(BaseSettings):
 
     # Export Settings
     output_dir: str = Field(default="outputs")
+
+    @field_validator("output_dir", mode="before")
+    @classmethod
+    def detect_persistent_output_dir(cls, v: Optional[str]) -> str:
+        if v and v != "outputs":
+            return v
+        # Detect Hugging Face Spaces persistent volume mounted at /data
+        if os.path.isdir("/data") and os.access("/data", os.W_OK):
+            persistent_out = "/data/outputs"
+            os.makedirs(persistent_out, exist_ok=True)
+            return persistent_out
+        return v or "outputs"
 
     # S3 Settings (for export)
     s3_bucket: Optional[str] = Field(default=None)

@@ -493,8 +493,10 @@ async def lifespan(app: FastAPI):
 
     if db is None:
         try:
-            os.makedirs("outputs", exist_ok=True)
-            sqlite_url = f"sqlite+aiosqlite:///{os.path.abspath('outputs/rasosynthtune.db')}"
+            persistent_base = "/data" if os.path.isdir("/data") and os.access("/data", os.W_OK) else os.getenv("PERSISTENT_STORAGE_PATH", "outputs")
+            os.makedirs(persistent_base, exist_ok=True)
+            db_path = os.path.abspath(os.path.join(persistent_base, "rasosynthtune.db"))
+            sqlite_url = f"sqlite+aiosqlite:///{db_path}"
             db = await AsyncDB.create(sqlite_url)
             logger.info(f"  ✓ AsyncDB initialized with SQLite fallback ({sqlite_url})")
         except Exception as sqle:
