@@ -26,7 +26,8 @@ _DISCIPLINE_INDICATORS: Dict[Discipline, Set[str]] = {
         "rust", "golang", "c++", "java", "machine learning", "deep learning", "ai", "llm",
         "nlp", "computer vision", "neural network", "transformer", "sft", "rlhf", "dataset",
         "algorithm", "api", "backend", "frontend", "database", "sql", "linux", "git",
-        "docker", "kubernetes", "async", "compiler", "framework", "library", "microservice"
+        "docker", "kubernetes", "async", "compiler", "framework", "library", "microservice",
+        "data science", "data engineering", "pandas", "dataframe"
     },
     Discipline.LAW_TAX: {
         "tax", "taxation", "law", "legal", "statute", "gst", "vat", "statutory", "compliance",
