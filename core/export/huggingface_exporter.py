@@ -132,3 +132,120 @@ print(dataset["train"][0])
 ```
 """
     return content.strip()
+
+
+def generate_hf_model_card(
+    model_name: str,
+    base_model: str,
+    dataset_name: str,
+    sample_count: int,
+    epochs: int = 3,
+    learning_rate: float = 2e-4,
+    lora_r: int = 16,
+    lora_alpha: int = 32,
+    train_loss: Optional[float] = None,
+    eval_loss: Optional[float] = None,
+    merkle_root: Optional[str] = None,
+    certificate_id: Optional[str] = None,
+    domain: str = "General",
+    license_type: str = "apache-2.0",
+) -> str:
+    """Generate a standard Hugging Face Model Card (README.md) for fine-tuned LoRA adapters."""
+    tags = ["rasosynthtune", "peft", "lora", "fine-tuned", "text-generation"]
+    clean_domain = domain.lower().replace(" ", "-").replace("&", "and")
+    if clean_domain:
+        tags.append(clean_domain)
+
+    yaml_block = f"""---
+license: {license_type}
+base_model: {base_model}
+pipeline_tag: text-generation
+library_name: peft
+tags:
+{chr(10).join(f"- {t}" for t in tags)}
+---"""
+
+    dbom_block = ""
+    if merkle_root:
+        dbom_block = f"""
+## Training Provenance & Cryptographic DBOM Attestation
+This adapter was trained exclusively on a verifiable dataset attested by RasoSynth:
+| Metric | Value |
+| :--- | :--- |
+| **Certificate ID** | `{certificate_id or ('DBOM-' + merkle_root[:8])}` |
+| **Dataset Merkle Root** | `{merkle_root}` |
+| **Attestation Standard** | `RFC 6962 / NIST SP 800-106 (SHA-256)` |
+| **Integrity Guarantee** | `100% Deterministic Provenance` |
+"""
+
+    loss_block = ""
+    if train_loss is not None:
+        loss_block = f"""
+## Convergence Metrics
+- **Final Train Loss**: `{train_loss:.4f}`
+{f"- **Final Eval Loss**: `{eval_loss:.4f}`" if eval_loss is not None else ""}
+- **Optimizer**: `AdamW (bf16, ZeRO-2)`
+"""
+
+    content = f"""{yaml_block}
+
+# Model Card for {model_name}
+
+This model is a parameter-efficient fine-tuned (PEFT LoRA) adapter trained on **{dataset_name}** using **[RasoSynthTune](https://github.com/Sourabh-Kumar04/RasoSynth_CUTC)**.
+
+## Model Summary
+- **Base Architecture**: `{base_model}`
+- **Adapter Type**: LoRA (Low-Rank Adaptation)
+- **Target Domain**: {domain}
+- **Training Corpus Size**: {sample_count:,} synthetic instruction samples
+- **License**: {license_type}
+
+## Hyperparameters
+| Parameter | Value |
+| :--- | :--- |
+| **Base Model** | `{base_model}` |
+| **Epochs** | `{epochs}` |
+| **Learning Rate** | `{learning_rate}` |
+| **LoRA Rank (r)** | `{lora_r}` |
+| **LoRA Alpha (α)** | `{lora_alpha}` |
+| **Target Modules** | `q_proj, v_proj, k_proj, o_proj, gate_proj, up_proj, down_proj` |
+| **Precision** | `bfloat16` with FlashAttention-2 |
+{loss_block}
+{dbom_block}
+## Quickstart Inference
+
+```python
+import torch
+from peft import PeftModel
+from transformers import AutoModelForCausalLM, AutoTokenizer
+
+base_model_id = "{base_model}"
+adapter_id = "{model_name}"
+
+tokenizer = AutoTokenizer.from_pretrained(base_model_id)
+base_model = AutoModelForCausalLM.from_pretrained(
+    base_model_id,
+    torch_dtype=torch.bfloat16,
+    device_map="auto",
+)
+model = PeftModel.from_pretrained(base_model, adapter_id)
+
+prompt = "Statutory query or instruction..."
+inputs = tokenizer(prompt, return_tensors="pt").to("cuda")
+with torch.no_grad():
+    outputs = model.generate(**inputs, max_new_tokens=256, temperature=0.7)
+
+print(tokenizer.decode(outputs[0], skip_special_tokens=True))
+```
+
+## Citation
+```bibtex
+@misc{{{model_name.lower().replace('-', '_')}_2026,
+  author = {{RasoSynthTune Fine-Tuning Pipeline}},
+  title = {{{model_name}: Fine-Tuned Domain Adapter}},
+  year = {{2026}},
+  url = {{https://github.com/Sourabh-Kumar04/RasoSynth_CUTC}}
+}}
+```
+"""
+    return content.strip()

@@ -145,6 +145,7 @@ export default function ReviewPage() {
   const [pausedJobs, setPausedJobs] = useState<string[]>([])
   const [showMerkleProof, setShowMerkleProof] = useState(false)
   const [diffModalItem, setDiffModalItem] = useState<ReviewItem | null>(null)
+  const [showHotkeyHud, setShowHotkeyHud] = useState(true)
 
   const { toasts, push: toast } = useToast()
   const PAGE_SIZE = 20
@@ -198,6 +199,15 @@ export default function ReviewPage() {
     return () => clearInterval(id)
   }, [fetchStats, fetchQueue, fetchPaused])
 
+  // ── Queue navigation ──────────────────────────────────────────────────────
+
+  const queueItems = queue?.items ?? []
+  const currentIdx = selected ? queueItems.findIndex(i => i.id === selected.id) : -1
+
+  const navigateTo = (idx: number) => {
+    if (idx >= 0 && idx < queueItems.length) selectItem(queueItems[idx])
+  }
+
   // ── Keyboard shortcuts ────────────────────────────────────────────────────
 
   useEffect(() => {
@@ -209,20 +219,18 @@ export default function ReviewPage() {
       if (e.key === 'r') act('reject', selected)
       if (e.key === 'e') { setEditing(true); setSheet(true) }
       if (e.key === 'f') act('flag', selected)
-      if (e.key === 'Escape') { setSelected(null); setSheet(false) }
+      if (e.key === 'd') setDiffModalItem(selected)
+      if (e.key === 'j' || e.key === 'ArrowDown') {
+        if (currentIdx < queueItems.length - 1) navigateTo(currentIdx + 1)
+      }
+      if (e.key === 'k' || e.key === 'ArrowUp') {
+        if (currentIdx > 0) navigateTo(currentIdx - 1)
+      }
+      if (e.key === 'Escape') { setSelected(null); setSheet(false); setDiffModalItem(null) }
     }
     window.addEventListener('keydown', handler)
     return () => window.removeEventListener('keydown', handler)
-  }, [selected, editing])
-
-  // ── Queue navigation ──────────────────────────────────────────────────────
-
-  const queueItems = queue?.items ?? []
-  const currentIdx = selected ? queueItems.findIndex(i => i.id === selected.id) : -1
-
-  const navigateTo = (idx: number) => {
-    if (idx >= 0 && idx < queueItems.length) selectItem(queueItems[idx])
-  }
+  }, [selected, editing, currentIdx, queueItems])
 
   // ── Actions ───────────────────────────────────────────────────────────────
 
@@ -734,6 +742,44 @@ export default function ReviewPage() {
           }
         </div>
       </div>
+
+      {/* Floating HITL Keyboard Action HUD */}
+      {selected && showHotkeyHud && (
+        <div className="fixed bottom-5 left-1/2 -translate-x-1/2 z-40 bg-[#0c0c14]/95 border border-[#272738] backdrop-blur-md px-4 py-2 rounded-full shadow-2xl flex items-center gap-3 animate-fade-in text-xs font-mono">
+          <div className="flex items-center gap-1.5 text-emerald-400">
+            <kbd className="px-1.5 py-0.5 rounded bg-[#161622] text-white border border-[#272738] font-bold text-[10px]">A</kbd>
+            <span>Approve</span>
+          </div>
+          <span className="text-[#272738]">|</span>
+          <div className="flex items-center gap-1.5 text-rose-400">
+            <kbd className="px-1.5 py-0.5 rounded bg-[#161622] text-white border border-[#272738] font-bold text-[10px]">R</kbd>
+            <span>Reject</span>
+          </div>
+          <span className="text-[#272738]">|</span>
+          <div className="flex items-center gap-1.5 text-amber-400">
+            <kbd className="px-1.5 py-0.5 rounded bg-[#161622] text-white border border-[#272738] font-bold text-[10px]">F</kbd>
+            <span>Flag</span>
+          </div>
+          <span className="text-[#272738]">|</span>
+          <div className="flex items-center gap-1.5 text-cyan-400">
+            <kbd className="px-1.5 py-0.5 rounded bg-[#161622] text-white border border-[#272738] font-bold text-[10px]">D</kbd>
+            <span>Diff</span>
+          </div>
+          <span className="text-[#272738]">|</span>
+          <div className="flex items-center gap-1 text-[#94a3b8]">
+            <kbd className="px-1 py-0.5 rounded bg-[#161622] text-white border border-[#272738] font-bold text-[10px]">J</kbd>
+            <kbd className="px-1 py-0.5 rounded bg-[#161622] text-white border border-[#272738] font-bold text-[10px]">K</kbd>
+            <span>Nav</span>
+          </div>
+          <button
+            onClick={() => setShowHotkeyHud(false)}
+            className="text-[#64748b] hover:text-white ml-1 p-0.5 rounded cursor-pointer"
+            title="Dismiss HUD"
+          >
+            <X className="w-3.5 h-3.5" />
+          </button>
+        </div>
+      )}
 
       {/* Grounding Diff Modal */}
       <GroundingDiffModal

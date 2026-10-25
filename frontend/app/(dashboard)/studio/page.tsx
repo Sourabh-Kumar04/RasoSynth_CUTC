@@ -16,6 +16,7 @@ import {
   ExternalLink,
   Layers,
   ShieldCheck,
+  AlertCircle,
 } from 'lucide-react'
 import { clsx } from 'clsx'
 import { Button } from '@/components/ui/button'
@@ -134,6 +135,44 @@ const INDUSTRY_PRESETS = [
   },
 ]
 
+function usePromptLint(text: string) {
+  const warnings: string[] = []
+  const tips: string[] = []
+
+  const len = text.trim().length
+  if (len === 0) return { score: 0, warnings: [], tips: [] }
+
+  if (len < 45) {
+    warnings.push('Sparse instruction prompt: add explicit curriculum criteria or difficulty split.')
+  }
+
+  const lower = text.toLowerCase()
+  const isLegal = lower.includes('tax') || lower.includes('law') || lower.includes('gst') || lower.includes('bns') || lower.includes('court')
+  const hasStatute = lower.includes('section') || lower.includes('sec') || lower.includes('act') || lower.includes('circular') || lower.includes('rule')
+  if (isLegal && !hasStatute) {
+    warnings.push('Legal context lacks statutory citations: add section or rule numbers for grounding.')
+  }
+
+  const isCode = lower.includes('code') || lower.includes('python') || lower.includes('rust') || lower.includes('api')
+  const hasVersion = lower.includes('python 3') || lower.includes('async') || lower.includes('pydantic') || lower.includes('fastapi') || lower.includes('tokio')
+  if (isCode && !hasVersion) {
+    tips.push('Specify target language versions and frameworks (e.g. Python 3.12, Pydantic v2).')
+  }
+
+  const hasDifficultySplit = lower.includes('difficulty') || lower.includes('easy') || lower.includes('tiers') || lower.includes('curriculum')
+  if (!hasDifficultySplit) {
+    tips.push('Tip: Apply a 40-40-20 difficulty curriculum split for better model generalization.')
+  }
+
+  let score = 50
+  if (len >= 60) score += 20
+  if (hasStatute || hasVersion) score += 15
+  if (hasDifficultySplit) score += 15
+  score = Math.min(100, score)
+
+  return { score, warnings, tips }
+}
+
 function StudioContent() {
   const router = useRouter()
   const searchParams = useSearchParams()
@@ -142,6 +181,7 @@ function StudioContent() {
     searchParams.get('prompt') ||
     'Synthesize 10,000 multi-turn instruction dialogues from AI Kosh tax rulings & GST statutes with self-correction'
   )
+  const promptLint = usePromptLint(prompt)
   const [targetDomain, setTargetDomain] = useState(
     searchParams.get('domain') || 'Finance & Taxation (AI Kosh)'
   )
@@ -528,6 +568,46 @@ function StudioContent() {
                   placeholder="Describe dataset instructions, schemas, statutory citations, and edge-cases..."
                   className="w-full bg-[#12121a] border border-[#272738] rounded-md p-3 text-xs font-mono text-white placeholder-zinc-500 focus:outline-none focus:border-[#f26625] transition-colors resize-none leading-relaxed"
                 />
+                {/* Live Prompt Heuristic Linter Strip (Zen) */}
+                {prompt.trim().length > 0 && (
+                  <div className="mt-2 p-2.5 rounded-md bg-[#0a0a0f] border border-[#1f1f2e] space-y-1.5 text-xs font-mono">
+                    <div className="flex items-center justify-between">
+                      <span className="text-[10px] text-[#94a3b8] uppercase font-bold flex items-center gap-1.5">
+                        <ShieldCheck className="h-3.5 w-3.5 text-[#10b981]" />
+                        Prompt Quality:
+                        <strong className={clsx(
+                          promptLint.score >= 80 ? "text-emerald-400" :
+                          promptLint.score >= 60 ? "text-amber-400" : "text-rose-400"
+                        )}>
+                          {promptLint.score}/100
+                        </strong>
+                      </span>
+                      {!prompt.toLowerCase().includes('difficulty') && (
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setPrompt((p) => p.trim() + ' Apply a 40-40-20 difficulty curriculum split: (easy) definitional statutory citations; (medium) multi-statute procedural cross-referencing; (hard) adversarial edge-cases.')
+                          }}
+                          className="text-[10px] text-[#f26625] hover:text-[#ff7b42] hover:underline cursor-pointer"
+                        >
+                          + Add 40-40-20 Curriculum
+                        </button>
+                      )}
+                    </div>
+                    {promptLint.warnings.map((w, idx) => (
+                      <div key={idx} className="flex items-center gap-1.5 text-amber-400/90 text-[11px]">
+                        <AlertCircle className="h-3 w-3 shrink-0" />
+                        <span>{w}</span>
+                      </div>
+                    ))}
+                    {promptLint.tips.map((t, idx) => (
+                      <div key={idx} className="text-[#94a3b8] text-[11px] flex items-center gap-1.5">
+                        <span className="text-cyan-400">💡</span>
+                        <span>{t}</span>
+                      </div>
+                    ))}
+                  </div>
+                )}
               </div>
 
               {/* Synthesis Mode Switcher */}
@@ -658,6 +738,46 @@ function StudioContent() {
                 className="w-full bg-[#0a0a0f] border border-[#272738] focus:border-[#f26625] rounded-md p-3 text-xs font-mono text-white placeholder:text-[#94a3b8] focus:outline-none transition-colors resize-none"
                 placeholder="Describe instruction schema, target personas, and validation constraints..."
               />
+              {/* Live Prompt Heuristic Linter Strip (Standard) */}
+              {prompt.trim().length > 0 && (
+                <div className="mt-2 p-2.5 rounded-md bg-[#0a0a0f] border border-[#1f1f2e] space-y-1.5 text-xs font-mono">
+                  <div className="flex items-center justify-between">
+                    <span className="text-[10px] text-[#94a3b8] uppercase font-bold flex items-center gap-1.5">
+                      <ShieldCheck className="h-3.5 w-3.5 text-[#10b981]" />
+                      Prompt Specification Quality:
+                      <strong className={clsx(
+                        promptLint.score >= 80 ? "text-emerald-400" :
+                        promptLint.score >= 60 ? "text-amber-400" : "text-rose-400"
+                      )}>
+                        {promptLint.score}/100
+                      </strong>
+                    </span>
+                    {!prompt.toLowerCase().includes('difficulty') && (
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setPrompt((p) => p.trim() + ' Apply a 40-40-20 difficulty curriculum split: (easy) definitional statutory citations; (medium) multi-statute procedural cross-referencing; (hard) adversarial edge-cases.')
+                        }}
+                        className="text-[10px] text-[#f26625] hover:text-[#ff7b42] hover:underline cursor-pointer"
+                      >
+                        + Add 40-40-20 Curriculum
+                      </button>
+                    )}
+                  </div>
+                  {promptLint.warnings.map((w, idx) => (
+                    <div key={idx} className="flex items-center gap-1.5 text-amber-400/90 text-[11px]">
+                      <AlertCircle className="h-3 w-3 shrink-0" />
+                      <span>{w}</span>
+                    </div>
+                  ))}
+                  {promptLint.tips.map((t, idx) => (
+                    <div key={idx} className="text-[#94a3b8] text-[11px] flex items-center gap-1.5">
+                      <span className="text-cyan-400">💡</span>
+                      <span>{t}</span>
+                    </div>
+                  ))}
+                </div>
+              )}
               <div className="flex flex-wrap items-center justify-between gap-2 pt-2">
                 <Button
                   type="button"
