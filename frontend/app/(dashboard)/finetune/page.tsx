@@ -331,6 +331,7 @@ function FineTuneContent() {
     load_in_4bit: true, bf16: true,
     push_to_hub: false, hf_token: '', hf_org: '',
     chat_template: 'alpaca', output_dir: 'outputs/finetune',
+    execution_target: 'local',
   })
 
   // Synchronize search param if changes
@@ -746,6 +747,18 @@ function FineTuneContent() {
                         <SelectItem value="chatml">ChatML</SelectItem>
                         <SelectItem value="openai_jsonl">OpenAI JSONL</SelectItem>
                         <SelectItem value="llama3">Llama 3</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <div>
+                    <label className="text-[10px] mb-1 block font-bold font-mono uppercase text-[#94a3b8]">Compute Execution Target</label>
+                    <Select value={form.execution_target}
+                      onValueChange={v => f('execution_target', v)}>
+                      <SelectTrigger className="rounded-md border-[#272738] bg-[#0a0a0f] text-white text-xs font-mono"><SelectValue /></SelectTrigger>
+                      <SelectContent className="bg-[#12121a] border-[#272738] text-white text-xs font-mono">
+                        <SelectItem value="local">Local Hardware (PyTorch / Unsloth)</SelectItem>
+                        <SelectItem value="modal">Modal Serverless GPU (NVIDIA A10G)</SelectItem>
+                        <SelectItem value="runpod">RunPod Cloud GPU (A40 / H100)</SelectItem>
                       </SelectContent>
                     </Select>
                   </div>
