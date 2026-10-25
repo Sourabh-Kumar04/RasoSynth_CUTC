@@ -28,6 +28,8 @@ import {
   ShieldCheck,
   AlertTriangle,
   Trash2,
+  CheckSquare,
+  Square,
 } from 'lucide-react'
 import { clsx } from 'clsx'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
@@ -265,6 +267,49 @@ export default function DatasetsPage() {
       setHfPublishError(e.message || 'Failed to publish to Hugging Face Hub')
     } finally {
       setHfPublishLoading(false)
+    }
+  }
+
+  // Multi-select batch export state
+  const [selectedDatasetIds, setSelectedDatasetIds] = useState<Set<string>>(new Set())
+  const [batchExporting, setBatchExporting] = useState(false)
+
+  const toggleSelectDataset = (id: string) => {
+    playClickSound()
+    setSelectedDatasetIds((prev) => {
+      const next = new Set(prev)
+      if (next.has(id)) {
+        next.delete(id)
+      } else {
+        next.add(id)
+      }
+      return next
+    })
+  }
+
+  const toggleSelectAll = () => {
+    playClickSound()
+    if (selectedDatasetIds.size > 0 && selectedDatasetIds.size === filteredDatasets.length) {
+      setSelectedDatasetIds(new Set())
+    } else {
+      setSelectedDatasetIds(new Set(filteredDatasets.map((d) => d.id)))
+    }
+  }
+
+  const handleExportBatch = async (format: 'tar.gz' | 'zip') => {
+    if (selectedDatasetIds.size === 0) return
+    setBatchExporting(true)
+    playClickSound()
+    try {
+      for (const id of Array.from(selectedDatasetIds)) {
+        await api.exportDataset(id, format)
+      }
+      playSuccessChime()
+    } catch (e) {
+      console.error('Batch export failed:', e)
+    } finally {
+      setBatchExporting(false)
+      setSelectedDatasetIds(new Set())
     }
   }
 
@@ -793,6 +838,20 @@ export default function DatasetsPage() {
           <Table>
             <TableHeader className="bg-[#0a0a0f]">
               <TableRow className="border-b border-[#272738]">
+                <TableHead className="w-10 text-[#94a3b8] px-3">
+                  <button
+                    type="button"
+                    onClick={toggleSelectAll}
+                    className="cursor-pointer text-[#94a3b8] hover:text-white flex items-center justify-center"
+                    title="Select all"
+                  >
+                    {selectedDatasetIds.size > 0 && selectedDatasetIds.size === filteredDatasets.length ? (
+                      <CheckSquare className="h-4 w-4 text-[#10b981]" />
+                    ) : (
+                      <Square className="h-4 w-4 text-[#64748b]" />
+                    )}
+                  </button>
+                </TableHead>
                 <TableHead className="w-[300px] text-[#94a3b8] font-mono uppercase text-[10px]">Dataset Repository</TableHead>
                 <TableHead className="text-[#94a3b8] font-mono uppercase text-[10px]">Modality</TableHead>
                 <TableHead className="text-[#94a3b8] font-mono uppercase text-[10px]">Format</TableHead>
@@ -812,10 +871,25 @@ export default function DatasetsPage() {
                     key={dataset.id}
                     className={clsx(
                       'cursor-pointer hover:bg-[#0a0a0f] transition-colors',
-                      selectedDataset === dataset.id && 'bg-[#161622]/80'
+                      selectedDataset === dataset.id && 'bg-[#161622]/80',
+                      selectedDatasetIds.has(dataset.id) && 'bg-[#161622]/40'
                     )}
                     onClick={() => setSelectedDataset(dataset.id)}
                   >
+                    <TableCell className="w-10 px-3" onClick={(e) => e.stopPropagation()}>
+                      <button
+                        type="button"
+                        onClick={() => toggleSelectDataset(dataset.id)}
+                        className="cursor-pointer text-[#94a3b8] hover:text-white flex items-center justify-center"
+                        title="Select dataset"
+                      >
+                        {selectedDatasetIds.has(dataset.id) ? (
+                          <CheckSquare className="h-4 w-4 text-[#10b981]" />
+                        ) : (
+                          <Square className="h-4 w-4 text-[#64748b]" />
+                        )}
+                      </button>
+                    </TableCell>
                     <TableCell>
                       <div className="flex items-center gap-3">
                         <div className="h-8 w-8 rounded-md bg-[#161622] border border-[#272738] flex items-center justify-center shrink-0">
@@ -988,6 +1062,44 @@ export default function DatasetsPage() {
             </TableBody>
           </Table>
         </Card>
+      )}
+
+      {/* Floating Multi-Dataset Batch Exporter HUD */}
+      {selectedDatasetIds.size > 0 && (
+        <div className="fixed bottom-6 left-1/2 -translate-x-1/2 z-50 flex items-center gap-3 bg-[#0c0c14]/95 border border-[#272738] rounded-full px-5 py-2.5 shadow-2xl backdrop-blur-md animate-fade-in font-mono text-xs">
+          <span className="font-bold text-white flex items-center gap-1.5">
+            <span className="w-2 h-2 rounded-full bg-[#f26625] animate-pulse" />
+            {selectedDatasetIds.size} dataset{selectedDatasetIds.size > 1 ? 's' : ''} selected
+          </span>
+          <span className="text-[#272738]">|</span>
+          <Button
+            size="sm"
+            className="bg-[#10b981] hover:bg-emerald-600 text-white h-7 text-xs rounded-full font-mono font-semibold flex items-center gap-1"
+            onClick={() => handleExportBatch('tar.gz')}
+            disabled={batchExporting}
+          >
+            {batchExporting ? <Loader2 className="h-3 w-3 animate-spin" /> : <Download className="h-3 w-3" />}
+            <span>Download Archive (.tar.gz)</span>
+          </Button>
+          <Button
+            size="sm"
+            variant="outline"
+            className="border-[#272738] text-white hover:bg-[#161622] h-7 text-xs rounded-full font-mono flex items-center gap-1"
+            onClick={() => handleExportBatch('zip')}
+            disabled={batchExporting}
+          >
+            <Download className="h-3 w-3 text-[#f26625]" />
+            <span>Export (.zip)</span>
+          </Button>
+          <button
+            type="button"
+            onClick={() => setSelectedDatasetIds(new Set())}
+            className="text-[#64748b] hover:text-white p-1 rounded-full cursor-pointer ml-1"
+            title="Clear Selection"
+          >
+            <X className="h-3.5 w-3.5" />
+          </button>
+        </div>
       )}
 
       {/* Selected Dataset Details Drawer / Card */}

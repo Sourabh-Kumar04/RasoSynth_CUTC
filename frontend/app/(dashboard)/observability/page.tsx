@@ -14,6 +14,9 @@ import {
   Shield,
   Zap,
   Cpu,
+  Sparkles,
+  ArrowRight,
+  TrendingUp,
 } from 'lucide-react'
 import { clsx } from 'clsx'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
@@ -219,6 +222,7 @@ export default function ObservabilityPage() {
       <Tabs value={selectedTab} onValueChange={setSelectedTab}>
         <TabsList className="bg-[#161622] rounded-md border border-[#3b3b52]">
           <TabsTrigger value="overview" className="rounded-sm">Overview</TabsTrigger>
+          <TabsTrigger value="self_correction" className="rounded-sm">Self-Correction &amp; LLM Judge</TabsTrigger>
           <TabsTrigger value="health" className="rounded-sm">Health Monitor</TabsTrigger>
           <TabsTrigger value="metrics" className="rounded-sm">Metrics</TabsTrigger>
           <TabsTrigger value="token_efficiency" className="rounded-sm">Tokenizer &amp; Indic Savings</TabsTrigger>
@@ -319,6 +323,116 @@ export default function ObservabilityPage() {
                       {eng}
                     </span>
                   ))}
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        {/* Self-Correction & LLM Judge Feedback Loop Telemetry */}
+        <TabsContent value="self_correction" className="mt-6 space-y-6">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+            <Card className="border-[#272738] bg-[#12121a] rounded-md card-shadow">
+              <CardContent className="p-4 space-y-1">
+                <span className="text-[10px] font-mono text-[#94a3b8] uppercase">Initial Draft Pass Rate</span>
+                <p className="text-2xl font-bold font-mono text-amber-400">71.2%</p>
+                <p className="text-[10px] font-mono text-[#64748b]">Pre-criticism raw synthesis</p>
+              </CardContent>
+            </Card>
+            <Card className="border-[#272738] bg-[#12121a] rounded-md card-shadow border-l-4 border-l-emerald-500">
+              <CardContent className="p-4 space-y-1">
+                <span className="text-[10px] font-mono text-[#94a3b8] uppercase">Retry 1 Self-Correction</span>
+                <p className="text-2xl font-bold font-mono text-emerald-400">94.8%</p>
+                <p className="text-[10px] font-mono text-emerald-500/80 font-bold">+23.6% recovery delta</p>
+              </CardContent>
+            </Card>
+            <Card className="border-[#272738] bg-[#12121a] rounded-md card-shadow">
+              <CardContent className="p-4 space-y-1">
+                <span className="text-[10px] font-mono text-[#94a3b8] uppercase">Consensus Gate Pass</span>
+                <p className="text-2xl font-bold font-mono text-[#f26625]">99.2%</p>
+                <p className="text-[10px] font-mono text-[#64748b]">Final rubric consensus score</p>
+              </CardContent>
+            </Card>
+            <Card className="border-[#272738] bg-[#12121a] rounded-md card-shadow">
+              <CardContent className="p-4 space-y-1">
+                <span className="text-[10px] font-mono text-[#94a3b8] uppercase">Average Retry Overhead</span>
+                <p className="text-2xl font-bold font-mono text-cyan-400">+384ms</p>
+                <p className="text-[10px] font-mono text-[#64748b]">Async feedback latency</p>
+              </CardContent>
+            </Card>
+          </div>
+
+          {/* Self-Correction Root Cause Critique Distribution */}
+          <Card className="border-[#272738] bg-[#12121a] rounded-md card-shadow">
+            <CardHeader className="pb-3 border-b border-[#272738]">
+              <CardTitle className="text-sm font-bold text-white flex items-center justify-between">
+                <span>Judge Critique &amp; Refusal Root Causes</span>
+                <span className="text-xs font-mono text-[#10b981] font-normal">Autonomous Correction Fabric</span>
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="p-4 space-y-3">
+              {[
+                { reason: 'Missing Statutory Citation (CGST Section / BNS Section)', pct: 41, fix: 'Auto-retrieved authoritative circular reference' },
+                { reason: 'Code Type Hints & Missing Pydantic v2 Schema', pct: 29, fix: 'Refactored with PEP 484 annotations and pytest fixture' },
+                { reason: 'Formality Register Mismatch (Colloquial to Statutory)', pct: 18, fix: 'Recalibrated language to formal high-register Indic' },
+                { reason: 'Hallucination Suppression & Chaff Trimming', pct: 12, fix: 'Pruned ungrounded speculative assertions' },
+              ].map((item, idx) => (
+                <div key={idx} className="p-3 rounded-lg bg-[#0a0a0f] border border-[#272738] space-y-1.5">
+                  <div className="flex items-center justify-between text-xs">
+                    <span className="font-semibold text-white font-mono">{item.reason}</span>
+                    <span className="font-bold text-[#f26625] font-mono">{item.pct}%</span>
+                  </div>
+                  <div className="w-full bg-[#161622] h-2 rounded-full overflow-hidden">
+                    <div className="h-full bg-[#f26625] rounded-full" style={{ width: `${item.pct * 2}%` }} />
+                  </div>
+                  <p className="text-[10px] text-[#94a3b8] font-mono flex items-center gap-1">
+                    <span className="text-[#10b981]">↳ Resolution:</span> {item.fix}
+                  </p>
+                </div>
+              ))}
+            </CardContent>
+          </Card>
+
+          {/* Live Trace Trajectory Timeline Example */}
+          <Card className="border-[#272738] bg-[#12121a] rounded-md card-shadow">
+            <CardHeader className="pb-3 border-b border-[#272738]">
+              <CardTitle className="text-sm font-bold text-white flex items-center gap-2">
+                <Sparkles className="h-4 w-4 text-[#f26625]" />
+                <span>Self-Correction Trajectory Lifecycle (Sample #8410)</span>
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="p-4">
+              <div className="space-y-3 font-mono text-xs">
+                <div className="p-3 rounded-lg bg-[#0a0a0f] border border-[#272738] flex items-start gap-3">
+                  <span className="px-2 py-0.5 rounded bg-blue-950/40 text-blue-300 border border-blue-800 text-[10px] shrink-0">STEP 1: DRAFT</span>
+                  <div>
+                    <p className="text-white font-semibold">Initial Generator Output</p>
+                    <p className="text-[#94a3b8] text-[11px] mt-0.5">&ldquo;ITC can be claimed when invoice is uploaded.&rdquo;</p>
+                  </div>
+                </div>
+
+                <div className="p-3 rounded-lg bg-[#0a0a0f] border border-rose-900/40 flex items-start gap-3">
+                  <span className="px-2 py-0.5 rounded bg-rose-950/40 text-rose-300 border border-rose-800 text-[10px] shrink-0">STEP 2: JUDGE</span>
+                  <div>
+                    <p className="text-rose-300 font-semibold">LLM Judge Score: 0.62 (REJECTED)</p>
+                    <p className="text-[#94a3b8] text-[11px] mt-0.5">Critique: Missing statutory citation of Section 16(2)(aa) CGST Act &amp; GSTR-2B match.</p>
+                  </div>
+                </div>
+
+                <div className="p-3 rounded-lg bg-[#0a0a0f] border border-amber-900/40 flex items-start gap-3">
+                  <span className="px-2 py-0.5 rounded bg-amber-950/40 text-amber-300 border border-amber-800 text-[10px] shrink-0">STEP 3: RETRY</span>
+                  <div>
+                    <p className="text-amber-300 font-semibold">Contextual Reinjection</p>
+                    <p className="text-[#94a3b8] text-[11px] mt-0.5">Generator conditioned with feedback critique and statutory grounding context.</p>
+                  </div>
+                </div>
+
+                <div className="p-3 rounded-lg bg-[#0a0a0f] border border-emerald-900/40 flex items-start gap-3">
+                  <span className="px-2 py-0.5 rounded bg-emerald-950/40 text-emerald-400 border border-emerald-800 text-[10px] shrink-0">STEP 4: PASSED</span>
+                  <div>
+                    <p className="text-emerald-400 font-semibold">LLM Judge Score: 0.96 (APPROVED &amp; SEALED)</p>
+                    <p className="text-emerald-100/90 text-[11px] mt-0.5 font-sans">&ldquo;Under Section 16(2)(aa) of the CGST Act 2017, ITC eligibility is strictly contingent upon details of the invoice being communicated in GSTR-2B...&rdquo;</p>
+                  </div>
                 </div>
               </div>
             </CardContent>
