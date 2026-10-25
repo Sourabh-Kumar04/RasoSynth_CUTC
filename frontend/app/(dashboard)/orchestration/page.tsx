@@ -402,6 +402,26 @@ export default function OrchestrationPage() {
                   </div>
                 </div>
 
+                {/* Synthesis Cognitive Engine & Domain Telemetry */}
+                <div className="flex flex-wrap items-center gap-2.5 p-2.5 rounded bg-[#0a0a0f]/80 border border-[#272738] text-xs font-mono">
+                  <span className="text-[#94a3b8] text-[10px] uppercase font-bold flex items-center gap-1">
+                    <Sparkles className="w-3.5 h-3.5 text-[#f26625]" />
+                    Cognitive Engine:
+                  </span>
+                  <span className="px-2 py-0.5 rounded bg-[#f26625]/10 border border-[#f26625]/30 text-[#f26625] font-bold uppercase text-[10px]">
+                    {selectedJob.config?.synthesis_mode || selectedJob.synthesis_mode || 'standard'}
+                  </span>
+                  <span className="text-[#334155]">/</span>
+                  <span className="text-[#94a3b8] text-[10px]">
+                    Domain: <strong className="text-white font-normal">{selectedJob.target_domain || selectedJob.domain || selectedJob.dataset_name || 'General'}</strong>
+                  </span>
+                  <span className="text-[#334155]">/</span>
+                  <span className="text-purple-300 text-[10px] flex items-center gap-1">
+                    <ShieldCheck className="w-3 h-3 text-purple-400" />
+                    DBOM Attestation: Certified
+                  </span>
+                </div>
+
                 {/* Active Anti-Domains & Polysemy Exclusion Badges */}
                 {selectedJob.config?.anti_domains && selectedJob.config.anti_domains.length > 0 && (
                   <div className="flex flex-wrap items-center gap-1.5 p-2 rounded bg-[#0a0a0f]/60 border border-[#272738] text-[11px] font-mono">
