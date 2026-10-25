@@ -258,6 +258,7 @@ export default function DatasetsPage() {
         hf_token: hfToken.trim() || undefined,
         private: hfPrivate,
       })
+      playSuccessChime()
       setHfPublishResult(res)
     } catch (e: any) {
       console.error('Failed to publish to Hugging Face Hub:', e)

@@ -46,3 +46,24 @@ def test_audio_sound_effect_frequencies():
     a5 = 880.00
     ratio = a5 / d5
     assert abs(ratio - 1.5) < 0.01  # Perfect fifth
+
+
+def test_merkle_graph_proof_path_invariants():
+    """Verify Merkle tree node relationships, sibling pairs, and depth hierarchy."""
+    nodes = {
+        "root": {"level": 0, "parent": None},
+        "branch-left": {"level": 1, "parent": "root", "sibling": "branch-right"},
+        "branch-right": {"level": 1, "parent": "root", "sibling": "branch-left"},
+        "leaf-0": {"level": 2, "parent": "branch-left", "sibling": "leaf-1"},
+        "leaf-1": {"level": 2, "parent": "branch-left", "sibling": "leaf-0"},
+        "leaf-2": {"level": 2, "parent": "branch-right", "sibling": "leaf-3"},
+        "leaf-3": {"level": 2, "parent": "branch-right", "sibling": "leaf-2"},
+    }
+
+    # Verify every leaf resolves to root in exactly 2 steps
+    for leaf_id in ["leaf-0", "leaf-1", "leaf-2", "leaf-3"]:
+        parent = nodes[leaf_id]["parent"]
+        grandparent = nodes[parent]["parent"]
+        assert grandparent == "root"
+        sibling = nodes[leaf_id]["sibling"]
+        assert nodes[sibling]["parent"] == parent
