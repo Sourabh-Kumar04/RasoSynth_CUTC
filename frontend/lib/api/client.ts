@@ -347,6 +347,10 @@ class APIClient {
     return this.request<any>('/cluster/ray')
   }
 
+  async getRayCluster(): Promise<any> {
+    return this.getRayClusterStatus()
+  }
+
   async previewJobExampleBatch(data: { query: string; sources: any[]; carry_forward_examples?: any[]; carry_forward_indices?: number[]; carry_forward_token?: string; query_plan?: Record<string, any>; dataset_type?: string; language?: string; max_examples?: number }): Promise<any> {
     return this.request<any>('/jobs/preview/batch', {
       method: 'POST',

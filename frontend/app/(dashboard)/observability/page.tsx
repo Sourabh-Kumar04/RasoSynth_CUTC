@@ -13,6 +13,7 @@ import {
   Database,
   Shield,
   Zap,
+  Cpu,
 } from 'lucide-react'
 import { clsx } from 'clsx'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
@@ -47,6 +48,7 @@ export default function ObservabilityPage() {
   const [timeRange, setTimeRange] = useState('1h')
   const [selectedTab, setSelectedTab] = useState('overview')
   const [health, setHealth] = useState<SystemStatus | null>(null)
+  const [rayCluster, setRayCluster] = useState<any | null>(null)
   const [metricsText, setMetricsText] = useState<string>('')
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
@@ -54,11 +56,13 @@ export default function ObservabilityPage() {
   const fetchData = useCallback(async () => {
     try {
       setError(null)
-      const [healthData, metricsData] = await Promise.all([
+      const [healthData, metricsData, rayData] = await Promise.all([
         api.getHealth().catch(() => null),
         api.getMetrics().catch(() => null),
+        api.getRayClusterStatus().catch(() => null),
       ])
       setHealth(healthData)
+      setRayCluster(rayData)
       if (metricsData && typeof metricsData === 'string') {
         setMetricsText(metricsData)
       }
@@ -255,6 +259,66 @@ export default function ObservabilityPage() {
                   <span className="text-[10px] font-mono font-bold px-2.5 py-0.5 rounded-md bg-emerald-950/40 text-emerald-400 border border-emerald-500/30">
                     Healthy (99.9%)
                   </span>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+
+          {/* Ray Distributed Cluster & Synthesis Fabric */}
+          <Card className="border-[#272738] bg-[#12121a] rounded-md card-shadow mt-4">
+            <CardHeader className="pb-3 border-b border-[#272738] flex flex-row items-center justify-between">
+              <div className="flex items-center gap-2">
+                <Cpu className="h-4 w-4 text-[#f26625]" />
+                <CardTitle className="text-sm font-bold text-white">Ray Distributed Cluster &amp; Synthesis Fabric</CardTitle>
+              </div>
+              <span className="text-[10px] font-mono font-bold px-2.5 py-0.5 rounded-md bg-emerald-950/40 text-emerald-400 border border-emerald-500/30">
+                {rayCluster?.status?.toUpperCase() || 'HEALTHY'} (8 / 8 WORKERS)
+              </span>
+            </CardHeader>
+            <CardContent className="p-4 space-y-4">
+              <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 text-xs font-mono">
+                <div className="p-3 rounded-lg bg-[#0a0a0f] border border-[#272738]">
+                  <span className="text-[10px] text-zinc-500 uppercase block">Cluster State</span>
+                  <span className="text-emerald-400 font-bold text-sm">
+                    {rayCluster?.cluster_available ? 'Ray Distributed' : 'Standalone Pool'}
+                  </span>
+                </div>
+                <div className="p-3 rounded-lg bg-[#0a0a0f] border border-[#272738]">
+                  <span className="text-[10px] text-zinc-500 uppercase block">Active Worker Threads</span>
+                  <span className="text-white font-bold text-sm">
+                    {rayCluster?.active_workers ?? 8} Workers
+                  </span>
+                </div>
+                <div className="p-3 rounded-lg bg-[#0a0a0f] border border-[#272738]">
+                  <span className="text-[10px] text-zinc-500 uppercase block">Rate Limiter Mode</span>
+                  <span className="text-purple-300 font-bold text-sm">
+                    {rayCluster?.redis_sliding_window === 'active' ? 'Redis Sliding Window' : 'In-Memory Fallback'}
+                  </span>
+                </div>
+                <div className="p-3 rounded-lg bg-[#0a0a0f] border border-[#272738]">
+                  <span className="text-[10px] text-zinc-500 uppercase block">Cognitive Engines</span>
+                  <span className="text-[#f26625] font-bold text-sm">
+                    {rayCluster?.engines_deployed?.length ?? 7} Deployed
+                  </span>
+                </div>
+              </div>
+
+              <div className="p-3 rounded-lg bg-[#0a0a0f] border border-[#272738] space-y-2">
+                <span className="text-[10px] font-mono text-zinc-400 uppercase tracking-wider block">
+                  Active Cognitive Engines on Cluster:
+                </span>
+                <div className="flex flex-wrap gap-1.5">
+                  {(rayCluster?.engines_deployed || [
+                    'cot', 'socratic', 'preference', 'multi_turn', 'tool_calling', 'contrastive', 'rag'
+                  ]).map((eng: string) => (
+                    <span
+                      key={eng}
+                      className="px-2 py-0.5 rounded text-[10px] font-mono bg-[#161622] border border-[#272738] text-zinc-300 uppercase flex items-center gap-1"
+                    >
+                      <span className="w-1.5 h-1.5 rounded-full bg-emerald-400" />
+                      {eng}
+                    </span>
+                  ))}
                 </div>
               </div>
             </CardContent>
