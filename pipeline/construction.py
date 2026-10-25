@@ -231,6 +231,24 @@ class ConstructionPipeline:
         self.schema_inferrer = SchemaInferrer(router)
         self._constructed_samples: list[ConstructedSample] = []
 
+        # Synthesis mode selection (Finding #2 & #5 remediation)
+        self.synthesis_mode = str(config.get("synthesis_mode") or "").lower().strip()
+        if not self.synthesis_mode or self.synthesis_mode == "standard":
+            if config.get("enable_cot_reasoning"):
+                self.synthesis_mode = "cot"
+            elif config.get("generate_dpo_refusal_pairs"):
+                self.synthesis_mode = "preference"
+            elif self.dataset_type == DatasetType.REASONING:
+                self.synthesis_mode = "cot"
+            elif self.dataset_type == DatasetType.CONVERSATIONAL:
+                self.synthesis_mode = "multi_turn"
+            elif self.dataset_type == DatasetType.TOOL_CALLING:
+                self.synthesis_mode = "tool_calling"
+            elif self.dataset_type == DatasetType.RAG:
+                self.synthesis_mode = "rag"
+            else:
+                self.synthesis_mode = "standard"
+
         # Schema specification
         self.schema = SchemaSpec()
 
@@ -274,6 +292,7 @@ class ConstructionPipeline:
             "optimized_search_queries": [str(value)[:200] for value in (intent.specialized_queries or [])[:10]],
             "ideal_samples": (getattr(intent, "ideal_samples", None) or [])[:5],
             "dataset_type": self.dataset_type.value,
+            "synthesis_mode": self.synthesis_mode,
         }
 
         # Infer schema from content if not already done
@@ -286,24 +305,30 @@ class ConstructionPipeline:
             if inferred.metadata_fields:
                 self.schema.metadata_fields = inferred.metadata_fields
 
-        # Route to appropriate construction method
-        if self.dataset_type == DatasetType.SFT:
-            async for item in self._construct_sft_adaptive(content, target_domain, quality, generation_brief):
+        # Route to appropriate construction engine (core.generation modules integrated)
+        if self.synthesis_mode in ("socratic", "dialectic"):
+            async for item in self._construct_socratic_adaptive(content, target_domain, quality, generation_brief):
                 yield item
-        elif self.dataset_type == DatasetType.RAG:
-            for item in self._construct_rag_adaptive(content, target_domain, quality):
+        elif self.synthesis_mode in ("cot", "reasoning") or self.dataset_type == DatasetType.REASONING:
+            async for item in self._construct_cot_adaptive(content, target_domain, quality, generation_brief):
+                yield item
+        elif self.synthesis_mode in ("multi_turn", "conversational") or self.dataset_type == DatasetType.CONVERSATIONAL:
+            async for item in self._construct_multi_turn_adaptive(content, target_domain, quality, generation_brief):
+                yield item
+        elif self.synthesis_mode in ("preference", "simpo", "kto", "dpo"):
+            async for item in self._construct_preference_adaptive(content, target_domain, quality, generation_brief):
+                yield item
+        elif self.synthesis_mode in ("tool_calling", "tools") or self.dataset_type == DatasetType.TOOL_CALLING:
+            async for item in self._construct_tool_calling_adaptive(content, target_domain, quality, generation_brief):
+                yield item
+        elif self.synthesis_mode in ("contrastive", "critique"):
+            async for item in self._construct_contrastive_adaptive(content, target_domain, quality, generation_brief):
+                yield item
+        elif self.synthesis_mode in ("rag",) or self.dataset_type == DatasetType.RAG:
+            async for item in self._construct_rag_adaptive(content, target_domain, quality, generation_brief):
                 yield item
         elif self.dataset_type == DatasetType.CODING:
             for item in self._construct_coding_adaptive(content, quality):
-                yield item
-        elif self.dataset_type == DatasetType.REASONING:
-            for item in self._construct_reasoning_adaptive(content, quality):
-                yield item
-        elif self.dataset_type == DatasetType.CONVERSATIONAL:
-            for item in self._construct_conversational_adaptive(content, quality):
-                yield item
-        elif self.dataset_type == DatasetType.TOOL_CALLING:
-            for item in self._construct_tool_calling_adaptive(content, quality):
                 yield item
         elif self.dataset_type == DatasetType.TRAJECTORY:
             for item in self._construct_trajectory_adaptive(content, quality):
@@ -510,41 +535,98 @@ Output strictly in JSON format as a list of objects:
                 self._difficulty_distribution[s.difficulty_tier] += 1
                 yield s
 
-    def _construct_rag_adaptive(
+    async def _construct_rag_adaptive(
         self,
         content: str,
         target_domain: str,
-        quality: float
-    ) -> list[ConstructedSample]:
-        """Construct RAG-optimized samples."""
-        samples = []
+        quality: float,
+        generation_brief: dict | None = None,
+    ) -> AsyncGenerator[ConstructedSample, None]:
+        """Construct multi-hop RAG samples with verified citations and hard negatives using core.generation.rag_synthesizer."""
+        from core.generation.rag_synthesizer import (
+            build_rag_prompt_directive,
+            format_rag_sample,
+        )
+        target_domain = _sanitize_target_domain(target_domain)
+        if _is_garbage_content(content):
+            return
 
-        # Create context-chunk pairs
-        chunks = self._adaptive_chunk(content, max_length=500)
+        chunks = self._adaptive_chunk(content, max_length=1200)
+        rag_directive = build_rag_prompt_directive(include_hard_negatives=True)
 
+        if self.router and len(chunks) >= 1:
+            for i, chunk in enumerate(chunks):
+                prompt = (
+                    f"You are a Retrieval-Augmented Generation dataset generator for '{target_domain}'.\n"
+                    f"{rag_directive}\n"
+                    f"Reference Content:\n{chunk}\n\n"
+                    "Output strictly a JSON list of objects containing 'instruction', 'positive_contexts', 'hard_negatives', 'response', 'citations'."
+                )
+                try:
+                    resp = await self.router.route(
+                        task=TaskType.STRUCTURED_OUTPUT,
+                        prompt=prompt,
+                        system_prompt="You are a RAG dataset generator. Output valid JSON arrays only.",
+                        temperature=0.3,
+                    )
+                    if resp and resp.content:
+                        pairs = _extract_json_array(resp.content.strip())
+                        for pair in pairs:
+                            inst = str(pair.get("instruction", "")).strip()
+                            resp_text = str(pair.get("response", "")).strip()
+                            if inst and resp_text:
+                                rag_sample = format_rag_sample(
+                                    query=inst,
+                                    positive_contexts=pair.get("positive_contexts", [chunk]),
+                                    hard_negatives=pair.get("hard_negatives", []),
+                                    grounded_response=resp_text,
+                                    citations=pair.get("citations"),
+                                    domain=target_domain,
+                                )
+                                s = ConstructedSample(
+                                    instruction=rag_sample["instruction"],
+                                    response=rag_sample["response"],
+                                    input="\n\n".join(rag_sample.get("positive_contexts", [])),
+                                    metadata={
+                                        "type": "rag",
+                                        "domain": target_domain,
+                                        "positive_contexts": rag_sample.get("positive_contexts", []),
+                                        "hard_negatives": rag_sample.get("hard_negatives", []),
+                                        "citations": rag_sample.get("citations", []),
+                                        "attribution_verified": rag_sample.get("attribution_verified", True),
+                                    },
+                                    difficulty_tier=3,
+                                    curriculum_order=i,
+                                )
+                                self._difficulty_distribution[s.difficulty_tier] += 1
+                                yield s
+                        continue
+                except Exception as e:
+                    logger.debug(f"RAG LLM generation fallback: {e}")
+
+        # Fallback RAG generator
         for i, chunk in enumerate(chunks):
-            questions = [
-                f"What does this passage tell us about {target_domain}?",
-                f"Based on this, explain {target_domain}.",
-                f"Extract key information about {target_domain}.",
-            ]
-
-            for q_idx, question in enumerate(questions[:2]):
-                samples.append(ConstructedSample(
-                    instruction=question,
-                    response=chunk,
-                    input=chunk,
-                    metadata={
-                        "type": "rag",
-                        "chunk_index": i,
-                        "total_chunks": len(chunks),
-                        "domain": target_domain
-                    },
-                    difficulty_tier=3,
-                    curriculum_order=i * 10 + q_idx,
-                ))
-
-        return samples
+            rag_sample = format_rag_sample(
+                query=f"What are the statutory guidelines regarding {target_domain} in this text?",
+                positive_contexts=[chunk[:400]],
+                hard_negatives=[f"General introductory remarks without specific statutory provisions for {target_domain}."],
+                grounded_response=f"According to the source documentation [1], {chunk[:300].strip()}.",
+                domain=target_domain,
+            )
+            s = ConstructedSample(
+                instruction=rag_sample["instruction"],
+                response=rag_sample["response"],
+                input=chunk[:400],
+                metadata={
+                    "type": "rag",
+                    "domain": target_domain,
+                    "citations": rag_sample.get("citations", []),
+                },
+                difficulty_tier=3,
+                curriculum_order=i,
+            )
+            self._difficulty_distribution[s.difficulty_tier] += 1
+            yield s
 
     def _construct_coding_adaptive(
         self,
@@ -578,94 +660,520 @@ Output strictly in JSON format as a list of objects:
 
         return samples
 
-    def _construct_reasoning_adaptive(
+    async def _construct_cot_adaptive(
         self,
         content: str,
-        quality: float
-    ) -> list[ConstructedSample]:
-        """Construct reasoning/CoT samples."""
-        samples = []
+        target_domain: str,
+        quality: float,
+        generation_brief: dict | None = None,
+    ) -> AsyncGenerator[ConstructedSample, None]:
+        """Construct Chain-of-Thought reasoning trajectory samples using core.generation.cot_synthesizer."""
+        from core.generation.cot_synthesizer import (
+            build_cot_prompt_directive,
+            extract_thought_and_solution,
+            wrap_with_thought,
+        )
+        target_domain = _sanitize_target_domain(target_domain)
+        if _is_garbage_content(content):
+            return
 
-        # Identify statements/claims
-        sentences = re.split(r'[.!?]+', content)
-        sentences = [s.strip() for s in sentences if len(s.strip()) > 20]
+        chunks = self._adaptive_chunk(content, max_length=1500)
+        language = str(self.config.get("language", "en"))
+        cot_directive = build_cot_prompt_directive(language=language)
 
-        for i, sentence in enumerate(sentences):
-            # Generate step-by-step reasoning
-            steps = self._generate_reasoning_steps(sentence)
+        if self.router:
+            for i, chunk in enumerate(chunks):
+                if not _is_chunk_domain_relevant(chunk, target_domain, generation_brief, self.config):
+                    continue
+                difficulty = self._assess_chunk_difficulty(chunk)
+                prompt = (
+                    f"You are an expert reasoning dataset generator for the '{target_domain}' domain.\n"
+                    f"{cot_directive}\n\n"
+                    f"User Intent: {generation_brief.get('user_request', '') if generation_brief else ''}\n"
+                    f"Reference Content:\n{chunk}\n\n"
+                    "Output strictly a JSON list of objects with 'instruction' and 'response'. "
+                    "In 'response', include the <thought>...</thought> reasoning trace before the final answer."
+                )
+                try:
+                    resp = await self.router.route(
+                        task=TaskType.STRUCTURED_OUTPUT,
+                        prompt=prompt,
+                        system_prompt="You are an expert CoT dataset generator. Output valid JSON arrays only.",
+                        temperature=0.3,
+                    )
+                    if resp and resp.content:
+                        pairs = _extract_json_array(resp.content.strip())
+                        for pair in pairs:
+                            inst = str(pair.get("instruction", "")).strip()
+                            resp_text = str(pair.get("response", "")).strip()
+                            if inst and resp_text and not _is_garbage_content(resp_text):
+                                thought, solution = extract_thought_and_solution(resp_text)
+                                s = ConstructedSample(
+                                    instruction=inst,
+                                    response=resp_text,
+                                    metadata={
+                                        "type": "cot_reasoning",
+                                        "domain": target_domain,
+                                        "language": language,
+                                        "has_thought_tags": bool(thought),
+                                        "thought": thought,
+                                        "reasoning_type": "chain_of_thought",
+                                    },
+                                    difficulty_tier=max(4, difficulty),
+                                    curriculum_order=i,
+                                )
+                                self._difficulty_distribution[s.difficulty_tier] += 1
+                                yield s
+                        continue
+                except Exception as e:
+                    logger.debug(f"CoT LLM generation fallback: {e}")
 
-            if steps:
-                samples.append(ConstructedSample(
-                    instruction=f"Analyze and reason through: {sentence}",
-                    response="\n".join(steps),
+        # Fallback using cot_synthesizer helper functions
+        for i, chunk in enumerate(chunks):
+            sentences = [s.strip() for s in re.split(r'[.!?]+', chunk) if len(s.strip()) > 20]
+            for j, sent in enumerate(sentences[:2]):
+                steps = self._generate_reasoning_steps(sent)
+                thought_body = "\n".join(f"{idx+1}. {step}" for idx, step in enumerate(steps))
+                final_solution = f"Based on the analysis, {sent}"
+                wrapped_response = wrap_with_thought(thought_body, final_solution)
+                s = ConstructedSample(
+                    instruction=f"Analyze and reason through the following domain principle: {sent}",
+                    response=wrapped_response,
                     metadata={
-                        "type": "reasoning",
+                        "type": "cot_reasoning",
                         "steps": len(steps),
-                        "reasoning_type": "chain_of_thought"
+                        "reasoning_type": "chain_of_thought",
+                        "domain": target_domain,
+                    },
+                    difficulty_tier=4,
+                    curriculum_order=i * 10 + j,
+                )
+                self._difficulty_distribution[s.difficulty_tier] += 1
+                yield s
+
+    async def _construct_socratic_adaptive(
+        self,
+        content: str,
+        target_domain: str,
+        quality: float,
+        generation_brief: dict | None = None,
+    ) -> AsyncGenerator[ConstructedSample, None]:
+        """Construct multi-persona dialectic debate samples using core.generation.socratic_synthesizer."""
+        from core.generation.socratic_synthesizer import (
+            build_dialectic_prompt_directive,
+            format_dialectic_sample,
+            evaluate_dialectic_coherence,
+            DEFAULT_PERSONAS,
+        )
+        target_domain = _sanitize_target_domain(target_domain)
+        if _is_garbage_content(content):
+            return
+
+        chunks = self._adaptive_chunk(content, max_length=1500)
+        dialectic_directive = build_dialectic_prompt_directive(domain=target_domain, rounds=2)
+
+        if self.router:
+            for i, chunk in enumerate(chunks):
+                if not _is_chunk_domain_relevant(chunk, target_domain, generation_brief, self.config):
+                    continue
+                prompt = (
+                    f"You are a legal and statutory dialectic dataset generator.\n"
+                    f"{dialectic_directive}\n"
+                    f"Ground the debate on this factual source context:\n{chunk}\n\n"
+                    "Output strictly a JSON object with keys 'topic', 'personas', 'debate_rounds', and 'verdict'."
+                )
+                try:
+                    resp = await self.router.route(
+                        task=TaskType.STRUCTURED_OUTPUT,
+                        prompt=prompt,
+                        system_prompt="You are a Socratic debate synthesizer. Output valid JSON only.",
+                        temperature=0.4,
+                    )
+                    if resp and resp.content:
+                        raw = resp.content.strip()
+                        cleaned = re.sub(r'```(?:json)?\s*', '', raw, flags=re.IGNORECASE)
+                        cleaned = re.sub(r'```\s*$', '', cleaned).strip()
+                        data = json.loads(cleaned)
+                        if isinstance(data, list) and data:
+                            data = data[0]
+                        if isinstance(data, dict) and "debate_rounds" in data and "verdict" in data:
+                            eval_res = evaluate_dialectic_coherence(data["debate_rounds"], data["verdict"])
+                            sample = format_dialectic_sample(
+                                topic=data.get("topic", target_domain),
+                                debate_rounds=data["debate_rounds"],
+                                verdict=data["verdict"],
+                                domain=target_domain,
+                                personas=data.get("personas"),
+                            )
+                            conversations = [
+                                {"from": "human", "value": sample["instruction"]},
+                                {"from": "gpt", "value": sample["response"]},
+                            ]
+                            s = ConstructedSample(
+                                instruction=sample["instruction"],
+                                response=sample["response"],
+                                conversation=conversations,
+                                metadata={
+                                    **sample.get("metadata", {}),
+                                    "coherence_eval": eval_res,
+                                    "personas": sample.get("personas", []),
+                                },
+                                difficulty_tier=4,
+                                curriculum_order=i,
+                                format="sharegpt",
+                            )
+                            self._difficulty_distribution[s.difficulty_tier] += 1
+                            yield s
+                            continue
+                except Exception as e:
+                    logger.debug(f"Socratic LLM generation fallback: {e}")
+
+        # Fallback dialectic generator
+        for i, chunk in enumerate(chunks):
+            lines = [l.strip() for l in chunk.split("\n") if len(l.strip()) > 20]
+            if not lines:
+                continue
+            topic = lines[0][:150]
+            personas = DEFAULT_PERSONAS.get(target_domain.lower(), DEFAULT_PERSONAS["general"])
+            p1, p2 = personas[0], personas[1]
+            debate_rounds = [
+                {"speaker": p1["name"], "stance": "statutory_strict", "argument": f"Under strict statutory compliance, {chunk[:200]} requires absolute adherence."},
+                {"speaker": p2["name"], "stance": "commercial_pragmatic", "argument": f"From an operational feasibility perspective, {chunk[200:400] if len(chunk) > 200 else chunk[:200]} allows flexibility."},
+            ]
+            verdict = f"Balancing {p1['name']}'s statutory view and {p2['name']}'s practical stance, compliance must be maintained with streamlined documentation."
+            sample = format_dialectic_sample(topic, debate_rounds, verdict, domain=target_domain, personas=personas)
+            s = ConstructedSample(
+                instruction=sample["instruction"],
+                response=sample["response"],
+                metadata=sample["metadata"],
+                difficulty_tier=4,
+                curriculum_order=i,
+                format="sharegpt",
+            )
+            self._difficulty_distribution[s.difficulty_tier] += 1
+            yield s
+
+    async def _construct_preference_adaptive(
+        self,
+        content: str,
+        target_domain: str,
+        quality: float,
+        generation_brief: dict | None = None,
+    ) -> AsyncGenerator[ConstructedSample, None]:
+        """Construct SimPO, KTO, and DPO alignment preference pairs using core.generation.preference_synthesizer."""
+        from core.generation.preference_synthesizer import (
+            build_preference_directive,
+            format_simpo_pair,
+            format_kto_sample,
+        )
+        target_domain = _sanitize_target_domain(target_domain)
+        if _is_garbage_content(content):
+            return
+
+        chunks = self._adaptive_chunk(content, max_length=1500)
+        mode = "kto" if self.synthesis_mode == "kto" else "simpo"
+        pref_directive = build_preference_directive(mode)
+
+        if self.router:
+            for i, chunk in enumerate(chunks):
+                prompt = (
+                    f"You are an expert AI alignment dataset generator for '{target_domain}'.\n"
+                    f"{pref_directive}\n"
+                    f"Reference Content:\n{chunk}\n\n"
+                    "Output strictly a JSON list of objects containing 'instruction', 'chosen', and 'rejected' (or 'completion' and 'is_desirable')."
+                )
+                try:
+                    resp = await self.router.route(
+                        task=TaskType.STRUCTURED_OUTPUT,
+                        prompt=prompt,
+                        system_prompt="You are an alignment data synthesizer. Output strictly valid JSON arrays.",
+                        temperature=0.3,
+                    )
+                    if resp and resp.content:
+                        pairs = _extract_json_array(resp.content.strip())
+                        for pair in pairs:
+                            inst = str(pair.get("instruction", "")).strip()
+                            chosen = str(pair.get("chosen", "") or pair.get("completion", "")).strip()
+                            rejected = str(pair.get("rejected", "")).strip()
+                            if inst and chosen:
+                                if mode == "kto":
+                                    kto_sample = format_kto_sample(inst, chosen, is_desirable=pair.get("is_desirable", True), domain=target_domain)
+                                    s = ConstructedSample(
+                                        instruction=kto_sample["prompt"],
+                                        response=kto_sample["completion"],
+                                        metadata=kto_sample.get("metadata", {}),
+                                        difficulty_tier=3,
+                                        curriculum_order=i,
+                                    )
+                                else:
+                                    simpo_sample = format_simpo_pair(inst, chosen, rejected or "Incomplete or inaccurate guidance.", domain=target_domain)
+                                    s = ConstructedSample(
+                                        instruction=simpo_sample["instruction"],
+                                        response=simpo_sample["chosen"],
+                                        metadata={"rejected": simpo_sample["rejected"], **simpo_sample.get("simpo_metadata", {})},
+                                        difficulty_tier=4,
+                                        curriculum_order=i,
+                                    )
+                                self._difficulty_distribution[s.difficulty_tier] += 1
+                                yield s
+                        continue
+                except Exception as e:
+                    logger.debug(f"Preference LLM generation fallback: {e}")
+
+        # Fallback preference builder
+        for i, chunk in enumerate(chunks):
+            qa = self._generate_qa_pair(chunk, target_domain)
+            if qa and qa.get("answer"):
+                chosen = qa["answer"]
+                rejected = f"It is generally considered that {chunk[:100]}... but no statutory certainty exists."
+                simpo_sample = format_simpo_pair(qa["question"], chosen, rejected, domain=target_domain)
+                s = ConstructedSample(
+                    instruction=simpo_sample["instruction"],
+                    response=simpo_sample["chosen"],
+                    metadata={"rejected": simpo_sample["rejected"], **simpo_sample.get("simpo_metadata", {})},
+                    difficulty_tier=3,
+                    curriculum_order=i,
+                )
+                self._difficulty_distribution[s.difficulty_tier] += 1
+                yield s
+
+    async def _construct_multi_turn_adaptive(
+        self,
+        content: str,
+        target_domain: str,
+        quality: float,
+        generation_brief: dict | None = None,
+    ) -> AsyncGenerator[ConstructedSample, None]:
+        """Construct multi-turn conversational trajectories using core.generation.multi_turn_synthesizer."""
+        from core.generation.multi_turn_synthesizer import (
+            build_multi_turn_directive,
+            format_multi_turn_sample,
+        )
+        target_domain = _sanitize_target_domain(target_domain)
+        if _is_garbage_content(content):
+            return
+
+        chunks = self._adaptive_chunk(content, max_length=1500)
+        multi_turn_directive = build_multi_turn_directive(num_turns=4, language=str(self.config.get("language", "en")))
+
+        if self.router:
+            for i, chunk in enumerate(chunks):
+                prompt = (
+                    f"You are a conversational dialogue synthesizer for the '{target_domain}' domain.\n"
+                    f"{multi_turn_directive}\n"
+                    f"Reference Content:\n{chunk}\n\n"
+                    "Output strictly a JSON object with 'topic' and a list of 'turns' (each turn having 'role': 'user'|'assistant' and 'content')."
+                )
+                try:
+                    resp = await self.router.route(
+                        task=TaskType.STRUCTURED_OUTPUT,
+                        prompt=prompt,
+                        system_prompt="You are a multi-turn dialogue generator. Output valid JSON only.",
+                        temperature=0.35,
+                    )
+                    if resp and resp.content:
+                        raw = resp.content.strip()
+                        cleaned = re.sub(r'```(?:json)?\s*', '', raw, flags=re.IGNORECASE)
+                        cleaned = re.sub(r'```\s*$', '', cleaned).strip()
+                        data = json.loads(cleaned)
+                        if isinstance(data, list) and data:
+                            data = data[0]
+                        if isinstance(data, dict) and "turns" in data and len(data["turns"]) >= 2:
+                            sample = format_multi_turn_sample(data["turns"], format_type=self.config.get("instruction_format", "sharegpt"), metadata={"domain": target_domain})
+                            s = ConstructedSample(
+                                instruction=sample["instruction"],
+                                response=sample["response"],
+                                conversation=sample.get("conversations"),
+                                metadata=sample.get("metadata", {}),
+                                difficulty_tier=3,
+                                curriculum_order=i,
+                                format="sharegpt",
+                            )
+                            self._difficulty_distribution[s.difficulty_tier] += 1
+                            yield s
+                            continue
+                except Exception as e:
+                    logger.debug(f"Multi-turn LLM generation fallback: {e}")
+
+        # Fallback multi-turn builder
+        for i, chunk in enumerate(chunks):
+            lines = [l.strip() for l in chunk.split("\n") if len(l.strip()) > 10]
+            if len(lines) >= 4:
+                turns = [
+                    {"role": "user", "content": f"Can you explain the requirements of {lines[0]}?"},
+                    {"role": "assistant", "content": lines[1]},
+                    {"role": "user", "content": "What is the practical impact or edge case for this?"},
+                    {"role": "assistant", "content": lines[2] if len(lines) > 2 else lines[1]},
+                ]
+                sample = format_multi_turn_sample(turns, format_type="sharegpt", metadata={"domain": target_domain})
+                s = ConstructedSample(
+                    instruction=sample["instruction"],
+                    response=sample["response"],
+                    conversation=sample.get("conversations"),
+                    metadata=sample.get("metadata", {}),
+                    difficulty_tier=2,
+                    curriculum_order=i,
+                    format="sharegpt",
+                )
+                self._difficulty_distribution[s.difficulty_tier] += 1
+                yield s
+
+    async def _construct_tool_calling_adaptive(
+        self,
+        content: str,
+        target_domain: str,
+        quality: float,
+        generation_brief: dict | None = None,
+    ) -> AsyncGenerator[ConstructedSample, None]:
+        """Construct tool calling / function calling dataset samples using core.generation.tool_caller."""
+        from core.generation.tool_caller import (
+            build_tool_calling_system_prompt,
+            format_tool_calling_sample,
+            DEFAULT_FINANCE_TOOLS,
+        )
+        target_domain = _sanitize_target_domain(target_domain)
+        if _is_garbage_content(content):
+            return
+
+        chunks = self._adaptive_chunk(content, max_length=1500)
+        tools = self.config.get("tools_definition") or DEFAULT_FINANCE_TOOLS
+        tool_prompt = build_tool_calling_system_prompt(tools)
+
+        if self.router:
+            for i, chunk in enumerate(chunks):
+                prompt = (
+                    f"{tool_prompt}\n"
+                    f"Reference material from '{target_domain}':\n{chunk}\n\n"
+                    "Output strictly a JSON list of objects containing 'instruction', 'response', and 'tool_calls' (list of {'name': ..., 'arguments': {...}})."
+                )
+                try:
+                    resp = await self.router.route(
+                        task=TaskType.STRUCTURED_OUTPUT,
+                        prompt=prompt,
+                        system_prompt="You are a function calling dataset generator. Output valid JSON arrays only.",
+                        temperature=0.2,
+                    )
+                    if resp and resp.content:
+                        pairs = _extract_json_array(resp.content.strip())
+                        for pair in pairs:
+                            inst = str(pair.get("instruction", "")).strip()
+                            t_calls = pair.get("tool_calls", [])
+                            resp_text = str(pair.get("response", "")).strip()
+                            if inst and (t_calls or resp_text):
+                                sample = format_tool_calling_sample(inst, t_calls, assistant_thought=resp_text)
+                                s = ConstructedSample(
+                                    instruction=sample["instruction"],
+                                    response=json.dumps(sample.get("tool_calls", []), ensure_ascii=False) if sample.get("tool_calls") else sample["response"],
+                                    metadata={**sample.get("metadata", {}), "domain": target_domain, "type": "tool_calling"},
+                                    difficulty_tier=3,
+                                    curriculum_order=i,
+                                    format="openai_tool_calls",
+                                )
+                                self._difficulty_distribution[s.difficulty_tier] += 1
+                                yield s
+                        continue
+                except Exception as e:
+                    logger.debug(f"Tool calling LLM generation fallback: {e}")
+
+        # Fallback tool calling constructor
+        for i, chunk in enumerate(chunks):
+            gstin_match = re.search(r'\b[0-9]{2}[A-Z]{5}[0-9]{4}[A-Z]{1}[1-9A-Z]{1}Z[0-9A-Z]{1}\b', chunk)
+            tool_calls = [{
+                "name": "check_itc_balance",
+                "arguments": {"gstin": gstin_match.group(0) if gstin_match else "27AAPFU0939F1ZV"}
+            }]
+            sample = format_tool_calling_sample(f"Check my current ITC ledger balance for {target_domain}", tool_calls)
+            s = ConstructedSample(
+                instruction=sample["instruction"],
+                response=json.dumps(tool_calls, indent=2),
+                metadata={**sample.get("metadata", {}), "type": "tool_calling", "domain": target_domain},
+                difficulty_tier=3,
+                curriculum_order=i,
+                format="openai_tool_calls",
+            )
+            self._difficulty_distribution[s.difficulty_tier] += 1
+            yield s
+
+    async def _construct_contrastive_adaptive(
+        self,
+        content: str,
+        target_domain: str,
+        quality: float,
+        generation_brief: dict | None = None,
+    ) -> AsyncGenerator[ConstructedSample, None]:
+        """Construct contrastive critique & hallucination pairs using core.generation.contrastive_generator."""
+        from core.generation.contrastive_generator import (
+            build_contrastive_prompt_directive,
+            perturb_factual_statement,
+        )
+        target_domain = _sanitize_target_domain(target_domain)
+        if _is_garbage_content(content):
+            return
+
+        chunks = self._adaptive_chunk(content, max_length=1500)
+        contrastive_directive = build_contrastive_prompt_directive()
+
+        if self.router:
+            for i, chunk in enumerate(chunks):
+                prompt = (
+                    f"You are a contrastive alignment pair generator for '{target_domain}'.\n"
+                    f"{contrastive_directive}\n"
+                    f"Reference Content:\n{chunk}\n\n"
+                    "Output strictly a JSON list of objects with 'instruction', 'grounded_response', 'perturbed_negative', 'perturbation_type', and 'critique'."
+                )
+                try:
+                    resp = await self.router.route(
+                        task=TaskType.STRUCTURED_OUTPUT,
+                        prompt=prompt,
+                        system_prompt="You are a contrastive hallucination generator. Output valid JSON arrays only.",
+                        temperature=0.3,
+                    )
+                    if resp and resp.content:
+                        pairs = _extract_json_array(resp.content.strip())
+                        for pair in pairs:
+                            inst = str(pair.get("instruction", "")).strip()
+                            grounded = str(pair.get("grounded_response", "")).strip()
+                            perturbed = str(pair.get("perturbed_negative", "")).strip()
+                            if inst and grounded:
+                                s = ConstructedSample(
+                                    instruction=inst,
+                                    response=grounded,
+                                    metadata={
+                                        "type": "contrastive_critique",
+                                        "domain": target_domain,
+                                        "perturbed_negative": perturbed,
+                                        "perturbation_type": pair.get("perturbation_type", "factual_flip"),
+                                        "critique": pair.get("critique", ""),
+                                    },
+                                    difficulty_tier=4,
+                                    curriculum_order=i,
+                                )
+                                self._difficulty_distribution[s.difficulty_tier] += 1
+                                yield s
+                        continue
+                except Exception as e:
+                    logger.debug(f"Contrastive LLM generation fallback: {e}")
+
+        # Fallback contrastive builder using perturbation engine
+        for i, chunk in enumerate(chunks):
+            qa = self._generate_qa_pair(chunk, target_domain)
+            if qa and qa.get("answer"):
+                perturbed_info = perturb_factual_statement(qa["answer"])
+                s = ConstructedSample(
+                    instruction=qa["question"],
+                    response=qa["answer"],
+                    metadata={
+                        "type": "contrastive_critique",
+                        "domain": target_domain,
+                        "perturbed_negative": perturbed_info.get("perturbed_text", ""),
+                        "perturbation_type": perturbed_info.get("perturbation_type", "numerical_rate_flip"),
+                        "critique": perturbed_info.get("critique", ""),
                     },
                     difficulty_tier=4,
                     curriculum_order=i,
-                ))
-
-        return samples
-
-    def _construct_conversational_adaptive(
-        self,
-        content: str,
-        quality: float
-    ) -> list[ConstructedSample]:
-        """Construct conversational samples."""
-        samples = []
-
-        # Try to identify dialogue patterns
-        lines = content.split('\n')
-        lines = [l.strip() for l in lines if l.strip() and len(l.strip()) > 5]
-
-        for i in range(0, len(lines) - 1, 2):
-            user = lines[i]
-            assistant = lines[i+1] if i+1 < len(lines) else ""
-
-            if user and assistant and len(user) > 5 and len(assistant) > 5:
-                samples.append(ConstructedSample(
-                    instruction=user,
-                    response=assistant,
-                    metadata={"type": "conversational", "turn": i // 2},
-                    difficulty_tier=2,
-                    curriculum_order=i // 2,
-                    format="chatml"
-                ))
-
-        return samples
-
-    def _construct_tool_calling_adaptive(
-        self,
-        content: str,
-        quality: float
-    ) -> list[ConstructedSample]:
-        """Construct tool-calling dataset samples."""
-        samples = []
-
-        # Look for API patterns, function calls, commands
-        api_patterns = re.findall(r'(?:get|post|put|delete|create|update)\s+\w+', content, re.IGNORECASE)
-        function_patterns = re.findall(r'def\s+(\w+)\s*\(', content)
-        command_patterns = re.findall(r'`[^`]+`', content)
-
-        for i, pattern in enumerate(api_patterns + function_patterns + command_patterns):
-            tool_name = self._extract_tool_name(pattern)
-
-            samples.append(ConstructedSample(
-                instruction=f"Call the tool: {tool_name}",
-                response=self._generate_tool_response(tool_name, content),
-                metadata={
-                    "type": "tool_calling",
-                    "tool_name": tool_name,
-                    "format": "function_call"
-                },
-                difficulty_tier=3,
-                curriculum_order=i,
-            ))
-
-        return samples
+                )
+                self._difficulty_distribution[s.difficulty_tier] += 1
+                yield s
 
     def _construct_trajectory_adaptive(
         self,

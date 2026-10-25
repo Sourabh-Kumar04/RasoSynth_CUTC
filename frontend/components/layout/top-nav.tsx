@@ -22,6 +22,7 @@ import {
 import { clsx } from 'clsx'
 import { CommandPalette } from '@/components/search/CommandPalette'
 import { SpotlightProductTour } from '@/components/onboarding/SpotlightProductTour'
+import { RealtimePaletteTester } from '@/components/palette/realtime-palette-tester'
 import { api } from '@/lib/api/client'
 
 const MOBILE_NAV_ITEMS = [
@@ -125,6 +126,8 @@ export function TopNav() {
             >
               <Search className="w-4 h-4" />
             </button>
+
+            <RealtimePaletteTester />
 
             <Link
               href="/studio"

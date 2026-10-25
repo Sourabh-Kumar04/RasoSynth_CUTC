@@ -29,6 +29,8 @@ class RouterConfig:
     retry_max_delay: float = 60.0
     cache_ttl: int = 3600
     enable_caching: bool = True
+    enable_semantic_cache: bool = True
+    semantic_similarity_threshold: float = 0.94
     enable_self_improvement: bool = True
     health_reset_after_seconds: int = 300  # 5 minutes
 
@@ -147,6 +149,17 @@ class ProviderRouter:
         self._provider_configs: dict[str, dict] = {}
         self._success_rates: dict[str, list[bool]] = {}
         self.failover_engine = None
+        # Semantic cache integration for fuzzy prompt and embedding match optimization
+        try:
+            from core.cache.semantic import SemanticCacheManager
+            self.semantic_cache = SemanticCacheManager(
+                similarity_threshold=self.config.semantic_similarity_threshold,
+                enable_partial_reuse=True
+            )
+        except Exception as sc_init_err:
+            self.semantic_cache = None
+            _log.debug("SemanticCacheManager initialization skipped: %s", sc_init_err)
+
         # Synchronously register providers without awaiting initialize().
         # Call await router.initialize() from the async lifespan handler.
         self._provider_last_failure: dict[str, float] = {}
@@ -375,6 +388,29 @@ class ProviderRouter:
                     max_tokens=max_tokens,
                 )
                 cached = self._get_cached(cache_key, provider_name=provider_name)
+                if cached:
+                    return cached
+
+                # Semantic Cache check if exact cache missed
+                if self.config.enable_semantic_cache and getattr(self, "semantic_cache", None):
+                    try:
+                        matches = await self.semantic_cache.get_similar(
+                            prompt,
+                            threshold=self.config.semantic_similarity_threshold,
+                            limit=1
+                        )
+                        if matches:
+                            top_match = matches[0]
+                            logger.info(
+                                "Semantic cache HIT for provider %s (similarity=%.3f)",
+                                provider_name, top_match.similarity
+                            )
+                            if provider_name:
+                                self.cache_hits[provider_name] = self.cache_hits.get(provider_name, 0) + 1
+                            return top_match.entry.response
+                    except Exception as sem_err:
+                        logger.debug("Semantic cache lookup failed: %s", sem_err)
+
             if cached:
                 return cached
 
@@ -402,6 +438,11 @@ class ProviderRouter:
                     self._record_success(provider_name, True)
                     if not bypass_cache and cache_key:
                         self._set_cached(cache_key, response)
+                        if self.config.enable_semantic_cache and getattr(self, "semantic_cache", None):
+                            try:
+                                await self.semantic_cache.store(cache_key, prompt, response)
+                            except Exception as sem_store_err:
+                                logger.debug("Semantic cache store error: %s", sem_store_err)
                     return response
 
                 except Exception as e:

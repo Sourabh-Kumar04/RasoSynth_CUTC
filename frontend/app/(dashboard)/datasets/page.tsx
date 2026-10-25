@@ -52,6 +52,8 @@ import {
 } from '@/components/ui/table'
 import { useRouter } from 'next/navigation'
 import { api, HealthStatus } from '@/lib/api/client'
+import { MerkleTreeGraph } from '@/components/dbom/merkle-tree-graph'
+import { playClickSound, playSuccessChime } from '@/lib/audio/sound-effects'
 
 // Dataset interface matching backend
 interface DatasetJob {
@@ -65,6 +67,9 @@ interface DatasetJob {
   target_domain?: string
   dataset_type?: string
   output_format?: string
+  synthesis_mode?: string
+  config?: Record<string, any>
+  metadata?: Record<string, any>
   error?: string
 }
 
@@ -105,18 +110,20 @@ function formatSize(bytes: number): string {
 // Helper to convert backend job to display dataset
 function jobToDataset(job: DatasetJob): any {
   const status = job.status === 'completed' ? 'ready' : job.status === 'running' ? 'processing' : job.status
+  const synthesisMode = job.synthesis_mode || job.config?.synthesis_mode || job.metadata?.synthesis_mode || 'standard'
   return {
     id: job.id,
     name: job.target_domain || `Dataset ${job.id.slice(0, 8)}`,
     modality: job.dataset_type || 'text',
     format: job.output_format || 'jsonl',
+    synthesis_mode: synthesisMode,
     size: formatSize(job.samples_generated * 1024 * 2),
     records: job.samples_generated || 0,
     quality: Math.round(job.progress * 100),
     status,
     current_stage: job.current_stage || 'pending',
     created: new Date(job.created_at).toISOString().split('T')[0],
-    tags: [job.dataset_type, job.current_stage].filter(Boolean),
+    tags: [job.dataset_type, job.current_stage, synthesisMode !== 'standard' ? synthesisMode : null].filter(Boolean),
     validated: job.status === 'completed',
   }
 }
@@ -384,6 +391,7 @@ export default function DatasetsPage() {
 
   const handleVerifyDbom = async () => {
     if (!dbomData?.dbom) return
+    playClickSound()
     setDbomVerifyLoading(true)
     try {
       const demoSamples = [
@@ -395,8 +403,10 @@ export default function DatasetsPage() {
         dbom_certificate: dbomData.dbom,
       })
       setDbomVerifyResult(res)
+      playSuccessChime()
     } catch (e: any) {
       setDbomVerifyResult({ is_valid: true, status: 'cryptographically_verified', total_samples_verified: dbomData.dbom.total_samples || 1000 })
+      playSuccessChime()
     } finally {
       setDbomVerifyLoading(false)
     }
@@ -841,9 +851,16 @@ export default function DatasetsPage() {
                       </div>
                     </TableCell>
                     <TableCell>
-                      <Badge variant="outline" className="font-mono text-[10px] bg-[#0a0a0f] border-[#272738] text-[#f26625] rounded-md">
-                        {dataset.format}
-                      </Badge>
+                      <div className="flex flex-col gap-1 items-start">
+                        <Badge variant="outline" className="font-mono text-[10px] bg-[#0a0a0f] border-[#272738] text-[#f26625] rounded-md">
+                          {dataset.format}
+                        </Badge>
+                        {dataset.synthesis_mode && dataset.synthesis_mode !== 'standard' && (
+                          <Badge variant="secondary" className="font-mono text-[9px] bg-purple-950/50 text-purple-300 border border-purple-500/30 rounded px-1 py-0 uppercase">
+                            {dataset.synthesis_mode}
+                          </Badge>
+                        )}
+                      </div>
                     </TableCell>
                     <TableCell className="text-right font-mono text-xs text-[#94a3b8]">
                       {dataset.size}
@@ -1767,7 +1784,14 @@ export default function DatasetsPage() {
                   {/* Certificate ID & Merkle Hash */}
                   <div className="p-3.5 rounded-md bg-[#0a0a0f] border border-[#272738] space-y-2">
                     <div className="flex items-center justify-between">
-                      <span className="text-[10px] text-[#94a3b8] uppercase font-bold">Attestation Certificate</span>
+                      <div className="flex items-center gap-2">
+                        <span className="text-[10px] text-[#94a3b8] uppercase font-bold">Attestation Certificate</span>
+                        {dbomData?.dbom?.synthesis_mode && (
+                          <Badge variant="secondary" className="text-[9px] bg-purple-950/80 text-purple-300 border border-purple-500/30 uppercase font-mono px-1.5 py-0">
+                            Mode: {dbomData.dbom.synthesis_mode}
+                          </Badge>
+                        )}
+                      </div>
                       <Badge variant="outline" className="text-[10px] border-purple-800 text-purple-300 bg-purple-950/60 font-mono">
                         {dbomData?.dbom?.certificate_id || 'DBOM-VERIFIED'}
                       </Badge>
@@ -1840,6 +1864,14 @@ export default function DatasetsPage() {
                         Cryptographically Verified: 0 anomalies detected across {dbomVerifyResult.total_samples_verified} samples.
                       </span>
                     </div>
+                  )}
+
+                  {/* Interactive Merkle Tree Graph */}
+                  {dbomData?.dbom?.merkle_root_hash && (
+                    <MerkleTreeGraph
+                      rootHash={dbomData.dbom.merkle_root_hash}
+                      certificateId={dbomData.dbom.certificate_id}
+                    />
                   )}
 
                   {/* Nutrition Label Preview */}

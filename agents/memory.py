@@ -10,6 +10,8 @@ from dataclasses import dataclass, field
 from datetime import datetime, timezone
 from enum import Enum
 import json
+import os
+from pathlib import Path
 import asyncio
 import uuid
 
@@ -53,7 +55,24 @@ class MemoryEntry:
             "access_count": self.access_count,
             "tags": self.tags,
             "source_agent": self.source_agent,
+            "metadata": self.metadata,
         }
+
+    @classmethod
+    def from_dict(cls, data: dict) -> "MemoryEntry":
+        """Instantiate MemoryEntry from serialized dictionary."""
+        return cls(
+            entry_id=data.get("entry_id", str(uuid.uuid4())),
+            memory_type=MemoryType(data.get("memory_type", "episodic")),
+            content=data.get("content"),
+            importance=float(data.get("importance", 1.0)),
+            created_at=datetime.fromisoformat(data["created_at"]) if "created_at" in data else datetime.now(timezone.utc),
+            accessed_at=datetime.fromisoformat(data["accessed_at"]) if "accessed_at" in data else datetime.now(timezone.utc),
+            access_count=int(data.get("access_count", 0)),
+            tags=data.get("tags", []),
+            source_agent=data.get("source_agent"),
+            metadata=data.get("metadata", {}),
+        )
 
 
 @dataclass
@@ -530,15 +549,70 @@ class KnowledgeBase:
 
 
 class AgentMemoryManager:
-    """Manages all memory types for agents."""
+    """Manages all memory types for agents with persistent disk and Redis synchronization."""
 
-    def __init__(self, agent_id: str):
+    def __init__(self, agent_id: str, storage_dir: Optional[str] = None, redis_client: Optional[Any] = None):
         self.agent_id = agent_id
+        self.storage_dir = Path(storage_dir or os.getenv("AGENT_MEMORY_DIR", "outputs/agent_memory"))
+        self.redis_client = redis_client
         self.vector_memory = VectorMemory()
         self.episodic_memory = EpisodicMemory()
         self.graph_memory = GraphMemory()
         self.knowledge_base = KnowledgeBase()
         self.working_memory: Dict[str, Any] = {}
+
+        # Auto-load existing persistent memory from disk if available
+        self._load_from_disk()
+
+    def _get_persistence_file(self) -> Path:
+        """Path to JSON file storing agent memories."""
+        self.storage_dir.mkdir(parents=True, exist_ok=True)
+        return self.storage_dir / f"{self.agent_id}_memory.json"
+
+    def _load_from_disk(self) -> None:
+        """Load stored memories from local disk."""
+        filepath = self._get_persistence_file()
+        if not filepath.exists():
+            return
+        try:
+            with open(filepath, "r", encoding="utf-8") as f:
+                data = json.load(f)
+                entries = data.get("entries", [])
+                for entry_dict in entries:
+                    entry = MemoryEntry.from_dict(entry_dict)
+                    self.vector_memory._entries[entry.entry_id] = entry
+                    for tag in entry.tags:
+                        if tag not in self.vector_memory._index:
+                            self.vector_memory._index[tag] = []
+                        self.vector_memory._index[tag].append(entry.entry_id)
+        except Exception:
+            pass
+
+    async def _sync_to_storage(self, entry: MemoryEntry) -> None:
+        """Persist memory entry to disk and optionally to Redis."""
+        # 1. Disk persistence
+        try:
+            filepath = self._get_persistence_file()
+            data = {"agent_id": self.agent_id, "updated_at": datetime.now(timezone.utc).isoformat(), "entries": []}
+            if filepath.exists():
+                try:
+                    with open(filepath, "r", encoding="utf-8") as f:
+                        data = json.load(f)
+                except Exception:
+                    pass
+            data.setdefault("entries", []).append(entry.to_dict())
+            with open(filepath, "w", encoding="utf-8") as f:
+                json.dump(data, f, indent=2, ensure_ascii=False)
+        except Exception:
+            pass
+
+        # 2. Redis persistence if configured
+        if self.redis_client:
+            try:
+                r_key = f"agent_mem:{self.agent_id}:{entry.memory_type.value}"
+                await self.redis_client.rpush(r_key, json.dumps(entry.to_dict()))
+            except Exception:
+                pass
 
     async def store(
         self,
@@ -547,7 +621,7 @@ class AgentMemoryManager:
         tags: Optional[List[str]] = None,
         importance: float = 1.0
     ) -> MemoryEntry:
-        """Store a memory entry."""
+        """Store a memory entry and persist it."""
         entry = await self.vector_memory.store(
             content=content,
             memory_type=memory_type,
@@ -555,6 +629,7 @@ class AgentMemoryManager:
             importance=importance,
             source_agent=self.agent_id
         )
+        await self._sync_to_storage(entry)
         return entry
 
     async def recall(
@@ -586,6 +661,7 @@ class AgentMemoryManager:
         """Get statistics for all memory types."""
         return {
             "agent_id": self.agent_id,
+            "persistent_file": str(self._get_persistence_file()),
             "vector_memory": self.vector_memory.get_stats(),
             "episodic_memory": {
                 "total_episodes": len(self.episodic_memory._episodes),

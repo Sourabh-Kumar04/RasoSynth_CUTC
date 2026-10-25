@@ -267,10 +267,38 @@ class ContentAnalyzer:
             "unique_word_ratio": len(set(text.lower().split())) / max(len(text.split()), 1),
             "has_profanity": bool(re.search(r'\b(fuck|shit|damn)\b', text.lower())),
             "has_garbled_text": self._detect_garbled_text(text),
+            "has_bot_challenge": self._detect_anti_bot_garbage(text),
             "completeness": self._assess_completeness(text),
         }
 
         return quality
+
+    @staticmethod
+    def _detect_anti_bot_garbage(text: str) -> bool:
+        """Detect anti-bot, CAPTCHA, Cloudflare, or crawler-challenge text."""
+        if not text:
+            return False
+        patterns = [
+            r"javascript\s+is\s+disabled",
+            r"javascript\s+not\s+enabled",
+            r"enable\s+javascript",
+            r"requires\s+javascript",
+            r"please\s+turn\s+javascript\s+on",
+            r"verify\s+(?:that\s+)?you(?:'re|\s+are)\s+(?:not\s+)?a\s+(?:robot|human)",
+            r"prove\s+you(?:'re|\s+are)\s+(?:not\s+)?a\s+(?:robot|human)",
+            r"are\s+you\s+a\s+human",
+            r"cf-browser-verification",
+            r"cloudflare\s+(?:\w+\s+)*challenge",
+            r"ddos\s+protection\s+by\s+cloudflare",
+            r"attention\s+required!\s*\|\s*cloudflare",
+            r"checking\s+your\s+browser\s+before\s+accessing",
+            r"just\s+a\s+moment\b",
+            r"429\s+too\s+many\s+requests",
+            r"403\s+forbidden",
+            r"access\s+denied",
+        ]
+        text_lower = text.lower()
+        return any(bool(re.search(p, text_lower)) for p in patterns)
 
     def _detect_garbled_text(self, text: str) -> bool:
         """Detect garbled or corrupted text."""
@@ -415,6 +443,12 @@ class ExtractionPipeline:
                 yield content
         elif source_type == SourceType.AI_KOSH:
             async for content in self.extract_from_aikosh(source):
+                yield content
+        elif (
+            source_type in (SourceType.GOOGLE_SCHOLAR, SourceType.SEMANTIC_SCHOLAR)
+            or "semanticscholar.org" in url
+        ):
+            async for content in self.extract_from_scholar(source):
                 yield content
         else:
             async for content in self.extract_from_url(url):
@@ -594,11 +628,34 @@ class ExtractionPipeline:
                 }
             ) as client:
                 response = await client.get(url)
+                if response.status_code >= 400:
+                    yield ExtractedContent(
+                        content="",
+                        content_type="error",
+                        url=url,
+                        confidence=0.0,
+                        quality_score=0.0,
+                        extraction_warnings=[f"HTTP {response.status_code} error from source"]
+                    )
+                    return
+
                 content_type = response.headers.get("content-type", "")
 
                 # Detect encoding
                 encoding = response.encoding or 'utf-8'
                 raw_content = response.text
+
+                # Immediate anti-bot verification check on raw response text
+                if self.analyzer._detect_anti_bot_garbage(raw_content):
+                    yield ExtractedContent(
+                        content="",
+                        content_type="error",
+                        url=url,
+                        confidence=0.0,
+                        quality_score=0.0,
+                        extraction_warnings=["anti_bot_garbage: Anti-bot verification page detected (CAPTCHA/Cloudflare)"]
+                    )
+                    return
 
                 # Extract based on content type
                 if "text/html" in content_type:
@@ -636,6 +693,17 @@ class ExtractionPipeline:
         encoding: str
     ) -> AsyncGenerator[ExtractedContent, None]:
         """Extract text from HTML with structure preservation."""
+        if self.analyzer._detect_anti_bot_garbage(html):
+            yield ExtractedContent(
+                content="",
+                content_type="error",
+                url=url,
+                confidence=0.0,
+                quality_score=0.0,
+                extraction_warnings=["anti_bot_garbage: Anti-bot verification page detected (CAPTCHA/Cloudflare)"]
+            )
+            return
+
         # Remove scripts and styles
         text = html
         text = re.sub(r'<script[^>]*>.*?</script>', '', text, flags=re.DOTALL | re.IGNORECASE)
@@ -649,6 +717,17 @@ class ExtractionPipeline:
 
         # Regular HTML extraction
         content = self._strip_html(text)
+
+        if self.analyzer._detect_anti_bot_garbage(content):
+            yield ExtractedContent(
+                content="",
+                content_type="error",
+                url=url,
+                confidence=0.0,
+                quality_score=0.0,
+                extraction_warnings=["anti_bot_garbage: Anti-bot verification page detected (CAPTCHA/Cloudflare)"]
+            )
+            return
 
         # Analyze structure
         structure = self.analyzer._detect_structure(html)
@@ -711,6 +790,25 @@ class ExtractionPipeline:
         # Clean content
         cleaned = self._clean_text(content)
 
+        # Detect anti-bot challenge upfront
+        is_bot = (
+            analysis.get("quality", {}).get("has_bot_challenge")
+            or analysis.get("has_bot_challenge")
+            or self.analyzer._detect_anti_bot_garbage(content)
+            or self.analyzer._detect_anti_bot_garbage(cleaned)
+        )
+        if is_bot:
+            return ExtractedContent(
+                content="",
+                content_type="error",
+                language=analysis.get("language", "unknown"),
+                url=url,
+                confidence=0.0,
+                quality_score=0.0,
+                encoding=encoding,
+                extraction_warnings=["anti_bot_garbage: Anti-bot verification page detected (CAPTCHA/Cloudflare)"],
+            )
+
         # Detect quality issues
         quality_score = self._calculate_quality_score(analysis, cleaned)
 
@@ -771,6 +869,13 @@ class ExtractionPipeline:
 
     def _calculate_quality_score(self, analysis: dict, content: str) -> float:
         """Calculate content quality score."""
+        if (
+            analysis.get("has_bot_challenge")
+            or analysis.get("quality", {}).get("has_bot_challenge")
+            or self.analyzer._detect_anti_bot_garbage(content)
+        ):
+            return 0.0
+
         score = 1.0
 
         # Deduct for quality issues
@@ -792,6 +897,9 @@ class ExtractionPipeline:
     def _generate_warnings(self, analysis: dict, has_ocr: bool) -> list[str]:
         """Generate extraction warnings."""
         warnings = []
+
+        if analysis.get("has_bot_challenge") or analysis.get("quality", {}).get("has_bot_challenge"):
+            warnings.append("anti_bot_garbage: Anti-bot verification page detected (CAPTCHA/Cloudflare)")
 
         if analysis.get("has_garbled_text"):
             warnings.append("Content may contain garbled/corrupted text")
@@ -1134,6 +1242,49 @@ class ExtractionPipeline:
                 confidence=0.0,
                 url=source.url,
                 extraction_warnings=[f"PubMed extraction failed: {str(e)}"]
+            )
+
+    async def extract_from_scholar(self, source) -> AsyncGenerator[ExtractedContent, None]:
+        """Extract academic content from scholar source using API abstract/metadata, avoiding Cloudflare web walls."""
+        try:
+            title = getattr(source, "title", "") or ""
+            description = getattr(source, "description", "") or ""
+            metadata = getattr(source, "metadata__", None) or getattr(source, "metadata", {}) or {}
+            arxiv_id = metadata.get("arxiv_id", "")
+            url = getattr(source, "url", "")
+
+            content = f"{title}\n\n{description}".strip() if (title or description) else ""
+
+            # Check if abstract is real content (not anti-bot)
+            if content and not self.analyzer._detect_anti_bot_garbage(content) and len(content) > 30:
+                extracted = await self._process_text(content, url, "utf-8")
+                extracted.metadata["source_type"] = "academic_abstract"
+                extracted.metadata["paper_id"] = metadata.get("paper_id", "")
+                if arxiv_id:
+                    extracted.metadata["arxiv_id"] = arxiv_id
+                author = getattr(source, "author", "")
+                if author:
+                    extracted.metadata["authors"] = author
+                yield extracted
+            elif arxiv_id:
+                async for c in self.extract_from_arxiv(source):
+                    yield c
+            else:
+                yield ExtractedContent(
+                    content="",
+                    content_type="error",
+                    confidence=0.0,
+                    url=url,
+                    extraction_warnings=["Scholar source abstract missing or empty; scraping bypassed to avoid bot challenge"]
+                )
+        except Exception as e:
+            self._LOG.warning(f"Scholar extraction failed: {e}")
+            yield ExtractedContent(
+                content="",
+                content_type="error",
+                confidence=0.0,
+                url=getattr(source, "url", ""),
+                extraction_warnings=[f"Scholar extraction failed: {str(e)}"]
             )
 
     async def extract_from_kaggle(self, source) -> AsyncGenerator[ExtractedContent, None]:

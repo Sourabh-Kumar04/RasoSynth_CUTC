@@ -82,6 +82,10 @@ class JobRequest(BaseModel):
         return value
     dataset_name: Optional[str] = Field(default=None, min_length=1, max_length=120)
     dataset_type: DatasetType = Field(default=DatasetType.SFT)
+    synthesis_mode: Optional[Literal["standard", "cot", "socratic", "multi_turn", "preference", "simpo", "kto", "tool_calling", "contrastive", "rag"]] = Field(
+        default="standard",
+        description="Advanced synthesis mode routing to specialized generation engines (standard, cot, socratic, multi_turn, preference, simpo, kto, tool_calling, contrastive, rag)"
+    )
 
     @field_validator("dataset_type", mode="before")
     @classmethod

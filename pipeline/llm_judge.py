@@ -6,6 +6,7 @@ replacing the heuristic-only placeholder implementation.
 
 from __future__ import annotations
 
+import asyncio
 import hashlib
 import json
 import logging
@@ -13,6 +14,8 @@ import time
 from dataclasses import dataclass
 from enum import Enum
 from typing import Optional, Any
+
+from providers.core_lib.base import TaskType
 
 logger = logging.getLogger(__name__)
 

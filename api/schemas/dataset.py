@@ -190,6 +190,7 @@ class DatasetConfig(BaseSchema):
     description: str = ""
 
     dataset_type: DatasetType = DatasetType.SYNTHETIC
+    synthesis_mode: str = "standard"
     modality: List[DataModality] = Field(default_factory=list)
 
     data_constraints: DataConstraints = Field(default_factory=DataConstraints)

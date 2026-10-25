@@ -49,6 +49,7 @@ def generate_dbom_attestation(
     language: str = "en",
     license_type: str = "Apache-2.0",
     compliance_flags: Optional[Dict[str, Any]] = None,
+    synthesis_mode: Optional[str] = "standard",
 ) -> Dict[str, Any]:
     """Generate tamper-evident cryptographic DBOM certificate for a dataset."""
     leaf_hashes = [compute_sample_hash(s) for s in samples]
@@ -65,6 +66,7 @@ def generate_dbom_attestation(
         "dataset_name": dataset_name,
         "domain": domain or "general",
         "language": language,
+        "synthesis_mode": synthesis_mode or "standard",
         "total_samples": len(samples),
         "issued_at": now_iso,
         "merkle_root_hash": merkle_root,
@@ -77,6 +79,7 @@ def generate_dbom_attestation(
         },
         "provenance": {
             "engine": "RasoSynthTune 2.0.0 Enterprise",
+            "synthesis_mode": synthesis_mode or "standard",
             "license": license_type,
             "synthetic_pipeline": "deterministic_seedless_coverage",
             "tamper_verification_algorithm": "SHA-256 Merkle Tree",
@@ -132,6 +135,7 @@ def generate_nutrition_label_markdown(dbom: Dict[str, Any]) -> str:
 |:---|:---|
 | **Dataset Name** | {dbom.get('dataset_name')} |
 | **Domain** | {dbom.get('domain')} |
+| **Synthesis Mode** | `{dbom.get('synthesis_mode', 'standard')}` |
 | **Primary Language** | {dbom.get('language')} |
 | **Total Samples** | {dbom.get('total_samples'):,} records |
 | **License** | {prov.get('license', 'Apache-2.0')} |

@@ -21,6 +21,8 @@ import { clsx } from 'clsx'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { useRouter, useSearchParams } from 'next/navigation'
+import { ZenSpatialCanvas } from '@/components/zen/zen-spatial-canvas'
+import { playClickSound } from '@/lib/audio/sound-effects'
 import { api } from '@/lib/api/client'
 
 // 1-Click Industry Benchmark Presets
@@ -108,6 +110,7 @@ function StudioContent() {
     searchParams.get('domain') || 'Finance & Taxation (AI Kosh)'
   )
   const [datasetType, setDatasetType] = useState('sft')
+  const [synthesisMode, setSynthesisMode] = useState('standard')
   const [instructionFormat, setInstructionFormat] = useState('alpaca')
   const [language, setLanguage] = useState(searchParams.get('language') || 'en')
   const [scriptMode, setScriptMode] = useState<'native' | 'romanized' | 'dual'>('native')
@@ -134,6 +137,7 @@ function StudioContent() {
   const [isAutoDetecting, setIsAutoDetecting] = useState(false)
   const [discoveredSources, setDiscoveredSources] = useState<Array<{ name: string; url?: string; source_type?: string }>>([])
   const [autoDetectNotice, setAutoDetectNotice] = useState<string | null>(null)
+  const [coverageMatrix, setCoverageMatrix] = useState<{ dimensions?: Record<string, any>; cells?: Array<Record<string, any>>; total_cells?: number } | null>(null)
   const [activePreset, setActivePreset] = useState<string>('aikosh-tax')
   const [idealSamples, setIdealSamples] = useState<Array<{ instruction: string; response: string }>>([])
   const [showAdvanced, setShowAdvanced] = useState(false)
@@ -209,6 +213,21 @@ function StudioContent() {
           })))
         }
 
+        // Fetch execution plan and coverage matrix
+        try {
+          const planRes = await api.planJob({
+            domain: dynamicDomain || targetDomain,
+            target_size: 20,
+            synthesis_mode: synthesisMode,
+            language: language,
+          })
+          if (planRes?.coverage_matrix && planRes.coverage_matrix.cells?.length > 0) {
+            setCoverageMatrix(planRes.coverage_matrix)
+          }
+        } catch {
+          // Non-blocking for auto-detect preview
+        }
+
         setAutoDetectNotice(
           `Discovered ${allTerms.length} invariant terms · ${previewRes.sources?.length || 0} authority sources`
         )
@@ -226,6 +245,7 @@ function StudioContent() {
 
   // Launch job
   const handleGenerate = async () => {
+    playClickSound()
     setIsSubmitting(true)
     try {
       const validAnchors = idealSamples
@@ -249,6 +269,7 @@ function StudioContent() {
         target_domain: prompt.trim() || targetDomain,
         dataset_name: targetDomain,
         dataset_type: datasetType,
+        synthesis_mode: synthesisMode,
         instruction_format: instructionFormat,
         language: language,
         script_mode: scriptMode,
@@ -334,6 +355,7 @@ function StudioContent() {
                 key={preset.id}
                 type="button"
                 onClick={() => {
+                  playClickSound()
                   setActivePreset(preset.id)
                   setTargetDomain(preset.domain)
                   setPrompt(preset.prompt)
@@ -388,7 +410,8 @@ function StudioContent() {
       </div>
 
       {/* Main Studio Controls */}
-      <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
+      <ZenSpatialCanvas activeMode="Zen Kinetic Spatial">
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
         
         {/* Left Column: Intent, Prompt & Grounding Invariants */}
         <div className="lg:col-span-7 p-5 rounded-md bg-[#12121a] border border-[#272738] space-y-5">
@@ -541,6 +564,38 @@ function StudioContent() {
               </div>
             )}
 
+            {/* Synthetic Diversity & Topic Coverage Matrix */}
+            {coverageMatrix && coverageMatrix.cells && coverageMatrix.cells.length > 0 && (
+              <div className="space-y-2 pt-2 border-t border-[#1c1c28]">
+                <div className="flex items-center justify-between">
+                  <span className="text-[10px] font-mono uppercase text-[#94a3b8] flex items-center gap-1.5">
+                    <Layers className="w-3.5 h-3.5 text-[#f26625]" />
+                    Topic &amp; Diversity Coverage Matrix ({coverageMatrix.cells.length} cells planned)
+                  </span>
+                  <span className="px-1.5 py-0.5 rounded-sm bg-purple-950/60 border border-purple-800/60 text-[9px] font-mono text-purple-300">
+                    Balanced Sampling Guarantee
+                  </span>
+                </div>
+                <div className="grid grid-cols-2 sm:grid-cols-3 gap-1.5 max-h-48 overflow-y-auto p-2 bg-[#0a0a0f] border border-[#272738] rounded-md">
+                  {coverageMatrix.cells.map((cell, idx) => (
+                    <div
+                      key={idx}
+                      className="p-1.5 rounded bg-[#161622] border border-[#272738]/60 text-[10px] font-mono space-y-0.5 hover:border-[#f26625]/40 transition-colors"
+                    >
+                      {Object.entries(cell).map(([k, v]) => (
+                        <div key={k} className="flex items-center justify-between text-[9px]">
+                          <span className="text-[#64748b] truncate max-w-[70px]">{k}:</span>
+                          <span className="text-purple-300 font-semibold truncate max-w-[90px]" title={String(v)}>
+                            {String(v)}
+                          </span>
+                        </div>
+                      ))}
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+
             {/* Collapsible Few-Shot Anchor Examples */}
             <div className="pt-2 border-t border-[#1c1c28]">
               <button
@@ -641,6 +696,27 @@ function StudioContent() {
                   <option value="rlhf">Preference Pairs (RLHF / DPO)</option>
                   <option value="simpo">Simple Preference (SimPO)</option>
                   <option value="rag">Retrieval-Augmented Generation (RAG)</option>
+                </select>
+              </div>
+
+              <div>
+                <label className="text-[10px] font-mono uppercase text-[#94a3b8] block mb-1">
+                  Synthesis Engine Mode
+                </label>
+                <select
+                  value={synthesisMode}
+                  onChange={(e) => setSynthesisMode(e.target.value)}
+                  className="w-full bg-[#0a0a0f] border border-[#272738] focus:border-[#f26625] rounded-md p-2 text-xs font-mono text-white focus:outline-none"
+                >
+                  <option value="standard">Standard SFT (Grounded &amp; Adaptive)</option>
+                  <option value="cot">Chain-of-Thought (DeepSeek-R1 / &lt;thought&gt; Tags)</option>
+                  <option value="socratic">Socratic Dialectic Debate (Multi-Persona Verdict)</option>
+                  <option value="multi_turn">Multi-Turn Dialogue Trajectories</option>
+                  <option value="simpo">SimPO Preference Optimization (Length-Normalized)</option>
+                  <option value="kto">KTO Binary Utility (Prospect Theory)</option>
+                  <option value="tool_calling">Tool &amp; Function Calling (OpenAI / Hermes Schema)</option>
+                  <option value="contrastive">Contrastive Critique (Hallucination Perturbation)</option>
+                  <option value="rag">Multi-Hop RAG (Hard Negatives &amp; Citations)</option>
                 </select>
               </div>
 
@@ -882,7 +958,8 @@ function StudioContent() {
           </Button>
         </div>
       </div>
-    </div>
+    </ZenSpatialCanvas>
+  </div>
   )
 }
 

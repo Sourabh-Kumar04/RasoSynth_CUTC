@@ -236,6 +236,28 @@ class QualityScorer:
 
         # -- Provider-based evaluation ---------------------------------
         if self.router is not None:
+            # 1. Try neural embedding cosine similarity if router supports embed
+            if hasattr(self.router, "embed"):
+                try:
+                    import asyncio
+                    inst_resp = await asyncio.wait_for(self.router.embed(instruction[:1000]), timeout=5.0)
+                    resp_resp = await asyncio.wait_for(self.router.embed(response[:1000]), timeout=5.0)
+                    emb_inst = inst_resp.embedding if hasattr(inst_resp, "embedding") else inst_resp
+                    emb_resp = resp_resp.embedding if hasattr(resp_resp, "embedding") else resp_resp
+                    if emb_inst and emb_resp:
+                        dot = sum(a * b for a, b in zip(emb_inst, emb_resp))
+                        norm_a = sum(a * a for a, b in zip(emb_inst, emb_resp)) ** 0.5
+                        norm_b = sum(b * b for b in emb_resp) ** 0.5
+                        if norm_a > 0 and norm_b > 0:
+                            cos_sim = dot / (norm_a * norm_b)
+                            score = max(0.0, min(1.0, (cos_sim + 1.0) / 2.0))
+                            details["method"] = "embedding_similarity"
+                            details["cosine_similarity"] = round(cos_sim, 4)
+                            return round(score, 4), details
+                except Exception as emb_err:
+                    logger.debug("Embedding-based semantic scoring failed: %s", emb_err)
+
+            # 2. Try LLM Quality Check evaluation
             try:
                 prompt = (
                     "Rate the quality of this instruction-response pair on a "
@@ -258,10 +280,10 @@ class QualityScorer:
                             details["provider_score"] = provider_score
                             return provider_score, details
             except Exception:
-                logger.debug("Provider-based semantic scoring failed; using heuristics", exc_info=True)
+                logger.debug("Provider-based semantic scoring failed; using offline structural analysis", exc_info=True)
 
-        # -- Heuristic fallback ----------------------------------------
-        details["method"] = "heuristic"
+        # -- Offline structural fallback --------------------------------
+        details["method"] = "offline_structural_analysis"
         inst_words = instruction.split()
         resp_words = response.split()
 

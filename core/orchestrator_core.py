@@ -1275,6 +1275,29 @@ class DatasetOrchestrator:
         extracted = []
         extract_sem = asyncio.Semaphore(8)
 
+        # Check if distributed Ray cluster extraction is enabled
+        enable_ray = (
+            self.config.get("enable_ray", False)
+            or str(job.get("config", {}).get("enable_ray", "")).lower() in ("true", "1")
+            or os.getenv("ENABLE_RAY", "").lower() in ("true", "1")
+        )
+        if enable_ray and len(sources) > 0:
+            try:
+                from workers.ray_pipeline import RayPipeline, RAY_AVAILABLE
+                if RAY_AVAILABLE:
+                    logger.info(f"[{job_id}] Distributing extraction of {len(sources)} sources via Ray cluster...")
+                    ray_pipe = RayPipeline(extraction_config, num_workers=min(len(sources), 4))
+                    ray_sources = [
+                        s if isinstance(s, dict) else {"url": getattr(s, "url", ""), "metadata": getattr(s, "metadata", {})}
+                        for s in sources
+                    ]
+                    ray_extracted = ray_pipe.run_extraction(ray_sources)
+                    if ray_extracted:
+                        extracted.extend(ray_extracted)
+                        logger.info(f"[{job_id}] Ray cluster successfully extracted {len(ray_extracted)} records.")
+            except Exception as ray_err:
+                logger.warning(f"[{job_id}] Ray extraction fallback to local async pool: {ray_err}")
+
         async def _extract_source_task(source):
             if self._is_cancelled(job_id):
                 return []
@@ -2282,6 +2305,7 @@ class DatasetOrchestrator:
                 }
                 try:
                     from core.export.dbom_attestor import generate_dbom_attestation
+                    synthesis_mode_val = str(job_config.get("synthesis_mode", "standard"))
                     dbom_cert = generate_dbom_attestation(
                         dataset_name=export_config.dataset_name,
                         samples=[
@@ -2294,8 +2318,10 @@ class DatasetOrchestrator:
                         ],
                         domain=str(job_config.get("target_domain", "")),
                         language=str(job_config.get("language", "en")),
+                        synthesis_mode=synthesis_mode_val,
                     )
                     metadata_dict["dbom"] = dbom_cert
+                    metadata_dict["synthesis_mode"] = synthesis_mode_val
                     export_file = str(export_result.get("dataset", ""))
                     if export_file and os.path.exists(export_file):
                         with open(f"{export_file}.dbom.json", "w", encoding="utf-8") as f:

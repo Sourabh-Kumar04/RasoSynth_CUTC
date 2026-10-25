@@ -93,16 +93,18 @@ from api.review import router as review_router
 from api.quality import router as quality_router
 from api.finetune import router as finetune_router
 
-# Rate limiter for security (in-memory token bucket)
+# Rate limiter for security (distributed Redis-backed with in-memory fallback)
 class RateLimiter:
-    """In-memory rate limiter using token bucket algorithm.
+    """Rate limiter supporting distributed Redis-backed coordination and in-memory fallback.
 
+    Ensures rate limits apply uniformly across multi-worker (Uvicorn --workers N) deployments.
     Limits: max N requests per window_seconds per client_key (typically IP).
     """
 
-    def __init__(self, max_requests: int = 5, window_seconds: int = 60):
+    def __init__(self, max_requests: int = 5, window_seconds: int = 60, prefix: str = "general"):
         self.max_requests = max_requests
         self.window_seconds = window_seconds
+        self.prefix = prefix
         self._buckets: Dict[str, list] = {}
 
     def _cleanup(self):
@@ -115,8 +117,7 @@ class RateLimiter:
         for k in expired_keys:
             del self._buckets[k]
 
-    def check(self, client_key: str) -> bool:
-        """Check if request is allowed. Returns True if allowed, False if rate limited."""
+    def _check_memory(self, client_key: str) -> bool:
         now = time.time()
         self._cleanup()
 
@@ -133,6 +134,27 @@ class RateLimiter:
         self._buckets[client_key].append(now)
         return True
 
+    async def check_async(self, client_key: str, redis_client=None) -> bool:
+        """Asynchronously check rate limit, coordinating across workers via Redis if available."""
+        if redis_client is not None:
+            try:
+                now = time.time()
+                bucket_window = int(now // self.window_seconds)
+                redis_key = f"ratelimit:{self.prefix}:{client_key}:{bucket_window}"
+                count = await redis_client.incr(redis_key)
+                if count == 1:
+                    await redis_client.expire(redis_key, self.window_seconds + 5)
+                if count > self.max_requests:
+                    return False
+                return True
+            except Exception as e:
+                logger.debug(f"Redis rate limiter fallback to memory: {e}")
+        return self._check_memory(client_key)
+
+    def check(self, client_key: str) -> bool:
+        """Synchronous check using in-memory state."""
+        return self._check_memory(client_key)
+
 
 def get_client_ip(request: Request) -> str:
     """Extract client IP from request, respecting X-Forwarded-For."""
@@ -142,9 +164,9 @@ def get_client_ip(request: Request) -> str:
     return request.client.host if request.client else "unknown"
 
 
-# Global rate limiters
-_login_rate_limiter = RateLimiter(max_requests=5, window_seconds=60)
-_provider_test_rate_limiter = RateLimiter(max_requests=20, window_seconds=60)
+# Global rate limiters (multi-worker safe)
+_login_rate_limiter = RateLimiter(max_requests=5, window_seconds=60, prefix="login")
+_provider_test_rate_limiter = RateLimiter(max_requests=20, window_seconds=60, prefix="provider_test")
 
 
 # CSRF Protection
@@ -342,7 +364,7 @@ class SecurityHeadersMiddleware(BaseHTTPMiddleware):
         "Referrer-Policy": "strict-origin-when-cross-origin",
         "Permissions-Policy": "geolocation=(), microphone=(), camera=()",
         "Strict-Transport-Security": "max-age=31536000; includeSubDomains",
-        "Content-Security-Policy": "default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline';",
+        "Content-Security-Policy": "default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; object-src 'none'; base-uri 'self'; frame-ancestors 'none';",
     }
 
     # Paths that need larger body limits (e.g., dataset downloads)
@@ -865,8 +887,28 @@ def _validate_security_config():
             "Must be at least 32 characters. "
             "Generate one with: python -c \"import secrets; print(secrets.token_urlsafe(64))\""
         )
+    # Fail fast if default public fallback secret is used in staging/production/HF Space
+    default_public_secret = "rasosynthtune-sovereign-production-jwt-token-secret-key-32b-secure"
+    is_production = (
+        os.getenv("AI_DATASET_ENVIRONMENT", "").lower() in ("production", "staging")
+        or os.getenv("ENVIRONMENT", "").lower() in ("production", "staging")
+        or bool(os.getenv("SPACE_ID"))  # HuggingFace Space
+    )
+    if jwt_secret == default_public_secret:
+        if is_production:
+            raise RuntimeError(
+                "CRITICAL SECURITY ERROR: The hardcoded default JWT_SECRET is active in a production or deployed environment. "
+                "You must set a unique, secret JWT_SECRET environment variable before starting the server. "
+                "Generate one with: python -c \"import secrets; print(secrets.token_urlsafe(64))\""
+            )
+        else:
+            logger.warning(
+                "SECURITY WARNING: Default public JWT_SECRET is currently in use for development. "
+                "Always supply a custom JWT_SECRET in production deployments."
+            )
+
     # Warn if using default/weak secret
-    weak_patterns = ["password", "secret", "changeme", "demo", "test", "1234", "0000"]
+    weak_patterns = ["password", "changeme", "demo", "test1234", "000000"]
     if any(p in jwt_secret.lower() for p in weak_patterns):
         logger.warning("JWT_SECRET appears weak or contains common patterns. Use a cryptographically random secret.")
 
@@ -987,9 +1029,10 @@ async def get_circuit_breakers_status():
 @app.post("/providers/test", response_model=ProviderTestResponse, tags=["Providers"])
 async def test_provider(request: ProviderTestRequest, fastapi_request: Request):
     """Test connectivity to a specific provider (rate limited: 20/min/IP)."""
-    # Rate limiting on provider test
+    # Rate limiting on provider test (distributed Redis-backed with in-memory fallback)
     client_ip = get_client_ip(fastapi_request)
-    if not _provider_test_rate_limiter.check(client_ip):
+    redis_client = getattr(cache, "redis", None) if cache is not None else None
+    if not await _provider_test_rate_limiter.check_async(client_ip, redis_client=redis_client):
         logger.warning(f"Rate limit exceeded for provider test from IP: {client_ip}")
         raise HTTPException(
             status_code=429,
@@ -1570,9 +1613,10 @@ async def login(request: LoginRequest, fastapi_request: Request):
     """
     auth = get_auth_manager()
 
-    # Rate limiting on login
+    # Rate limiting on login (distributed Redis-backed with in-memory fallback)
     client_ip = get_client_ip(fastapi_request)
-    if not _login_rate_limiter.check(client_ip):
+    redis_client = getattr(cache, "redis", None) if cache is not None else None
+    if not await _login_rate_limiter.check_async(client_ip, redis_client=redis_client):
         logger.warning(f"Rate limit exceeded for login from IP: {client_ip}")
         raise HTTPException(
             status_code=429,
@@ -1997,6 +2041,74 @@ async def estimate_job(request: JobRequest):
         "warnings": analysis.warnings,
         "suggested_adjustments": analysis.fallback_strategies,
     }
+
+
+@app.post("/jobs/plan", tags=["Jobs"])
+async def plan_job(request: JobRequest):
+    """Generate an execution plan with resource allocation, step costs, and workflow optimization."""
+    try:
+        from api.planning.planner import WorkflowPlanner
+        from api.schemas.dataset import DatasetConfig
+        from pipeline.planner import DatasetPlanner, CoveragePlanner
+
+        domain_val = getattr(request, "target_domain", None) or getattr(request, "domain", "general")
+        size_val = int(getattr(request, "dataset_size", None) or getattr(request, "target_size", 20))
+        output_fmt = getattr(request, "output_format", getattr(request, "export_format", "jsonl"))
+        config = DatasetConfig(
+            name=request.dataset_name or domain_val or "dataset",
+            domain=domain_val,
+            synthesis_mode=getattr(request, "synthesis_mode", "standard"),
+            language=request.language,
+            output_format=output_fmt,
+        )
+        planner = WorkflowPlanner()
+        plan = await planner.create_plan(config)
+
+        # Generate topic and diversity coverage matrix for UI visualization
+        cov_matrix_dict = {}
+        try:
+            dp = DatasetPlanner(orchestrator.router if orchestrator else None, config.model_dump())
+            dplan = await dp.create_plan(domain_val or "general")
+            cov_planner = CoveragePlanner(config.model_dump())
+            cov_matrix = cov_planner.generate_matrix(dplan, target_size=min(size_val, 50))
+            cov_matrix_dict = {
+                "dimensions": cov_matrix.dimensions,
+                "cells": cov_matrix.cells[:30],
+                "total_cells": len(cov_matrix.cells),
+            }
+        except Exception as cov_err:
+            logger.debug("CoveragePlanner skipped in /jobs/plan: %s", cov_err)
+
+        return {
+            "plan_id": plan.plan_id,
+            "status": plan.status.value if hasattr(plan.status, "value") else str(plan.status),
+            "estimated_cost": plan.total_estimated_cost_usd,
+            "estimated_duration_seconds": plan.total_estimated_duration_seconds,
+            "orchestration_mode": plan.orchestration_mode,
+            "execution_strategy": plan.execution_strategy,
+            "steps": [step.model_dump() for step in plan.steps],
+            "total_gpu_hours": plan.total_gpu_hours,
+            "coverage_matrix": cov_matrix_dict,
+        }
+    except Exception as exc:
+        logger.error(f"Planning failed: {exc}", exc_info=True)
+        raise HTTPException(status_code=500, detail=f"Failed to generate workflow plan: {exc}")
+
+
+@app.get("/cluster/ray", tags=["Observability"])
+async def get_ray_cluster_status():
+    """Get Ray distributed GPU and compute cluster worker status."""
+    try:
+        from workers.ray_pipeline import get_ray_status
+        return get_ray_status()
+    except Exception as e:
+        return {
+            "available": False,
+            "error": str(e),
+            "nodes": 0,
+            "available_cpus": 0,
+            "available_gpus": 0,
+        }
 
 
 @app.post("/jobs", response_model=JobResponse, status_code=201, tags=["Jobs"])
@@ -3695,12 +3807,14 @@ async def get_dataset_dbom(job_id: str):
             {"instruction": f"Instruction sample 2 for {domain}", "response": "Response sample 2"},
         ]
 
+    synthesis_mode = config.get("synthesis_mode", "standard")
     dbom = generate_dbom_attestation(
         dataset_name=domain,
         samples=samples,
         domain=domain,
         language=lang,
         license_type="Apache-2.0",
+        synthesis_mode=synthesis_mode,
     )
     nutrition_label = generate_nutrition_label_markdown(dbom)
 

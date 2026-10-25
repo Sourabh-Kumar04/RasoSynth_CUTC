@@ -163,6 +163,13 @@ class FilteringPipeline:
         self.hallucination_detector = HallucinationDetector(router=router)
         self.dedup_engine = DeduplicationEngine(router=router, config=config)
         self.diversity_analyzer = DatasetDiversityAnalyzer(router=router)
+        self.llm_judge = None
+        if router:
+            try:
+                from pipeline.llm_judge import LLMJudge
+                self.llm_judge = LLMJudge(router=router, providers=config.get("preferred_providers") or None)
+            except Exception as e:
+                logger.debug(f"LLMJudge initialization skipped: {e}")
 
         # Accumulated samples for batch diversity analysis
         self._accumulated_samples: list[str] = []
@@ -226,7 +233,7 @@ class FilteringPipeline:
 
         signal_score, signal_issues = self._signal_quality(content_text)
         statistical_score, statistical_issues = await self._statistical_quality(content_text)
-        semantic_score, semantic_issues = await self._semantic_quality(content_text)
+        semantic_score, semantic_issues = await self._semantic_quality(content_text, intent.domain)
         llm_judge_score, llm_judge_issues = await self._llm_judge_quality(content_text, intent.domain)
         compliance_score = self._check_compliance(content_text)
 
@@ -526,14 +533,14 @@ class FilteringPipeline:
             score -= 0.2
             issues.append("repeated_characters")
 
-        # Default language detection (simple heuristic)
-        # Check if text contains mostly ASCII characters
-        ascii_chars = sum(1 for c in text if ord(c) < 128)
+        # Unicode character validity check (multilingual safe, DPDP Act Indic scripts compliant)
+        # Penalize only if text is dominated by unprintable control bytes or replacement chars
+        unprintable = sum(1 for c in text if (ord(c) < 32 and c not in '\n\r\t') or ord(c) == 0xFFFD)
         if len(text) > 0:
-            ascii_ratio = ascii_chars / len(text)
-            if ascii_ratio < 0.5:
-                score -= 0.2
-                issues.append("low_ascii_ratio")
+            unprintable_ratio = unprintable / len(text)
+            if unprintable_ratio > 0.10:
+                score -= 0.3
+                issues.append("corrupted_binary_or_control_characters")
 
         return max(0.0, min(1.0, score)), issues
 
@@ -590,105 +597,92 @@ class FilteringPipeline:
 
         return max(0.0, min(1.0, score)), issues
 
-    async def _semantic_quality(self, text: str) -> tuple[float, list[str]]:
-        """Layer 3: Semantic quality (higher cost)"""
+    async def _semantic_quality(self, text: str, target_domain: str = "") -> tuple[float, list[str]]:
+        """Layer 3: Semantic quality via cosine similarity of neural embeddings (no heuristics)."""
         issues = []
-        score = 0.5  # Start neutral
-
         if not self.router:
-            # If no router available, return neutral score
-            return score, issues
+            return 0.5, issues
 
         try:
-            # Get embedding for the text with timeout to prevent hangs
-            embedding_response = await asyncio.wait_for(
-                self.router.embed(text[:512]),  # Limit length for efficiency
+            # 1. Embed content text with timeout
+            text_resp = await asyncio.wait_for(
+                self.router.embed(text[:1000]),
                 timeout=5.0
             )
-            embedding = embedding_response.embedding
+            emb_text = text_resp.embedding if hasattr(text_resp, "embedding") else text_resp
 
-            # For now, we'll use a simple heuristic based on embedding properties
-            # In a real implementation, we would compare against domain-specific embeddings
+            if not emb_text:
+                return 0.2, ["empty_embedding"]
 
-            # Check if embedding has reasonable magnitude (not all zeros or extremely large)
-            magnitude = sum(x*x for x in embedding) ** 0.5
-            if magnitude == 0:
-                score = 0.1
-                issues.append("zero_embedding")
-            elif magnitude > 100:
-                score = 0.2
-                issues.append("large_embedding_magnitude")
-            else:
-                # Moderate magnitude is good
-                score += 0.2
+            # 2. If target_domain is present, compare against domain anchor embedding via cosine similarity
+            if target_domain and target_domain.lower() not in ("general", "custom"):
+                domain_cache = getattr(self, "_domain_embedding_cache", {})
+                if target_domain not in domain_cache:
+                    domain_resp = await asyncio.wait_for(
+                        self.router.embed(f"Domain knowledge and statutory definitions for {target_domain}"),
+                        timeout=5.0
+                    )
+                    domain_vec = domain_resp.embedding if hasattr(domain_resp, "embedding") else domain_resp
+                    domain_cache[target_domain] = domain_vec
+                    self._domain_embedding_cache = domain_cache
+                else:
+                    domain_vec = domain_cache[target_domain]
 
-            # Check embedding diversity (standard deviation of values)
-            if len(embedding) > 0:
-                mean_val = sum(embedding) / len(embedding)
-                variance = sum((x - mean_val) ** 2 for x in embedding) / len(embedding)
-                std_dev = variance ** 0.5
-                if std_dev < 0.01:
-                    score -= 0.2
-                    issues.append("low_embedding_diversity")
-                elif std_dev > 1.0:
-                    score += 0.1
-                    issues.append("high_embedding_diversity")
+                # True cosine similarity calculation
+                dot = sum(a * b for a, b in zip(emb_text, domain_vec))
+                norm_a = sum(a * a for a, b in zip(emb_text, domain_vec)) ** 0.5
+                norm_b = sum(b * b for b in domain_vec) ** 0.5
+                if norm_a > 0 and norm_b > 0:
+                    cos_sim = dot / (norm_a * norm_b)
+                    norm_score = max(0.0, min(1.0, (cos_sim + 1.0) / 2.0))
+                    if norm_score < 0.4:
+                        issues.append("low_semantic_domain_alignment")
+                    return round(norm_score, 4), issues
+
+            norm_val = sum(x * x for x in emb_text) ** 0.5
+            if norm_val == 0:
+                return 0.1, ["zero_vector"]
+            return 0.75, issues
 
         except Exception as e:
-            # If embedding fails, we can't assess semantic quality
             issues.append(f"embedding_failed: {str(e)[:50]}")
-            score = 0.3  # Slightly below average
-
-        return max(0.0, min(1.0, score)), issues
+            return 0.4, issues
 
     async def _llm_judge_quality(self, text: str, target_domain: str) -> tuple[float, list[str]]:
-        """Layer 4: LLM-judge quality (expensive, applied selectively)"""
+        """Layer 4: Real LLM-as-a-judge quality evaluation (no heuristics)."""
         issues = []
-        score = 0.5  # Start neutral
 
         if not self.router:
-            # If no router available, return neutral score
-            return score, issues
+            # If no router configured, return neutral score
+            return 0.5, issues
 
-        try:
-            # For now, we'll use a simple heuristic - in reality this would call an LLM
-            # with a prompt asking it to judge the quality
+        if len(text.strip()) < 30:
+            return 0.2, ["insufficient_text_length"]
 
-            # Simple heuristic: longer, well-formatted text tends to be higher quality
-            if len(text) > 100:
-                score += 0.1
-            if len(text) > 500:
-                score += 0.1
+        if getattr(self, "llm_judge", None):
+            try:
+                judge_result = await self.llm_judge.judge(
+                    instruction=f"Evaluate factual accuracy, reasoning validity, consistency, and domain grounding for domain '{target_domain or 'general'}'.",
+                    response=text[:2000],
+                    domain=target_domain or "general"
+                )
+                if judge_result and judge_result.overall > 0:
+                    if judge_result.accuracy_score < 0.4:
+                        issues.append("low_llm_factual_accuracy")
+                    if judge_result.reasoning_score < 0.4:
+                        issues.append("weak_llm_reasoning")
+                    if judge_result.scores.get("consistency", 1.0) < 0.4:
+                        issues.append("llm_internal_inconsistency")
+                    if judge_result.scores.get("grounding", 1.0) < 0.4:
+                        issues.append("low_domain_grounding")
 
-            # Check for structure indicators
-            if '\n\n' in text:  # Has paragraphs
-                score += 0.1
-            if text.count('.') > 3:  # Has multiple sentences
-                score += 0.1
-            if text.count(':') > 0:  # Has colons (often indicates structure)
-                score += 0.05
+                    return round(judge_result.overall, 4), issues
+            except Exception as judge_err:
+                logger.warning(f"LLMJudge evaluation failed: {judge_err}")
+                issues.append(f"llm_judge_error: {str(judge_err)[:50]}")
+                return 0.4, issues
 
-            # Penalize excessive repetition
-            words = text.lower().split()
-            if len(words) > 10:
-                unique_ratio = len(set(words)) / len(words)
-                if unique_ratio < 0.4:
-                    score -= 0.2
-                    issues.append("low_word_diversity")
-
-            # Domain relevance check (simple)
-            if target_domain:
-                domain_words = set(target_domain.lower().split())
-                text_words = set(text.lower().split())
-                if len(domain_words) > 0:
-                    overlap = len(domain_words & text_words) / len(domain_words)
-                    score += overlap * 0.2  # Up to 0.2 bonus for domain relevance
-
-        except Exception as e:
-            issues.append(f"llm_judge_error: {str(e)[:50]}")
-            score = 0.4  # Slightly below average
-
-        return max(0.0, min(1.0, score)), issues
+        return 0.5, issues
 
     def redact_pii(self, text: str) -> str:
         """Redact PII under DPDP Act (India 2023/2026) and global privacy regulations."""
