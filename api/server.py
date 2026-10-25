@@ -251,7 +251,7 @@ class CSRFMiddleware(BaseHTTPMiddleware):
     - WebSocket upgrade requests
     """
 
-    SKIP_PATHS = {"/auth/login", "/auth/logout", "/health", "/health/ready",
+    SKIP_PATHS = {"/auth/login", "/auth/logout", "/health", "/health/ready", "/health/live",
                   "/metrics", "/docs", "/redoc", "/openapi.json", "/"}
 
     async def dispatch(self, request: Request, call_next):
@@ -262,6 +262,11 @@ class CSRFMiddleware(BaseHTTPMiddleware):
         # Check if path should be skipped
         path = request.url.path
         if path in self.SKIP_PATHS or path.startswith(("/auth/", "/docs", "/redoc", "/openapi")) or path.endswith(("/export", "/download")):
+            return await call_next(request)
+
+        # Machine-to-machine API requests with Authorization: Bearer or X-API-Key are immune to CSRF
+        auth_header = request.headers.get("Authorization", "")
+        if auth_header.startswith("Bearer ") or request.headers.get("X-API-Key"):
             return await call_next(request)
 
         # Check for WebSocket upgrade
@@ -957,6 +962,18 @@ async def get_provider_techniques():
     return techniques
 
 
+@app.get("/health/circuit-breakers", tags=["Health"])
+@app.get("/providers/circuit-breakers", tags=["Providers"])
+async def get_circuit_breakers_status():
+    """Get circuit breaker statuses for configured providers."""
+    if not failover_engine or not hasattr(failover_engine, "circuit_breakers"):
+        return {}
+    return {
+        name: cb.state.value if hasattr(cb.state, "value") else str(cb.state)
+        for name, cb in failover_engine.circuit_breakers.items()
+    }
+
+
 @app.get("/providers/{provider_name}", response_model=ProviderStatus, tags=["Providers"])
 async def get_provider(provider_name: str):
     """Get single provider status and performance statistics."""
@@ -1014,16 +1031,6 @@ async def update_provider(provider_name: str, payload: dict = Body(...)):
         logger.info("Updated dynamic configuration for provider %s: %s", provider_name, payload)
     return {"status": "updated", "provider": provider_name, "config": payload}
 
-
-@app.get("/health/circuit-breakers", tags=["Health"])
-async def get_circuit_breakers_status():
-    """Get circuit breaker statuses for configured providers."""
-    if not failover_engine or not hasattr(failover_engine, "circuit_breakers"):
-        return {}
-    return {
-        name: cb.state.value if hasattr(cb.state, "value") else str(cb.state)
-        for name, cb in failover_engine.circuit_breakers.items()
-    }
 
 
 @app.post("/providers/test", response_model=ProviderTestResponse, tags=["Providers"])
@@ -1515,6 +1522,16 @@ async def readiness_check():
     return {
         "ready": is_ready,
         "checks": checks,
+        "timestamp": datetime.now(timezone.utc).isoformat()
+    }
+
+
+@app.get("/health/live", tags=["Health"])
+async def liveness_check():
+    """Liveness probe for Kubernetes and container orchestration."""
+    return {
+        "live": True,
+        "status": "healthy",
         "timestamp": datetime.now(timezone.utc).isoformat()
     }
 
