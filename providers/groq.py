@@ -137,7 +137,7 @@ class GroqProvider(BaseProvider):
         ProviderCapability.FAST_INFERENCE,
     ]
 
-    def __init__(self, config: Optional[Any] = None, model: str = "openai/gpt-oss-20b"):  # noqa: E501
+    def __init__(self, config: Optional[Any] = None, model: str = "openai/gpt-oss-120b"):  # noqa: E501
         import os
         if isinstance(config, dict):
             provider_config = ProviderConfig(
@@ -245,7 +245,7 @@ class GroqProvider(BaseProvider):
         if model:
             candidate_models.append(_resolve_groq_model(model))
         # Fallback chain — production models available on free/dev tiers (Oct 2026)
-        for m in (self.model, "openai/gpt-oss-20b", "openai/gpt-oss-120b", "qwen/qwen3.8-27b"):
+        for m in (self.model, "openai/gpt-oss-120b", "openai/gpt-oss-20b", "qwen/qwen3.8-27b"):
             m = _resolve_groq_model(m)
             if m not in candidate_models:
                 candidate_models.append(m)

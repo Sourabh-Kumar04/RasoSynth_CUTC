@@ -1,5 +1,5 @@
 """Enhanced API schemas with constraint analysis and advanced features."""
-from pydantic import BaseModel, Field, field_validator
+from pydantic import BaseModel, Field, field_validator, AliasChoices
 from typing import Optional, Literal, Any
 from datetime import datetime
 from enum import Enum
@@ -71,7 +71,13 @@ class ConstraintAnalysis(BaseModel):
 
 
 class JobRequest(BaseModel):
-    target_domain: str = Field(..., min_length=1, max_length=2000, description="Natural-language dataset request")
+    target_domain: str = Field(
+        ...,
+        validation_alias=AliasChoices("target_domain", "domain", "query", "topic"),
+        min_length=1,
+        max_length=2000,
+        description="Natural-language dataset request"
+    )
 
     @field_validator("target_domain")
     @classmethod
@@ -95,7 +101,13 @@ class JobRequest(BaseModel):
             return v.lower()
         return v
     output_schema: Optional[dict] = Field(default=None, description="Custom output schema")
-    dataset_size: int = Field(default=1000, ge=1, le=100000, description="Target number of samples")
+    dataset_size: int = Field(
+        default=1000,
+        validation_alias=AliasChoices("dataset_size", "target_size", "size"),
+        ge=1,
+        le=100000,
+        description="Target number of samples"
+    )
     quality_level: QualityLevel = Field(default=QualityLevel.STANDARD)
     language: str = Field(default="en", description="Primary language code")
     secondary_languages: list[str] = Field(default_factory=list, description="Additional languages")

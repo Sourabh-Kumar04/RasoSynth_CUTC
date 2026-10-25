@@ -294,7 +294,9 @@ function StudioContent() {
         // Fetch execution plan and coverage matrix
         try {
           const planRes = await api.planJob({
+            target_domain: dynamicDomain || targetDomain,
             domain: dynamicDomain || targetDomain,
+            dataset_size: 20,
             target_size: 20,
             synthesis_mode: synthesisMode,
             language: language,
