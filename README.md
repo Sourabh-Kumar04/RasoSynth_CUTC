@@ -267,7 +267,74 @@ curl http://localhost:8000/jobs/{job_id}/download
 | `conversational` | Dialogue datasets |
 | `tool_calling` | Tool/function calling |
 
-### Export Formats
+## Cognitive Synthesis Engines
+
+RasoSynthTune features 7 dedicated cognitive synthesis engines, selectable per pipeline job:
+
+| Engine | Flag | Primary Target & Mechanism |
+|--------|------|----------------------------|
+| **Chain-of-Thought** | `cot` | Multi-step reasoning with `<thought>` rationale validation for complex deductions |
+| **Socratic Inquiry** | `socratic` | Probing multi-turn inquiry for foundational first-principles discovery |
+| **Preference Pairs** | `preference` | Chosen vs rejected response pairs formatted for DPO, SimPO, and RLHF alignment |
+| **Multi-Turn Chat** | `multi_turn` | Contextual multi-turn dialogue trees preserving state and intent continuity |
+| **Tool Calling** | `tool_calling` | Structured JSON function definitions, argument parsing, and tool execution traces |
+| **Contrastive Pairs** | `contrastive` | Counterfactual hard-negative generation exposing subtle edge cases |
+| **Retrieval Augmented** | `rag` | Deeply grounded generation with strict passage attribution and citation verification |
+
+---
+
+## Cryptographic Data Bill of Materials (DBOM) & Data Nutrition
+
+Every synthesized dataset is cryptographically sealed into a **SHA-256 Merkle Provenance Tree**:
+
+- **Mathematical Proof Path**: Every sample is hashed into a leaf ($H_0 = \text{SHA256}(s_0)$). Adjacent leaves fold into intermediate branch digests ($H(H_0 \parallel H_1)$), culminating in an immutable **Merkle Root**.
+- **Interactive Proof Auditor**: Explore, audit, and verify parent-child hash paths directly on the web canvas or via API.
+- **Hugging Face Hub Integration**: DBOM certificates and statutory Data Nutrition Facts (DPDP Act, language distribution, lexical diversity) are automatically embedded into generated `README.md` cards.
+
+---
+
+## Serverless Cloud GPU Fine-Tuning
+
+Execute QLoRA / SFT training locally or offload to serverless cloud GPU clusters:
+
+- **Local QLoRA**: High-efficiency training via Unsloth / HuggingFace `SFTTrainer` with 4-bit BitsAndBytes quantization.
+- **Modal Serverless Fabric**: Instant provisioning of NVIDIA A10G / H100 containers without managing infrastructure.
+- **RunPod Worker Endpoints**: High-throughput distributed training on dedicated cloud GPU pods.
+
+```bash
+# Fine-tune using serverless Modal NVIDIA A10G container
+curl -X POST http://localhost:8000/api/finetune/jobs \
+  -H "Content-Type: application/json" \
+  -H "X-CSRF-Token: $CSRF_TOKEN" \
+  -d '{
+    "dataset_id": "<your-dataset-id>",
+    "base_model": "sarvamai/sarvam-2b-v0.5",
+    "execution_target": "modal",
+    "num_train_epochs": 3,
+    "lora_r": 16
+  }'
+```
+
+---
+
+## Enterprise CLI & Diagnostic Suite
+
+```bash
+# 1. Run full infrastructure & cloud latency diagnostics
+python scripts/health_check.py
+# Or output machine-readable JSON:
+python scripts/health_check.py --json
+
+# 2. Package & publish dataset to Hugging Face Hub with DBOM attestation
+python scripts/export_hf.py \
+  --dataset-dir outputs/flagship_indic_gst \
+  --repo-id "your-org/indic-gst-instruct" \
+  --dry-run
+```
+
+---
+
+## Export Formats
 
 `jsonl` · `csv` · `parquet` · `huggingface` · `sql` · `qdrant`
 
