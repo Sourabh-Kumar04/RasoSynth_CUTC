@@ -44,7 +44,7 @@ export function TopNav() {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false)
   const [showTour, setShowTour] = useState(false)
   const [showSearch, setShowSearch] = useState(false)
-  const [isHealthy, setIsHealthy] = useState(true)
+  const [healthStatus, setHealthStatus] = useState<'checking' | 'live' | 'standby'>('checking')
 
   // Global Cmd+K keyboard shortcut listener
   useEffect(() => {
@@ -62,9 +62,13 @@ export function TopNav() {
     async function checkHealth() {
       try {
         const health = await api.getHealth()
-        setIsHealthy(Boolean(health && (health.status === 'ok' || health.status === 'healthy')))
+        if (health && (health.status === 'ok' || health.status === 'healthy')) {
+          setHealthStatus('live')
+        } else {
+          setHealthStatus('standby')
+        }
       } catch {
-        setIsHealthy(false)
+        setHealthStatus('standby')
       }
     }
     checkHealth()
@@ -102,9 +106,23 @@ export function TopNav() {
             </Link>
 
             <div className="hidden md:inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded text-[10px] font-mono font-medium bg-[#12121a] border border-[#272738]">
-              <span className={clsx("w-2 h-2 rounded-full", isHealthy ? "bg-emerald-400 animate-pulse shadow-[0_0_8px_rgba(16,185,129,0.7)]" : "bg-rose-500")} />
-              <span className={isHealthy ? "text-emerald-400 font-semibold" : "text-rose-400 font-semibold"}>
-                {isHealthy ? "Refinery: Live" : "Refinery: Offline"}
+              <span
+                className={clsx(
+                  "w-2 h-2 rounded-full",
+                  healthStatus === 'live' && "bg-emerald-400 animate-pulse shadow-[0_0_8px_rgba(16,185,129,0.7)]",
+                  healthStatus === 'standby' && "bg-amber-400 animate-pulse shadow-[0_0_8px_rgba(245,158,11,0.6)]",
+                  healthStatus === 'checking' && "bg-slate-400"
+                )}
+              />
+              <span
+                className={clsx(
+                  "font-semibold",
+                  healthStatus === 'live' && "text-emerald-400",
+                  healthStatus === 'standby' && "text-amber-400",
+                  healthStatus === 'checking' && "text-slate-400"
+                )}
+              >
+                {healthStatus === 'live' ? "Refinery: Live" : healthStatus === 'standby' ? "Refinery: Standby" : "Refinery: Connecting"}
               </span>
             </div>
           </div>
