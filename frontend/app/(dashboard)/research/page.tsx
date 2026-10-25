@@ -166,44 +166,47 @@ export default function ResearchPage() {
       {/* Stat cards */}
       {!loading && (
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-          <Card className="bg-[#12121a] border-[#272738] rounded-md card-shadow">
+          <Card className="bg-[#12121a]/90 backdrop-blur-sm border-[#272738] rounded-md card-shadow glow-card-hover group">
             <CardContent className="pt-4 pb-4 px-4 flex items-center justify-between">
               <div>
-                <p className="text-xs text-[#94a3b8] font-mono uppercase">Status</p>
-                <p className={clsx('text-xl font-bold font-mono capitalize mt-0.5 text-[#f26625]')}>
-                  {status?.status ?? 'active'}
-                </p>
+                <p className="text-[10px] text-[#94a3b8] font-mono uppercase tracking-wider">Status</p>
+                <div className="flex items-center gap-1.5 mt-1">
+                  <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse shadow-[0_0_8px_rgba(16,185,129,0.8)]" />
+                  <p className="text-xl font-bold font-mono capitalize text-white">
+                    {status?.status ?? 'active'}
+                  </p>
+                </div>
               </div>
-              <div className="h-9 w-9 rounded-xl bg-[#161622] border border-[#3b3b52] flex items-center justify-center">
+              <div className="h-9 w-9 rounded-md bg-[#f26625]/10 border border-[#f26625]/30 flex items-center justify-center transition-transform group-hover:scale-110">
                 {status?.status === 'running'
                   ? <Loader2 className="h-4.5 w-4.5 text-[#f26625] animate-spin" />
                   : <Beaker className="h-4.5 w-4.5 text-[#f26625]" />}
               </div>
             </CardContent>
           </Card>
-          <Card className="bg-[#12121a] border-[#272738] rounded-md card-shadow">
+          <Card className="bg-[#12121a]/90 backdrop-blur-sm border-[#272738] rounded-md card-shadow glow-card-hover group">
             <CardContent className="pt-4 pb-4 px-4 flex items-center justify-between">
               <div>
-                <p className="text-xs text-[#94a3b8] font-mono uppercase">Last Run</p>
-                <p className="text-lg font-bold font-mono text-[#f26625] mt-0.5">
+                <p className="text-[10px] text-[#94a3b8] font-mono uppercase tracking-wider">Last Run</p>
+                <p className="text-lg font-bold font-mono text-cyan-400 mt-1">
                   {status?.last_research
                     ? new Date(status.last_research).toLocaleDateString()
-                    : 'Today'}
+                    : 'Continuous Active'}
                 </p>
               </div>
-              <div className="h-9 w-9 rounded-xl bg-[#161622] border border-[#3b3b52] flex items-center justify-center">
-                <Clock className="h-4.5 w-4.5 text-[#f26625]" />
+              <div className="h-9 w-9 rounded-md bg-cyan-500/10 border border-cyan-500/30 flex items-center justify-center transition-transform group-hover:scale-110">
+                <Clock className="h-4.5 w-4.5 text-cyan-400" />
               </div>
             </CardContent>
           </Card>
-          <Card className="bg-[#12121a] border-[#272738] rounded-md card-shadow">
+          <Card className="bg-[#12121a]/90 backdrop-blur-sm border-[#272738] rounded-md card-shadow glow-card-hover group">
             <CardContent className="pt-4 pb-4 px-4 flex items-center justify-between">
               <div>
-                <p className="text-xs text-[#94a3b8] font-mono uppercase">Techniques</p>
-                <p className="text-xl font-bold font-mono text-[#f26625] mt-0.5">{cachedTechniques.length + techEntries.length || 12}</p>
+                <p className="text-[10px] text-[#94a3b8] font-mono uppercase tracking-wider">Active Techniques</p>
+                <p className="text-xl font-bold font-mono text-[#10b981] mt-1">{cachedTechniques.length + techEntries.length || 12}</p>
               </div>
-              <div className="h-9 w-9 rounded-xl bg-[#161622] border border-[#3b3b52] flex items-center justify-center">
-                <Target className="h-4.5 w-4.5 text-emerald-600" />
+              <div className="h-9 w-9 rounded-md bg-emerald-500/10 border border-emerald-500/30 flex items-center justify-center transition-transform group-hover:scale-110">
+                <Target className="h-4.5 w-4.5 text-[#10b981]" />
               </div>
             </CardContent>
           </Card>

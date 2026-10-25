@@ -5,7 +5,7 @@ import {
   Cpu, Play, Square, RefreshCw, ExternalLink,
   List, Plus, ChevronDown, ChevronUp, Copy,
   CheckCircle2, AlertCircle, Loader2, X, Zap, Sparkles,
-  Download, FileText, Check,
+  Download, FileText, Check, Clock, Activity,
 } from 'lucide-react'
 import { clsx } from 'clsx'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
@@ -705,16 +705,21 @@ function FineTuneContent() {
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
         {(
           [
-            { key: 'pending',   label: 'Pending',   stripe: 'border-l-amber-500', color: 'text-amber-400' },
-            { key: 'running',   label: 'Running',   stripe: 'border-l-[#10b981]',   color: 'text-[#10b981]' },
-            { key: 'completed', label: 'Completed', stripe: 'border-l-emerald-500', color: 'text-emerald-400' },
-            { key: 'failed',    label: 'Failed',    stripe: 'border-l-rose-500',    color: 'text-rose-400' },
+            { key: 'pending',   label: 'Pending',   stripe: 'border-l-amber-500', color: 'text-amber-400', icon: Clock, bg: 'bg-amber-500/10' },
+            { key: 'running',   label: 'Running',   stripe: 'border-l-[#10b981]',   color: 'text-[#10b981]', icon: Activity, bg: 'bg-emerald-500/10' },
+            { key: 'completed', label: 'Completed', stripe: 'border-l-emerald-500', color: 'text-emerald-400', icon: CheckCircle2, bg: 'bg-emerald-500/10' },
+            { key: 'failed',    label: 'Failed',    stripe: 'border-l-rose-500',    color: 'text-rose-400', icon: AlertCircle, bg: 'bg-rose-500/10' },
           ] as const
-        ).map(({ key, label, stripe, color }) => (
-          <Card key={key} className={clsx('border-l-4 bg-[#12121a] border-[#272738] rounded-md card-shadow', stripe)}>
-            <CardContent className="pt-4 pb-4 px-4">
-              <p className="text-[10px] text-[#94a3b8] font-mono uppercase tracking-wider">{label}</p>
-              <p className={clsx('text-2xl font-bold font-mono mt-0.5 tnum', color)}>{counts[key]}</p>
+        ).map(({ key, label, stripe, color, icon: Icon, bg }) => (
+          <Card key={key} className={clsx('border-l-4 bg-[#12121a]/90 backdrop-blur-sm border-[#272738] rounded-md card-shadow glow-card-hover group', stripe)}>
+            <CardContent className="pt-4 pb-4 px-4 flex items-center justify-between">
+              <div>
+                <p className="text-[10px] text-[#94a3b8] font-mono uppercase tracking-wider">{label}</p>
+                <p className={clsx('text-2xl font-bold font-mono mt-0.5 tnum tracking-tight', color)}>{counts[key]}</p>
+              </div>
+              <div className={clsx('w-9 h-9 rounded-md flex items-center justify-center border border-white/5 transition-transform group-hover:scale-110', bg)}>
+                <Icon className={clsx('w-4 h-4', color)} />
+              </div>
             </CardContent>
           </Card>
         ))}

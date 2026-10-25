@@ -156,62 +156,65 @@ export default function ObservabilityPage() {
 
       {/* System Status Cards */}
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
-        <Card className="border-[#272738] bg-[#12121a] rounded-md card-shadow">
+        <Card className="border-[#272738] bg-[#12121a]/90 backdrop-blur-sm rounded-md card-shadow glow-card-hover group">
           <CardContent className="p-4">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-xs text-[#94a3b8] font-mono uppercase">System Status</p>
-                <p className="text-xl font-bold font-mono text-[#f26625] capitalize mt-0.5">
-                  {health?.status || 'healthy'}
-                </p>
+                <p className="text-[10px] text-[#94a3b8] font-mono uppercase tracking-wider">System Status</p>
+                <div className="flex items-center gap-1.5 mt-1">
+                  <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse shadow-[0_0_8px_rgba(16,185,129,0.8)]" />
+                  <p className="text-xl font-bold font-mono text-white capitalize">
+                    {health?.status || 'healthy'}
+                  </p>
+                </div>
               </div>
-              <div className="h-10 w-10 rounded-xl bg-[#161622] border border-[#3b3b52] flex items-center justify-center">
-                <CheckCircle2 className="h-5 w-5 text-emerald-600" />
+              <div className="h-10 w-10 rounded-md bg-emerald-500/10 border border-emerald-500/30 flex items-center justify-center transition-transform group-hover:scale-110">
+                <CheckCircle2 className="h-5 w-5 text-emerald-400" />
               </div>
             </div>
           </CardContent>
         </Card>
-        <Card className="border-[#272738] bg-[#12121a] rounded-md card-shadow">
+        <Card className="border-[#272738] bg-[#12121a]/90 backdrop-blur-sm rounded-md card-shadow glow-card-hover group">
           <CardContent className="p-4">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-xs text-[#94a3b8] font-mono uppercase">Primary Database</p>
-                <p className="text-xl font-bold font-mono text-[#10b981] mt-0.5">
+                <p className="text-[10px] text-[#94a3b8] font-mono uppercase tracking-wider">Primary Database</p>
+                <p className="text-xl font-bold font-mono text-[#10b981] mt-1">
                   {health?.database !== false ? (health?.database_engine === 'sqlite' ? 'SQLite' : 'PostgreSQL') : 'Disconnected'}
                 </p>
               </div>
-              <div className="h-10 w-10 rounded-xl bg-[#161622] border border-[#3b3b52] flex items-center justify-center">
+              <div className="h-10 w-10 rounded-md bg-emerald-500/10 border border-emerald-500/30 flex items-center justify-center transition-transform group-hover:scale-110">
                 <Database className="h-5 w-5 text-[#10b981]" />
               </div>
             </div>
           </CardContent>
         </Card>
-        <Card className="border-[#272738] bg-[#12121a] rounded-md card-shadow">
+        <Card className="border-[#272738] bg-[#12121a]/90 backdrop-blur-sm rounded-md card-shadow glow-card-hover group">
           <CardContent className="p-4">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-xs text-[#94a3b8] font-mono uppercase">Redis Cache</p>
-                <p className="text-xl font-bold font-mono text-[#f26625] mt-0.5">
-                  {health?.redis !== false ? 'Connected' : 'Disconnected'}
+                <p className="text-[10px] text-[#94a3b8] font-mono uppercase tracking-wider">Redis Cache &amp; Broker</p>
+                <p className="text-xl font-bold font-mono text-[#f26625] mt-1">
+                  {health?.redis !== false ? 'Connected' : 'Standalone'}
                 </p>
               </div>
-              <div className="h-10 w-10 rounded-xl bg-[#161622] border border-[#3b3b52] flex items-center justify-center">
+              <div className="h-10 w-10 rounded-md bg-[#f26625]/10 border border-[#f26625]/30 flex items-center justify-center transition-transform group-hover:scale-110">
                 <Server className="h-5 w-5 text-[#f26625]" />
               </div>
             </div>
           </CardContent>
         </Card>
-        <Card className="border-[#272738] bg-[#12121a] rounded-md card-shadow">
+        <Card className="border-[#272738] bg-[#12121a]/90 backdrop-blur-sm rounded-md card-shadow glow-card-hover group">
           <CardContent className="p-4">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-xs text-[#94a3b8] font-mono uppercase">System Load &amp; RAM</p>
-                <p className="text-sm font-bold font-mono text-[#f26625] mt-1">
+                <p className="text-[10px] text-[#94a3b8] font-mono uppercase tracking-wider">System Load &amp; RAM</p>
+                <p className="text-sm font-bold font-mono text-cyan-400 mt-1">
                   Load: {health?.system_metrics?.cpu_load_1m ?? '0.1'} · RAM: {health?.system_metrics?.memory_used_percent ? `${health.system_metrics.memory_used_percent}%` : '45%'}
                 </p>
               </div>
-              <div className="h-10 w-10 rounded-xl bg-[#161622] border border-[#3b3b52] flex items-center justify-center">
-                <Activity className="h-5 w-5 text-emerald-600" />
+              <div className="h-10 w-10 rounded-md bg-cyan-500/10 border border-cyan-500/30 flex items-center justify-center transition-transform group-hover:scale-110">
+                <Activity className="h-5 w-5 text-cyan-400" />
               </div>
             </div>
           </CardContent>

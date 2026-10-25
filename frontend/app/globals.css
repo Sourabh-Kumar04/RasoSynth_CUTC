@@ -78,7 +78,7 @@
     background-size: 24px 24px;
   }
 
-  /* Cybernetic Glows */
+  /* Cybernetic Glows & Atmospheric Lighting */
   .glow-indigo {
     box-shadow: 0 0 20px -3px rgba(99, 102, 241, 0.35);
   }
@@ -96,7 +96,45 @@
   }
 
   .glow-yc {
-    box-shadow: 0 0 22px -3px rgba(242, 102, 37, 0.45);
+    box-shadow: 0 0 24px -2px rgba(242, 102, 37, 0.45);
+  }
+
+  .glow-card-hover {
+    transition: all 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+  }
+
+  .glow-card-hover:hover {
+    border-color: rgba(242, 102, 37, 0.45);
+    box-shadow: 0 12px 36px -8px rgba(0, 0, 0, 0.7), 0 0 25px -4px rgba(242, 102, 37, 0.18);
+    transform: translateY(-2px);
+  }
+
+  /* Vibrant Glassmorphism with Depth */
+  .glass-card {
+    background: linear-gradient(180deg, rgba(22, 22, 32, 0.75) 0%, rgba(14, 14, 22, 0.85) 100%);
+    backdrop-filter: blur(16px);
+    -webkit-backdrop-filter: blur(16px);
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    box-shadow: inset 0 1px 0 0 rgba(255, 255, 255, 0.06), 0 8px 24px -6px rgba(0, 0, 0, 0.4);
+  }
+
+  /* Hero Radial Ambient Glow */
+  .ambient-glow-top {
+    background: radial-gradient(circle at 50% -20%, rgba(242, 102, 37, 0.15), rgba(99, 102, 241, 0.04) 50%, transparent 80%);
+  }
+
+  /* Tactile Interactive Buttons */
+  .btn-tactile {
+    transition: all 0.15s cubic-bezier(0.16, 1, 0.3, 1);
+  }
+
+  .btn-tactile:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 4px 14px -2px rgba(242, 102, 37, 0.35);
+  }
+
+  .btn-tactile:active {
+    transform: translateY(1px) scale(0.98);
   }
 
   /* YC Minimal Proof-Carrying & Systematic Proof System (Stitch MCP Reference) */

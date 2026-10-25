@@ -522,14 +522,14 @@ export default function ReviewPage() {
               { label: 'Rejected',  val: stats.rejected,  color: 'text-rose-400', stripe: 'border-l-rose-500'    },
               { label: 'Flagged',   val: stats.flagged,   color: 'text-amber-400', stripe: 'border-l-amber-600' },
             ].map(({ label, val, color, stripe }) => (
-              <Card key={label} className={clsx('border-l-4 bg-[#12121a] border-[#272738] rounded-md card-shadow animate-fade-in', stripe)}>
+              <Card key={label} className={clsx('border-l-4 bg-[#12121a]/90 backdrop-blur-sm border-[#272738] rounded-md card-shadow glow-card-hover animate-fade-in group', stripe)}>
                 <CardContent className="pt-3 pb-2 px-4">
-                  <p className="text-[10px] text-[#94a3b8] font-mono uppercase">{label}</p>
-                  <p className={clsx('text-xl font-bold font-mono mt-0.5', color)}>{val}</p>
+                  <p className="text-[10px] text-[#94a3b8] font-mono uppercase tracking-wider">{label}</p>
+                  <p className={clsx('text-xl font-bold font-mono mt-0.5 tracking-tight', color)}>{val}</p>
                 </CardContent>
               </Card>
             ))}
-            <Card className="border-l-4 border-l-emerald-500 bg-[#12121a] border-[#272738] rounded-md card-shadow animate-fade-in col-span-2 sm:col-span-1">
+            <Card className="border-l-4 border-l-emerald-500 bg-[#12121a]/90 backdrop-blur-sm border-[#272738] rounded-md card-shadow glow-card-hover animate-fade-in col-span-2 sm:col-span-1">
               <CardContent className="pt-2 pb-2 px-3 flex items-center gap-3">
                 <ApprovalRing pct={stats.approval_rate} />
                 <div>

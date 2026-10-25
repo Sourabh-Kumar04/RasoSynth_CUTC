@@ -217,15 +217,15 @@ export default function ProvidersPage() {
             { label: 'Active', value: `${activeCount}/${providers.length}`, icon: CheckCircle2, color: 'text-emerald-400', bg: 'bg-[#161622]' },
             { label: 'Avg Latency', value: avgLatency ? `${avgLatency}ms` : '—', icon: Clock, color: 'text-[#f26625]', bg: 'bg-[#161622]' },
             { label: 'Cost Today', value: `$${totalCost.toFixed(3)}`, icon: DollarSign, color: 'text-[#f26625]', bg: 'bg-[#161622]' },
-            { label: 'CB Open', value: cbOpen, icon: ShieldAlert, color: cbOpen > 0 ? 'text-rose-400' : 'text-emerald-400', bg: cbOpen > 0 ? 'bg-rose-950/40' : 'bg-[#161622]' },
+            { label: 'CB Open', value: cbOpen, icon: ShieldAlert, color: cbOpen > 0 ? 'text-rose-400' : 'text-emerald-400', bg: cbOpen > 0 ? 'bg-rose-950/40' : 'bg-emerald-950/30' },
           ].map(({ label, value, icon: Icon, color, bg }) => (
-            <Card key={label} className="bg-[#12121a] border-[#272738] rounded-xl card-shadow">
+            <Card key={label} className="bg-[#12121a]/90 backdrop-blur-sm border-[#272738] rounded-xl card-shadow glow-card-hover group">
               <CardContent className="pt-4 pb-4 px-4 flex items-center justify-between">
                 <div>
-                  <p className="text-xs text-[#94a3b8] font-mono uppercase">{label}</p>
-                  <p className={clsx('text-2xl font-bold font-mono mt-0.5 tnum', color)}>{value}</p>
+                  <p className="text-[10px] text-[#94a3b8] font-mono uppercase tracking-wider">{label}</p>
+                  <p className={clsx('text-2xl font-bold font-mono mt-0.5 tnum tracking-tight', color)}>{value}</p>
                 </div>
-                <div className={clsx('h-9 w-9 rounded-lg flex items-center justify-center border border-[#272738]', bg)}>
+                <div className={clsx('h-9 w-9 rounded-lg flex items-center justify-center border border-white/5 transition-transform group-hover:scale-110', bg)}>
                   <Icon className={clsx('h-4.5 w-4.5', color)} />
                 </div>
               </CardContent>

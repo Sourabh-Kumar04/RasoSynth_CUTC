@@ -18,6 +18,8 @@ import {
   Settings as SettingsIcon,
   Menu,
   X,
+  Sparkles,
+  Zap,
 } from 'lucide-react'
 import { clsx } from 'clsx'
 import { CommandPalette } from '@/components/search/CommandPalette'
@@ -92,32 +94,48 @@ export function TopNav() {
 
             <Link
               href="/datasets"
-              className="hidden sm:inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded text-[10px] font-mono font-medium bg-emerald-950/30 border border-emerald-500/30 text-[#10b981] hover:bg-emerald-950/50 transition-colors"
+              className="hidden sm:inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded text-[10px] font-mono font-medium bg-emerald-950/40 border border-emerald-500/40 text-[#10b981] hover:bg-emerald-950/60 shadow-[0_0_12px_rgba(16,185,129,0.15)] transition-all"
               title="Cryptographic DBOM Attestation Engine Active"
             >
               <ShieldCheck className="w-3 h-3 text-[#10b981]" />
               <span>DBOM Verified</span>
             </Link>
+
+            <div className="hidden md:inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded text-[10px] font-mono font-medium bg-[#12121a] border border-[#272738]">
+              <span className={clsx("w-2 h-2 rounded-full", isHealthy ? "bg-emerald-400 animate-pulse shadow-[0_0_8px_rgba(16,185,129,0.7)]" : "bg-rose-500")} />
+              <span className={isHealthy ? "text-emerald-400 font-semibold" : "text-rose-400 font-semibold"}>
+                {isHealthy ? "Refinery: Live" : "Refinery: Offline"}
+              </span>
+            </div>
           </div>
 
           {/* Search Bar (Cmd+K) */}
           <div className="flex-1 max-w-md mx-2 hidden sm:block">
             <button
               onClick={() => setShowSearch(true)}
-              className="w-full flex items-center space-x-2 px-3 py-1.5 rounded-full bg-[#12121a] hover:bg-[#161622] border border-[#272738] hover:border-[#3b3b52] text-xs text-[#94a3b8] transition-all justify-between group"
+              className="w-full flex items-center space-x-2 px-3.5 py-1.5 rounded-full bg-[#12121a]/80 hover:bg-[#161622] border border-[#272738] hover:border-[#f26625]/40 text-xs text-[#94a3b8] hover:text-zinc-200 transition-all justify-between group shadow-inner"
             >
               <div className="flex items-center space-x-2">
-                <Search className="w-3.5 h-3.5 text-[#94a3b8] group-hover:text-white transition-colors" />
+                <Search className="w-3.5 h-3.5 text-[#94a3b8] group-hover:text-[#f26625] transition-colors" />
                 <span className="truncate">Search studio, presets, datasets...</span>
               </div>
-              <kbd className="px-1.5 py-0.5 rounded bg-[#161622] border border-[#272738] text-[10px] font-mono text-[#94a3b8]">
+              <kbd className="px-1.5 py-0.5 rounded bg-[#161622] border border-[#272738] text-[10px] font-mono text-[#94a3b8] group-hover:text-white group-hover:border-[#3b3b52]">
                 ⌘K
               </kbd>
             </button>
           </div>
 
           {/* Right Actions */}
-          <div className="flex items-center space-x-2.5">
+          <div className="flex items-center space-x-2">
+            <button
+              onClick={() => setShowTour(true)}
+              className="hidden sm:inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md border border-[#272738] bg-[#12121a] hover:bg-[#181826] hover:border-amber-500/40 text-xs font-mono text-zinc-300 hover:text-white transition-all"
+              title="Launch Guided Product Tour"
+            >
+              <Sparkles className="w-3.5 h-3.5 text-amber-400" />
+              <span>Tour</span>
+            </button>
+
             <button
               onClick={() => setShowSearch(true)}
               className="sm:hidden p-2 rounded-lg text-[#94a3b8] hover:text-white hover:bg-[#161622] border border-[#272738]"
@@ -128,9 +146,9 @@ export function TopNav() {
 
             <Link
               href="/studio"
-              className="inline-flex items-center space-x-1.5 px-3 py-1.5 rounded-md border border-[#272738] bg-transparent hover:bg-[#161622] text-zinc-300 hover:text-white text-xs font-mono font-medium transition-all active:scale-95"
+              className="inline-flex items-center space-x-1.5 px-3 py-1.5 rounded-md bg-[#f26625] hover:bg-[#de581a] border border-[#ea580c] text-white text-xs font-mono font-bold transition-all active:scale-95 glow-yc shadow-sm"
             >
-              <FlaskConical className="w-3.5 h-3.5 text-[#f26625]" />
+              <FlaskConical className="w-3.5 h-3.5 text-white" />
               <span>New Dataset</span>
             </Link>
 
