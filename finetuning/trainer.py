@@ -92,7 +92,7 @@ class FineTuneConfig:
     chat_template: str = "alpaca"
 
     # Execution target
-    execution_target: str = "local"
+    execution_target: str = "colab"
 
     def validate(self) -> None:
         """Raise ValueError on invalid config combinations."""

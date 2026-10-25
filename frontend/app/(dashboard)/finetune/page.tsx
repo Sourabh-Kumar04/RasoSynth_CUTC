@@ -474,7 +474,7 @@ function FineTuneContent() {
     load_in_4bit: true, bf16: true,
     push_to_hub: false, hf_token: '', hf_org: '',
     chat_template: 'alpaca', output_dir: 'outputs/finetune',
-    execution_target: 'cloud_accelerated',
+    execution_target: 'colab',
   })
 
   // Synchronize search param if changes
@@ -894,7 +894,7 @@ function FineTuneContent() {
                       onValueChange={v => f('execution_target', v)}>
                       <SelectTrigger className="rounded-md border-[#272738] bg-[#0a0a0f] text-white text-xs font-mono"><SelectValue /></SelectTrigger>
                       <SelectContent className="bg-[#12121a] border-[#272738] text-white text-xs font-mono">
-                        <SelectItem value="cloud_accelerated">Managed Cloud GPU (Zero-Setup, Free Tier)</SelectItem>
+                        <SelectItem value="colab">Google Colab (Automated Cloud GPU — Free &amp; Zero-Setup)</SelectItem>
                         <SelectItem value="local">Local Hardware (PyTorch / Unsloth)</SelectItem>
                         <SelectItem value="modal">Modal Serverless GPU (NVIDIA A10G)</SelectItem>
                         <SelectItem value="runpod">RunPod Cloud GPU (A40 / H100)</SelectItem>

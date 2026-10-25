@@ -57,7 +57,7 @@ class CreateFineTuneJobRequest(BaseModel):
     hf_token: str = ""
     hf_org: str = ""
     chat_template: str = Field("alpaca", pattern="^(alpaca|chatml|llama3|sharegpt|openai_jsonl)$")
-    execution_target: str = Field("cloud_accelerated", pattern="^(local|modal|runpod|serverless|colab|cloud_accelerated)$")
+    execution_target: str = Field("colab", pattern="^(local|modal|runpod|serverless|colab|cloud_accelerated)$")
 
     @model_validator(mode="after")
     def check_dataset_source(self) -> "CreateFineTuneJobRequest":
