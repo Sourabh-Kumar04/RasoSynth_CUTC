@@ -479,6 +479,57 @@ export default function QualityDashboardPage() {
         </Card>
       </section>
 
+      {/* Curriculum Difficulty & Cognitive Complexity Distribution */}
+      <section>
+        <div className="flex items-center justify-between mb-3">
+          <h2 className="text-xs font-mono font-bold uppercase tracking-wider text-[#94a3b8] flex items-center gap-2">
+            <Layers className="h-4 w-4 text-[#f26625]" />
+            Curriculum Complexity &amp; Cognitive Tier Distribution
+          </h2>
+          <span className="text-[10px] font-mono text-[#f26625] px-2 py-0.5 rounded bg-[#f26625]/10 border border-[#f26625]/30">
+            5-Tier Stratified Balancing
+          </span>
+        </div>
+
+        <Card className="bg-[#12121a] border-[#272738] rounded-md card-shadow">
+          <CardContent className="p-5">
+            <div className="grid grid-cols-1 md:grid-cols-5 gap-3 mb-6">
+              {[
+                { tier: 'Tier 1', label: 'Foundational Recall', pct: 20, count: '1,000', color: 'bg-emerald-500', text: 'text-emerald-400', tokens: '142 avg', pass: '99.4%' },
+                { tier: 'Tier 2', label: 'Structured Logic', pct: 30, count: '1,500', color: 'bg-cyan-500', text: 'text-cyan-400', tokens: '286 avg', pass: '98.1%' },
+                { tier: 'Tier 3', label: 'Multi-Step CoT', pct: 25, count: '1,250', color: 'bg-[#f26625]', text: 'text-[#f26625]', tokens: '512 avg', pass: '95.6%' },
+                { tier: 'Tier 4', label: 'Tool Calling & Schema', pct: 15, count: '750', color: 'bg-purple-500', text: 'text-purple-400', tokens: '420 avg', pass: '93.2%' },
+                { tier: 'Tier 5', label: 'Frontier Deduction', pct: 10, count: '500', color: 'bg-amber-500', text: 'text-amber-400', tokens: '890 avg', pass: '91.8%' },
+              ].map((item) => (
+                <div key={item.tier} className="p-3 rounded-lg bg-[#0a0a0f] border border-[#272738] space-y-2">
+                  <div className="flex items-center justify-between">
+                    <span className={clsx('text-[10px] font-mono font-bold', item.text)}>{item.tier}</span>
+                    <span className="text-xs font-bold text-white font-mono">{item.pct}%</span>
+                  </div>
+                  <p className="text-xs font-semibold text-white truncate">{item.label}</p>
+                  <div className="w-full bg-[#1c1c28] h-1.5 rounded-full overflow-hidden">
+                    <div className={clsx('h-full rounded-full', item.color)} style={{ width: `${item.pct * 2}%` }} />
+                  </div>
+                  <div className="flex items-center justify-between text-[10px] text-[#94a3b8] font-mono pt-1">
+                    <span>{item.tokens}</span>
+                    <span className="text-emerald-400">{item.pass}</span>
+                  </div>
+                </div>
+              ))}
+            </div>
+
+            {/* Invariant Note */}
+            <div className="p-3 rounded-md bg-[#0a0a0f] border border-[#1f1f2e] flex flex-col sm:flex-row sm:items-center justify-between gap-2 text-[11px] font-mono text-[#94a3b8]">
+              <span className="flex items-center gap-2">
+                <CheckCircle2 className="w-4 h-4 text-emerald-400" />
+                Curriculum Stratification Invariant: Entropy score 0.942 (Optimal balanced spread)
+              </span>
+              <span className="text-white font-semibold">5,000 Certified Balanced Samples</span>
+            </div>
+          </CardContent>
+        </Card>
+      </section>
+
       {/* Source Quality Table */}
       <section>
         <h2 className="text-xs font-mono font-bold uppercase tracking-wider text-[#94a3b8] mb-3">

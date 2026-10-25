@@ -288,7 +288,11 @@ class ConstructionPipeline:
             "preserved_terms": self.config.get("preserved_terms", []),
             "parallel_bilingual": self.config.get("parallel_bilingual", False),
             "key_entities": [str(value)[:120] for value in (intent.key_entities or [])[:12]],
-            "constraints": [str(value)[:240] for value in (intent.constraints or [])[:12]],
+            "constraints": [
+                f"{k}: {v}"[:240] for k, v in list(intent.constraints.items())[:12]
+            ] if isinstance(intent.constraints, dict) else [
+                str(value)[:240] for value in (intent.constraints or [])[:12]
+            ],
             "optimized_search_queries": [str(value)[:200] for value in (intent.specialized_queries or [])[:10]],
             "ideal_samples": (getattr(intent, "ideal_samples", None) or [])[:5],
             "dataset_type": self.dataset_type.value,
