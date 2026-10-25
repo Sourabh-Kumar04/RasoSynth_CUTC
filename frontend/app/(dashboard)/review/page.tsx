@@ -19,6 +19,7 @@ import {
 import { api } from '@/lib/api/client'
 import { MerkleTreeGraph } from '@/components/dbom/merkle-tree-graph'
 import { GroundingDiffModal } from '@/components/review/grounding-diff-modal'
+import { playSuccessChime, playClickSound } from '@/lib/audio/sound-effects'
 
 const API_BASE = process.env.NEXT_PUBLIC_API_URL || ''
 
@@ -239,10 +240,17 @@ export default function ReviewPage() {
   ) => {
     setAction(true)
     try {
-      if (action === 'approve') await api.approveReviewItem(item.id, reviewer, notes)
-      else if (action === 'reject') await api.rejectReviewItem(item.id, reviewer, notes)
-      else if (action === 'flag')   await api.flagReviewItem(item.id, reviewer, notes)
-      else if (action === 'edit') {
+      if (action === 'approve') {
+        playSuccessChime()
+        await api.approveReviewItem(item.id, reviewer, notes)
+      } else if (action === 'reject') {
+        playClickSound()
+        await api.rejectReviewItem(item.id, reviewer, notes)
+      } else if (action === 'flag') {
+        playClickSound()
+        await api.flagReviewItem(item.id, reviewer, notes)
+      } else if (action === 'edit') {
+        playSuccessChime()
         await api.editReviewItem(item.id, reviewer,
           editInstruction || undefined, editResponse || undefined, notes)
         setEditing(false)
@@ -259,6 +267,7 @@ export default function ReviewPage() {
 
   const bulkAct = async (type: 'approve' | 'reject') => {
     if (selected2.size === 0) return
+    playClickSound()
     setAction(true)
     let ok = 0
     for (const id of Array.from(selected2)) {
@@ -268,6 +277,7 @@ export default function ReviewPage() {
         ok++
       } catch {}
     }
+    if (type === 'approve') playSuccessChime()
     toast(`${type === 'approve' ? 'Approved' : 'Rejected'} ${ok} items`, 'success')
     setSelected2(new Set())
     await Promise.all([fetchStats(), fetchQueue()])
