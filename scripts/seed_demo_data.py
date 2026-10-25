@@ -145,7 +145,33 @@ def main():
     parser = argparse.ArgumentParser(description="Seed RasoSynthTune demo artifacts & DBOMs")
     parser.add_argument("--output-dir", default="outputs/demo_seed", help="Target output directory")
     parser.add_argument("--json", action="store_true", help="Output JSON summary")
+    parser.add_argument("--dry-run", action="store_true", help="Validate demo dataset configurations without writing to disk")
     args = parser.parse_args()
+
+    if args.dry_run:
+        summary = [
+            {
+                "job_id": d["job_id"],
+                "domain": d["domain"],
+                "sample_count": d["sample_count"],
+                "dry_run": True,
+            }
+            for d in DEMO_DATASETS
+        ]
+        res = {
+            "status": "dry_run_validated",
+            "datasets_created": len(summary),
+            "details": summary,
+        }
+        if args.json:
+            print(json.dumps(res, indent=2))
+        else:
+            print("=" * 72)
+            print("  RasoSynthTune: Demo Data Seeder (Dry Run)")
+            print("=" * 72)
+            print(f"Total Demo Datasets Validated: {res['datasets_created']}")
+            print("=" * 72)
+        sys.exit(0)
 
     res = seed_demo_artifacts(args.output_dir)
     if args.json:
