@@ -120,24 +120,45 @@ class FinetuneJobManager:
         return fj.to_dict() if fj else None
 
     async def list_jobs(self, limit: int = 100) -> list[dict]:
-        """Return jobs from DB, with a short cache to reduce DB pressure."""
-        import time
-        now = time.monotonic()
-        if self._list_cache is not None and (now - self._list_cache_ts) < LIST_CACHE_TTL:
-            return self._list_cache[:limit]
+        """Return jobs directly from DB to prevent cross-worker cache staleness in multi-process uvicorn."""
         jobs = await self.db.list_finetune_jobs(limit=limit)
-        result = [j.to_dict() for j in jobs]
-        self._list_cache = result
-        self._list_cache_ts = now
-        return result
+        return [j.to_dict() for j in jobs]
+
+    def _persist_log_event(self, job_id: str, event: dict) -> None:
+        """Persist event to shared container disk so all Uvicorn worker processes can read it."""
+        try:
+            log_dir = "/tmp/finetune_logs"
+            os.makedirs(log_dir, exist_ok=True)
+            log_file = os.path.join(log_dir, f"{job_id}.jsonl")
+            import json
+            with open(log_file, "a", encoding="utf-8") as f:
+                f.write(json.dumps(event) + "\n")
+        except Exception:
+            pass
 
     def get_logs(self, job_id: str, limit: int = 200) -> list[dict]:
-        """Return last N log events from the in-memory ring buffer."""
+        """Return last N log events from the in-memory ring buffer or shared worker disk cache."""
         buf = self._logs.get(job_id)
-        if buf is None:
-            return []
-        entries = list(buf)
-        return entries[-limit:] if limit < len(entries) else entries
+        if buf and len(buf) > 0:
+            entries = list(buf)
+            return entries[-limit:] if limit < len(entries) else entries
+        
+        # Cross-worker fallback: read from shared disk
+        try:
+            log_file = os.path.join("/tmp/finetune_logs", f"{job_id}.jsonl")
+            if os.path.exists(log_file):
+                import json
+                entries = []
+                with open(log_file, "r", encoding="utf-8") as f:
+                    for line in f:
+                        line = line.strip()
+                        if line:
+                            entries.append(json.loads(line))
+                self._logs[job_id] = deque(entries, maxlen=LOG_BUFFER_SIZE)
+                return entries[-limit:] if limit < len(entries) else entries
+        except Exception:
+            pass
+        return []
 
     async def subscribe(self, job_id: str) -> AsyncGenerator[dict, None]:
         """Async generator of training events for a job (WebSocket use)."""
@@ -169,16 +190,19 @@ class FinetuneJobManager:
         async with self._semaphore:
             await self.db.update_finetune_job(job_id, status="running", started_at=utc_now())
             self._list_cache = None
-            await self._broadcast(job_id, {"type": "started", "job_id": job_id})
+            start_event = {"type": "started", "job_id": job_id, "timestamp": datetime.now(timezone.utc).isoformat()}
+            self._persist_log_event(job_id, start_event)
+            await self._broadcast(job_id, start_event)
 
             trainer = Trainer(config)
             try:
                 async for event in trainer.train():
                     event["job_id"] = job_id
 
-                    # Store in ring buffer
+                    # Store in ring buffer and persist to shared disk across worker processes
                     buf = self._logs.setdefault(job_id, deque(maxlen=LOG_BUFFER_SIZE))
                     buf.append(event)
+                    self._persist_log_event(job_id, event)
 
                     await self._broadcast(job_id, event)
                     etype = event.get("type")

@@ -507,7 +507,14 @@ function FineTuneContent() {
     try {
       const res = await api.listFineTuneJobs()
       const raw = res?.jobs || (Array.isArray(res) ? res : [])
-      if (Array.isArray(raw)) setJobs(raw)
+      if (Array.isArray(raw)) {
+        setJobs(raw)
+        setSelectedJob(curr => {
+          if (!curr) return null
+          const updated = raw.find((j: any) => j.id === curr.id)
+          return updated ? { ...curr, ...updated } : curr
+        })
+      }
     } catch {}
   }, [])
 
@@ -524,10 +531,9 @@ function FineTuneContent() {
   }, [fetchJobs])
 
   useEffect(() => {
-    if (tab !== 'jobs') return
-    const id = setInterval(fetchJobs, 5000)
+    const id = setInterval(fetchJobs, 4000)
     return () => clearInterval(id)
-  }, [tab, fetchJobs])
+  }, [fetchJobs])
 
   // ── WebSocket & Resilient Polling Stream ──────────────────────────────────
 
@@ -536,17 +542,16 @@ function FineTuneContent() {
   const connectStream = useCallback((jobId: string) => {
     wsRef.current?.close()
     if (pollingTimerRef.current) clearInterval(pollingTimerRef.current)
-    setLogs([])
 
-    // Determine target WebSocket endpoint
-    let wsUrl: string
-    if (process.env.NEXT_PUBLIC_API_URL) {
-      wsUrl = `${process.env.NEXT_PUBLIC_API_URL.replace(/^http/, 'ws')}/api/finetune/jobs/${jobId}/stream`
-    } else if (typeof window !== 'undefined' && window.location.hostname !== 'localhost') {
-      wsUrl = `wss://sourabh-kumar04-rasosynthtune.hf.space/api/finetune/jobs/${jobId}/stream`
-    } else {
-      wsUrl = `ws://localhost:8000/api/finetune/jobs/${jobId}/stream`
-    }
+    // Immediate initial poll so user sees state instantly
+    api.getFineTuneJob(jobId).then(jobRes => {
+      if (jobRes) setSelectedJob(p => p ? { ...p, ...jobRes } : jobRes)
+    }).catch(() => {})
+    api.getFineTuneLogs(jobId, 150).then(logsRes => {
+      if (logsRes?.logs && Array.isArray(logsRes.logs) && logsRes.logs.length > 0) {
+        setLogs(logsRes.logs)
+      }
+    }).catch(() => {})
 
     // Resilient polling fallback if WS fails in serverless / restricted networks
     const startPollingFallback = () => {
@@ -555,7 +560,7 @@ function FineTuneContent() {
         try {
           const [jobRes, logsRes] = await Promise.all([
             api.getFineTuneJob(jobId),
-            api.getFineTuneLogs(jobId, 100),
+            api.getFineTuneLogs(jobId, 150),
           ])
           if (jobRes) {
             setSelectedJob(p => p ? { ...p, ...jobRes } : jobRes)
@@ -568,7 +573,17 @@ function FineTuneContent() {
             setLogs(logsRes.logs)
           }
         } catch {}
-      }, 3000)
+      }, 2500)
+    }
+
+    // Determine target WebSocket endpoint
+    let wsUrl: string
+    if (process.env.NEXT_PUBLIC_API_URL) {
+      wsUrl = `${process.env.NEXT_PUBLIC_API_URL.replace(/^http/, 'ws')}/api/finetune/jobs/${jobId}/stream`
+    } else if (typeof window !== 'undefined' && window.location.hostname !== 'localhost') {
+      wsUrl = `wss://sourabh-kumar04-rasosynthtune.hf.space/api/finetune/jobs/${jobId}/stream`
+    } else {
+      wsUrl = `ws://localhost:8000/api/finetune/jobs/${jobId}/stream`
     }
 
     try {
@@ -590,9 +605,20 @@ function FineTuneContent() {
               } : p
             )
           }
-          if (ev.type === 'completed') { fetchJobs(); toast('Training completed!', 'success') }
-          if (ev.type === 'error')     { fetchJobs(); toast(`Error: ${ev.message}`, 'error') }
-          if (ev.type === 'cancelled') { fetchJobs() }
+          if (ev.type === 'completed') {
+            setSelectedJob(p => p ? { ...p, status: 'completed', progress: 100 } : p)
+            fetchJobs()
+            toast('Training completed!', 'success')
+          }
+          if (ev.type === 'error') {
+            setSelectedJob(p => p ? { ...p, status: 'failed', error: ev.message } : p)
+            fetchJobs()
+            toast(`Error: ${ev.message}`, 'error')
+          }
+          if (ev.type === 'cancelled') {
+            setSelectedJob(p => p ? { ...p, status: 'cancelled' } : p)
+            fetchJobs()
+          }
         } catch {}
       }
 
@@ -647,10 +673,25 @@ function FineTuneContent() {
   const handleSelectJob = async (job: FTJob) => {
     setSelectedJob(job)
     setMobileSheet(true)
-    const res = await api.getFineTuneJob(job.id)
-    if (res) setSelectedJob(res)
-    if (job.status === 'running') connectStream(job.id)
-    else setLogs([])
+    try {
+      const res = await api.getFineTuneJob(job.id)
+      if (res) setSelectedJob(res)
+    } catch {}
+
+    if (job.status === 'running') {
+      connectStream(job.id)
+    } else {
+      try {
+        const logsRes = await api.getFineTuneLogs(job.id, 200)
+        if (logsRes?.logs && Array.isArray(logsRes.logs) && logsRes.logs.length > 0) {
+          setLogs(logsRes.logs)
+        } else {
+          setLogs([])
+        }
+      } catch {
+        setLogs([])
+      }
+    }
   }
 
   const handleCancel = async (jobId: string) => {

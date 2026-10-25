@@ -134,12 +134,12 @@ class FineTuneJob(Base):
     """Fine-tuning job model — tracks PEFT/LoRA training runs."""
     __tablename__ = "finetune_jobs"
 
-    id = Column(PG_UUID(as_uuid=False), primary_key=True, default=lambda: str(uuid.uuid4()))
-    dataset_id = Column(PG_UUID(as_uuid=False), ForeignKey("datasets.id", ondelete="SET NULL"), nullable=True, index=True)
+    id = Column(String(64), primary_key=True, default=lambda: str(uuid.uuid4()))
+    dataset_id = Column(String(255), nullable=True, index=True)
     # job metadata
-    status = Column(String, nullable=False, default="pending", index=True)  # pending/running/completed/failed/cancelled
-    base_model = Column(String, nullable=False)          # e.g. "unsloth/llama-3-8b"
-    output_model_name = Column(String)                   # HF Hub repo or local path
+    status = Column(String(32), nullable=False, default="pending", index=True)  # pending/running/completed/failed/cancelled
+    base_model = Column(String(255), nullable=False)          # e.g. "unsloth/llama-3-8b"
+    output_model_name = Column(String(255))                   # HF Hub repo or local path
     # config payload – lora_r, lora_alpha, epochs, batch_size, lr, push_to_hub, etc.
     config = Column(JSON, default=dict)
     # results
@@ -149,8 +149,8 @@ class FineTuneJob(Base):
     train_loss = Column(Float)
     eval_loss = Column(Float)
     error = Column(Text)
-    output_path = Column(String)                         # local checkpoint dir
-    hf_repo_url = Column(String)                         # HF Hub URL if pushed
+    output_path = Column(String(512))                         # local checkpoint dir
+    hf_repo_url = Column(String(512))                         # HF Hub URL if pushed
     # timing
     created_at = Column(DateTime, default=utc_now)
     started_at = Column(DateTime)
@@ -306,6 +306,18 @@ class DatabaseManager:
                 await conn.execute(
                     text("ALTER TABLE jobs ADD COLUMN IF NOT EXISTS samples_filtered INTEGER DEFAULT 0")
                 )
+                try:
+                    await conn.execute(
+                        text("ALTER TABLE finetune_jobs ALTER COLUMN dataset_id TYPE VARCHAR(255)")
+                    )
+                except Exception:
+                    pass
+                try:
+                    await conn.execute(
+                        text("ALTER TABLE finetune_jobs ALTER COLUMN id TYPE VARCHAR(64)")
+                    )
+                except Exception:
+                    pass
 
             # ── Performance indexes for scale ─────────────────────────
             indexes = [

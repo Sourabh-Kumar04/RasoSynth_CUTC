@@ -1,3 +1,4 @@
+import uuid
 import pytest
 from finetuning.trainer import FineTuneConfig
 
@@ -212,5 +213,72 @@ async def test_finetune_webhook_dispatch():
         assert payload["base_model"] == "HuggingFaceTB/SmolLM2-1.7B-Instruct"
         assert "Final Loss: `0.32`" in payload["content"]
         assert "/api/finetune/jobs/ft-job-456/download" in payload["download_url"]
+
+
+@pytest.mark.asyncio
+async def test_finetune_string_dataset_id_and_listing():
+    """Ensure non-UUID dataset IDs (e.g. flagship presets) do not crash listing or fetching."""
+    from core.db import DatabaseManager
+    from finetuning.job_manager import FinetuneJobManager
+
+    db = DatabaseManager("sqlite+aiosqlite:///:memory:")
+    await db.create_tables()
+    manager = FinetuneJobManager(db)
+
+    # 1. Create job with non-UUID dataset_id string
+    job_id = str(uuid.uuid4())
+    fj = await db.create_finetune_job({
+        "id": job_id,
+        "status": "pending",
+        "base_model": "sarvamai/sarvam-2b-v0.5",
+        "output_model_name": "test1",
+        "dataset_id": "flagship_indic_gst",
+        "config": {"epochs": 3},
+    })
+    assert fj.id == job_id
+    assert fj.dataset_id == "flagship_indic_gst"
+
+    # 2. list_jobs should retrieve it smoothly without ValueError
+    jobs = await manager.list_jobs(limit=10)
+    found = [j for j in jobs if j["id"] == job_id]
+    assert len(found) == 1
+    assert found[0]["dataset_id"] == "flagship_indic_gst"
+    assert found[0]["output_model_name"] == "test1"
+
+    # 3. get_job should retrieve it smoothly
+    fetched = await manager.get_job(job_id)
+    assert fetched is not None
+    assert fetched["id"] == job_id
+    assert fetched["dataset_id"] == "flagship_indic_gst"
+
+    await db.close()
+
+
+@pytest.mark.asyncio
+async def test_finetune_cross_worker_logs_persistence(tmp_path):
+    """Ensure logs persisted by one worker can be read by peer worker instances."""
+    from core.db import DatabaseManager
+    from finetuning.job_manager import FinetuneJobManager
+
+    db = DatabaseManager("sqlite+aiosqlite:///:memory:")
+    await db.create_tables()
+    worker1 = FinetuneJobManager(db)
+    worker2 = FinetuneJobManager(db)
+
+    job_id = f"worker-test-{uuid.uuid4()}"
+    event = {"type": "progress", "progress": 42.5, "loss": 1.25}
+
+    worker1._persist_log_event(job_id, event)
+    # worker2 has empty in-memory ring buffer for this job
+    assert job_id not in worker2._logs
+
+    # worker2 should fall back to shared disk log
+    logs = worker2.get_logs(job_id)
+    assert len(logs) >= 1
+    assert logs[-1]["type"] == "progress"
+    assert logs[-1]["loss"] == 1.25
+
+    await db.close()
+
 
 
