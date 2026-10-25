@@ -406,7 +406,7 @@ export default function ResearchPage() {
               Overview
             </TabsTrigger>
             <TabsTrigger value="techniques" className="rounded-sm text-xs font-mono data-[state=active]:bg-[#f26625] data-[state=active]:text-white data-[state=active]:glow-yc">
-              Core Techniques ({cachedTechniques.length})
+              Synthesized Techniques ({cachedTechniques.length})
             </TabsTrigger>
             <TabsTrigger value="history" className="rounded-sm text-xs font-mono data-[state=active]:bg-[#f26625] data-[state=active]:text-white data-[state=active]:glow-yc">
               Audit Trail ({history.length})
@@ -786,6 +786,11 @@ export default function ResearchPage() {
                 </CardTitle>
               </CardHeader>
               <CardContent className="p-0 divide-y divide-[#272738]">
+                {cachedTechniques.length === 0 && (
+                  <p className="px-5 py-6 text-xs font-mono text-[#94a3b8]">
+                    No synthesized techniques cached yet — run a research sweep to generate them.
+                  </p>
+                )}
                 {cachedTechniques.map((t, i) => (
                   <div key={i} className="flex items-center justify-between px-5 py-3.5">
                     <div className="flex items-center gap-3">

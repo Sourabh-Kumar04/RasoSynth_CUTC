@@ -26,16 +26,16 @@ import { SpotlightProductTour } from '@/components/onboarding/SpotlightProductTo
 import { BrandLogo } from '@/components/ui/brand-logo'
 
 const MOBILE_NAV_ITEMS = [
-  { href: '/studio', label: 'Dataset Studio', icon: FlaskConical },
+  { href: '/studio', label: 'Studio', icon: FlaskConical },
   { href: '/datasets', label: 'Data Library', icon: Database },
   { href: '/finetune', label: 'Model Training', icon: Cpu },
-  { href: '/quality', label: 'Quality Inspector', icon: BarChart2 },
-  { href: '/review', label: 'Data Review', icon: ClipboardCheck },
-  { href: '/observability', label: 'System Insights', icon: Activity },
   { href: '/orchestration', label: 'Pipelines', icon: Workflow },
+  { href: '/quality', label: 'Quality Jury', icon: BarChart2 },
+  { href: '/review', label: 'Data Review', icon: ClipboardCheck },
+  { href: '/observability', label: 'Telemetry', icon: Activity },
   { href: '/research', label: 'Benchmarks', icon: TrendingUp },
   { href: '/providers', label: 'AI Providers', icon: Beaker },
-  { href: '/settings', label: 'Settings', icon: SettingsIcon },
+  { href: '/settings', label: 'System Status', icon: SettingsIcon },
 ]
 
 export function TopNav() {

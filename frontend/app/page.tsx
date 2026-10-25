@@ -463,7 +463,7 @@ export default function ZenPortalPage() {
                 onClick={() => setIsMobileMenuOpen(false)}
                 className="p-2 rounded bg-[#141420] border border-[#222232] hover:border-[#f26625]/50 flex items-center justify-between"
               >
-                <span>Datasets</span>
+                <span>Data Library</span>
                 <ArrowRight className="w-3 h-3 text-[#f26625]" />
               </Link>
               <Link
@@ -471,7 +471,7 @@ export default function ZenPortalPage() {
                 onClick={() => setIsMobileMenuOpen(false)}
                 className="p-2 rounded bg-[#141420] border border-[#222232] hover:border-[#f26625]/50 flex items-center justify-between"
               >
-                <span>Fine-Tuning</span>
+                <span>Model Training</span>
                 <ArrowRight className="w-3 h-3 text-[#f26625]" />
               </Link>
               <Link
@@ -479,7 +479,7 @@ export default function ZenPortalPage() {
                 onClick={() => setIsMobileMenuOpen(false)}
                 className="p-2 rounded bg-[#141420] border border-[#222232] hover:border-[#f26625]/50 flex items-center justify-between"
               >
-                <span>Orchestration</span>
+                <span>Pipelines</span>
                 <ArrowRight className="w-3 h-3 text-[#f26625]" />
               </Link>
               <Link
@@ -487,7 +487,7 @@ export default function ZenPortalPage() {
                 onClick={() => setIsMobileMenuOpen(false)}
                 className="p-2 rounded bg-[#141420] border border-[#222232] hover:border-[#f26625]/50 flex items-center justify-between"
               >
-                <span>HITL Review</span>
+                <span>Data Review</span>
                 <ArrowRight className="w-3 h-3 text-[#f26625]" />
               </Link>
               <Link
@@ -495,7 +495,7 @@ export default function ZenPortalPage() {
                 onClick={() => setIsMobileMenuOpen(false)}
                 className="p-2 rounded bg-[#141420] border border-[#222232] hover:border-[#f26625]/50 flex items-center justify-between"
               >
-                <span>Neural Quality</span>
+                <span>Quality Jury</span>
                 <ArrowRight className="w-3 h-3 text-[#f26625]" />
               </Link>
               <Link
@@ -503,7 +503,7 @@ export default function ZenPortalPage() {
                 onClick={() => setIsMobileMenuOpen(false)}
                 className="p-2 rounded bg-[#141420] border border-[#222232] hover:border-[#f26625]/50 flex items-center justify-between"
               >
-                <span>Observability</span>
+                <span>Telemetry</span>
                 <ArrowRight className="w-3 h-3 text-[#f26625]" />
               </Link>
               <Link
@@ -511,7 +511,7 @@ export default function ZenPortalPage() {
                 onClick={() => setIsMobileMenuOpen(false)}
                 className="p-2 rounded bg-[#141420] border border-[#222232] hover:border-[#f26625]/50 flex items-center justify-between"
               >
-                <span>Research Lab</span>
+                <span>Benchmarks</span>
                 <ArrowRight className="w-3 h-3 text-[#f26625]" />
               </Link>
               <Link
@@ -519,7 +519,7 @@ export default function ZenPortalPage() {
                 onClick={() => setIsMobileMenuOpen(false)}
                 className="p-2 rounded bg-[#141420] border border-[#222232] hover:border-[#f26625]/50 flex items-center justify-between"
               >
-                <span>Providers</span>
+                <span>AI Providers</span>
                 <ArrowRight className="w-3 h-3 text-[#f26625]" />
               </Link>
               <Link
@@ -527,7 +527,7 @@ export default function ZenPortalPage() {
                 onClick={() => setIsMobileMenuOpen(false)}
                 className="p-2 rounded bg-[#141420] border border-[#222232] hover:border-[#f26625]/50 flex items-center justify-between"
               >
-                <span>Settings</span>
+                <span>System Status</span>
                 <ArrowRight className="w-3 h-3 text-[#f26625]" />
               </Link>
             </div>
@@ -1156,7 +1156,7 @@ export default function ZenPortalPage() {
               </p>
               <div className="flex items-center gap-2 text-[10px] text-emerald-400">
                 <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
-                <span>All Clusters Operational</span>
+                <span>Hybrid Standalone · Operational</span>
               </div>
             </div>
 

@@ -31,7 +31,7 @@ const PRIMARY_NAV_LINKS = [
 const SECONDARY_NAV_LINKS = [
   { href: '/research', label: 'Benchmarks', fullLabel: 'Benchmarks & ROI', icon: BarChart2 },
   { href: '/providers', label: 'AI Providers', fullLabel: 'AI Providers & Failover', icon: Beaker },
-  { href: '/settings', label: 'Settings', fullLabel: 'System Status & Settings', icon: Settings },
+  { href: '/settings', label: 'System Status', fullLabel: 'System Status & Configuration', icon: Settings },
 ]
 
 export function SubNav() {

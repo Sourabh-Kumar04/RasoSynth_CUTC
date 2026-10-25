@@ -107,6 +107,13 @@ export default function ObservabilityPage() {
 
   const totalServices = 2
 
+  // Headline status reflects host pressure too, so it never reads Healthy
+  // next to a Critical RAM badge on the Load & RAM card.
+  const hostPressureCritical =
+    (health?.system_metrics?.memory_used_percent ?? 45) > 85 ||
+    (health?.system_metrics?.cpu_load_1m ?? 0.1) > 3.0
+  const displayStatus = hostPressureCritical ? 'degraded' : (health?.status || 'healthy')
+
   return (
     <div className="space-y-6 w-full pb-8">
       {/* Page Header */}
@@ -201,14 +208,18 @@ export default function ObservabilityPage() {
               <div>
                 <p className="text-[10px] text-[#94a3b8] font-mono uppercase tracking-wider">System Status</p>
                 <div className="flex items-center gap-1.5 mt-1">
-                  <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse shadow-[0_0_8px_rgba(16,185,129,0.8)]" />
+                  <span className={`w-2 h-2 rounded-full animate-pulse ${hostPressureCritical ? 'bg-amber-400 shadow-[0_0_8px_rgba(251,191,36,0.8)]' : 'bg-emerald-400 shadow-[0_0_8px_rgba(16,185,129,0.8)]'}`} />
                   <p className="text-xl font-bold font-mono text-white capitalize">
-                    {health?.status || 'healthy'}
+                    {displayStatus}
                   </p>
                 </div>
               </div>
-              <div className="h-10 w-10 rounded-md bg-emerald-500/10 border border-emerald-500/30 flex items-center justify-center transition-transform group-hover:scale-110">
-                <CheckCircle2 className="h-5 w-5 text-emerald-400" />
+              <div className={`h-10 w-10 rounded-md border flex items-center justify-center transition-transform group-hover:scale-110 ${hostPressureCritical ? 'bg-amber-500/10 border-amber-500/30' : 'bg-emerald-500/10 border-emerald-500/30'}`}>
+                {hostPressureCritical ? (
+                  <AlertTriangle className="h-5 w-5 text-amber-400" />
+                ) : (
+                  <CheckCircle2 className="h-5 w-5 text-emerald-400" />
+                )}
               </div>
             </div>
           </CardContent>

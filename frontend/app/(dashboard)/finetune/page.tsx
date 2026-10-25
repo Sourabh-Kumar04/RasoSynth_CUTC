@@ -544,7 +544,7 @@ function DetailPane({ job, logs, lossHistory, onCancel, onCopy, onReconnect, log
             <div className="p-3 space-y-0.5">
               {logs.length === 0
                 ? <p className="text-xs text-[#94a3b8] font-mono">
-                    {job.status === 'running' ? 'Waiting for events…' : 'No log stream recorded.'}
+                    {job.status === 'running' ? 'Waiting for events…' : 'No log stream recorded for this run — logs stream here while a job is running.'}
                   </p>
                 : logs.map((line, i) => <LogRow key={i} line={line} />)
               }
