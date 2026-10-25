@@ -4,13 +4,14 @@ import { useState, useEffect, useCallback } from 'react'
 import {
   Settings, Shield, Key, Database, Server, Activity,
   CheckCircle2, XCircle, AlertCircle, RefreshCw, Loader2, ExternalLink,
-  HardDrive, Radio, Cpu, FileText, Check, ArrowRight
+  HardDrive, Radio, Cpu, FileText, Check, ArrowRight, Cloud, Zap
 } from 'lucide-react'
 import { clsx } from 'clsx'
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { api } from '@/lib/api/client'
+import { playClickSound, playSuccessChime } from '@/lib/audio/sound-effects'
 
 interface HealthStatus {
   status: string
@@ -54,6 +55,22 @@ export default function SettingsPage() {
   const [loading, setLoading] = useState(true)
   const [refreshing, setRefreshing] = useState(false)
 
+  const [computeConfig, setComputeConfig] = useState<{
+    modal_configured: boolean
+    runpod_configured: boolean
+    hf_configured: boolean
+    modal_token_id_masked: string | null
+    runpod_key_masked: string | null
+    hf_token_masked: string | null
+    available_targets: string[]
+  } | null>(null)
+  const [modalTokenId, setModalTokenId] = useState('')
+  const [modalTokenSecret, setModalTokenSecret] = useState('')
+  const [runpodApiKey, setRunpodApiKey] = useState('')
+  const [hfToken, setHfToken] = useState('')
+  const [savingCompute, setSavingCompute] = useState(false)
+  const [saveSuccess, setSaveSuccess] = useState(false)
+
   const fetchHealth = useCallback(async () => {
     try {
       const data = await api.getHealthReady().catch(() => api.getHealth().catch(() => null))
@@ -64,9 +81,52 @@ export default function SettingsPage() {
     }
   }, [])
 
-  useEffect(() => { fetchHealth() }, [fetchHealth])
+  const fetchComputeSettings = useCallback(async () => {
+    try {
+      const res = await api.getComputeSettings()
+      setComputeConfig(res)
+    } catch (e) {
+      console.warn('Failed to fetch compute settings', e)
+    }
+  }, [])
 
-  const refresh = () => { setRefreshing(true); fetchHealth() }
+  useEffect(() => {
+    fetchHealth()
+    fetchComputeSettings()
+  }, [fetchHealth, fetchComputeSettings])
+
+  const refresh = () => {
+    setRefreshing(true)
+    fetchHealth()
+    fetchComputeSettings()
+  }
+
+  const handleSaveCompute = async (e: React.FormEvent) => {
+    e.preventDefault()
+    playClickSound()
+    setSavingCompute(true)
+    setSaveSuccess(false)
+    try {
+      await api.updateComputeSettings({
+        modal_token_id: modalTokenId || undefined,
+        modal_token_secret: modalTokenSecret || undefined,
+        runpod_api_key: runpodApiKey || undefined,
+        hf_token: hfToken || undefined,
+      })
+      playSuccessChime()
+      setSaveSuccess(true)
+      fetchComputeSettings()
+      setModalTokenId('')
+      setModalTokenSecret('')
+      setRunpodApiKey('')
+      setHfToken('')
+      setTimeout(() => setSaveSuccess(false), 3000)
+    } catch (err) {
+      console.error('Failed to update compute settings', err)
+    } finally {
+      setSavingCompute(false)
+    }
+  }
 
   const infraStatus = health?.status === 'healthy' || health?.status === 'ok'
   const dbOk = health?.database
@@ -145,6 +205,10 @@ export default function SettingsPage() {
       <Tabs defaultValue="general">
         <TabsList className="bg-[#161622] rounded-md border border-[#272738] p-1 flex flex-wrap gap-1 h-auto">
           <TabsTrigger value="general" className="rounded-sm text-xs font-mono data-[state=active]:bg-[#f26625] data-[state=active]:text-white data-[state=active]:glow-yc">General &amp; Engine</TabsTrigger>
+          <TabsTrigger value="compute" className="rounded-sm text-xs font-mono data-[state=active]:bg-[#f26625] data-[state=active]:text-white data-[state=active]:glow-yc flex items-center gap-1.5">
+            <Cloud className="w-3.5 h-3.5" />
+            Cloud Compute &amp; GPUs
+          </TabsTrigger>
           <TabsTrigger value="providers" className="rounded-sm text-xs font-mono data-[state=active]:bg-[#f26625] data-[state=active]:text-white data-[state=active]:glow-yc">Providers</TabsTrigger>
           <TabsTrigger value="delivery" className="rounded-sm text-xs font-mono data-[state=active]:bg-[#f26625] data-[state=active]:text-white data-[state=active]:glow-yc">Delivery (ADR-002)</TabsTrigger>
           <TabsTrigger value="observability" className="rounded-sm text-xs font-mono data-[state=active]:bg-[#f26625] data-[state=active]:text-white data-[state=active]:glow-yc">Observability</TabsTrigger>
@@ -242,6 +306,195 @@ export default function SettingsPage() {
                   </code>
                 </div>
               ))}
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        {/* Cloud Compute & GPUs */}
+        <TabsContent value="compute" className="mt-4 space-y-4">
+          <Card className="bg-[#12121a] border-[#272738] rounded-md card-shadow">
+            <CardHeader className="pb-3 border-b border-[#272738]">
+              <CardTitle className="text-sm font-bold text-white flex items-center gap-2">
+                <Cloud className="w-4 h-4 text-[#f26625]" />
+                Cloud GPU Compute Fabric &amp; Serverless Endpoints
+              </CardTitle>
+              <CardDescription className="text-xs text-[#94a3b8]">
+                Configure external cloud GPU credentials for offloading QLoRA and SFT fine-tuning jobs (Modal Labs, RunPod Cloud, HuggingFace Hub)
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="p-0 divide-y divide-[#272738]">
+              <div className="flex items-center justify-between px-5 py-3.5">
+                <div className="flex items-center gap-3.5">
+                  <div className="h-9 w-9 rounded-xl bg-[#161622] border border-[#272738] flex items-center justify-center font-mono font-bold text-xs text-[#f26625]">
+                    M
+                  </div>
+                  <div>
+                    <p className="text-xs font-bold text-white flex items-center gap-2">
+                      Modal Serverless GPU Fabric (NVIDIA A10G / H100)
+                      {computeConfig?.modal_configured && <CheckCircle2 className="h-3.5 w-3.5 text-[#10b981]" />}
+                    </p>
+                    <p className="text-[11px] text-[#94a3b8] font-mono mt-0.5">
+                      MODAL_TOKEN_ID &amp; MODAL_TOKEN_SECRET — Serverless containerized training
+                    </p>
+                  </div>
+                </div>
+                <span className={clsx(
+                  'text-[10px] font-mono font-bold px-2.5 py-0.5 rounded-md border',
+                  computeConfig?.modal_configured
+                    ? 'bg-emerald-950/40 text-[#10b981] border-emerald-500/30'
+                    : 'bg-zinc-900 text-zinc-400 border-zinc-800'
+                )}>
+                  {computeConfig?.modal_configured ? `Active (${computeConfig.modal_token_id_masked || 'Configured'})` : 'Not Configured'}
+                </span>
+              </div>
+
+              <div className="flex items-center justify-between px-5 py-3.5">
+                <div className="flex items-center gap-3.5">
+                  <div className="h-9 w-9 rounded-xl bg-[#161622] border border-[#272738] flex items-center justify-center font-mono font-bold text-xs text-purple-400">
+                    RP
+                  </div>
+                  <div>
+                    <p className="text-xs font-bold text-white flex items-center gap-2">
+                      RunPod Cloud GPU Endpoints
+                      {computeConfig?.runpod_configured && <CheckCircle2 className="h-3.5 w-3.5 text-[#10b981]" />}
+                    </p>
+                    <p className="text-[11px] text-[#94a3b8] font-mono mt-0.5">
+                      RUNPOD_API_KEY — On-demand remote worker pods for high-throughput fine-tuning
+                    </p>
+                  </div>
+                </div>
+                <span className={clsx(
+                  'text-[10px] font-mono font-bold px-2.5 py-0.5 rounded-md border',
+                  computeConfig?.runpod_configured
+                    ? 'bg-emerald-950/40 text-[#10b981] border-emerald-500/30'
+                    : 'bg-zinc-900 text-zinc-400 border-zinc-800'
+                )}>
+                  {computeConfig?.runpod_configured ? `Active (${computeConfig.runpod_key_masked || 'Configured'})` : 'Not Configured'}
+                </span>
+              </div>
+
+              <div className="flex items-center justify-between px-5 py-3.5">
+                <div className="flex items-center gap-3.5">
+                  <div className="h-9 w-9 rounded-xl bg-[#161622] border border-[#272738] flex items-center justify-center font-mono font-bold text-xs text-amber-400">
+                    HF
+                  </div>
+                  <div>
+                    <p className="text-xs font-bold text-white flex items-center gap-2">
+                      Hugging Face Hub Token (Write / Model Upload)
+                      {computeConfig?.hf_configured && <CheckCircle2 className="h-3.5 w-3.5 text-[#10b981]" />}
+                    </p>
+                    <p className="text-[11px] text-[#94a3b8] font-mono mt-0.5">
+                      HF_TOKEN — Required for pushing trained LoRA weights &amp; dataset cards
+                    </p>
+                  </div>
+                </div>
+                <span className={clsx(
+                  'text-[10px] font-mono font-bold px-2.5 py-0.5 rounded-md border',
+                  computeConfig?.hf_configured
+                    ? 'bg-emerald-950/40 text-[#10b981] border-emerald-500/30'
+                    : 'bg-zinc-900 text-zinc-400 border-zinc-800'
+                )}>
+                  {computeConfig?.hf_configured ? `Active (${computeConfig.hf_token_masked || 'Configured'})` : 'Not Configured'}
+                </span>
+              </div>
+            </CardContent>
+          </Card>
+
+          {/* Form to update credentials */}
+          <Card className="bg-[#12121a] border-[#272738] rounded-md card-shadow">
+            <CardHeader className="pb-3 border-b border-[#272738]">
+              <CardTitle className="text-sm font-bold text-white flex items-center gap-2">
+                <Key className="w-4 h-4 text-[#f26625]" />
+                Update Cloud Compute Credentials
+              </CardTitle>
+              <CardDescription className="text-xs text-[#94a3b8]">
+                Credentials are saved to the active runtime environment and persisted for all subsequent cloud fine-tuning jobs.
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="p-5">
+              <form onSubmit={handleSaveCompute} className="space-y-4">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div className="space-y-1.5">
+                    <label className="text-xs font-medium text-white block">
+                      Modal Token ID
+                    </label>
+                    <input
+                      type="text"
+                      value={modalTokenId}
+                      onChange={(e) => setModalTokenId(e.target.value)}
+                      placeholder={computeConfig?.modal_token_id_masked || 'ak-xxxx'}
+                      className="w-full px-3 py-2 text-xs font-mono bg-[#0a0a0f] border border-[#272738] rounded-md text-white placeholder-zinc-600 focus:outline-none focus:border-[#f26625]"
+                    />
+                  </div>
+
+                  <div className="space-y-1.5">
+                    <label className="text-xs font-medium text-white block">
+                      Modal Token Secret
+                    </label>
+                    <input
+                      type="password"
+                      value={modalTokenSecret}
+                      onChange={(e) => setModalTokenSecret(e.target.value)}
+                      placeholder="as-xxxx"
+                      className="w-full px-3 py-2 text-xs font-mono bg-[#0a0a0f] border border-[#272738] rounded-md text-white placeholder-zinc-600 focus:outline-none focus:border-[#f26625]"
+                    />
+                  </div>
+
+                  <div className="space-y-1.5">
+                    <label className="text-xs font-medium text-white block">
+                      RunPod API Key
+                    </label>
+                    <input
+                      type="password"
+                      value={runpodApiKey}
+                      onChange={(e) => setRunpodApiKey(e.target.value)}
+                      placeholder={computeConfig?.runpod_key_masked || 'rpa_xxxx'}
+                      className="w-full px-3 py-2 text-xs font-mono bg-[#0a0a0f] border border-[#272738] rounded-md text-white placeholder-zinc-600 focus:outline-none focus:border-[#f26625]"
+                    />
+                  </div>
+
+                  <div className="space-y-1.5">
+                    <label className="text-xs font-medium text-white block">
+                      Hugging Face Token
+                    </label>
+                    <input
+                      type="password"
+                      value={hfToken}
+                      onChange={(e) => setHfToken(e.target.value)}
+                      placeholder={computeConfig?.hf_token_masked || 'hf_xxxx'}
+                      className="w-full px-3 py-2 text-xs font-mono bg-[#0a0a0f] border border-[#272738] rounded-md text-white placeholder-zinc-600 focus:outline-none focus:border-[#f26625]"
+                    />
+                  </div>
+                </div>
+
+                <div className="flex items-center justify-between pt-3 border-t border-[#272738]">
+                  <div>
+                    {saveSuccess && (
+                      <span className="text-xs text-emerald-400 font-mono flex items-center gap-1.5">
+                        <CheckCircle2 className="w-3.5 h-3.5" />
+                        Credentials saved and applied to runtime!
+                      </span>
+                    )}
+                  </div>
+                  <Button
+                    type="submit"
+                    disabled={savingCompute || (!modalTokenId && !modalTokenSecret && !runpodApiKey && !hfToken)}
+                    className="bg-[#f26625] hover:bg-[#d9551c] text-white text-xs font-mono px-4 h-8"
+                  >
+                    {savingCompute ? (
+                      <>
+                        <Loader2 className="w-3.5 h-3.5 animate-spin mr-1.5" />
+                        Saving...
+                      </>
+                    ) : (
+                      <>
+                        <Zap className="w-3.5 h-3.5 mr-1.5" />
+                        Apply &amp; Save Credentials
+                      </>
+                    )}
+                  </Button>
+                </div>
+              </form>
             </CardContent>
           </Card>
         </TabsContent>

@@ -31,7 +31,9 @@ def test_generate_hf_dataset_card_with_dbom_attestation():
     assert "DPDP Act Compliance" in card
 
 
-def test_publish_dataset_to_hf_hub_requires_token():
+def test_publish_dataset_to_hf_hub_requires_token(monkeypatch):
+    monkeypatch.delenv("HF_TOKEN", raising=False)
+    monkeypatch.delenv("HUGGINGFACE_HUB_TOKEN", raising=False)
     with pytest.raises(ValueError, match="Hugging Face Hub token is required"):
         publish_dataset_to_hf_hub(
             repo_id="user/test-dataset",

@@ -1552,6 +1552,58 @@ async def get_provider_health_metrics():
     return {"metrics": metrics_map}
 
 
+@app.get("/settings/compute", tags=["Settings"])
+async def get_compute_settings():
+    """Return cloud GPU provider configuration status (without exposing raw secrets)."""
+    cfg = get_settings()
+    m_id = os.getenv("MODAL_TOKEN_ID") or cfg.modal_token_id
+    m_sec = os.getenv("MODAL_TOKEN_SECRET") or cfg.modal_token_secret
+    r_key = os.getenv("RUNPOD_API_KEY") or cfg.runpod_api_key
+    h_tok = os.getenv("HF_TOKEN") or cfg.hf_token
+
+    return {
+        "modal_configured": bool(m_id and m_sec),
+        "runpod_configured": bool(r_key),
+        "hf_configured": bool(h_tok),
+        "modal_token_id_masked": f"{m_id[:4]}...{m_id[-4:]}" if m_id and len(m_id) > 8 else ("configured" if m_id else None),
+        "runpod_key_masked": f"{r_key[:4]}...{r_key[-4:]}" if r_key and len(r_key) > 8 else ("configured" if r_key else None),
+        "hf_token_masked": f"{h_tok[:4]}...{h_tok[-4:]}" if h_tok and len(h_tok) > 8 else ("configured" if h_tok else None),
+        "available_targets": ["local", "modal", "runpod", "serverless"]
+    }
+
+
+class UpdateComputeSettingsRequest(BaseModel):
+    modal_token_id: Optional[str] = None
+    modal_token_secret: Optional[str] = None
+    runpod_api_key: Optional[str] = None
+    hf_token: Optional[str] = None
+
+
+@app.post("/settings/compute", tags=["Settings"])
+async def update_compute_settings(payload: UpdateComputeSettingsRequest):
+    """Update runtime cloud compute and HuggingFace tokens."""
+    cfg = get_settings()
+    if payload.modal_token_id:
+        os.environ["MODAL_TOKEN_ID"] = payload.modal_token_id
+        cfg.modal_token_id = payload.modal_token_id
+    if payload.modal_token_secret:
+        os.environ["MODAL_TOKEN_SECRET"] = payload.modal_token_secret
+        cfg.modal_token_secret = payload.modal_token_secret
+    if payload.runpod_api_key:
+        os.environ["RUNPOD_API_KEY"] = payload.runpod_api_key
+        cfg.runpod_api_key = payload.runpod_api_key
+    if payload.hf_token:
+        os.environ["HF_TOKEN"] = payload.hf_token
+        cfg.hf_token = payload.hf_token
+    return {
+        "status": "success",
+        "message": "Compute settings successfully updated in runtime memory.",
+        "modal_configured": bool(os.getenv("MODAL_TOKEN_ID") and os.getenv("MODAL_TOKEN_SECRET")),
+        "runpod_configured": bool(os.getenv("RUNPOD_API_KEY")),
+        "hf_configured": bool(os.getenv("HF_TOKEN")),
+    }
+
+
 @app.post("/validate", tags=["Validation"])
 @app.post("/validate/dataset", tags=["Validation"])
 async def validate_dataset_request(payload: dict = Body(default_factory=dict)):

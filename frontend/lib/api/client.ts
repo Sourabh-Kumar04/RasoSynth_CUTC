@@ -471,6 +471,37 @@ class APIClient {
     return this.request<Record<string, string>>('/health/circuit-breakers')
   }
 
+  // Cloud compute settings
+  async getComputeSettings() {
+    return this.request<{
+      modal_configured: boolean
+      runpod_configured: boolean
+      hf_configured: boolean
+      modal_token_id_masked: string | null
+      runpod_key_masked: string | null
+      hf_token_masked: string | null
+      available_targets: string[]
+    }>('/settings/compute')
+  }
+
+  async updateComputeSettings(data: {
+    modal_token_id?: string
+    modal_token_secret?: string
+    runpod_api_key?: string
+    hf_token?: string
+  }) {
+    return this.request<{
+      status: string
+      message: string
+      modal_configured: boolean
+      runpod_configured: boolean
+      hf_configured: boolean
+    }>('/settings/compute', {
+      method: 'POST',
+      body: JSON.stringify(data),
+    })
+  }
+
   // === Validation API ===
 
   // Validate request before submission

@@ -89,6 +89,11 @@ class Settings(BaseSettings):
     # Local Ollama
     ollama_base_url: str = Field(default="http://localhost:11434")
 
+    # Cloud GPU Serverless Training (Modal, RunPod)
+    modal_token_id: Optional[str] = Field(default=None)
+    modal_token_secret: Optional[str] = Field(default=None)
+    runpod_api_key: Optional[str] = Field(default=None)
+
     # Infrastructure - No defaults for credentials!
     redis_url: str = Field(default="redis://redis:6379/0")
     postgres_url: str = Field(
