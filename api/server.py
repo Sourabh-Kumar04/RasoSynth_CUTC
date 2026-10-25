@@ -881,6 +881,65 @@ def _validate_security_config():
     """Validate security configuration at startup. Fails fast if misconfigured."""
     settings = get_settings()
     jwt_secret = settings.jwt_secret
+    default_public_secret = "rasosynthtune-sovereign-production-jwt-token-secret-key-32b-secure"
+
+    # Hugging Face Space or auto-generation mode:
+    # If deployed on Hugging Face Spaces and no custom JWT_SECRET is provided in Space secrets,
+    # generate an ephemeral, cryptographically secure token shared across all workers
+    # instead of crashing the Space container in an infinite reboot loop.
+    is_hf_space = bool(
+        os.getenv("SPACE_ID")
+        or os.getenv("SPACE_HOST")
+        or os.getenv("HF_SPACE")
+        or os.getenv("AUTO_GENERATE_JWT_SECRET", "").lower() in ("true", "1")
+    )
+    if is_hf_space and (not jwt_secret or jwt_secret == default_public_secret):
+        import secrets
+        from pathlib import Path
+        import tempfile
+
+        secret_path = Path(tempfile.gettempdir()) / ".rasosynth_jwt_secret"
+        generated_token = None
+        if secret_path.exists():
+            try:
+                cached = secret_path.read_text(encoding="utf-8").strip()
+                if len(cached) >= 32:
+                    generated_token = cached
+            except Exception:
+                pass
+
+        if not generated_token:
+            new_secret = secrets.token_urlsafe(64)
+            try:
+                flags = os.O_WRONLY | os.O_CREAT | os.O_EXCL
+                fd = os.open(str(secret_path), flags, 0o600)
+                with os.fdopen(fd, "w", encoding="utf-8") as f:
+                    f.write(new_secret)
+                generated_token = new_secret
+            except FileExistsError:
+                try:
+                    generated_token = secret_path.read_text(encoding="utf-8").strip()
+                except Exception:
+                    generated_token = new_secret
+            except Exception:
+                generated_token = new_secret
+
+        os.environ["JWT_SECRET"] = generated_token
+        settings.jwt_secret = generated_token
+        jwt_secret = generated_token
+        get_settings.cache_clear()
+
+        # Update CSRF manager secret if not explicitly configured
+        if not os.getenv("CSRF_SECRET"):
+            _csrf_manager._secret = hashlib.sha256(jwt_secret.encode()).hexdigest()
+
+        logger.warning(
+            "SECURITY NOTICE [HuggingFace Spaces]: No custom JWT_SECRET was configured in Space Secrets. "
+            "An ephemeral cryptographically secure secret (64-byte urlsafe) has been automatically generated for this container instance. "
+            "All uvicorn worker processes will share this secret via /tmp/.rasosynth_jwt_secret. "
+            "To persist authentication sessions across Space restarts, configure JWT_SECRET in Space Secrets."
+        )
+
     if not jwt_secret:
         raise RuntimeError(
             "JWT_SECRET environment variable is required. "
@@ -892,12 +951,10 @@ def _validate_security_config():
             "Must be at least 32 characters. "
             "Generate one with: python -c \"import secrets; print(secrets.token_urlsafe(64))\""
         )
-    # Fail fast if default public fallback secret is used in staging/production/HF Space
-    default_public_secret = "rasosynthtune-sovereign-production-jwt-token-secret-key-32b-secure"
+    # Fail fast if default public fallback secret is used in staging/production (excluding HF Space with auto-token)
     is_production = (
         os.getenv("AI_DATASET_ENVIRONMENT", "").lower() in ("production", "staging")
         or os.getenv("ENVIRONMENT", "").lower() in ("production", "staging")
-        or bool(os.getenv("SPACE_ID"))  # HuggingFace Space
     )
     if jwt_secret == default_public_secret:
         if is_production:

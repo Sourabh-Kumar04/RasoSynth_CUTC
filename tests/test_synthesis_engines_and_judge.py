@@ -265,11 +265,27 @@ async def test_multi_worker_rate_limiter_redis_fallback():
 def test_production_jwt_secret_validation(monkeypatch):
     monkeypatch.setenv("AI_DATASET_ENVIRONMENT", "production")
     monkeypatch.setenv("JWT_SECRET", "rasosynthtune-sovereign-production-jwt-token-secret-key-32b-secure")
+    monkeypatch.delenv("SPACE_ID", raising=False)
     get_settings.cache_clear()
 
     with pytest.raises(RuntimeError) as exc_info:
         _validate_security_config()
     assert "CRITICAL SECURITY ERROR" in str(exc_info.value)
+
+
+def test_hf_space_jwt_secret_autogen(monkeypatch, tmp_path):
+    monkeypatch.setenv("SPACE_ID", "Sourabh-Kumar04/RasoSynthTune")
+    monkeypatch.setenv("JWT_SECRET", "rasosynthtune-sovereign-production-jwt-token-secret-key-32b-secure")
+    monkeypatch.delenv("AI_DATASET_ENVIRONMENT", raising=False)
+    monkeypatch.delenv("ENVIRONMENT", raising=False)
+    monkeypatch.setattr("tempfile.gettempdir", lambda: str(tmp_path))
+    get_settings.cache_clear()
+
+    _validate_security_config()
+    autogen_secret = os.getenv("JWT_SECRET")
+    assert autogen_secret != "rasosynthtune-sovereign-production-jwt-token-secret-key-32b-secure"
+    assert len(autogen_secret) >= 32
+    assert (tmp_path / ".rasosynth_jwt_secret").exists()
 
 
 @pytest.mark.asyncio
