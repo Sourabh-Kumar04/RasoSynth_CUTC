@@ -201,6 +201,7 @@ class FinetuneJobManager:
                         )
                         self._list_cache = None
                         logger.info("Fine-tune job %s completed", job_id)
+                        await self._dispatch_webhook(config.webhook_url, job_id, "completed", event, config)
                     elif etype == "error":
                         await self.db.update_finetune_job(
                             job_id, status="failed",
@@ -209,11 +210,13 @@ class FinetuneJobManager:
                         )
                         self._list_cache = None
                         logger.error("Fine-tune job %s failed: %s", job_id, event.get("message"))
+                        await self._dispatch_webhook(config.webhook_url, job_id, "failed", event, config)
                     elif etype == "cancelled":
                         await self.db.update_finetune_job(
                             job_id, status="cancelled", completed_at=datetime.now(timezone.utc)
                         )
                         self._list_cache = None
+                        await self._dispatch_webhook(config.webhook_url, job_id, "cancelled", event, config)
 
             except asyncio.CancelledError:
                 trainer.cancel()
@@ -222,6 +225,7 @@ class FinetuneJobManager:
                 )
                 await self._broadcast(job_id, {"type": "cancelled", "job_id": job_id})
                 self._list_cache = None
+                await self._dispatch_webhook(config.webhook_url, job_id, "cancelled", {"message": "Job cancelled"}, config)
 
             except Exception as exc:
                 await self.db.update_finetune_job(
@@ -230,9 +234,70 @@ class FinetuneJobManager:
                 await self._broadcast(job_id, {"type": "error", "job_id": job_id, "message": str(exc)})
                 self._list_cache = None
                 logger.exception("Unexpected error in fine-tune job %s", job_id)
+                await self._dispatch_webhook(config.webhook_url, job_id, "failed", {"message": str(exc)}, config)
 
             finally:
                 self._tasks.pop(job_id, None)
+
+    async def _dispatch_webhook(
+        self,
+        webhook_url: Optional[str],
+        job_id: str,
+        status: str,
+        event: dict,
+        config: FineTuneConfig,
+    ):
+        if not webhook_url or not str(webhook_url).strip():
+            return
+
+        url = str(webhook_url).strip()
+        base_model = config.base_model
+        output_name = config.output_model_name or job_id
+        target = config.execution_target
+        loss = event.get("loss") or event.get("train_loss") or "N/A"
+        err_msg = event.get("message") or event.get("error") or ""
+
+        title = f"RasoSynthTune Fine-Tuning Job {status.upper()}"
+        summary = (
+            f"Job ID: `{job_id}`\n"
+            f"Base Model: `{base_model}`\n"
+            f"Hardware Engine: `{target}`\n"
+            f"Status: **{status}**"
+        )
+        if status == "completed":
+            summary += f"\nFinal Loss: `{loss}`\nArtifacts ready for download."
+        elif err_msg:
+            summary += f"\nError: `{err_msg}`"
+
+        payload = {
+            "event": f"finetune_job_{status}",
+            "job_id": job_id,
+            "status": status,
+            "base_model": base_model,
+            "output_model_name": output_name,
+            "execution_target": target,
+            "loss": str(loss),
+            "error": err_msg,
+            "download_url": f"/api/finetune/jobs/{job_id}/download",
+            "gguf_url": f"/api/finetune/jobs/{job_id}/export-gguf",
+            "text": summary,
+            "content": summary,
+            "embeds": [
+                {
+                    "title": title,
+                    "description": summary,
+                    "color": 0x22c55e if status == "completed" else 0xef4444,
+                }
+            ],
+        }
+
+        try:
+            import httpx
+            async with httpx.AsyncClient(timeout=10.0) as client:
+                resp = await client.post(url, json=payload)
+                logger.info("Dispatched webhook for job %s to %s (status %s)", job_id, url, resp.status_code)
+        except Exception as e:
+            logger.warning("Failed to dispatch webhook for job %s to %s: %s", job_id, url, e)
 
     async def _broadcast(self, job_id: str, event: dict):
         for q in list(self._subscribers.get(job_id, [])):

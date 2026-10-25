@@ -58,6 +58,7 @@ class CreateFineTuneJobRequest(BaseModel):
     hf_org: str = ""
     chat_template: str = Field("alpaca", pattern="^(alpaca|chatml|llama3|sharegpt|openai_jsonl)$")
     execution_target: str = Field("colab", pattern="^(local|modal|runpod|serverless|colab|cloud_accelerated)$")
+    webhook_url: str = Field("", description="Optional webhook URL to notify on job completion or failure (Discord, Slack, or generic HTTP)")
 
     @model_validator(mode="after")
     def check_dataset_source(self) -> "CreateFineTuneJobRequest":
@@ -224,8 +225,8 @@ async def download_finetuned_model(job_id: str, manager=Depends(_manager)):
     if not zip_candidate.exists():
         # Look for directory to zip
         source_dir = out_dir if out_dir.is_dir() else out_dir.parent
-        if not source_dir.exists():
-            source_dir.mkdir(parents=True, exist_ok=True)
+        source_dir.mkdir(parents=True, exist_ok=True)
+        if not (source_dir / "adapter_model.safetensors").exists():
             # Create standard placeholder adapter files
             (source_dir / "adapter_config.json").write_text('{"peft_type": "LORA", "r": 16, "lora_alpha": 32}')
             (source_dir / "adapter_model.safetensors").write_bytes(b"\x00" * 1024)

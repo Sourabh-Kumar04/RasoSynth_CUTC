@@ -176,3 +176,41 @@ def test_format_sample_cross_format():
     assert "### Assistant:\nMachine intelligence." in out_sg
 
 
+@pytest.mark.asyncio
+async def test_finetune_webhook_dispatch():
+    """Test webhook dispatch on fine-tune job completion."""
+    from unittest.mock import AsyncMock, MagicMock, patch
+    from finetuning.job_manager import FinetuneJobManager
+    from finetuning.trainer import FineTuneConfig
+
+    mock_db = MagicMock()
+    manager = FinetuneJobManager(mock_db)
+
+    config = FineTuneConfig(
+        dataset_path="test.jsonl",
+        base_model="HuggingFaceTB/SmolLM2-1.7B-Instruct",
+        output_model_name="test-webhook-model",
+        webhook_url="https://discord.com/api/webhooks/test-hook",
+    )
+
+    with patch("httpx.AsyncClient.post", new_callable=AsyncMock) as mock_post:
+        mock_post.return_value = MagicMock(status_code=204)
+        await manager._dispatch_webhook(
+            config.webhook_url,
+            "ft-job-456",
+            "completed",
+            {"type": "completed", "loss": 0.32},
+            config,
+        )
+
+        mock_post.assert_awaited_once()
+        call_args = mock_post.call_args
+        assert call_args[0][0] == "https://discord.com/api/webhooks/test-hook"
+        payload = call_args[1]["json"]
+        assert payload["job_id"] == "ft-job-456"
+        assert payload["status"] == "completed"
+        assert payload["base_model"] == "HuggingFaceTB/SmolLM2-1.7B-Instruct"
+        assert "Final Loss: `0.32`" in payload["content"]
+        assert "/api/finetune/jobs/ft-job-456/download" in payload["download_url"]
+
+

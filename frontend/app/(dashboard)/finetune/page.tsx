@@ -475,6 +475,7 @@ function FineTuneContent() {
     push_to_hub: false, hf_token: '', hf_org: '',
     chat_template: 'alpaca', output_dir: 'outputs/finetune',
     execution_target: 'colab',
+    webhook_url: '',
   })
 
   // Synchronize search param if changes
@@ -1030,6 +1031,23 @@ function FineTuneContent() {
                     </div>
                   </div>
                 )}
+              </Section>
+
+              <Section title="Webhooks & Notifications (Optional)" defaultOpen={false}>
+                <div>
+                  <label className="text-[10px] mb-1 block font-bold font-mono uppercase text-[#94a3b8]">
+                    Webhook URL (Discord / Slack / Generic HTTP)
+                  </label>
+                  <Input
+                    placeholder="https://discord.com/api/webhooks/... or https://hooks.slack.com/services/..."
+                    className="rounded-md border-[#272738] bg-[#0a0a0f] text-white focus:border-[#f26625] text-xs font-mono"
+                    value={form.webhook_url}
+                    onChange={e => f('webhook_url', e.target.value)}
+                  />
+                  <p className="text-[10px] text-[#64748b] mt-1 font-mono">
+                    Dispatches asynchronous status alerts, training loss, and artifact download links upon job completion or failure.
+                  </p>
+                </div>
               </Section>
 
               <Button

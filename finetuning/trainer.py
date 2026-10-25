@@ -94,6 +94,9 @@ class FineTuneConfig:
     # Execution target
     execution_target: str = "colab"
 
+    # Webhook callback
+    webhook_url: str = ""
+
     def validate(self) -> None:
         """Raise ValueError on invalid config combinations."""
         if self.fp16 and self.bf16:
