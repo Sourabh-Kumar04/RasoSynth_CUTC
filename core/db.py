@@ -134,7 +134,7 @@ class FineTuneJob(Base):
     """Fine-tuning job model — tracks PEFT/LoRA training runs."""
     __tablename__ = "finetune_jobs"
 
-    id = Column(String(64), primary_key=True, default=lambda: str(uuid.uuid4()))
+    id = Column(PG_UUID(as_uuid=False), primary_key=True, default=lambda: str(uuid.uuid4()))
     dataset_id = Column(String(255), nullable=True, index=True)
     # job metadata
     status = Column(String(32), nullable=False, default="pending", index=True)  # pending/running/completed/failed/cancelled
@@ -308,13 +308,15 @@ class DatabaseManager:
                 )
                 try:
                     await conn.execute(
-                        text("ALTER TABLE finetune_jobs ALTER COLUMN dataset_id TYPE VARCHAR(255)")
-                    )
-                except Exception:
-                    pass
-                try:
-                    await conn.execute(
-                        text("ALTER TABLE finetune_jobs ALTER COLUMN id TYPE VARCHAR(64)")
+                        text("""
+                        DO $$
+                        BEGIN
+                            ALTER TABLE finetune_jobs DROP CONSTRAINT IF EXISTS finetune_jobs_dataset_id_fkey;
+                            ALTER TABLE finetune_jobs ALTER COLUMN dataset_id TYPE VARCHAR(255) USING dataset_id::varchar;
+                        EXCEPTION
+                            WHEN OTHERS THEN NULL;
+                        END $$;
+                        """)
                     )
                 except Exception:
                     pass
@@ -529,11 +531,43 @@ class DatabaseManager:
 
     async def get_finetune_job(self, job_id: str) -> Optional["FineTuneJob"]:
         async with self.session_maker() as session:
-            return await session.get(FineTuneJob, job_id)
+            try:
+                import uuid as _uuid
+                clean_id = str(_uuid.UUID(str(job_id)))
+                fj = await session.get(FineTuneJob, clean_id)
+                if fj is not None:
+                    return fj
+            except Exception:
+                pass
+            try:
+                from sqlalchemy import select, text
+                stmt = select(FineTuneJob).where(
+                    text("CAST(finetune_jobs.id AS TEXT) = :jid")
+                ).params(jid=str(job_id))
+                result = await session.execute(stmt)
+                return result.scalar_one_or_none()
+            except Exception:
+                return None
 
     async def update_finetune_job(self, job_id: str, **kwargs) -> None:
         async with self.session_maker() as session:
-            fj = await session.get(FineTuneJob, job_id)
+            fj = None
+            try:
+                import uuid as _uuid
+                clean_id = str(_uuid.UUID(str(job_id)))
+                fj = await session.get(FineTuneJob, clean_id)
+            except Exception:
+                pass
+            if fj is None:
+                try:
+                    from sqlalchemy import select, text
+                    stmt = select(FineTuneJob).where(
+                        text("CAST(finetune_jobs.id AS TEXT) = :jid")
+                    ).params(jid=str(job_id))
+                    result = await session.execute(stmt)
+                    fj = result.scalar_one_or_none()
+                except Exception:
+                    pass
             if fj:
                 for k, v in kwargs.items():
                     if hasattr(fj, k):
