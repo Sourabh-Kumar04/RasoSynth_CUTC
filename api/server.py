@@ -3649,6 +3649,13 @@ async def publish_dataset_to_huggingface_hub(job_id: str, request: dict = Body(.
     fertility = estimate_tokenizer_fertility(lang, script)
     savings = fertility.get("potential_token_savings_pct", 0.0)
 
+    synthesis_mode = (
+        getattr(job, "synthesis_mode", None)
+        or config.get("synthesis_mode")
+        or "standard"
+    )
+    merkle_root = getattr(job, "merkle_root", None) or config.get("merkle_root")
+
     readme_content = generate_hf_dataset_card(
         dataset_name=domain,
         domain=domain,
@@ -3661,6 +3668,8 @@ async def publish_dataset_to_huggingface_hub(job_id: str, request: dict = Body(.
         has_tool_calling=has_tool,
         has_bitext=has_bitext,
         tokenizer_savings_pct=savings,
+        synthesis_mode=synthesis_mode,
+        merkle_root=merkle_root,
     )
 
     # Fetch samples from db
