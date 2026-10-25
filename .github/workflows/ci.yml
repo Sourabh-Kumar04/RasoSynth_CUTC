@@ -54,6 +54,11 @@ jobs:
                  tests/test_ui_palette_and_audio.py \
                  tests/test_dbom_and_planner.py \
                  tests/test_synthesis_engines_and_judge.py \
+                 tests/test_archive_export.py \
+                 tests/test_finetune_telemetry.py \
+                 tests/test_hf_model_card.py \
+                 tests/test_contamination_cli.py \
+                 tests/test_seed_demo_data.py \
                  -v --tb=short
 
       - name: Verify CLI Command Surface & Diagnostic Tools
@@ -63,6 +68,8 @@ jobs:
           python scripts/health_check.py --json
           python scripts/export_hf.py --help
           python scripts/resume_job.py --help
+          python scripts/check_contamination.py --dry-run
+          python scripts/seed_demo_data.py --dry-run
           python cli.py generate --domain "Indian Taxation & GST" --size 3 --output-dir outputs/ci_test
           python cli.py generate --domain "Air-Gapped Sovereign AI" --size 2 --engine vllm --output-dir outputs/ci_test_vllm
           python cli.py audit --dataset outputs/ci_test/dataset_distillation_3.jsonl
