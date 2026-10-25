@@ -30,6 +30,7 @@ import {
   Trash2,
   CheckSquare,
   Square,
+  Workflow,
 } from 'lucide-react'
 import { clsx } from 'clsx'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
@@ -982,11 +983,11 @@ export default function DatasetsPage() {
                           variant="outline"
                           size="sm"
                           className="h-8 gap-1 text-xs px-2.5 rounded-md border-[#272738] text-white hover:bg-[#161622] hover:border-[#3b3b52]"
-                          disabled={downloadingIds.has(dataset.id) || dataset.status !== 'ready'}
+                          disabled={downloadingIds.has(dataset.id) || dataset.records === 0}
                           onClick={() =>
                             handleDownload(dataset.id, downloadFormat[dataset.id] || 'jsonl')
                           }
-                          title="Export & Download"
+                          title={dataset.records > 0 ? `Export & Download ${dataset.records} records` : 'No records generated yet'}
                         >
                           {downloadingIds.has(dataset.id) ? (
                             <Loader2 className="h-3.5 w-3.5 animate-spin text-[#f26625]" />
@@ -995,28 +996,40 @@ export default function DatasetsPage() {
                           )}
                         </Button>
                         {dataset.status === 'ready' && (
-                          <>
-                            <Button
-                              variant="ghost"
-                              size="sm"
-                              className="h-8 text-xs px-2.5 rounded-md text-[#f26625] hover:text-white hover:bg-[#161622] font-mono"
-                              onClick={() => handleViewHfCard(dataset.id, dataset.name)}
-                              title="Generate Hugging Face Dataset Card (README.md)"
-                            >
-                              <FileText className="h-3.5 w-3.5 text-[#f26625] mr-1" />
-                              HF Card
-                            </Button>
-                            <Button
-                              variant="ghost"
-                              size="sm"
-                              className="h-8 text-xs px-2.5 rounded-md text-[#f26625] hover:text-white hover:bg-[#161622] font-mono"
-                              onClick={() => router.push(`/finetune?dataset=${dataset.id}`)}
-                              title="1-Click Launch Fine-Tune"
-                            >
-                              <Zap className="h-3.5 w-3.5 text-amber-400 mr-1" />
-                              Tune
-                            </Button>
-                          </>
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            className="h-8 text-xs px-2.5 rounded-md text-[#f26625] hover:text-white hover:bg-[#161622] font-mono"
+                            onClick={() => handleViewHfCard(dataset.id, dataset.name)}
+                            title="Generate Hugging Face Dataset Card (README.md)"
+                          >
+                            <FileText className="h-3.5 w-3.5 text-[#f26625] mr-1" />
+                            HF Card
+                          </Button>
+                        )}
+                        {dataset.status !== 'ready' && (
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            className="h-8 text-xs px-2 rounded-md text-amber-400 hover:text-white hover:bg-[#161622] font-mono"
+                            onClick={() => router.push(`/orchestration?job=${dataset.id}`)}
+                            title="Inspect live generation DAG & approve early previews"
+                          >
+                            <Workflow className="h-3.5 w-3.5 mr-1" />
+                            Orchestration
+                          </Button>
+                        )}
+                        {dataset.records > 0 && (
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            className="h-8 text-xs px-2.5 rounded-md text-[#f26625] hover:text-white hover:bg-[#161622] font-mono"
+                            onClick={() => router.push(`/finetune?dataset=${dataset.id}`)}
+                            title="1-Click Launch Fine-Tune on this dataset"
+                          >
+                            <Zap className="h-3.5 w-3.5 text-amber-400 mr-1" />
+                            Tune
+                          </Button>
                         )}
                         <Button
                           variant="ghost"
@@ -1507,10 +1520,24 @@ export default function DatasetsPage() {
                     DBOM Attestation
                   </Button>
 
+                  {selected.status !== 'ready' && (
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      className="gap-2 border-amber-500/40 text-amber-400 hover:text-white hover:bg-[#161622] rounded-md px-4 font-mono text-xs"
+                      onClick={() => router.push(`/orchestration?job=${selected.id}`)}
+                      title="Inspect live generation DAG in Orchestration Studio"
+                    >
+                      <Workflow className="h-3.5 w-3.5" />
+                      Live Orchestration DAG
+                    </Button>
+                  )}
+
                   <Button
                     variant="outline"
                     size="sm"
                     className="gap-2 border-[#272738] text-white hover:bg-[#161622] rounded-md px-4 font-mono text-xs"
+                    disabled={selected.records === 0}
                     onClick={() => router.push(`/finetune?dataset=${selected.id}`)}
                   >
                     <Zap className="h-3.5 w-3.5 text-amber-400" />
@@ -1520,7 +1547,7 @@ export default function DatasetsPage() {
                   <Button
                     size="sm"
                     className="gap-2 bg-[#f26625] hover:bg-[#de581a] text-white rounded-md px-5 font-mono text-xs font-semibold shadow-sm glow-yc"
-                    disabled={downloadingIds.has(selected.id)}
+                    disabled={downloadingIds.has(selected.id) || selected.records === 0}
                     onClick={() =>
                       handleDownload(selected.id, downloadFormat[selected.id] || 'jsonl')
                     }
