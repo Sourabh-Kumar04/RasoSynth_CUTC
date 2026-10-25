@@ -102,18 +102,18 @@ export default function QualityDashboardPage() {
           </span>
           <h1 className="text-2xl font-bold tracking-tight text-white font-display flex items-center gap-2">
             <BarChart2 className="h-5 w-5 text-[#f26625]" />
-            Dataset Quality Studio
+            Quality Inspector
           </h1>
         </div>
         <p className="text-xs text-[#94a3b8] font-sans">
-          Grounding verifications, perplexity scores, deduplication metrics, and source-level quality breakdowns
+          Automated AI evaluation, hallucination resistance scoring, semantic diversity, and benchmark decontamination
         </p>
       </div>
 
       {/* Overview Cards */}
       <section>
         <h2 className="text-xs font-mono font-bold uppercase tracking-wider text-[#94a3b8] mb-3">
-          Overview Telemetry
+          Quality Metrics Overview
         </h2>
         <QualityOverviewCards />
       </section>

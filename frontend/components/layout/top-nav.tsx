@@ -25,15 +25,15 @@ import { SpotlightProductTour } from '@/components/onboarding/SpotlightProductTo
 import { api } from '@/lib/api/client'
 
 const MOBILE_NAV_ITEMS = [
-  { href: '/studio', label: 'Studio', icon: FlaskConical },
-  { href: '/orchestration', label: 'DAG Orchestrator', icon: Workflow },
-  { href: '/datasets', label: 'Dataset Store', icon: Database },
-  { href: '/finetune', label: 'Fine-Tune Studio', icon: Cpu },
-  { href: '/research', label: 'Research & Benchmarks', icon: TrendingUp },
-  { href: '/review', label: 'HITL Review', icon: ClipboardCheck },
-  { href: '/quality', label: 'Quality Canvas', icon: BarChart2 },
-  { href: '/observability', label: 'Telemetry', icon: Activity },
-  { href: '/providers', label: 'Providers', icon: Beaker },
+  { href: '/studio', label: 'Dataset Studio', icon: FlaskConical },
+  { href: '/datasets', label: 'Data Library', icon: Database },
+  { href: '/finetune', label: 'Model Training', icon: Cpu },
+  { href: '/quality', label: 'Quality Inspector', icon: BarChart2 },
+  { href: '/review', label: 'Data Review', icon: ClipboardCheck },
+  { href: '/observability', label: 'System Insights', icon: Activity },
+  { href: '/orchestration', label: 'Pipelines', icon: Workflow },
+  { href: '/research', label: 'Benchmarks', icon: TrendingUp },
+  { href: '/providers', label: 'AI Providers', icon: Beaker },
   { href: '/settings', label: 'Settings', icon: SettingsIcon },
 ]
 

@@ -326,14 +326,18 @@ class Trainer:
             put({"type": "error", "message": "Dataset is empty — cannot fine-tune."})
             return
 
+        output_dir = Path(cfg.output_dir)
+        output_dir.mkdir(parents=True, exist_ok=True)
+
+        if cfg.execution_target in ("colab", "cloud_accelerated"):
+            self._train_colab(cfg, samples, put, output_dir)
+            return
+
         try:
             import transformers  # noqa
         except ImportError:
             put({"type": "error", "message": "transformers not installed. Run: pip install transformers peft datasets trl"})
             return
-
-        output_dir = Path(cfg.output_dir)
-        output_dir.mkdir(parents=True, exist_ok=True)
 
         if cfg.execution_target in ("modal", "serverless"):
             self._train_modal(cfg, samples, put, output_dir)
@@ -345,6 +349,12 @@ class Trainer:
                 self._train_unsloth(cfg, samples, put, unsloth, output_dir)
             else:
                 self._train_hf(cfg, samples, put, output_dir)
+
+    def _train_colab(self, cfg, samples, put, output_dir):
+        """Execute headless Cloud GPU fine-tuning via Colab acceleration bridge."""
+        from finetuning.colab_bridge import ColabBridgeTrainer
+        bridge = ColabBridgeTrainer(cfg, output_dir)
+        bridge.execute_training(samples, put)
 
     def _train_modal(self, cfg, samples, put, output_dir=None):
         """Execute QLoRA fine-tuning via Modal serverless GPU fabric."""

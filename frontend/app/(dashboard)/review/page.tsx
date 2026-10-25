@@ -404,10 +404,10 @@ export default function ReviewPage() {
         <div>
           <div className="flex items-center gap-2.5 mb-1">
             <span className="text-[10px] font-mono px-2.5 py-0.5 rounded-md bg-[#161622] border border-[#272738] text-[#10b981] font-bold uppercase tracking-wider">
-              Quality Inspection Queue
+              Human-in-the-Loop Verification
             </span>
             <h1 className="text-2xl font-bold tracking-tight text-white font-display">
-              HITL Review Studio
+              Data Review Studio
             </h1>
           </div>
           <p className="text-xs text-[#94a3b8]">

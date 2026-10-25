@@ -131,14 +131,14 @@ export default function ResearchPage() {
         <div>
           <div className="flex items-center gap-2.5 mb-1">
             <span className="text-[10px] font-mono px-2 py-0.5 rounded-sm bg-[#f26625]/10 border border-[#f26625]/30 text-[#f26625] font-bold uppercase tracking-wider">
-              Autonomous Synthetics
+              Empirical Benchmarks
             </span>
             <h1 className="text-2xl font-bold tracking-tight text-white font-display">
-              Research &amp; Optimization
+              Benchmarks &amp; Experiments
             </h1>
           </div>
           <p className="text-xs text-[#94a3b8]">
-            Autonomous technique discovery, dataset mutation experiments &amp; prompt optimization
+            Automated model evaluations, accuracy gain tracking, technique discovery &amp; inference efficiency
           </p>
         </div>
         <div className="flex gap-2">

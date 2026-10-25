@@ -15,14 +15,14 @@ import {
 import { clsx } from 'clsx'
 
 const SUB_NAV_LINKS = [
-  { href: '/studio', label: 'Studio Pipeline', icon: FlaskConical },
-  { href: '/orchestration', label: 'DAG Visualizer', icon: Workflow },
-  { href: '/datasets', label: 'Dataset Store', icon: Database },
-  { href: '/finetune', label: 'Fine-Tune', icon: Cpu },
-  { href: '/research', label: 'Research', icon: BarChart2 },
-  { href: '/observability', label: 'Telemetry', icon: Activity },
-  { href: '/review', label: 'Review', icon: ClipboardCheck },
-  { href: '/quality', label: 'Quality', icon: Sparkles },
+  { href: '/studio', label: 'Dataset Studio', icon: FlaskConical },
+  { href: '/datasets', label: 'Data Library', icon: Database },
+  { href: '/finetune', label: 'Model Training', icon: Cpu },
+  { href: '/quality', label: 'Quality Inspector', icon: Sparkles },
+  { href: '/review', label: 'Data Review', icon: ClipboardCheck },
+  { href: '/observability', label: 'System Insights', icon: Activity },
+  { href: '/orchestration', label: 'Pipelines', icon: Workflow },
+  { href: '/research', label: 'Benchmarks', icon: BarChart2 },
 ]
 
 export function SubNav() {

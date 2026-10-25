@@ -194,14 +194,14 @@ export default function ProvidersPage() {
         <div>
           <div className="flex items-center gap-2.5 mb-1">
             <span className="text-[10px] font-mono px-2 py-0.5 rounded-sm bg-[#f26625]/10 border border-[#f26625]/30 text-[#f26625] font-bold uppercase tracking-wider">
-              LLM &amp; API Router
+              Model Routing &amp; Resilience
             </span>
             <h1 className="text-2xl font-bold tracking-tight text-white font-display">
-              Provider Management
+              AI Providers &amp; Failover
             </h1>
           </div>
           <p className="text-xs text-[#94a3b8]">
-            Live health telemetry, latency profiles, and cost routing for AI model providers
+            Multi-provider health monitoring, token cost tracking, circuit breaker states &amp; live session migration
           </p>
         </div>
         <Button variant="outline" size="sm" className="rounded-md border-[#272738] text-[#94a3b8] hover:text-white hover:bg-[#161622] font-mono text-xs" onClick={fetchAll} disabled={loading}>

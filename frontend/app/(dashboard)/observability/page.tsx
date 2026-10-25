@@ -96,12 +96,12 @@ export default function ObservabilityPage() {
         <div>
           <div className="flex items-center gap-2.5 mb-1">
             <span className="text-[10px] font-mono px-2 py-0.5 rounded-sm bg-[#f26625]/10 border border-[#f26625]/30 text-[#f26625] font-bold uppercase tracking-wider">
-              Telemetry &amp; Health
+              System Health &amp; Insights
             </span>
-            <h1 className="text-2xl font-bold tracking-tight text-white font-display">Observability Center</h1>
+            <h1 className="text-2xl font-bold tracking-tight text-white font-display">System Insights &amp; Telemetry</h1>
           </div>
           <p className="text-xs text-[#94a3b8]">
-            Real-time system metrics, service health, Prometheus traces &amp; security validation
+            Real-time pipeline metrics, provider latency, execution traces &amp; autonomous self-correction analytics
           </p>
         </div>
         <div className="flex items-center gap-2">

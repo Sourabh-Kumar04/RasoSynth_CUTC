@@ -1683,6 +1683,18 @@ dataset_samples_generated_total 4520`
     }
 
     if (endpoint.startsWith('/api/finetune/jobs')) {
+      if (endpoint.includes('/model_card')) {
+        return parse("# RasoSynth Fine-Tuned Model\n\nDBOM Provenance Seal: `7e19a79c3f46f33d7b9e02c67b9319e34a6efb01dbf6c31a84f50e82c59a35e4`\n\nFinal Train Loss: 0.2140");
+      }
+      if (endpoint.includes('/export_gguf')) {
+        return parse({
+          status: 'ready',
+          format: 'GGUF-Q4_K_M',
+          gguf_path: 'outputs/finetune/model-q4_k_m.gguf',
+          file_size_mb: 1150.4,
+          runtime_compatibility: ['Ollama', 'LM Studio', 'vLLM', 'llama.cpp']
+        });
+      }
       if (method === 'POST') {
         const bodyObj = options.body ? JSON.parse(options.body as string) : {};
         return parse({
@@ -1832,6 +1844,18 @@ dataset_samples_generated_total 4520`
 
   async cancelFineTuneJob(jobId: string) {
     return this.request<any>(`/api/finetune/jobs/${jobId}`, { method: 'DELETE' })
+  }
+
+  async getFineTuneModelCard(jobId: string) {
+    return this.request<string>(`/api/finetune/jobs/${jobId}/model_card`)
+  }
+
+  async exportFineTuneGGUF(jobId: string) {
+    return this.request<any>(`/api/finetune/jobs/${jobId}/export_gguf`, { method: 'POST' })
+  }
+
+  getFineTuneModelDownloadUrl(jobId: string) {
+    return `${API_BASE_URL}/api/finetune/jobs/${jobId}/download`
   }
 
   // ── Review API ────────────────────────────────────────────────────────────

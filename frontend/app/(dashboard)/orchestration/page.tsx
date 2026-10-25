@@ -216,14 +216,14 @@ export default function OrchestrationPage() {
         <div>
           <div className="flex items-center gap-2 mb-1">
             <span className="px-2 py-0.5 rounded-sm text-[10px] font-mono font-bold bg-[#f26625]/10 border border-[#f26625]/30 text-[#f26625] uppercase tracking-wider">
-              WORKFLOW ORCHESTRATOR
+              SYNTHESIS PIPELINES
             </span>
             <h1 className="text-xl sm:text-2xl font-bold tracking-tight text-white font-display">
-              LangGraph DAG Execution Engine
+              Pipeline Execution Engine
             </h1>
           </div>
           <p className="text-xs text-[#94a3b8]">
-            Real-time DAG node telemetry, state checkpoint restoration, and live stream monitors
+            Real-time stage node telemetry, automated checkpoint recovery, and multi-agent synthesis workflows
           </p>
         </div>
 

@@ -406,7 +406,7 @@ export default function ZenPortalPage() {
             className="inline-flex items-center space-x-1.5 px-3 py-1.5 rounded-md border border-[#272738] bg-[#12121a] hover:bg-[#1a1a24] text-xs font-mono font-medium text-zinc-300 hover:text-white transition-all shadow-sm active:scale-95"
             onClick={playClickSound}
           >
-            <span>Open Studio Lab</span>
+            <span>Dataset Studio</span>
             <ArrowRight className="w-3 h-3 text-[#f26625]" />
           </Link>
         </div>
@@ -515,7 +515,7 @@ export default function ZenPortalPage() {
                 ) : (
                   <Play className="w-3 h-3 fill-current" />
                 )}
-                <span>Launch Pipeline</span>
+                <span>Start Synthesis</span>
               </button>
             </div>
           </div>

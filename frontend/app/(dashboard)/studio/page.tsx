@@ -398,10 +398,10 @@ function StudioContent() {
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-[#272738] pb-5">
         <div>
           <h1 className="text-2xl font-bold tracking-tight text-white font-display mb-1">
-            Autonomous Dataset Studio
+            Synthetic Dataset Studio
           </h1>
           <p className="text-xs text-[#94a3b8]">
-            Synthesize verified fine-tuning and reasoning datasets grounded in authoritative corpora
+            Curate and synthesize fine-tuning datasets with automated provenance and quality validation
           </p>
         </div>
 
@@ -411,7 +411,7 @@ function StudioContent() {
           className="bg-[#f26625] hover:bg-[#de581a] border border-[#ea580c] text-white font-mono text-xs font-bold h-9 px-5 shadow-sm glow-yc flex items-center gap-2 rounded-md self-start sm:self-auto"
         >
           {isSubmitting ? <Loader2 className="w-4 h-4 animate-spin" /> : <Play className="w-3.5 h-3.5 fill-current" />}
-          <span>Launch Pipeline</span>
+          <span>Synthesize Dataset</span>
         </Button>
       </div>
 
