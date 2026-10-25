@@ -133,6 +133,7 @@ function StudioContent() {
   const [humanReview, setHumanReview] = useState<boolean>(false)
   const [humanReviewPercentage, setHumanReviewPercentage] = useState<number>(10)
   const [prioritizeAiKosh, setPrioritizeAiKosh] = useState<boolean>(true)
+  const [isZenMode, setIsZenMode] = useState<boolean>(false)
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [isAutoDetecting, setIsAutoDetecting] = useState(false)
   const [discoveredSources, setDiscoveredSources] = useState<Array<{ name: string; url?: string; source_type?: string }>>([])
@@ -338,80 +339,199 @@ function StudioContent() {
       </div>
 
       {/* Industry Presets */}
-      <div className="space-y-3">
-        <div className="flex items-center justify-between">
-          <span className="text-xs font-mono font-bold uppercase tracking-wider text-white flex items-center gap-1.5">
-            <Sparkles className="w-3.5 h-3.5 text-[#f26625]" />
-            Industry Presets
-          </span>
-          <span className="text-[11px] font-mono text-[#10b981]">Grounded Schemas</span>
-        </div>
+      {!isZenMode && (
+        <div className="space-y-3">
+          <div className="flex items-center justify-between">
+            <span className="text-xs font-mono font-bold uppercase tracking-wider text-white flex items-center gap-1.5">
+              <Sparkles className="w-3.5 h-3.5 text-[#f26625]" />
+              Industry Presets
+            </span>
+            <span className="text-[11px] font-mono text-[#10b981]">Grounded Schemas</span>
+          </div>
 
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-3">
-          {INDUSTRY_PRESETS.map((preset) => {
-            const isSelected = activePreset === preset.id
-            return (
-              <button
-                key={preset.id}
-                type="button"
-                onClick={() => {
-                  playClickSound()
-                  setActivePreset(preset.id)
-                  setTargetDomain(preset.domain)
-                  setPrompt(preset.prompt)
-                  setDatasetSize(preset.size)
-                  setDatasetType(preset.type)
-                  if ((preset as any).language) setLanguage((preset as any).language)
-                  if ((preset as any).scriptMode) setScriptMode((preset as any).scriptMode)
-                  if ((preset as any).formalityRegister) setFormalityRegister((preset as any).formalityRegister)
-                  if ((preset as any).preservedTerms) {
-                    setPreservedTermsInput(((preset as any).preservedTerms || []).join(', '))
-                  }
-                  if ((preset as any).antiDomains) {
-                    setAntiDomainsInput(((preset as any).antiDomains || []).join(', '))
-                  } else {
-                    setAntiDomainsInput('')
-                  }
-                  if ((preset as any).parallelBilingual !== undefined) {
-                    setParallelBilingual(Boolean((preset as any).parallelBilingual))
-                  }
-                  const hasAiKosh = ((preset as any).sources || []).some((s: string) => s.toLowerCase().includes('kosh')) ||
-                    (preset.source || '').toLowerCase().includes('kosh')
-                  setPrioritizeAiKosh(hasAiKosh)
-                }}
-                className={clsx(
-                  'p-3.5 rounded-md border text-left transition-all space-y-2 relative overflow-hidden',
-                  isSelected
-                    ? 'bg-[#161622] border-[#f26625] shadow-sm glow-yc'
-                    : 'bg-[#12121a] border-[#272738] hover:border-[#f26625]/40 hover:bg-[#161622]/60'
-                )}
-              >
-                <div className="flex justify-between items-start">
-                  <span className="text-[10px] font-mono font-bold uppercase text-[#f26625] truncate">
-                    {preset.source}
-                  </span>
-                  <span className="text-[10px] font-mono text-[#10b981] font-semibold">
-                    {preset.size.toLocaleString()}
-                  </span>
-                </div>
-                <h4 className="text-xs font-semibold text-white truncate">{preset.title}</h4>
-                <div className="flex items-center gap-1 text-[10px] font-mono text-[#94a3b8]">
-                  <span className="px-1.5 py-0.5 rounded-sm bg-[#0a0a0f] border border-[#272738] uppercase">
-                    {preset.type}
-                  </span>
-                  <span className="px-1.5 py-0.5 rounded-sm bg-[#0a0a0f] border border-[#272738]">
-                    {preset.language}
-                  </span>
-                </div>
-              </button>
-            )
-          })}
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-3">
+            {INDUSTRY_PRESETS.map((preset) => {
+              const isSelected = activePreset === preset.id
+              return (
+                <button
+                  key={preset.id}
+                  type="button"
+                  onClick={() => {
+                    playClickSound()
+                    setActivePreset(preset.id)
+                    setTargetDomain(preset.domain)
+                    setPrompt(preset.prompt)
+                    setDatasetSize(preset.size)
+                    setDatasetType(preset.type)
+                    if ((preset as any).language) setLanguage((preset as any).language)
+                    if ((preset as any).scriptMode) setScriptMode((preset as any).scriptMode)
+                    if ((preset as any).formalityRegister) setFormalityRegister((preset as any).formalityRegister)
+                    if ((preset as any).preservedTerms) {
+                      setPreservedTermsInput(((preset as any).preservedTerms || []).join(', '))
+                    }
+                    if ((preset as any).antiDomains) {
+                      setAntiDomainsInput(((preset as any).antiDomains || []).join(', '))
+                    } else {
+                      setAntiDomainsInput('')
+                    }
+                    if ((preset as any).parallelBilingual !== undefined) {
+                      setParallelBilingual(Boolean((preset as any).parallelBilingual))
+                    }
+                    const hasAiKosh = ((preset as any).sources || []).some((s: string) => s.toLowerCase().includes('kosh')) ||
+                      (preset.source || '').toLowerCase().includes('kosh')
+                    setPrioritizeAiKosh(hasAiKosh)
+                  }}
+                  className={clsx(
+                    'p-3.5 rounded-md border text-left transition-all space-y-2 relative overflow-hidden',
+                    isSelected
+                      ? 'bg-[#161622] border-[#f26625] shadow-sm glow-yc'
+                      : 'bg-[#12121a] border-[#272738] hover:border-[#f26625]/40 hover:bg-[#161622]/60'
+                  )}
+                >
+                  <div className="flex justify-between items-start">
+                    <span className="text-[10px] font-mono font-bold uppercase text-[#f26625] truncate">
+                      {preset.source}
+                    </span>
+                    <span className="text-[10px] font-mono text-[#10b981] font-semibold">
+                      {preset.size.toLocaleString()}
+                    </span>
+                  </div>
+                  <h4 className="text-xs font-semibold text-white truncate">{preset.title}</h4>
+                  <div className="flex items-center gap-1 text-[10px] font-mono text-[#94a3b8]">
+                    <span className="px-1.5 py-0.5 rounded-sm bg-[#0a0a0f] border border-[#272738] uppercase">
+                      {preset.type}
+                    </span>
+                    <span className="px-1.5 py-0.5 rounded-sm bg-[#0a0a0f] border border-[#272738]">
+                      {preset.language}
+                    </span>
+                  </div>
+                </button>
+              )
+            })}
+          </div>
         </div>
-      </div>
+      )}
 
       {/* Main Studio Controls */}
-      <ZenSpatialCanvas activeMode="Zen Kinetic Spatial">
-        <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
+      <ZenSpatialCanvas
+        activeMode="Zen Kinetic Spatial"
+        isZenMode={isZenMode}
+        onZenModeChange={setIsZenMode}
+      >
+        {isZenMode ? (
+          <div className="space-y-6 max-w-3xl mx-auto py-4">
+            <div className="flex items-center justify-between border-b border-[#1c1c28] pb-4">
+              <div>
+                <h2 className="text-sm font-bold text-white font-mono flex items-center gap-2">
+                  <Sparkles className="w-4 h-4 text-[#f26625]" />
+                  <span>Zen Intent Synthesis Nexus</span>
+                </h2>
+                <p className="text-xs text-zinc-400 mt-0.5">
+                  Distraction-free spatial canvas. Secondary parameters suppressed into verified defaults.
+                </p>
+              </div>
+              <div className="flex items-center gap-2">
+                <span className="text-[10px] font-mono text-emerald-400 px-2 py-0.5 rounded bg-emerald-500/10 border border-emerald-500/20">
+                  {datasetSize.toLocaleString()} samples
+                </span>
+                <span className="text-[10px] font-mono text-[#f26625] px-2 py-0.5 rounded bg-[#f26625]/10 border border-[#f26625]/20 uppercase">
+                  {synthesisMode}
+                </span>
+              </div>
+            </div>
+
+            <div className="space-y-4">
+              <div>
+                <label className="text-[10px] font-mono uppercase text-zinc-400 block mb-1.5">
+                  Target Domain or Corpus
+                </label>
+                <Input
+                  value={targetDomain}
+                  onChange={(e) => setTargetDomain(e.target.value)}
+                  placeholder="e.g. Finance & Taxation (AI Kosh), Aerospace, Medical..."
+                  className="bg-[#12121a] border-[#272738] text-white text-xs font-mono h-10"
+                />
+              </div>
+
+              <div>
+                <label className="text-[10px] font-mono uppercase text-zinc-400 block mb-1.5">
+                  Synthesis Instruction Scope &amp; Constraints
+                </label>
+                <textarea
+                  value={prompt}
+                  onChange={(e) => setPrompt(e.target.value)}
+                  rows={6}
+                  placeholder="Describe dataset instructions, schemas, statutory citations, and edge-cases..."
+                  className="w-full bg-[#12121a] border border-[#272738] rounded-md p-3 text-xs font-mono text-white placeholder-zinc-500 focus:outline-none focus:border-[#f26625] transition-colors resize-none leading-relaxed"
+                />
+              </div>
+
+              {/* Synthesis Mode Switcher */}
+              <div className="space-y-1.5">
+                <label className="text-[10px] font-mono uppercase text-zinc-400 block">
+                  Synthesis Cognitive Engine
+                </label>
+                <div className="flex flex-wrap gap-1.5">
+                  {[
+                    { id: 'standard', name: 'Standard' },
+                    { id: 'cot', name: 'CoT Reasoning' },
+                    { id: 'socratic', name: 'Socratic' },
+                    { id: 'preference', name: 'DPO Pairs' },
+                    { id: 'multi_turn', name: 'Multi-Turn' },
+                    { id: 'tool_calling', name: 'Tool Calling' },
+                    { id: 'contrastive', name: 'Contrastive' },
+                    { id: 'rag', name: 'RAG Grounded' },
+                  ].map((mode) => {
+                    const isSelected = synthesisMode === mode.id
+                    return (
+                      <button
+                        key={mode.id}
+                        type="button"
+                        onClick={() => {
+                          playClickSound()
+                          setSynthesisMode(mode.id)
+                        }}
+                        className={clsx(
+                          'px-3 py-1.5 rounded-md text-xs font-mono transition-all',
+                          isSelected
+                            ? 'bg-[#f26625] text-white font-bold shadow-sm'
+                            : 'bg-[#12121a] text-zinc-400 hover:text-white border border-[#272738]'
+                        )}
+                      >
+                        {mode.name}
+                      </button>
+                    )
+                  })}
+                </div>
+              </div>
+
+              {/* Execution Action */}
+              <div className="pt-4 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                <button
+                  type="button"
+                  onClick={() => setIsZenMode(false)}
+                  className="text-xs font-mono text-zinc-400 hover:text-white underline decoration-[#272738] text-left"
+                >
+                  Configure fine-grained invariants (PII, Dialect, Anchors) in Lab View →
+                </button>
+
+                <Button
+                  onClick={handleGenerate}
+                  disabled={isSubmitting}
+                  className="bg-[#f26625] hover:bg-[#de581a] border border-[#ea580c] text-white font-mono font-bold text-xs h-10 px-6 rounded-md shadow-sm glow-yc flex items-center justify-center gap-2"
+                >
+                  {isSubmitting ? (
+                    <Loader2 className="w-4 h-4 animate-spin" />
+                  ) : (
+                    <Play className="w-3.5 h-3.5 fill-current" />
+                  )}
+                  <span>Launch Pipeline</span>
+                </Button>
+              </div>
+            </div>
+          </div>
+        ) : (
+          <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
         
         {/* Left Column: Intent, Prompt & Grounding Invariants */}
         <div className="lg:col-span-7 p-5 rounded-md bg-[#12121a] border border-[#272738] space-y-5">
@@ -958,6 +1078,7 @@ function StudioContent() {
           </Button>
         </div>
       </div>
+      )}
     </ZenSpatialCanvas>
   </div>
   )
