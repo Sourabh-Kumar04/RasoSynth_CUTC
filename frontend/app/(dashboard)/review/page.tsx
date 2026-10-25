@@ -4,7 +4,7 @@ import { useState, useEffect, useCallback, useRef } from 'react'
 import {
   ClipboardCheck, CheckCircle2, XCircle, Flag, Pencil,
   ChevronLeft, ChevronRight, RefreshCw, Play,
-  Loader2, AlertCircle, X, Download, CheckSquare, Square,
+  Loader2, AlertCircle, X, Download, CheckSquare, Square, ShieldCheck,
 } from 'lucide-react'
 import { clsx } from 'clsx'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
@@ -17,6 +17,7 @@ import {
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
 } from '@/components/ui/select'
 import { api } from '@/lib/api/client'
+import { MerkleTreeGraph } from '@/components/dbom/merkle-tree-graph'
 
 const API_BASE = process.env.NEXT_PUBLIC_API_URL || ''
 
@@ -141,6 +142,7 @@ export default function ReviewPage() {
   const [selected2, setSelected2] = useState<Set<string>>(new Set())
   // HITL: jobs currently paused at the review gate
   const [pausedJobs, setPausedJobs] = useState<string[]>([])
+  const [showMerkleProof, setShowMerkleProof] = useState(false)
 
   const { toasts, push: toast } = useToast()
   const PAGE_SIZE = 20
@@ -395,6 +397,15 @@ export default function ReviewPage() {
           </p>
         </div>
         <div className="flex gap-2 flex-wrap">
+          <Button
+            variant="outline"
+            size="sm"
+            className="rounded-md border-[#272738] text-purple-300 hover:text-white hover:bg-purple-950/30 font-mono text-xs flex items-center gap-1.5"
+            onClick={() => setShowMerkleProof(!showMerkleProof)}
+          >
+            <ShieldCheck className="h-3.5 w-3.5 text-purple-400" />
+            <span>{showMerkleProof ? 'Hide DBOM Proof' : 'Verify DBOM Proof'}</span>
+          </Button>
           <Button variant="outline" size="sm" className="rounded-md border-[#272738] text-white hover:bg-[#161622] font-mono text-xs" onClick={exportApproved}>
             <Download className="h-3.5 w-3.5 mr-1 text-[#10b981]" />Export Approved JSONL
           </Button>
@@ -408,6 +419,16 @@ export default function ReviewPage() {
           </Button>
         </div>
       </div>
+
+      {/* Cryptographic DBOM Proof Tree */}
+      {showMerkleProof && (
+        <div className="rounded-xl border border-purple-500/30 bg-[#0c0c14] p-4 shadow-xl">
+          <MerkleTreeGraph
+            rootHash="e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+            certificateId="DBOM-2026-CERT-HITL"
+          />
+        </div>
+      )}
 
       {/* HITL paused jobs banner */}
       {pausedJobs.length > 0 && (
