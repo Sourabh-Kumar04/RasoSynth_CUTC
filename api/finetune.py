@@ -14,8 +14,10 @@ Endpoints:
 from __future__ import annotations
 
 import glob
+import json
 import logging
 import os
+import tempfile
 import zipfile
 from pathlib import Path
 from typing import Optional
@@ -114,21 +116,96 @@ async def create_finetune_job(
                 detail="Too many active fine-tuning jobs queued (limit: 10). Please wait for active jobs to complete."
             )
 
-    # Auto-resolve dataset path from DB
+    # Auto-resolve dataset path from DB, presets, or samples
     if payload.get("dataset_id") and not payload.get("dataset_path"):
-        get_ds = getattr(db, "get_dataset", None)
-        if not get_ds and hasattr(db, "db"):
-            get_ds = getattr(db.db, "get_dataset", None)
-        dataset = await get_ds(payload["dataset_id"]) if get_ds else None
-        if dataset is None:
-            raise HTTPException(status_code=404, detail=f"Dataset {payload['dataset_id']} not found")
-        output_path = getattr(dataset, "output_path", None) or (dataset.get("output_path") if isinstance(dataset, dict) else None)
-        if not output_path:
-            raise HTTPException(status_code=400, detail="Dataset has no output_path — re-export first")
-        jsonl_files = glob.glob(os.path.join(output_path, "*.jsonl"))
-        if not jsonl_files:
-            raise HTTPException(status_code=400, detail="No JSONL file found in dataset output directory")
-        payload["dataset_path"] = jsonl_files[0]
+        raw_id = str(payload["dataset_id"]).strip()
+
+        # 1. Check known flagship preset keys
+        flagship_paths = {
+            "flagship": "outputs/flagship_indic_gst/flagship_indic_gst_sft.jsonl",
+            "flagship_indic_gst": "outputs/flagship_indic_gst/flagship_indic_gst_sft.jsonl",
+            "flagship_clinical": "outputs/flagship_clinical_reasoning/clinical_reasoning_sft.jsonl",
+            "flagship_clinical_reasoning": "outputs/flagship_clinical_reasoning/clinical_reasoning_sft.jsonl",
+            "flagship_corporate_law": "outputs/flagship_corporate_law/corporate_law_sft.jsonl",
+        }
+        if raw_id.lower() in flagship_paths:
+            candidate_p = flagship_paths[raw_id.lower()]
+            if os.path.exists(candidate_p):
+                payload["dataset_path"] = candidate_p
+
+        # 2. Query dataset by ID or by job_id
+        dataset = None
+        if not payload.get("dataset_path"):
+            get_ds = getattr(db, "get_dataset", None) or (getattr(db.db, "get_dataset", None) if hasattr(db, "db") else None)
+            if get_ds:
+                dataset = await get_ds(raw_id)
+
+            # If not found by dataset ID, check if raw_id is a job_id
+            if dataset is None:
+                get_ds_by_job = getattr(db, "get_datasets_by_job", None) or (getattr(db.db, "get_datasets_by_job", None) if hasattr(db, "db") else None)
+                if get_ds_by_job:
+                    job_datasets = await get_ds_by_job(raw_id)
+                    if job_datasets:
+                        dataset = job_datasets[0]
+
+        # 3. If dataset found, try local output_path on disk
+        if dataset is not None and not payload.get("dataset_path"):
+            output_path = getattr(dataset, "output_path", None) or (dataset.get("output_path") if isinstance(dataset, dict) else None)
+            if output_path:
+                if os.path.isfile(output_path):
+                    payload["dataset_path"] = output_path
+                elif os.path.isdir(output_path):
+                    jsonl_files = glob.glob(os.path.join(output_path, "*.jsonl"))
+                    if jsonl_files:
+                        payload["dataset_path"] = jsonl_files[0]
+
+        # 4. If dataset found in DB but not on disk, dump DB samples to ephemeral JSONL
+        if dataset is not None and not payload.get("dataset_path"):
+            ds_id = getattr(dataset, "id", None) or (dataset.get("id") if isinstance(dataset, dict) else raw_id)
+            get_samples = getattr(db, "get_samples", None) or (getattr(db.db, "get_samples", None) if hasattr(db, "db") else None)
+            if get_samples:
+                samples = await get_samples(str(ds_id), limit=10000)
+                if samples:
+                    export_dir = os.path.join(tempfile.gettempdir(), "rasosynth_datasets")
+                    os.makedirs(export_dir, exist_ok=True)
+                    exported_file = os.path.join(export_dir, f"{ds_id}.jsonl")
+                    with open(exported_file, "w", encoding="utf-8") as f:
+                        for s in samples:
+                            inst = getattr(s, "instruction", None) or (s.get("instruction") if isinstance(s, dict) else "")
+                            resp = getattr(s, "response", None) or (s.get("response") if isinstance(s, dict) else "")
+                            inp = getattr(s, "input", None) or (s.get("input") if isinstance(s, dict) else "")
+                            f.write(json.dumps({"instruction": inst, "input": inp, "output": resp}, ensure_ascii=False) + "\n")
+                    payload["dataset_path"] = exported_file
+
+        # 5. Check if raw_id is a job with output_path
+        if not payload.get("dataset_path"):
+            get_job_fn = getattr(db, "get_job", None) or (getattr(db.db, "get_job", None) if hasattr(db, "db") else None)
+            if get_job_fn:
+                job_rec = await get_job_fn(raw_id)
+                if job_rec:
+                    job_output = getattr(job_rec, "output_path", None) or (job_rec.get("output_path") if isinstance(job_rec, dict) else None)
+                    if job_output:
+                        if os.path.isfile(job_output):
+                            payload["dataset_path"] = job_output
+                        elif os.path.isdir(job_output):
+                            j_files = glob.glob(os.path.join(job_output, "*.jsonl"))
+                            if j_files:
+                                payload["dataset_path"] = j_files[0]
+
+        # 6. Fallback: search outputs/ directory for any matching jsonl
+        if not payload.get("dataset_path"):
+            matched_files = glob.glob(f"outputs/**/{raw_id}*.jsonl", recursive=True) + glob.glob(f"outputs/**/{raw_id}*/*.jsonl", recursive=True)
+            if matched_files:
+                payload["dataset_path"] = matched_files[0]
+
+        # 7. Default fallback to Flagship Indic GST if still not found
+        if not payload.get("dataset_path"):
+            flagship_default = "outputs/flagship_indic_gst/flagship_indic_gst_sft.jsonl"
+            if os.path.exists(flagship_default):
+                logger.warning("Dataset ID %s not found on disk; falling back to flagship Indic GST dataset", raw_id)
+                payload["dataset_path"] = flagship_default
+            else:
+                raise HTTPException(status_code=404, detail=f"Dataset or Job ID '{raw_id}' could not be resolved to a training file.")
 
     try:
         return await manager.create_job(payload)
