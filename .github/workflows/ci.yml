@@ -41,10 +41,28 @@ jobs:
                  tests/test_quality_deterministic.py \
                  -v --tb=short
 
-      - name: Verify CLI Command Surface
+      - name: Execute Cognitive Engine, Cloud GPU, and DBOM Suites
+        run: |
+          pytest tests/test_benchmark_pipeline.py \
+                 tests/test_health_check_cli.py \
+                 tests/test_resume_job.py \
+                 tests/test_websocket_stream.py \
+                 tests/test_cli_export.py \
+                 tests/test_e2e_pipeline_integration.py \
+                 tests/test_finetune_serverless.py \
+                 tests/test_hf_and_dbom_card.py \
+                 tests/test_ui_palette_and_audio.py \
+                 tests/test_dbom_and_planner.py \
+                 tests/test_synthesis_engines_and_judge.py \
+                 -v --tb=short
+
+      - name: Verify CLI Command Surface & Diagnostic Tools
         run: |
           python cli.py --help
           python main.py --help
+          python scripts/health_check.py --json
+          python scripts/export_hf.py --help
+          python scripts/resume_job.py --help
           python cli.py generate --domain "Indian Taxation & GST" --size 3 --output-dir outputs/ci_test
           python cli.py generate --domain "Air-Gapped Sovereign AI" --size 2 --engine vllm --output-dir outputs/ci_test_vllm
           python cli.py audit --dataset outputs/ci_test/dataset_distillation_3.jsonl

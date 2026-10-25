@@ -3,6 +3,7 @@
 import { useEffect, useState } from 'react'
 import { X, CheckCircle, AlertCircle, Info, AlertTriangle } from 'lucide-react'
 import { clsx } from 'clsx'
+import { playClickSound, playSuccessChime } from '@/lib/audio/sound-effects'
 
 type ToastType = 'success' | 'error' | 'warning' | 'info'
 
@@ -21,17 +22,17 @@ const icons = {
 }
 
 const styles = {
-  success: 'border-success/30 bg-success/10',
-  error: 'border-error/30 bg-error/10',
-  warning: 'border-warning/30 bg-warning/10',
-  info: 'border-info/30 bg-info/10',
+  success: 'border-[#f26625]/40 bg-[#12121a]/95 text-white shadow-[0_8px_30px_rgba(242,102,37,0.15)]',
+  error: 'border-rose-500/40 bg-[#12121a]/95 text-white shadow-[0_8px_30px_rgba(244,63,94,0.15)]',
+  warning: 'border-amber-500/40 bg-[#12121a]/95 text-white shadow-[0_8px_30px_rgba(245,158,11,0.15)]',
+  info: 'border-cyan-500/40 bg-[#12121a]/95 text-white shadow-[0_8px_30px_rgba(6,182,212,0.15)]',
 }
 
 const iconStyles = {
-  success: 'text-success',
-  error: 'text-error',
-  warning: 'text-warning',
-  info: 'text-info',
+  success: 'text-[#f26625]',
+  error: 'text-rose-400',
+  warning: 'text-amber-400',
+  info: 'text-cyan-400',
 }
 
 export function Toaster() {
@@ -51,35 +52,36 @@ export function Toaster() {
   }, [])
 
   const removeToast = (id: string) => {
+    playClickSound()
     setToasts((prev) => prev.filter((t) => t.id !== id))
   }
 
   if (toasts.length === 0) return null
 
   return (
-    <div className="fixed bottom-4 right-4 z-50 flex flex-col gap-2">
+    <div className="fixed bottom-4 right-4 z-50 flex flex-col gap-2 font-mono">
       {toasts.map((toast) => {
         const Icon = icons[toast.type]
         return (
           <div
             key={toast.id}
             className={clsx(
-              'flex items-start gap-3 rounded-lg border p-4 shadow-lg backdrop-blur-sm animate-slide-in min-w-[320px] max-w-[420px]',
+              'flex items-start gap-3 rounded-lg border p-3.5 shadow-2xl backdrop-blur-md animate-slide-in min-w-[320px] max-w-[420px]',
               styles[toast.type]
             )}
           >
-            <Icon className={clsx('h-5 w-5 shrink-0 mt-0.5', iconStyles[toast.type])} />
-            <div className="flex-1 space-y-1">
-              <p className="text-sm font-medium">{toast.title}</p>
+            <Icon className={clsx('h-4.5 w-4.5 shrink-0 mt-0.5', iconStyles[toast.type])} />
+            <div className="flex-1 space-y-0.5">
+              <p className="text-xs font-bold text-white">{toast.title}</p>
               {toast.description && (
-                <p className="text-xs text-muted-foreground">{toast.description}</p>
+                <p className="text-[11px] text-[#94a3b8]">{toast.description}</p>
               )}
             </div>
             <button
               onClick={() => removeToast(toast.id)}
-              className="text-muted-foreground hover:text-foreground"
+              className="text-[#64748b] hover:text-white p-0.5"
             >
-              <X className="h-4 w-4" />
+              <X className="h-3.5 w-3.5" />
             </button>
           </div>
         )
@@ -92,6 +94,11 @@ export function Toaster() {
 export const toast = {
   show: (type: ToastType, title: string, description?: string) => {
     const id = Math.random().toString(36).substring(7)
+    if (type === 'success') {
+      playSuccessChime()
+    } else {
+      playClickSound()
+    }
     window.dispatchEvent(
       new CustomEvent('toast', { detail: { id, type, title, description } })
     )
