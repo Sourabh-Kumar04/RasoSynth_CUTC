@@ -7,7 +7,6 @@ import {
   Sparkles,
   Maximize2,
   Minimize2,
-  Activity,
   Layers,
   Compass,
 } from 'lucide-react'
@@ -43,13 +42,6 @@ export function ZenSpatialCanvas({
   const [internalZenMode, setInternalZenMode] = useState(false)
   
   const isZenMode = controlledZenMode !== undefined ? controlledZenMode : internalZenMode
-
-  const [telemetry, setTelemetry] = useState({
-    fps: 60,
-    latency: '14ms',
-    merkleSync: '100% Sealed',
-    nodesOnline: '8 / 8 Active',
-  })
 
   // GSAP 60fps Smooth Pointer Aura Tracking
   useEffect(() => {
@@ -105,19 +97,8 @@ export function ZenSpatialCanvas({
         {/* Subtle Micro-Grid Backdrop */}
         <div className="absolute inset-0 bg-dot-grid opacity-25 pointer-events-none" />
 
-        {/* Aperture Telemetry Bar */}
-        <div className="relative z-10 flex items-center justify-between px-5 py-3 border-b border-[#1c1c28]/60 backdrop-blur-sm text-[10px] font-mono text-[#64748b]">
-          <div className="flex items-center gap-3">
-            <span className="flex items-center gap-1 text-emerald-400 font-semibold">
-              <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
-              SYNTH_KERNEL_ONLINE
-            </span>
-            <span className="hidden sm:inline text-[#334155]">/</span>
-            <span className="hidden sm:inline text-slate-400">{telemetry.nodesOnline}</span>
-            <span className="hidden sm:inline text-[#334155]">/</span>
-            <span className="hidden sm:inline text-purple-300">DBOM: {telemetry.merkleSync}</span>
-          </div>
-
+        {/* Aperture Controls Bar */}
+        <div className="relative z-10 flex items-center justify-end px-5 py-2.5 border-b border-[#1c1c28]/60 backdrop-blur-sm text-[10px] font-mono text-[#64748b]">
           <div className="flex items-center gap-2">
             <button
               onClick={toggleZenMode}
@@ -170,29 +151,6 @@ export function ZenSpatialCanvas({
           }`}
         >
           {children}
-        </motion.div>
-
-        {/* Bottom Subtle Telemetry Status Dock */}
-        <motion.div
-          initial={{ opacity: 0.7 }}
-          whileHover={{ opacity: 1 }}
-          className="relative z-10 px-5 py-2.5 border-t border-[#1c1c28]/60 bg-[#0a0a10]/80 backdrop-blur-md flex flex-wrap items-center justify-between text-[10px] font-mono text-[#64748b] gap-2"
-        >
-          <div className="flex items-center gap-4">
-            <span className="text-zinc-500 flex items-center gap-1">
-              <Activity className="w-3 h-3 text-[#f26625]" />
-              Latency: <strong className="text-white font-normal">{telemetry.latency}</strong>
-            </span>
-            <span className="hidden md:inline text-zinc-500">
-              Motion Engine: <strong className="text-white font-normal">Framer Motion + GSAP + Lenis</strong>
-            </span>
-          </div>
-
-          <div className="flex items-center gap-3">
-            <span className="text-[9px] text-zinc-500 uppercase tracking-widest">
-              State: <span className="text-zinc-300 font-bold">{isZenMode ? 'Zen Spatial Void' : activeMode}</span>
-            </span>
-          </div>
         </motion.div>
       </motion.div>
     </ZenSpatialContext.Provider>

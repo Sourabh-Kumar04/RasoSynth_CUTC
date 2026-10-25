@@ -13,7 +13,6 @@ import {
   BarChart2,
   Activity,
   Beaker,
-  ShieldCheck,
   TrendingUp,
   Settings as SettingsIcon,
   Menu,
@@ -24,7 +23,6 @@ import {
 import { clsx } from 'clsx'
 import { CommandPalette } from '@/components/search/CommandPalette'
 import { SpotlightProductTour } from '@/components/onboarding/SpotlightProductTour'
-import { api } from '@/lib/api/client'
 
 const MOBILE_NAV_ITEMS = [
   { href: '/studio', label: 'Dataset Studio', icon: FlaskConical },
@@ -44,7 +42,6 @@ export function TopNav() {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false)
   const [showTour, setShowTour] = useState(false)
   const [showSearch, setShowSearch] = useState(false)
-  const [healthStatus, setHealthStatus] = useState<'checking' | 'live' | 'standby'>('checking')
 
   // Global Cmd+K keyboard shortcut listener
   useEffect(() => {
@@ -58,24 +55,6 @@ export function TopNav() {
     return () => window.removeEventListener('keydown', handleKeyDown)
   }, [])
 
-  useEffect(() => {
-    async function checkHealth() {
-      try {
-        const health = await api.getHealth()
-        if (health && (health.status === 'ok' || health.status === 'healthy')) {
-          setHealthStatus('live')
-        } else {
-          setHealthStatus('standby')
-        }
-      } catch {
-        setHealthStatus('standby')
-      }
-    }
-    checkHealth()
-    const timer = setInterval(checkHealth, 30000)
-    return () => clearInterval(timer)
-  }, [])
-
   return (
     <>
       <header className="sticky top-0 z-40 w-full border-b border-[#272738] bg-[#0a0a0f]/95 backdrop-blur-md">
@@ -86,45 +65,10 @@ export function TopNav() {
               <div className="w-8 h-8 rounded-md bg-[#f26625] flex items-center justify-center transition-all duration-200 shadow-sm relative overflow-hidden group-hover:bg-[#de581a]">
                 <span className="font-mono font-black text-white text-base tracking-tighter">Y</span>
               </div>
-              <div className="flex flex-col">
-                <span className="font-bold text-base tracking-tight text-white font-display leading-none">
-                  RasoSynth<span className="text-[#f26625]">Tune</span>
-                </span>
-                <span className="text-[10px] font-mono text-[#f26625] tracking-wider uppercase mt-0.5 font-semibold">
-                  Autonomous Refinery
-                </span>
-              </div>
-            </Link>
-
-            <Link
-              href="/datasets"
-              className="hidden sm:inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded text-[10px] font-mono font-medium bg-emerald-950/40 border border-emerald-500/40 text-[#10b981] hover:bg-emerald-950/60 shadow-[0_0_12px_rgba(16,185,129,0.15)] transition-all"
-              title="Cryptographic DBOM Attestation Engine Active"
-            >
-              <ShieldCheck className="w-3 h-3 text-[#10b981]" />
-              <span>DBOM Verified</span>
-            </Link>
-
-            <div className="hidden md:inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded text-[10px] font-mono font-medium bg-[#12121a] border border-[#272738]">
-              <span
-                className={clsx(
-                  "w-2 h-2 rounded-full",
-                  healthStatus === 'live' && "bg-emerald-400 animate-pulse shadow-[0_0_8px_rgba(16,185,129,0.7)]",
-                  healthStatus === 'standby' && "bg-amber-400 animate-pulse shadow-[0_0_8px_rgba(245,158,11,0.6)]",
-                  healthStatus === 'checking' && "bg-slate-400"
-                )}
-              />
-              <span
-                className={clsx(
-                  "font-semibold",
-                  healthStatus === 'live' && "text-emerald-400",
-                  healthStatus === 'standby' && "text-amber-400",
-                  healthStatus === 'checking' && "text-slate-400"
-                )}
-              >
-                {healthStatus === 'live' ? "Refinery: Live" : healthStatus === 'standby' ? "Refinery: Standby" : "Refinery: Connecting"}
+              <span className="font-bold text-base tracking-tight text-white font-display leading-none">
+                RasoSynth<span className="text-[#f26625]">Tune</span>
               </span>
-            </div>
+            </Link>
           </div>
 
           {/* Search Bar (Cmd+K) */}
