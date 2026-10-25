@@ -137,7 +137,7 @@ const INDUSTRY_PRESETS = [
 
 function usePromptLint(text: string) {
   const warnings: string[] = []
-  const tips: string[] = []
+  const tips: Array<{ text: string; actionLabel: string; appendSnippet: string }> = []
 
   const len = text.trim().length
   if (len === 0) return { score: 0, warnings: [], tips: [] }
@@ -150,18 +150,30 @@ function usePromptLint(text: string) {
   const isLegal = lower.includes('tax') || lower.includes('law') || lower.includes('gst') || lower.includes('bns') || lower.includes('court')
   const hasStatute = lower.includes('section') || lower.includes('sec') || lower.includes('act') || lower.includes('circular') || lower.includes('rule')
   if (isLegal && !hasStatute) {
-    warnings.push('Legal context lacks statutory citations: add section or rule numbers for grounding.')
+    tips.push({
+      text: 'Ground legal reasoning in statutory provisions (e.g. Section 16(4) CGST Act or BNS 2023).',
+      actionLabel: '+ Add Statutory Grounding',
+      appendSnippet: ' Ground all reasoning steps in relevant statutory provisions (e.g. Section 16(4) CGST Act or BNS 2023) with zero hallucinated citations.',
+    })
   }
 
   const isCode = lower.includes('code') || lower.includes('python') || lower.includes('rust') || lower.includes('api')
   const hasVersion = lower.includes('python 3') || lower.includes('async') || lower.includes('pydantic') || lower.includes('fastapi') || lower.includes('tokio')
   if (isCode && !hasVersion) {
-    tips.push('Specify target language versions and frameworks (e.g. Python 3.12, Pydantic v2).')
+    tips.push({
+      text: 'Specify target language versions and frameworks (e.g. Python 3.12, Pydantic v2).',
+      actionLabel: '+ Add Framework Spec',
+      appendSnippet: ' Enforce Python 3.12 modern type hints, Pydantic v2 schemas, and robust pytest test cases.',
+    })
   }
 
   const hasDifficultySplit = lower.includes('difficulty') || lower.includes('easy') || lower.includes('tiers') || lower.includes('curriculum')
   if (!hasDifficultySplit) {
-    tips.push('Tip: Apply a 40-40-20 difficulty curriculum split for better model generalization.')
+    tips.push({
+      text: 'Apply a 40-40-20 difficulty curriculum split for better model generalization.',
+      actionLabel: '+ Add 40-40-20 Curriculum',
+      appendSnippet: ' Apply a 40-40-20 difficulty curriculum split: (easy) definitional lookups; (medium) multi-statute procedural cross-referencing; (hard) adversarial edge-cases.',
+    })
   }
 
   let score = 50
@@ -186,7 +198,9 @@ function StudioContent() {
     searchParams.get('domain') || 'Finance & Taxation (AI Kosh)'
   )
   const [datasetType, setDatasetType] = useState('sft')
-  const [synthesisMode, setSynthesisMode] = useState('standard')
+  const [synthesisMode, setSynthesisMode] = useState(
+    searchParams.get('engine') || 'standard'
+  )
   const [instructionFormat, setInstructionFormat] = useState('alpaca')
   const [language, setLanguage] = useState(searchParams.get('language') || 'en')
   const [scriptMode, setScriptMode] = useState<'native' | 'romanized' | 'dual'>('native')
@@ -502,7 +516,12 @@ function StudioContent() {
                       {preset.size.toLocaleString()}
                     </span>
                   </div>
-                  <h4 className="text-xs font-semibold text-white truncate">{preset.title}</h4>
+                  <h4
+                    className="text-xs font-semibold text-white line-clamp-2 leading-tight min-h-[2rem]"
+                    title={preset.title}
+                  >
+                    {preset.title}
+                  </h4>
                   <div className="flex items-center gap-1 text-[10px] font-mono text-[#94a3b8]">
                     <span className="px-1.5 py-0.5 rounded-sm bg-[#0a0a0f] border border-[#272738] uppercase">
                       {preset.type}
@@ -584,17 +603,6 @@ function StudioContent() {
                           {promptLint.score}/100
                         </strong>
                       </span>
-                      {!prompt.toLowerCase().includes('difficulty') && (
-                        <button
-                          type="button"
-                          onClick={() => {
-                            setPrompt((p) => p.trim() + ' Apply a 40-40-20 difficulty curriculum split: (easy) definitional statutory citations; (medium) multi-statute procedural cross-referencing; (hard) adversarial edge-cases.')
-                          }}
-                          className="text-[10px] text-[#f26625] hover:text-[#ff7b42] hover:underline cursor-pointer"
-                        >
-                          + Add 40-40-20 Curriculum
-                        </button>
-                      )}
                     </div>
                     {promptLint.warnings.map((w, idx) => (
                       <div key={idx} className="flex items-center gap-1.5 text-amber-400/90 text-[11px]">
@@ -602,10 +610,22 @@ function StudioContent() {
                         <span>{w}</span>
                       </div>
                     ))}
-                    {promptLint.tips.map((t, idx) => (
-                      <div key={idx} className="text-[#94a3b8] text-[11px] flex items-center gap-1.5">
-                        <span className="text-cyan-400">💡</span>
-                        <span>{t}</span>
+                    {promptLint.tips.map((tip, idx) => (
+                      <div key={idx} className="text-[#94a3b8] text-[11px] flex items-center justify-between gap-2 bg-[#12121c] p-1.5 rounded border border-[#222232]">
+                        <div className="flex items-center gap-1.5 truncate">
+                          <span className="text-cyan-400 shrink-0">💡</span>
+                          <span className="truncate">{tip.text}</span>
+                        </div>
+                        <button
+                          type="button"
+                          onClick={() => {
+                            playClickSound()
+                            setPrompt((p) => (p.trim() ? `${p.trim()} ${tip.appendSnippet.trim()}` : tip.appendSnippet.trim()))
+                          }}
+                          className="shrink-0 text-[10px] font-mono text-[#f26625] hover:text-white px-2 py-0.5 rounded bg-[#f26625]/10 hover:bg-[#f26625]/20 border border-[#f26625]/30 transition-all cursor-pointer"
+                        >
+                          {tip.actionLabel}
+                        </button>
                       </div>
                     ))}
                   </div>
@@ -754,17 +774,6 @@ function StudioContent() {
                         {promptLint.score}/100
                       </strong>
                     </span>
-                    {!prompt.toLowerCase().includes('difficulty') && (
-                      <button
-                        type="button"
-                        onClick={() => {
-                          setPrompt((p) => p.trim() + ' Apply a 40-40-20 difficulty curriculum split: (easy) definitional statutory citations; (medium) multi-statute procedural cross-referencing; (hard) adversarial edge-cases.')
-                        }}
-                        className="text-[10px] text-[#f26625] hover:text-[#ff7b42] hover:underline cursor-pointer"
-                      >
-                        + Add 40-40-20 Curriculum
-                      </button>
-                    )}
                   </div>
                   {promptLint.warnings.map((w, idx) => (
                     <div key={idx} className="flex items-center gap-1.5 text-amber-400/90 text-[11px]">
@@ -772,10 +781,22 @@ function StudioContent() {
                       <span>{w}</span>
                     </div>
                   ))}
-                  {promptLint.tips.map((t, idx) => (
-                    <div key={idx} className="text-[#94a3b8] text-[11px] flex items-center gap-1.5">
-                      <span className="text-cyan-400">💡</span>
-                      <span>{t}</span>
+                  {promptLint.tips.map((tip, idx) => (
+                    <div key={idx} className="text-[#94a3b8] text-[11px] flex items-center justify-between gap-2 bg-[#12121c] p-1.5 rounded border border-[#222232]">
+                      <div className="flex items-center gap-1.5 truncate">
+                        <span className="text-cyan-400 shrink-0">💡</span>
+                        <span className="truncate">{tip.text}</span>
+                      </div>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          playClickSound()
+                          setPrompt((p) => (p.trim() ? `${p.trim()} ${tip.appendSnippet.trim()}` : tip.appendSnippet.trim()))
+                        }}
+                        className="shrink-0 text-[10px] font-mono text-[#f26625] hover:text-white px-2 py-0.5 rounded bg-[#f26625]/10 hover:bg-[#f26625]/20 border border-[#f26625]/30 transition-all cursor-pointer"
+                      >
+                        {tip.actionLabel}
+                      </button>
                     </div>
                   ))}
                 </div>
@@ -1062,6 +1083,10 @@ function StudioContent() {
                   onChange={(e) => setDatasetSize(Number(e.target.value))}
                   className="w-full accent-[#f26625] bg-[#0a0a0f] cursor-pointer"
                 />
+                <div className="flex items-center justify-between text-[10px] font-mono text-[#94a3b8] mt-2 p-2 rounded bg-[#0a0a0f] border border-[#1f1f2e]">
+                  <span>Est. Cloud API: <strong className="text-zinc-200 font-bold">${((datasetSize / 1000) * 0.06).toFixed(2)}</strong> <span className="text-emerald-400">($0.00 Local)</span></span>
+                  <span>Est. Time: <strong className="text-zinc-200 font-bold">{datasetSize <= 100 ? '~15s' : datasetSize <= 1000 ? '~1.8m' : datasetSize <= 5000 ? '~8.5m' : `~${Math.round(datasetSize / 650)}m`}</strong></span>
+                </div>
               </div>
 
               {/* Quality & Human Review Gates */}

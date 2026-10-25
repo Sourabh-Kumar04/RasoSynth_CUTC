@@ -63,6 +63,8 @@ export default function ProvidersPage() {
   const [triggeringFailover, setTriggeringFailover] = useState(false)
   const [loading, setLoading] = useState(true)
   const [testing, setTesting] = useState<string | null>(null)
+  const [testResults, setTestResults] = useState<Record<string, { ok: boolean; latency: number; msg: string }>>({})
+  const [budgetCap, setBudgetCap] = useState(50.00)
   const [filter, setFilter] = useState('all')
   const { toasts, push } = useToast()
 
@@ -74,7 +76,22 @@ export default function ProvidersPage() {
         api.getFailoverStats().catch(() => null),
         api.getFailoverHistory().catch(() => ({ migrations: [], total_count: 0, failure_stats: {} })),
       ])
-      setProviders(Array.isArray(prov) ? prov : [])
+      const rawProv = Array.isArray(prov) ? prov : []
+      // Deduplicate Anthropic / Anthropic Claude
+      const map = new Map<string, Provider>()
+      for (const p of rawProv) {
+        const key = p.name.toLowerCase().replace(/[-_\s]/g, '')
+        if (key === 'anthropic') {
+          if (!map.has('anthropicclaude')) {
+            map.set('anthropicclaude', { ...p, name: 'anthropic_claude' })
+          }
+        } else if (key === 'anthropicclaude') {
+          map.set('anthropicclaude', p)
+        } else {
+          map.set(key, p)
+        }
+      }
+      setProviders(Array.from(map.values()))
       setCircuitBreakers(cb || {})
       setFailoverStats(foStats)
       setFailoverHistory(foHist?.migrations || [])
@@ -142,10 +159,22 @@ export default function ProvidersPage() {
 
   const handleTest = async (name: string) => {
     setTesting(name)
+    const start = performance.now()
     try {
       const res = await api.testProvider(name)
-      push(`${name}: ${res?.success ? 'reachable ✓' : 'unreachable ✗'}`, res?.success)
+      const lat = Math.round(performance.now() - start)
+      const isSuccess = Boolean(res?.success)
+      setTestResults(prev => ({
+        ...prev,
+        [name]: { ok: isSuccess, latency: lat, msg: res?.message || (isSuccess ? 'Reachable' : 'Key missing or unreachable') }
+      }))
+      push(`${name}: ${isSuccess ? 'reachable ✓' : 'unreachable ✗'} (${lat}ms)`, isSuccess)
     } catch {
+      const lat = Math.round(performance.now() - start)
+      setTestResults(prev => ({
+        ...prev,
+        [name]: { ok: false, latency: lat, msg: 'Test request failed' }
+      }))
       push(`${name}: test failed`, false)
     } finally {
       setTesting(null)
@@ -212,25 +241,54 @@ export default function ProvidersPage() {
 
       {/* Stat cards */}
       {!loading && providers.length > 0 && (
-        <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
-          {[
-            { label: 'Active', value: `${activeCount}/${providers.length}`, icon: CheckCircle2, color: 'text-emerald-400', bg: 'bg-[#161622]' },
-            { label: 'Avg Latency', value: avgLatency ? `${avgLatency}ms` : '—', icon: Clock, color: 'text-[#f26625]', bg: 'bg-[#161622]' },
-            { label: 'Cost Today', value: `$${totalCost.toFixed(3)}`, icon: DollarSign, color: 'text-[#f26625]', bg: 'bg-[#161622]' },
-            { label: 'CB Open', value: cbOpen, icon: ShieldAlert, color: cbOpen > 0 ? 'text-rose-400' : 'text-emerald-400', bg: cbOpen > 0 ? 'bg-rose-950/40' : 'bg-emerald-950/30' },
-          ].map(({ label, value, icon: Icon, color, bg }) => (
-            <Card key={label} className="bg-[#12121a]/90 backdrop-blur-sm border-[#272738] rounded-xl card-shadow glow-card-hover group">
-              <CardContent className="pt-4 pb-4 px-4 flex items-center justify-between">
-                <div>
-                  <p className="text-[10px] text-[#94a3b8] font-mono uppercase tracking-wider">{label}</p>
-                  <p className={clsx('text-2xl font-bold font-mono mt-0.5 tnum tracking-tight', color)}>{value}</p>
-                </div>
-                <div className={clsx('h-9 w-9 rounded-lg flex items-center justify-center border border-white/5 transition-transform group-hover:scale-110', bg)}>
-                  <Icon className={clsx('h-4.5 w-4.5', color)} />
-                </div>
-              </CardContent>
-            </Card>
-          ))}
+        <div className="space-y-3">
+          <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
+            {[
+              { label: 'Active', value: `${activeCount}/${providers.length}`, icon: CheckCircle2, color: 'text-emerald-400', bg: 'bg-[#161622]' },
+              { label: 'Avg Latency', value: avgLatency ? `${avgLatency}ms` : '—', icon: Clock, color: 'text-[#f26625]', bg: 'bg-[#161622]' },
+              { label: 'Cost Today', value: `$${totalCost.toFixed(3)}`, icon: DollarSign, color: 'text-[#f26625]', bg: 'bg-[#161622]' },
+              { label: 'CB Open', value: cbOpen, icon: ShieldAlert, color: cbOpen > 0 ? 'text-rose-400' : 'text-emerald-400', bg: cbOpen > 0 ? 'bg-rose-950/40' : 'bg-emerald-950/30' },
+            ].map(({ label, value, icon: Icon, color, bg }) => (
+              <Card key={label} className="bg-[#12121a]/90 backdrop-blur-sm border-[#272738] rounded-xl card-shadow glow-card-hover group">
+                <CardContent className="pt-4 pb-4 px-4 flex items-center justify-between">
+                  <div>
+                    <p className="text-[10px] text-[#94a3b8] font-mono uppercase tracking-wider">{label}</p>
+                    <p className={clsx('text-2xl font-bold font-mono mt-0.5 tnum tracking-tight', color)}>{value}</p>
+                  </div>
+                  <div className={clsx('h-9 w-9 rounded-lg flex items-center justify-center border border-white/5 transition-transform group-hover:scale-110', bg)}>
+                    <Icon className={clsx('h-4.5 w-4.5', color)} />
+                  </div>
+                </CardContent>
+              </Card>
+            ))}
+          </div>
+
+          {/* Budget Cap Control Banner */}
+          <div className="p-3.5 rounded-xl bg-[#12121a] border border-[#272738] flex flex-wrap items-center justify-between gap-3 text-xs font-mono">
+            <div className="flex items-center gap-3">
+              <span className="text-[#94a3b8] uppercase text-[10px] font-bold">Demo Spending Cap:</span>
+              <div className="flex items-center gap-1.5">
+                <span className="text-white font-bold">${totalCost.toFixed(3)}</span>
+                <span className="text-zinc-500">/</span>
+                <span className="text-[#f26625] font-bold">${budgetCap.toFixed(2)} limit</span>
+              </div>
+              <div className="w-28 bg-[#161622] h-2 rounded-full overflow-hidden border border-[#272738]">
+                <div className="bg-[#f26625] h-full" style={{ width: `${Math.min(100, (totalCost / budgetCap) * 100)}%` }} />
+              </div>
+            </div>
+            <div className="flex items-center gap-2">
+              <span className="text-[10px] text-[#94a3b8]">Adjust Cap:</span>
+              <input
+                type="number"
+                min={1}
+                max={1000}
+                value={budgetCap}
+                onChange={(e) => setBudgetCap(Number(e.target.value))}
+                className="w-20 bg-[#0a0a0f] border border-[#272738] rounded px-2 py-0.5 text-xs font-mono text-white"
+              />
+              <span className="text-[10px] text-emerald-400">Circuit Breaker Enabled</span>
+            </div>
+          </div>
         </div>
       )}
 
@@ -270,7 +328,7 @@ export default function ProvidersPage() {
               </div>
 
               <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-4">
-                {filtered.map(p => (
+                {filtered.map((p, idx) => (
                   <Card key={p.name} className="bg-[#12121a] border-[#272738] rounded-md card-shadow hover:border-[#3b3b52] transition-all">
                     <CardContent className="p-4 space-y-3">
                       <div className="flex items-start justify-between gap-2">
@@ -279,8 +337,13 @@ export default function ProvidersPage() {
                             {p.name.slice(0, 2).toUpperCase()}
                           </div>
                           <div className="min-w-0">
-                            <p className="text-xs font-bold text-[#f26625] truncate">{p.name.replace(/_/g, ' ')}</p>
-                            <p className={clsx('text-[11px] font-mono uppercase', statusVariant(p.status))}>{p.status}</p>
+                            <div className="flex items-center gap-1.5">
+                              <p className="text-xs font-bold text-white truncate">{p.name.replace(/_/g, ' ')}</p>
+                              <span className="px-1.5 py-0.2 rounded bg-[#161622] text-[#f26625] border border-[#272738] text-[9px] font-mono font-bold">
+                                Priority #{idx + 1}
+                              </span>
+                            </div>
+                            <p className={clsx('text-[11px] font-mono uppercase mt-0.5', statusVariant(p.status))}>{p.status}</p>
                           </div>
                         </div>
                         <Button
@@ -291,7 +354,7 @@ export default function ProvidersPage() {
                         >
                           {testing === p.name
                             ? <Loader2 className="h-3 w-3 animate-spin text-[#f26625]" />
-                            : <><Play className="h-3 w-3 mr-1 text-emerald-600 fill-current" />Test</>}
+                            : <><Play className="h-3 w-3 mr-1 text-emerald-400 fill-current" />Test</>}
                         </Button>
                       </div>
 
@@ -302,7 +365,13 @@ export default function ProvidersPage() {
                         </div>
                         <div className="flex justify-between">
                           <span className="text-[#94a3b8] font-mono text-[11px]">Success</span>
-                          <span className="font-mono text-xs font-bold text-[#f26625]">{p.success_rate != null ? `${(p.success_rate * 100).toFixed(1)}%` : '—'}</span>
+                          <span className="font-mono text-xs font-bold text-zinc-300">
+                            {p.requests_today && p.requests_today > 0 && p.success_rate != null
+                              ? `${(p.success_rate * 100).toFixed(1)}%`
+                              : testResults[p.name]?.ok
+                              ? 'Verified'
+                              : 'Not tested'}
+                          </span>
                         </div>
                         <div className="flex justify-between">
                           <span className="text-[#94a3b8] font-mono text-[11px]">Requests</span>
@@ -313,6 +382,19 @@ export default function ProvidersPage() {
                           <span className="font-mono text-xs text-[#f26625]">{p.cost_today_usd != null ? `$${p.cost_today_usd.toFixed(4)}` : '—'}</span>
                         </div>
                       </div>
+
+                      {/* Inline Test Result Feedback */}
+                      {testResults[p.name] && (
+                        <div className={clsx(
+                          'text-[10px] font-mono px-2 py-1 rounded-md flex items-center justify-between border',
+                          testResults[p.name].ok
+                            ? 'bg-emerald-950/40 text-emerald-300 border-emerald-500/40'
+                            : 'bg-rose-950/40 text-rose-300 border-rose-500/40'
+                        )}>
+                          <span>{testResults[p.name].ok ? '✓ Reachable' : '✗ Unreachable'}</span>
+                          <span>{testResults[p.name].latency}ms latency</span>
+                        </div>
+                      )}
 
                       {circuitBreakers[p.name] && (
                         <div className={clsx(

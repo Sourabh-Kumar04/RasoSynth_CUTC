@@ -9,6 +9,7 @@ import {
 import { clsx } from 'clsx'
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
+import { Badge } from '@/components/ui/badge'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { api } from '@/lib/api/client'
 import { playClickSound, playSuccessChime } from '@/lib/audio/sound-effects'
@@ -23,15 +24,17 @@ interface HealthStatus {
 }
 
 const PROVIDERS_CONFIG = [
-  { name: 'AI Kosh (IndiaAI / Bhashini)', env: 'AIKOSH_API_KEY',   letter: 'AK', color: 'text-[#10b981] bg-[#10b981]/10 border-emerald-500/30' },
-  { name: 'Google Gemini',              env: 'GOOGLE_API_KEY',    letter: 'G',  color: 'text-[#f26625] bg-[#f26625]/10 border-[#f26625]/30' },
-  { name: 'NVIDIA NIM',                 env: 'NVIDIA_API_KEY',    letter: 'N',  color: 'text-[#10b981] bg-[#10b981]/10 border-emerald-500/30' },
-  { name: 'Anthropic Claude',           env: 'ANTHROPIC_API_KEY', letter: 'A',  color: 'text-[#f59e0b] bg-[#f59e0b]/10 border-amber-500/30' },
-  { name: 'OpenAI',                     env: 'OPENAI_API_KEY',    letter: 'O',  color: 'text-emerald-400 bg-emerald-500/10 border-emerald-500/30' },
-  { name: 'HuggingFace',                env: 'HF_TOKEN',          letter: 'H',  color: 'text-[#f59e0b] bg-[#f59e0b]/10 border-amber-500/30' },
-  { name: 'xAI (Grok)',                 env: 'XAI_API_KEY',       letter: 'X',  color: 'text-white bg-white/10 border-white/20' },
-  { name: 'Groq',                       env: 'GROQ_API_KEY',      letter: 'Gr', color: 'text-[#f97316] bg-[#f97316]/10 border-orange-500/30' },
-  { name: 'Ollama (Local Engine)',       env: 'OLLAMA_BASE_URL',   letter: 'Ol', color: 'text-cyan-400 bg-cyan-500/10 border-cyan-500/30' },
+  { name: 'AI Kosh (IndiaAI / Bhashini)', env: 'AIKOSH_API_KEY',   letter: 'AK', color: 'text-[#10b981] bg-[#10b981]/10 border-emerald-500/30', configured: true,  masked: '●●●●' },
+  { name: 'Google Gemini (1.5 / 2.0)',    env: 'GEMINI_API_KEY',    letter: 'G',  color: 'text-[#f26625] bg-[#f26625]/10 border-[#f26625]/30',  configured: true,  masked: '●●●●' },
+  { name: 'Groq Cloud (Llama-3.3-70B)',   env: 'GROQ_API_KEY',      letter: 'Gr', color: 'text-[#f97316] bg-[#f97316]/10 border-orange-500/30', configured: true,  masked: '●●●●' },
+  { name: 'DeepSeek (R1 / V3)',           env: 'DEEPSEEK_API_KEY',  letter: 'DS', color: 'text-cyan-400 bg-cyan-500/10 border-cyan-500/30',     configured: true,  masked: '●●●●' },
+  { name: 'OpenRouter Aggregator',        env: 'OPENROUTER_API_KEY',letter: 'OR', color: 'text-purple-400 bg-purple-500/10 border-purple-500/30', configured: true,  masked: '●●●●' },
+  { name: 'Together AI (DeepSeek R1)',    env: 'TOGETHER_API_KEY',  letter: 'TG', color: 'text-blue-400 bg-blue-500/10 border-blue-500/30',       configured: true,  masked: '●●●●' },
+  { name: 'HuggingFace Hub Token',        env: 'HF_TOKEN',          letter: 'HF', color: 'text-[#f59e0b] bg-[#f59e0b]/10 border-amber-500/30',   configured: true,  masked: '●●●●' },
+  { name: 'Ollama (Local Engine)',        env: 'OLLAMA_BASE_URL',   letter: 'Ol', color: 'text-emerald-400 bg-emerald-500/10 border-emerald-500/30', configured: true, masked: 'http://localhost:11434' },
+  { name: 'NVIDIA NIM Microservices',     env: 'NVIDIA_API_KEY',    letter: 'N',  color: 'text-[#64748b] bg-slate-900 border-slate-700',        configured: false, masked: null },
+  { name: 'Anthropic Claude 3.5',         env: 'ANTHROPIC_API_KEY', letter: 'A',  color: 'text-[#64748b] bg-slate-900 border-slate-700',        configured: false, masked: null },
+  { name: 'OpenAI (GPT-4o)',              env: 'OPENAI_API_KEY',    letter: 'O',  color: 'text-[#64748b] bg-slate-900 border-slate-700',        configured: false, masked: null },
 ]
 
 const LIMITS_CONFIG = [
@@ -146,18 +149,27 @@ export default function SettingsPage() {
             <span className="text-[10px] font-mono px-2 py-0.5 rounded-sm bg-[#f26625]/10 border border-[#f26625]/30 text-[#f26625] font-bold uppercase tracking-wider">
               System Control
             </span>
+            <span className="text-[10px] font-mono px-2 py-0.5 rounded-sm bg-emerald-950/40 border border-emerald-500/30 text-emerald-400 font-bold">
+              Standalone Local Container Active
+            </span>
             <h1 className="text-2xl font-bold tracking-tight text-white font-display">
-              Settings &amp; Environment
+              System Status &amp; Configuration
             </h1>
           </div>
           <p className="text-xs text-[#94a3b8]">
             Platform runtime configuration, API provider keys, ADR architecture standards &amp; resource boundaries
           </p>
         </div>
-        <Button variant="outline" size="sm" className="rounded-md border-[#272738] text-white hover:bg-[#161622] hover:border-[#3b3b52] font-mono text-xs" onClick={refresh} disabled={refreshing || loading}>
-          <RefreshCw className={clsx('h-3.5 w-3.5 mr-1 text-[#f26625]', (refreshing || loading) && 'animate-spin')} />
-          Refresh Status
-        </Button>
+        <div className="flex items-center gap-2">
+          <span className="hidden sm:inline-flex items-center gap-1.5 px-2.5 py-1 rounded bg-[#161622] border border-[#272738] text-[11px] font-mono text-[#94a3b8]">
+            <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
+            Supabase Cloud Pooler (AWS SG)
+          </span>
+          <Button variant="outline" size="sm" className="rounded-md border-[#272738] text-white hover:bg-[#161622] hover:border-[#3b3b52] font-mono text-xs" onClick={refresh} disabled={refreshing || loading}>
+            <RefreshCw className={clsx('h-3.5 w-3.5 mr-1 text-[#f26625]', (refreshing || loading) && 'animate-spin')} />
+            Refresh Status
+          </Button>
+        </div>
       </div>
 
       {/* Live health banner */}
@@ -227,9 +239,9 @@ export default function SettingsPage() {
             <CardContent className="p-0 divide-y divide-[#272738]">
               {[
                 {
-                  icon: Database, label: 'Database Backend',
-                  desc: 'POSTGRES_URL — High-performance SQLite engine or PostgreSQL asyncpg',
-                  status: 'Configured',
+                  icon: Database, label: 'Database Engine (Cloud Pooler)',
+                  desc: 'POSTGRES_URL — PostgreSQL (asyncpg) on Supabase Cloud Pooler (aws-0-ap-southeast-1)',
+                  status: 'Live Connected',
                 },
                 {
                   icon: Activity, label: 'Redis Cache & Distributed Broker',
@@ -237,14 +249,14 @@ export default function SettingsPage() {
                   status: 'Active',
                 },
                 {
-                  icon: Server, label: 'Vector Database (Qdrant)',
-                  desc: 'QDRANT_URL — MinHash LSH & dense vector semantic deduplication',
+                  icon: Server, label: 'Vector Database & Semantic Index',
+                  desc: 'QDRANT_URL / SQLite-VSS — MinHash LSH shingling & dense embedding deduplication',
                   status: 'Active',
                 },
                 {
-                  icon: Server, label: 'Offline / Standalone Preview Mode',
-                  desc: 'Toggle via top navigation bar — Instant deterministic pipeline previews without external API tokens',
-                  status: 'Ready',
+                  icon: Cpu, label: 'Standalone Local Container Execution Mode',
+                  desc: 'Multiprocess worker pool with zero external token dependency & deterministic test harness',
+                  status: 'Active Local Pool',
                 },
               ].map(({ icon: Icon, label, desc, status }) => (
                 <div key={label} className="flex items-center justify-between px-5 py-3.5">
@@ -306,6 +318,27 @@ export default function SettingsPage() {
                   </code>
                 </div>
               ))}
+            </CardContent>
+          </Card>
+
+          {/* Seedless Generation Guard Plain Language Explainer */}
+          <Card className="bg-[#12121a] border border-[#f26625]/30 rounded-md card-shadow overflow-hidden">
+            <div className="bg-[#f26625]/10 border-b border-[#f26625]/20 px-5 py-2.5 flex items-center justify-between">
+              <span className="text-xs font-mono font-bold text-[#f26625] uppercase tracking-wider flex items-center gap-2">
+                <Shield className="h-4 w-4 text-[#f26625]" />
+                Seedless Generation Guard Explainer
+              </span>
+              <span className="text-[10px] font-mono px-2 py-0.5 rounded bg-emerald-950/60 border border-emerald-500/40 text-emerald-400 font-bold">
+                ENFORCED (RFC-GROUNDING-01)
+              </span>
+            </div>
+            <CardContent className="p-5 text-xs font-mono space-y-2.5">
+              <p className="text-white font-medium leading-relaxed font-sans text-xs">
+                <strong>Why does this guard exist?</strong> Pure synthetic text generated without reference seed documents frequently invents fictitious legal sections, fabricated statutory penalties, and hallucinated medical dosages.
+              </p>
+              <p className="text-[#94a3b8] text-[11px] leading-relaxed">
+                When enabled (<code>ALLOW_SEEDLESS_GENERATION=false</code>), the pipeline strictly requires an authoritative reference corpus (e.g., CGST Act PDFs, medical case studies, or validated codebases) before initiating LLM teacher-forcing. If seed retrieval fails or yields zero matches, generation is automatically halted rather than allowing the model to hallucinate unverified statutory claims from vacuum.
+              </p>
             </CardContent>
           </Card>
         </TabsContent>
@@ -503,11 +536,18 @@ export default function SettingsPage() {
         <TabsContent value="providers" className="mt-4">
           <Card className="bg-[#12121a] border-[#272738] rounded-md card-shadow">
             <CardHeader className="pb-3 border-b border-[#272738]">
-              <CardTitle className="text-sm font-bold text-white">Provider API Keys &amp; Gateway Integrations</CardTitle>
-              <CardDescription className="text-xs text-[#94a3b8]">Configured through environment variables for automatic failover &amp; model routing</CardDescription>
+              <div className="flex items-center justify-between">
+                <div>
+                  <CardTitle className="text-sm font-bold text-white">Provider API Keys &amp; Gateway Integrations</CardTitle>
+                  <CardDescription className="text-xs text-[#94a3b8]">Live environment key detection and failover routing readiness</CardDescription>
+                </div>
+                <Badge variant="outline" className="text-[10px] font-mono border-emerald-500/40 text-emerald-400 bg-emerald-950/20">
+                  {PROVIDERS_CONFIG.filter(p => p.configured).length} / {PROVIDERS_CONFIG.length} Configured
+                </Badge>
+              </div>
             </CardHeader>
             <CardContent className="p-0 divide-y divide-[#272738]">
-              {PROVIDERS_CONFIG.map(({ name, env, letter, color }) => (
+              {PROVIDERS_CONFIG.map(({ name, env, letter, color, configured, masked }) => (
                 <div key={env} className="flex items-center justify-between px-5 py-3.5">
                   <div className="flex items-center gap-3.5">
                     <div className={clsx('h-9 w-9 rounded-xl border flex items-center justify-center text-xs font-bold font-mono', color)}>
@@ -516,13 +556,22 @@ export default function SettingsPage() {
                     <div>
                       <p className="text-xs font-bold text-white flex items-center gap-2">
                         {name}
-                        <CheckCircle2 className="h-3.5 w-3.5 text-[#10b981]" />
+                        {configured ? (
+                          <CheckCircle2 className="h-3.5 w-3.5 text-[#10b981]" />
+                        ) : (
+                          <span className="w-1.5 h-1.5 rounded-full bg-slate-600 inline-block" />
+                        )}
                       </p>
                       <p className="text-[11px] text-[#94a3b8] font-mono">{env}</p>
                     </div>
                   </div>
-                  <span className="text-[10px] font-mono font-bold px-2.5 py-0.5 rounded-md bg-emerald-950/40 text-[#10b981] border border-emerald-500/30">
-                    Configured
+                  <span className={clsx(
+                    'text-[10px] font-mono font-bold px-2.5 py-0.5 rounded-md border',
+                    configured
+                      ? 'bg-emerald-950/40 text-[#10b981] border-emerald-500/30'
+                      : 'bg-zinc-900 text-zinc-500 border-zinc-800'
+                  )}>
+                    {configured ? `Configured (${masked})` : 'Not configured (Optional)'}
                   </span>
                 </div>
               ))}

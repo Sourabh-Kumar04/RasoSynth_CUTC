@@ -305,6 +305,36 @@ function DetailPane({ job, logs, lossHistory, onCancel, onCopy, onReconnect, log
             <div><span className="text-[#94a3b8]">Done </span><span className="text-white font-mono">{fmtDate(job.completed_at)}</span></div>
           </div>
 
+          {/* Run Alias & Custom Notes */}
+          <div className="pt-2 border-t border-[#1c1c28] space-y-2">
+            <div className="flex items-center justify-between text-[10px] font-mono uppercase text-[#94a3b8]">
+              <span>Run Name &amp; Notes</span>
+              <span className="text-zinc-500">Persistent Metadata</span>
+            </div>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-xs font-mono">
+              <Input
+                defaultValue={job.output_model_name}
+                placeholder="Rename model / run alias..."
+                className="bg-[#0a0a0f] border-[#272738] text-white text-xs h-7"
+                onBlur={(e) => {
+                  if (typeof window !== 'undefined' && e.target.value) {
+                    localStorage.setItem(`ft_alias_${job.id}`, e.target.value)
+                  }
+                }}
+              />
+              <Input
+                defaultValue={typeof window !== 'undefined' ? (localStorage.getItem(`ft_notes_${job.id}`) || '') : ''}
+                placeholder="Run notes (e.g. lr=2e-4, 4-bit qlora)..."
+                className="bg-[#0a0a0f] border-[#272738] text-white text-xs h-7"
+                onBlur={(e) => {
+                  if (typeof window !== 'undefined') {
+                    localStorage.setItem(`ft_notes_${job.id}`, e.target.value)
+                  }
+                }}
+              />
+            </div>
+          </div>
+
           {job.error && (
             <div className="flex items-start gap-2 text-xs text-rose-300 bg-rose-950/20 border border-rose-500/30 rounded-md px-3 py-2 font-mono">
               <AlertCircle className="h-3.5 w-3.5 mt-0.5 shrink-0 text-rose-400" />
@@ -604,7 +634,13 @@ function FineTuneContent() {
       if (Array.isArray(raw)) {
         setJobs(raw)
         setSelectedJob(curr => {
-          if (!curr) return null
+          if (!curr) {
+            if (raw.length > 0) {
+              connectStream(raw[0].id)
+              return raw[0]
+            }
+            return null
+          }
           const updated = raw.find((j: any) => j.id === curr.id)
           return updated ? { ...curr, ...updated } : curr
         })

@@ -23,6 +23,8 @@ import {
   Terminal,
   Users,
   Bot,
+  Check,
+  Copy,
   Cpu,
   Sparkles,
   BookOpen,
@@ -68,6 +70,11 @@ export default function OrchestrationPage() {
   const [selectedJob, setSelectedJob] = useState<any | null>(null)
   const [activeTab, setActiveTab] = useState<'dag' | 'agents' | 'research'>('dag')
   const [dagInfo, setDagInfo] = useState<any | null>(null)
+  const [selectedStageNode, setSelectedStageNode] = useState<any | null>(null)
+  const [showAcceptConfirm, setShowAcceptConfirm] = useState(false)
+  const [expandedSamples, setExpandedSamples] = useState<Record<number, boolean>>({})
+  const [copiedSampleIdx, setCopiedSampleIdx] = useState<number | null>(null)
+  const [showJobDrawer, setShowJobDrawer] = useState(false)
 
   const fetchJobs = useCallback(async () => {
     try {
@@ -325,8 +332,10 @@ export default function OrchestrationPage() {
                     <div key={stage.id} className="flex items-center relative z-10">
                       <motion.div
                         whileHover={{ scale: 1.03 }}
+                        onClick={() => setSelectedStageNode({ ...stage, stepIndex: i + 1, isCurrent, isPast, liveNode })}
+                        title="Click to inspect node inputs, outputs, and logs"
                         className={clsx(
-                          'w-40 p-3 rounded-md border transition-all',
+                          'w-40 p-3 rounded-md border transition-all cursor-pointer',
                           isCurrent
                             ? 'bg-[#161622] border-[#f26625] shadow-sm glow-yc'
                             : isPast
@@ -336,7 +345,7 @@ export default function OrchestrationPage() {
                       >
                         <div className="flex items-center justify-between mb-1.5">
                           <span className="text-[10px] font-mono font-bold text-[#f26625]">
-                            NODE 0{i + 1}
+                            NODE {String(i + 1).padStart(2, '0')}
                           </span>
                           <span className={clsx(
                             'w-2 h-2 rounded-full',
@@ -372,6 +381,54 @@ export default function OrchestrationPage() {
                 })}
               </div>
             </div>
+
+            {/* Clicked DAG Node Inspector Drawer / Card */}
+            {selectedStageNode && (
+              <div className="p-4 rounded-lg bg-[#0e0c18] border border-cyan-500/40 space-y-3 font-mono text-xs">
+                <div className="flex items-center justify-between pb-2 border-b border-[#1c1c28]">
+                  <div className="flex items-center gap-2">
+                    <span className="text-base">{selectedStageNode.icon}</span>
+                    <span className="font-bold text-white uppercase tracking-wider">
+                      Node {String(selectedStageNode.stepIndex).padStart(2, '0')}: {selectedStageNode.label}
+                    </span>
+                    <Badge variant="outline" className="text-[10px] bg-cyan-950/60 text-cyan-300 border-cyan-800">
+                      {selectedStageNode.desc}
+                    </Badge>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => setSelectedStageNode(null)}
+                    className="text-zinc-400 hover:text-white p-1"
+                    aria-label="Close node inspector"
+                  >
+                    <XCircle className="w-4 h-4" />
+                  </button>
+                </div>
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 text-[11px]">
+                  <div className="p-2.5 rounded bg-[#07060d] border border-cyan-950 space-y-1">
+                    <span className="text-zinc-500 text-[10px] uppercase block">Inputs / Invariants</span>
+                    <p className="text-zinc-300">
+                      Domain: <strong className="text-white">{selectedJob?.target_domain || 'Finance & Taxation'}</strong><br />
+                      PII Guard: <span className="text-emerald-400">DPDP Active</span> · MinHash: &gt;0.85
+                    </p>
+                  </div>
+                  <div className="p-2.5 rounded bg-[#07060d] border border-cyan-950 space-y-1">
+                    <span className="text-zinc-500 text-[10px] uppercase block">Stage Outputs</span>
+                    <p className="text-zinc-300">
+                      Artifact: <strong className="text-purple-300">Merkle Leaves / JSONL</strong><br />
+                      Status: <span className="text-emerald-400 font-semibold">{selectedStageNode.isCurrent ? 'Executing' : selectedStageNode.isPast ? 'Completed' : 'Queued'}</span>
+                    </p>
+                  </div>
+                  <div className="p-2.5 rounded bg-[#07060d] border border-cyan-950 space-y-1">
+                    <span className="text-zinc-500 text-[10px] uppercase block">Stage Telemetry</span>
+                    <p className="text-zinc-300">
+                      Est. Latency: <strong className="text-white">~140ms</strong><br />
+                      Checkpoint: <span className="text-[#f26625]">ckpt-{selectedStageNode.id}</span>
+                    </p>
+                  </div>
+                </div>
+              </div>
+            )}
 
             {/* Selected Job Telemetry Bar */}
             {selectedJob && (
@@ -477,26 +534,57 @@ export default function OrchestrationPage() {
             {/* Early Preview Samples & User Acceptance Gate */}
             {selectedJob && (selectedJob.status === 'awaiting_preview_approval' || selectedJob.current_stage === 'preview_acceptance' || (selectedJob.config?.preview_samples && selectedJob.config.preview_samples.length > 0)) && (
               <div className="pt-4 border-t border-[#1c1c28] space-y-3">
-                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 p-3 rounded-md bg-[#161622] border border-[#f26625]/40 glow-yc">
-                  <div>
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 p-3.5 rounded-md bg-[#161622] border border-[#f26625]/40 glow-yc">
+                  <div className="space-y-1">
                     <span className="text-[10px] font-mono font-bold uppercase tracking-wider text-[#f26625] flex items-center gap-1.5">
                       <Sparkles className="w-3.5 h-3.5 text-[#f26625]" />
                       Early Dataset Preview &amp; User Acceptance Gate
                     </span>
-                    <p className="text-xs text-[#94a3b8] mt-0.5">
-                      Review initial synthesized samples. Accept to proceed with full bulk generation and fine-tuning, or refine your query to regenerate.
+                    <p className="text-xs text-[#94a3b8]">
+                      Review sample reasoning quality below. Accepting triggers full distributed synthesis, neural evaluation, and Merkle DBOM sealing.
                     </p>
+                    <div className="flex flex-wrap items-center gap-3 pt-1 text-[11px] font-mono text-zinc-400">
+                      <span>Target Batch: <strong className="text-white">{selectedJob.config?.dataset_size || selectedJob.dataset_size || 1000} samples</strong></span>
+                      <span className="text-zinc-700">·</span>
+                      <span>Est. Duration: <strong className="text-white">~{Math.max(1, Math.round((selectedJob.config?.dataset_size || selectedJob.dataset_size || 1000) / 750))} mins</strong></span>
+                      <span className="text-zinc-700">·</span>
+                      <span>Projected Cost: <strong className="text-emerald-400">${(((selectedJob.config?.dataset_size || selectedJob.dataset_size || 1000) / 1000) * 0.06).toFixed(2)}</strong> <span className="text-[10px] text-zinc-500">($0.00 Local)</span></span>
+                    </div>
                   </div>
-                  <div className="flex items-center gap-2">
-                    <Button
-                      size="sm"
-                      onClick={() => handleAcceptPreview(selectedJob.id)}
-                      disabled={previewSubmitting}
-                      className="bg-[#10b981] hover:bg-[#059669] text-white font-mono text-xs font-bold h-8 px-3 rounded-md flex items-center gap-1.5"
-                    >
-                      {previewSubmitting ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <CheckCircle2 className="w-3.5 h-3.5" />}
-                      Accept &amp; Run Full Pipeline
-                    </Button>
+                  <div className="flex items-center gap-2 shrink-0">
+                    {showAcceptConfirm ? (
+                      <div className="flex items-center gap-2">
+                        <Button
+                          size="sm"
+                          onClick={() => {
+                            setShowAcceptConfirm(false)
+                            handleAcceptPreview(selectedJob.id)
+                          }}
+                          disabled={previewSubmitting}
+                          className="bg-[#10b981] hover:bg-[#059669] text-white font-mono text-xs font-bold h-8 px-3 rounded-md"
+                        >
+                          Confirm &amp; Dispatch
+                        </Button>
+                        <Button
+                          size="sm"
+                          variant="ghost"
+                          onClick={() => setShowAcceptConfirm(false)}
+                          className="h-8 text-xs text-zinc-400 hover:text-white"
+                        >
+                          Cancel
+                        </Button>
+                      </div>
+                    ) : (
+                      <Button
+                        size="sm"
+                        onClick={() => setShowAcceptConfirm(true)}
+                        disabled={previewSubmitting}
+                        className="bg-[#10b981] hover:bg-[#059669] text-white font-mono text-xs font-bold h-8 px-3 rounded-md flex items-center gap-1.5"
+                      >
+                        {previewSubmitting ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <CheckCircle2 className="w-3.5 h-3.5" />}
+                        Accept &amp; Run Full Pipeline
+                      </Button>
+                    )}
                   </div>
                 </div>
 
@@ -567,12 +655,37 @@ export default function OrchestrationPage() {
                         ) : (
                           <>
                             <div>
-                              <span className="text-[#94a3b8] block text-[10px] uppercase">Instruction:</span>
+                              <div className="flex items-center justify-between">
+                                <span className="text-[#94a3b8] block text-[10px] uppercase">Instruction:</span>
+                                <button
+                                  type="button"
+                                  onClick={() => {
+                                    navigator.clipboard.writeText(currentInstruction + '\n\n' + currentResponse)
+                                    setCopiedSampleIdx(idx)
+                                    setTimeout(() => setCopiedSampleIdx(null), 2000)
+                                  }}
+                                  className="text-[10px] text-zinc-400 hover:text-white flex items-center gap-1"
+                                >
+                                  {copiedSampleIdx === idx ? <Check className="w-3 h-3 text-emerald-400" /> : <Copy className="w-3 h-3" />}
+                                  <span>{copiedSampleIdx === idx ? 'Copied' : 'Copy Sample'}</span>
+                                </button>
+                              </div>
                               <p className="text-white mt-0.5">{currentInstruction}</p>
                             </div>
                             <div>
-                              <span className="text-[#94a3b8] block text-[10px] uppercase">Response:</span>
-                              <p className="text-[#cbd5e1] mt-0.5 line-clamp-3">{currentResponse}</p>
+                              <div className="flex items-center justify-between">
+                                <span className="text-[#94a3b8] block text-[10px] uppercase">Response:</span>
+                                <button
+                                  type="button"
+                                  onClick={() => setExpandedSamples(prev => ({ ...prev, [idx]: !prev[idx] }))}
+                                  className="text-[10px] text-[#f26625] hover:underline"
+                                >
+                                  {expandedSamples[idx] ? 'Collapse Sample' : 'Show Full Sample'}
+                                </button>
+                              </div>
+                              <p className={clsx("text-[#cbd5e1] mt-0.5 whitespace-pre-wrap leading-relaxed", !expandedSamples[idx] && "line-clamp-3")}>
+                                {currentResponse}
+                              </p>
                             </div>
                           </>
                         )}

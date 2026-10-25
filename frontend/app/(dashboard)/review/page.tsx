@@ -423,12 +423,21 @@ export default function ReviewPage() {
             size="sm"
             className="rounded-md border-[#272738] text-purple-300 hover:text-white hover:bg-purple-950/30 font-mono text-xs flex items-center gap-1.5"
             onClick={() => setShowMerkleProof(!showMerkleProof)}
+            title="Audit cryptographic SHA-256 Merkle root covering the current active review batch"
           >
             <ShieldCheck className="h-3.5 w-3.5 text-purple-400" />
-            <span>{showMerkleProof ? 'Hide DBOM Proof' : 'Verify DBOM Proof'}</span>
+            <span>{showMerkleProof ? 'Hide DBOM Proof' : 'Verify DBOM Proof (Current Batch)'}</span>
           </Button>
-          <Button variant="outline" size="sm" className="rounded-md border-[#272738] text-white hover:bg-[#161622] font-mono text-xs" onClick={exportApproved}>
-            <Download className="h-3.5 w-3.5 mr-1 text-[#10b981]" />Export Approved JSONL
+          <Button
+            variant="outline"
+            size="sm"
+            disabled={!stats || stats.approved === 0}
+            className="rounded-md border-[#272738] text-white hover:bg-[#161622] font-mono text-xs disabled:opacity-40 disabled:cursor-not-allowed"
+            onClick={exportApproved}
+            title={!stats || stats.approved === 0 ? 'No approved items in queue to export' : 'Export approved samples as JSONL'}
+          >
+            <Download className="h-3.5 w-3.5 mr-1 text-[#10b981]" />
+            Export Approved JSONL ({stats ? stats.approved : 0})
           </Button>
           <Button variant="outline" size="sm" className="rounded-md border-[#272738] text-[#94a3b8] hover:text-white hover:bg-[#161622] font-mono text-xs" onClick={async () => {
             setLoading(true)
@@ -589,9 +598,27 @@ export default function ReviewPage() {
             ))
             : !queue || !Array.isArray(queue.items) || queue.items.length === 0
               ? (
-                <div className="flex flex-col items-center justify-center py-16 space-y-3 bg-[#12121a] rounded-md border border-[#272738]">
-                  <ClipboardCheck className="h-10 w-10 text-[#64748b]" />
-                  <p className="text-xs text-[#94a3b8] font-mono">No items match this filter</p>
+                <div className="flex flex-col items-center justify-center p-8 space-y-3 bg-[#12121a] rounded-md border border-[#272738] text-center">
+                  <div className="w-10 h-10 rounded-full bg-[#161622] border border-[#272738] flex items-center justify-center text-[#f26625]">
+                    <ClipboardCheck className="h-5 w-5" />
+                  </div>
+                  <div className="space-y-1 max-w-sm">
+                    <h4 className="text-xs font-bold text-white font-mono uppercase tracking-wider">
+                      No Samples Awaiting Review
+                    </h4>
+                    <p className="text-[11px] text-[#94a3b8] leading-relaxed">
+                      Review queues populate when you run dataset synthesis with the <strong className="text-zinc-200">Stratified HITL Review</strong> gate enabled in Studio. A percentage of samples will pause here for manual audit.
+                    </p>
+                  </div>
+                  <Button
+                    asChild
+                    variant="outline"
+                    className="border-[#f26625]/40 text-[#f26625] bg-[#f26625]/10 hover:bg-[#f26625]/20 text-xs font-mono font-bold h-8 px-3 rounded-md"
+                  >
+                    <a href="/studio">
+                      <span>Launch Studio with HITL Gate →</span>
+                    </a>
+                  </Button>
                 </div>
               )
               : (
@@ -611,10 +638,12 @@ export default function ReviewPage() {
                         onClick={() => selectItem(item)}
                       >
                         <div className="flex items-start gap-2.5">
-                          {/* Bulk checkbox */}
+                          {/* Bulk checkbox - always visible */}
                           <button
-                            className="mt-0.5 shrink-0 opacity-0 group-hover:opacity-100 transition-opacity text-[#94a3b8] hover:text-white"
+                            type="button"
+                            className="mt-0.5 shrink-0 opacity-80 hover:opacity-100 transition-opacity text-[#94a3b8] hover:text-white"
                             onClick={e => { e.stopPropagation(); toggleBulk(item.id) }}
+                            aria-label={`Select item ${item.id.slice(0, 8)}`}
                           >
                             {isChecked
                               ? <CheckSquare className="h-4 w-4 text-[#10b981]" />
@@ -665,22 +694,48 @@ export default function ReviewPage() {
                                 )}
                               </div>
                             )}
-                            <div className="flex items-center justify-between mt-2 pt-1.5 border-t border-[#1e1e2d]">
+                            <div className="flex flex-wrap items-center justify-between gap-2 mt-2 pt-1.5 border-t border-[#1e1e2d]">
                               <p className="text-[10px] font-mono text-[#64748b] truncate">
                                 Job: {item.job_id.slice(0, 8)}
                               </p>
-                              <button
-                                type="button"
-                                className="inline-flex items-center gap-1 text-[10px] font-mono text-cyan-400 hover:text-white bg-cyan-950/30 hover:bg-cyan-900/50 border border-cyan-800/40 px-2 py-0.5 rounded transition-colors"
-                                onClick={(e) => {
-                                  e.stopPropagation()
-                                  setDiffModalItem(item)
-                                }}
-                                title="Inspect Source Grounding Diff"
-                              >
-                                <GitCompare className="h-3 w-3 text-cyan-400" />
-                                <span>Grounding Diff</span>
-                              </button>
+                              <div className="flex items-center gap-1.5">
+                                <button
+                                  type="button"
+                                  className="inline-flex items-center gap-1 text-[10px] font-mono text-emerald-400 hover:text-white bg-emerald-950/40 hover:bg-emerald-900/60 border border-emerald-800/50 px-2 py-0.5 rounded transition-colors"
+                                  onClick={(e) => {
+                                    e.stopPropagation()
+                                    act('approve', item)
+                                  }}
+                                  title="Approve this sample"
+                                >
+                                  <CheckCircle2 className="h-3 w-3" />
+                                  <span>Approve</span>
+                                </button>
+                                <button
+                                  type="button"
+                                  className="inline-flex items-center gap-1 text-[10px] font-mono text-rose-400 hover:text-white bg-rose-950/40 hover:bg-rose-900/60 border border-rose-800/50 px-2 py-0.5 rounded transition-colors"
+                                  onClick={(e) => {
+                                    e.stopPropagation()
+                                    act('reject', item)
+                                  }}
+                                  title="Reject this sample"
+                                >
+                                  <XCircle className="h-3 w-3" />
+                                  <span>Reject</span>
+                                </button>
+                                <button
+                                  type="button"
+                                  className="inline-flex items-center gap-1 text-[10px] font-mono text-cyan-400 hover:text-white bg-cyan-950/30 hover:bg-cyan-900/50 border border-cyan-800/40 px-2 py-0.5 rounded transition-colors"
+                                  onClick={(e) => {
+                                    e.stopPropagation()
+                                    setDiffModalItem(item)
+                                  }}
+                                  title="Inspect Source Grounding Diff"
+                                >
+                                  <GitCompare className="h-3 w-3 text-cyan-400" />
+                                  <span>Diff</span>
+                                </button>
+                              </div>
                             </div>
                           </div>
                         </div>

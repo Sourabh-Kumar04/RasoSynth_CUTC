@@ -101,23 +101,24 @@ export function ZenSpatialCanvas({
         <div className="relative z-10 flex items-center justify-end px-5 py-2.5 border-b border-[#1c1c28]/60 backdrop-blur-sm text-[10px] font-mono text-[#64748b]">
           <div className="flex items-center gap-2">
             <button
+              type="button"
               onClick={toggleZenMode}
               className={`flex items-center gap-1.5 px-2.5 py-1 rounded text-[10px] font-mono font-medium transition-all ${
                 isZenMode
                   ? 'bg-[#f26625] text-white shadow-sm'
                   : 'bg-[#12121a] hover:bg-[#1c1c28] text-zinc-300 hover:text-white border border-[#272738]'
               }`}
-              title="Toggle Zen Density ('Looks empty, not actually empty')"
+              title="Toggle between Full Studio Controls and Focused Minimal Canvas"
             >
               {isZenMode ? (
                 <>
                   <Minimize2 className="w-3 h-3 text-white" />
-                  <span>Lab View</span>
+                  <span>Exit Focus Mode</span>
                 </>
               ) : (
                 <>
                   <Maximize2 className="w-3 h-3 text-[#f26625]" />
-                  <span>Zen Spatial</span>
+                  <span>Focus Mode (Simplified)</span>
                 </>
               )}
             </button>
