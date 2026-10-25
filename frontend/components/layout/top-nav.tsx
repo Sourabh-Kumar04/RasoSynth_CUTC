@@ -23,6 +23,7 @@ import {
 import { clsx } from 'clsx'
 import { CommandPalette } from '@/components/search/CommandPalette'
 import { SpotlightProductTour } from '@/components/onboarding/SpotlightProductTour'
+import { BrandLogo } from '@/components/ui/brand-logo'
 
 const MOBILE_NAV_ITEMS = [
   { href: '/studio', label: 'Dataset Studio', icon: FlaskConical },
@@ -59,12 +60,10 @@ export function TopNav() {
     <>
       <header className="sticky top-0 z-40 w-full border-b border-[#272738] bg-[#0a0a0f]/95 backdrop-blur-md">
         <div className="flex h-14 items-center justify-between px-4 lg:px-6 gap-4">
-          {/* Logo & Brand - YC Style */}
+          {/* Logo & Brand */}
           <div className="flex items-center space-x-3 shrink-0">
             <Link href="/" className="flex items-center space-x-2.5 group">
-              <div className="w-8 h-8 rounded-md bg-[#f26625] flex items-center justify-center transition-all duration-200 shadow-sm relative overflow-hidden group-hover:bg-[#de581a]">
-                <span className="font-mono font-black text-white text-base tracking-tighter">Y</span>
-              </div>
+              <BrandLogo size={32} />
               <span className="font-bold text-base tracking-tight text-white font-display leading-none">
                 RasoSynth<span className="text-[#f26625]">Tune</span>
               </span>

@@ -36,6 +36,8 @@ import { clsx } from 'clsx'
 import { api } from '@/lib/api/client'
 import { playClickSound, playSuccessChime } from '@/lib/audio/sound-effects'
 import { MerkleTreeGraph } from '@/components/dbom/merkle-tree-graph'
+import { BrandLogo } from '@/components/ui/brand-logo'
+import { SynthesisFlowDiagram } from '@/components/ui/synthesis-flow-diagram'
 
 // 7 Synthesis Engines Definition with Live Preview Data
 const ENGINES = [
@@ -363,9 +365,7 @@ export default function ZenPortalPage() {
       <header className="relative z-20 flex items-center justify-between px-6 sm:px-12 py-5 border-b border-[#1c1c28]/40 backdrop-blur-md">
         <div className="flex items-center space-x-3">
           <Link href="/" className="flex items-center space-x-2.5 group">
-            <div className="w-8 h-8 rounded-md bg-[#f26625] flex items-center justify-center transition-all duration-200 shadow-sm relative overflow-hidden group-hover:bg-[#de581a]">
-              <span className="font-mono font-black text-white text-base tracking-tighter">Y</span>
-            </div>
+            <BrandLogo size={32} />
             <div className="flex flex-col">
               <span className="font-mono text-sm font-bold tracking-tight text-white">
                 RasoSynth<span className="text-[#f26625]">Tune</span>
@@ -676,6 +676,9 @@ export default function ZenPortalPage() {
           </p>
         </div>
 
+        {/* Dynamic Vector Architecture Stream */}
+        <SynthesisFlowDiagram />
+
         {/* 4 Pipeline Stages Cards */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
           {PIPELINE_DAG_STAGES.map((stg) => {
@@ -922,9 +925,7 @@ export default function ZenPortalPage() {
             {/* Col 1 */}
             <div className="space-y-3">
               <div className="flex items-center space-x-2">
-                <div className="w-6 h-6 rounded bg-[#f26625] flex items-center justify-center text-white font-bold text-xs">
-                  Y
-                </div>
+                <BrandLogo size={24} />
                 <span className="font-bold text-white text-sm">RasoSynthTune</span>
               </div>
               <p className="text-[11px] text-zinc-400 leading-relaxed font-sans">
