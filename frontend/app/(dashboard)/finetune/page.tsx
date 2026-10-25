@@ -5,7 +5,7 @@ import {
   Cpu, Play, Square, RefreshCw, ExternalLink,
   List, Plus, ChevronDown, ChevronUp, Copy,
   CheckCircle2, AlertCircle, Loader2, X, Zap, Sparkles,
-  Download, FileText, Check, Clock, Activity,
+  Download, FileText, Check, Clock, Activity, FileCode2,
 } from 'lucide-react'
 import { clsx } from 'clsx'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
@@ -205,6 +205,24 @@ function DetailPane({ job, logs, lossHistory, onCancel, onCopy, onReconnect, log
   const [cardText, setCardText] = useState('')
   const [cardLoading, setCardLoading] = useState(false)
   const [copiedSnippet, setCopiedSnippet] = useState(false)
+  const [modelfileOpen, setModelfileOpen] = useState(false)
+  const [modelfileText, setModelfileText] = useState('')
+  const [copiedCmd, setCopiedCmd] = useState(false)
+  const [copiedModelfile, setCopiedModelfile] = useState(false)
+
+  const handleFetchModelfile = async () => {
+    if (modelfileOpen) {
+      setModelfileOpen(false)
+      return
+    }
+    setModelfileOpen(true)
+    try {
+      const text = await api.getFineTuneModelfile(job.id)
+      setModelfileText(text || `FROM ./${job.output_model_name || 'model'}-q4_k_m.gguf\nPARAMETER temperature 0.3\nPARAMETER top_p 0.95`)
+    } catch {
+      setModelfileText(`FROM ./${job.output_model_name || 'model'}-q4_k_m.gguf\nPARAMETER temperature 0.3\nPARAMETER top_p 0.95`)
+    }
+  }
 
   const handleExportGGUF = async () => {
     setGgufLoading(true)
@@ -357,16 +375,81 @@ function DetailPane({ job, logs, lossHistory, onCancel, onCopy, onReconnect, log
             </div>
 
             {ggufData && (
-              <div className="p-2.5 rounded-md bg-[#0a0a0f] border border-cyan-500/30 text-xs font-mono text-cyan-300 flex items-center justify-between">
-                <span>Format: <b>{ggufData.format}</b> ({ggufData.file_size_mb} MB)</span>
-                <Button
-                  size="sm"
-                  variant="ghost"
-                  className="h-6 text-[10px] text-cyan-400 hover:text-white"
-                  onClick={() => onCopy(ggufData.gguf_path)}
-                >
-                  Copy Local Path
-                </Button>
+              <div className="p-3 rounded-md bg-[#0a0a0f] border border-cyan-500/30 text-xs font-mono space-y-2.5">
+                <div className="flex flex-wrap items-center justify-between gap-2">
+                  <div className="flex items-center gap-2">
+                    <span className="px-2 py-0.5 rounded bg-cyan-950/60 border border-cyan-500/40 text-cyan-300 font-bold text-[11px]">
+                      {ggufData.format}
+                    </span>
+                    <span className="text-[#94a3b8] text-[11px]">{ggufData.file_size_mb} MB</span>
+                  </div>
+                  <div className="flex items-center gap-1.5">
+                    <Button
+                      size="sm"
+                      onClick={() => window.open(api.getFineTuneGGUFDownloadUrl(job.id), '_blank')}
+                      className="h-7 text-xs bg-cyan-600 hover:bg-cyan-500 text-white font-bold flex items-center gap-1 shadow-sm"
+                    >
+                      <Download className="w-3 h-3" />
+                      Download .gguf
+                    </Button>
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      className="h-7 text-xs border-[#272738] bg-[#12121a] text-cyan-300 hover:text-white"
+                      onClick={() => onCopy(ggufData.gguf_path)}
+                    >
+                      Copy Path
+                    </Button>
+                  </div>
+                </div>
+
+                {/* Platform & Runtime Compatibility Badges */}
+                <div className="flex flex-wrap items-center gap-1.5 pt-1 border-t border-[#1f1f2e] text-[10px]">
+                  <span className="text-[#94a3b8]">Target Runtimes:</span>
+                  <span className="px-1.5 py-0.5 rounded bg-[#161622] border border-[#272738] text-zinc-300 flex items-center gap-1">
+                    🦙 Ollama
+                  </span>
+                  <span className="px-1.5 py-0.5 rounded bg-[#161622] border border-[#272738] text-zinc-300 flex items-center gap-1">
+                    🖥️ LM Studio
+                  </span>
+                  <span className="px-1.5 py-0.5 rounded bg-[#161622] border border-[#272738] text-zinc-300 flex items-center gap-1">
+                    ⚡ vLLM / llama.cpp
+                  </span>
+                  <span className="px-1.5 py-0.5 rounded bg-[#161622] border border-[#272738] text-emerald-400">
+                    🍏 Apple Metal + 🟢 NVIDIA CUDA
+                  </span>
+                </div>
+
+                {/* Ollama 1-Click Run Helper */}
+                <div className="flex items-center justify-between pt-1 border-t border-[#1f1f2e] text-[11px]">
+                  <button
+                    type="button"
+                    onClick={handleFetchModelfile}
+                    className="text-cyan-400 hover:text-cyan-300 underline decoration-dotted flex items-center gap-1"
+                  >
+                    <FileCode2 className="w-3.5 h-3.5" />
+                    {modelfileOpen ? 'Hide Modelfile' : 'Inspect Ollama Modelfile'}
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      const cmd = `ollama create ${job.output_model_name || 'rasosynth-model'} -f Modelfile && ollama run ${job.output_model_name || 'rasosynth-model'}`
+                      onCopy(cmd)
+                      setCopiedCmd(true)
+                      setTimeout(() => setCopiedCmd(false), 2000)
+                    }}
+                    className="text-[#f26625] hover:text-[#de581a] flex items-center gap-1"
+                  >
+                    {copiedCmd ? <Check className="w-3 h-3 text-emerald-400" /> : <Copy className="w-3 h-3" />}
+                    {copiedCmd ? 'Copied Run Command!' : 'Copy Ollama CLI Command'}
+                  </button>
+                </div>
+
+                {modelfileOpen && (
+                  <div className="p-2.5 bg-[#08080c] border border-[#272738] rounded max-h-36 overflow-y-auto text-[11px] font-mono text-[#94a3b8] whitespace-pre-wrap">
+                    {modelfileText || 'Generating Modelfile...'}
+                  </div>
+                )}
               </div>
             )}
 
@@ -459,9 +542,20 @@ function FineTuneContent() {
   const [tab, setTab] = useState<'jobs' | 'new'>(datasetParam ? 'new' : 'jobs')
   const [mobileSheet, setMobileSheet] = useState(false)
   const [formError, setFormError] = useState('')
+  const [pipelineDatasets, setPipelineDatasets] = useState<any[]>([])
   const { toasts, push: toast } = useToast()
   const wsRef = useRef<WebSocket | null>(null)
   const logsEndRef = useRef<HTMLDivElement>(null)
+
+  useEffect(() => {
+    api.getJobs({ limit: 50 })
+      .then(res => {
+        const raw = res as any
+        const list = Array.isArray(raw) ? raw : (raw?.data || raw?.jobs || [])
+        setPipelineDatasets(list.filter((j: any) => j.status === 'completed' || (j.samples_generated && j.samples_generated > 0)))
+      })
+      .catch(() => {})
+  }, [])
 
   const [form, setForm] = useState({
     dataset_path: '',
@@ -934,6 +1028,34 @@ function FineTuneContent() {
               </div>
 
               <Section title="Dataset Source">
+                {pipelineDatasets.length > 0 && (
+                  <div className="mb-3">
+                    <label className="text-[10px] mb-1 block font-bold font-mono uppercase text-[#f26625] flex items-center gap-1.5">
+                      <Sparkles className="w-3 h-3 text-[#f26625]" />
+                      Synthesized Datasets ({pipelineDatasets.length} available from pipeline)
+                    </label>
+                    <Select
+                      value={form.dataset_id}
+                      onValueChange={v => {
+                        f('dataset_id', v)
+                        f('dataset_path', '')
+                        f('output_model_name', `finetune-${v.slice(0, 8)}`)
+                      }}
+                    >
+                      <SelectTrigger className="rounded-md border-[#272738] bg-[#0a0a0f] text-white text-xs font-mono">
+                        <SelectValue placeholder="Choose a synthesized pipeline dataset..." />
+                      </SelectTrigger>
+                      <SelectContent className="bg-[#12121a] border-[#272738] text-white text-xs font-mono max-h-56">
+                        {pipelineDatasets.map(ds => (
+                          <SelectItem key={ds.id} value={ds.id}>
+                            {ds.config?.target_domain || ds.target_domain || ds.dataset_name || ds.id.slice(0, 8)} ({ds.samples_generated || 0} samples · DBOM Sealed)
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                )}
+
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                   <div>
                     <label className="text-[10px] mb-1 block font-bold font-mono uppercase text-[#94a3b8]">JSONL file path</label>

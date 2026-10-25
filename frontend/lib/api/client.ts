@@ -1686,6 +1686,9 @@ dataset_samples_generated_total 4520`
       if (endpoint.includes('/model_card')) {
         return parse("# RasoSynth Fine-Tuned Model\n\nDBOM Provenance Seal: `7e19a79c3f46f33d7b9e02c67b9319e34a6efb01dbf6c31a84f50e82c59a35e4`\n\nFinal Train Loss: 0.2140");
       }
+      if (endpoint.includes('/modelfile')) {
+        return parse("FROM ./model-q4_k_m.gguf\nPARAMETER temperature 0.3\nPARAMETER top_p 0.95");
+      }
       if (endpoint.includes('/export_gguf')) {
         return parse({
           status: 'ready',
@@ -1860,6 +1863,14 @@ dataset_samples_generated_total 4520`
 
   getFineTuneModelDownloadUrl(jobId: string) {
     return `${API_BASE_URL}/api/finetune/jobs/${jobId}/download`
+  }
+
+  getFineTuneGGUFDownloadUrl(jobId: string) {
+    return `${API_BASE_URL}/api/finetune/jobs/${jobId}/download_gguf`
+  }
+
+  async getFineTuneModelfile(jobId: string) {
+    return this.request<string>(`/api/finetune/jobs/${jobId}/modelfile`)
   }
 
   // ── Review API ────────────────────────────────────────────────────────────

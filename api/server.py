@@ -4275,6 +4275,18 @@ async def root():
     }
 
 
+@app.get("/favicon.ico", include_in_schema=False)
+@app.get("/favicon.svg", include_in_schema=False)
+async def get_favicon():
+    """Serve brand SVG favicon."""
+    fav_svg = Path("frontend/public/favicon.svg")
+    if fav_svg.exists():
+        return Response(content=fav_svg.read_bytes(), media_type="image/svg+xml")
+    # Inline fallback
+    inline_svg = """<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 40 40" fill="none"><rect width="40" height="40" rx="10" fill="#0a0a0f"/><path d="M20 5.5L32.5 12.8V27.2L20 34.5L7.5 27.2V12.8L20 5.5Z" stroke="#f26625" stroke-width="2"/><circle cx="20" cy="20" r="6" fill="#f26625"/></svg>"""
+    return Response(content=inline_svg.encode("utf-8"), media_type="image/svg+xml")
+
+
 async def run_pipeline(job_id: str, request: JobRequest | dict, resume_state: Optional[dict] = None):
     """Run the dataset generation pipeline.
 

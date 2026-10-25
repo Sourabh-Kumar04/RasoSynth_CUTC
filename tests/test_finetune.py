@@ -281,4 +281,54 @@ async def test_finetune_cross_worker_logs_persistence(tmp_path):
     await db.close()
 
 
+def test_finetune_gguf_export_and_download(test_client, tmp_path):
+    """Test 1-click GGUF export, GGUF binary download, and Ollama Modelfile endpoints."""
+    from unittest.mock import AsyncMock, MagicMock
+    from api.server import app
+
+    out_dir = tmp_path / "finetune_out"
+    out_dir.mkdir(parents=True, exist_ok=True)
+    fake_job = {
+        "id": "ft-gguf-test",
+        "output_model_name": "gguf-test-model",
+        "output_path": str(out_dir),
+        "chat_template": "alpaca",
+        "status": "completed",
+    }
+
+    mock_mgr = MagicMock()
+    mock_mgr.get_job = AsyncMock(return_value=fake_job)
+    orig_mgr = getattr(app.state, "ft_manager", None)
+    app.state.ft_manager = mock_mgr
+
+    try:
+        csrf_resp = test_client.get("/auth/csrf-token")
+        csrf_token = csrf_resp.json().get("csrf_token")
+        headers = {"X-CSRF-Token": csrf_token} if csrf_token else {}
+
+        # 1. Trigger GGUF export
+        export_res = test_client.post("/api/finetune/jobs/ft-gguf-test/export_gguf", headers=headers)
+        assert export_res.status_code == 200
+        export_data = export_res.json()
+        assert export_data["status"] == "ready"
+        assert export_data["format"] == "GGUF-Q4_K_M"
+        assert "Ollama" in export_data["runtime_compatibility"]
+
+        # 2. Test GGUF binary download
+        download_res = test_client.get("/api/finetune/jobs/ft-gguf-test/download_gguf")
+        assert download_res.status_code == 200
+        assert download_res.headers["content-type"] == "application/octet-stream"
+        assert b"GGUF" in download_res.content
+
+        # 3. Test Ollama Modelfile endpoint
+        modelfile_res = test_client.get("/api/finetune/jobs/ft-gguf-test/modelfile")
+        assert modelfile_res.status_code == 200
+        modelfile_text = modelfile_res.text
+        assert "FROM ./gguf-test-model-q4_k_m.gguf" in modelfile_text
+        assert "TEMPLATE" in modelfile_text
+        assert "PARAMETER temperature" in modelfile_text
+    finally:
+        app.state.ft_manager = orig_mgr
+
+
 

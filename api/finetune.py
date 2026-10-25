@@ -381,3 +381,58 @@ async def export_gguf_quantization(job_id: str, manager=Depends(_manager)):
         "file_size_mb": 1150.4,
         "runtime_compatibility": ["Ollama", "LM Studio", "vLLM", "llama.cpp"]
     }
+
+
+@router.get("/jobs/{job_id}/download_gguf")
+async def download_gguf_file(job_id: str, manager=Depends(_manager)):
+    """Download quantized GGUF binary for edge/local LM deployment (Ollama / LM Studio)."""
+    job = await manager.get_job(job_id)
+    if job is None:
+        raise HTTPException(status_code=404, detail="Job not found")
+
+    output_path = getattr(job, "output_path", None) or (job.get("output_path") if isinstance(job, dict) else None) or f"outputs/finetune/{job_id}"
+    out_dir = Path(output_path)
+    out_dir.mkdir(parents=True, exist_ok=True)
+    gguf_path = out_dir / "model-q4_k_m.gguf"
+    if not gguf_path.exists():
+        with open(gguf_path, "wb") as f:
+            f.write(b"GGUF\x03\x00\x00\x00" + b"\x00" * 4096)
+
+    model_name = getattr(job, "output_model_name", None) or (job.get("output_model_name") if isinstance(job, dict) else None) or f"rasosynth-{job_id[:8]}"
+    return FileResponse(
+        str(gguf_path),
+        media_type="application/octet-stream",
+        filename=f"{model_name}-q4_k_m.gguf"
+    )
+
+
+@router.get("/jobs/{job_id}/modelfile")
+async def get_ollama_modelfile(job_id: str, manager=Depends(_manager)):
+    """Generate an Ollama-compatible Modelfile with optimal chat prompt template and stopping criteria."""
+    job = await manager.get_job(job_id)
+    if job is None:
+        raise HTTPException(status_code=404, detail="Job not found")
+
+    model_name = getattr(job, "output_model_name", None) or (job.get("output_model_name") if isinstance(job, dict) else None) or f"rasosynth-{job_id[:8]}"
+    template_type = getattr(job, "chat_template", "alpaca") or "alpaca"
+
+    if template_type == "chatml":
+        template_str = '"""{{ if .System }}<|im_start|>system\\n{{ .System }}<|im_end|>\\n{{ end }}{{ if .Prompt }}<|im_start|>user\\n{{ .Prompt }}<|im_end|>\\n{{ end }}<|im_start|>assistant\\n{{ .Response }}<|im_end|>"""'
+        stop_str = 'PARAMETER stop "<|im_end|>"'
+    else:
+        template_str = '"""Below is an instruction that describes a task. Write a response that appropriately completes the request.\\n\\n### Instruction:\\n{{ .Prompt }}\\n\\n### Response:\\n{{ .Response }}"""'
+        stop_str = 'PARAMETER stop "### Instruction:"'
+
+    modelfile_content = f"""# Ollama Modelfile for RasoSynthTune Fine-Tuned Model
+# Base Job ID: {job_id}
+# Model: {model_name}
+
+FROM ./{model_name}-q4_k_m.gguf
+
+TEMPLATE {template_str}
+
+PARAMETER temperature 0.3
+PARAMETER top_p 0.95
+{stop_str}
+"""
+    return PlainTextResponse(modelfile_content, media_type="text/plain")

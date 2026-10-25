@@ -4,10 +4,15 @@ import { Providers } from '@/components/providers'
 import { Toaster } from '@/components/ui/toaster'
 
 export const metadata: Metadata = {
-  title: 'RasoSynthTune | Autonomous Dataset Synthesis',
-  description: 'AI-native dataset generation and evaluation orchestration platform',
+  title: 'RasoSynthTune | Autonomous Dataset Synthesis & Fine-Tuning Studio',
+  description: 'AI-native dataset generation, multi-tier evaluation, and PEFT/LoRA fine-tuning platform for Indic and specialized LLMs',
   icons: {
-    icon: '/favicon.svg',
+    icon: [
+      { url: '/favicon.svg', type: 'image/svg+xml' },
+      { url: '/favicon.ico', sizes: 'any' },
+    ],
+    shortcut: '/favicon.svg',
+    apple: '/favicon.svg',
   },
 }
 
