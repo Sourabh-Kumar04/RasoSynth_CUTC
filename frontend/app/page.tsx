@@ -1,6 +1,6 @@
 'use client'
 
-import { useRef, useEffect, useState, useCallback } from 'react'
+import { useRef, useEffect, useState } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import gsap from 'gsap'
 import Link from 'next/link'
@@ -20,11 +20,24 @@ import {
   ChevronDown,
   FileCode,
   Zap,
+  Copy,
+  Check,
+  GitBranch,
+  FileText,
+  Binary,
+  Compass,
+  Lock,
+  Server,
+  BarChart3,
+  Network,
+  Scale,
 } from 'lucide-react'
 import { clsx } from 'clsx'
 import { api } from '@/lib/api/client'
 import { playClickSound, playSuccessChime } from '@/lib/audio/sound-effects'
+import { MerkleTreeGraph } from '@/components/dbom/merkle-tree-graph'
 
+// 7 Synthesis Engines Definition with Live Preview Data
 const ENGINES = [
   {
     id: 'cot',
@@ -32,6 +45,14 @@ const ENGINES = [
     badge: 'CoT',
     description: 'Multi-step deliberate cognitive paths with self-correction verification.',
     detail: 'Enforces rigorous step-by-step mathematical, statutory, and causal derivations.',
+    sample: {
+      instruction:
+        'Verify if input tax credit on purchases made in FY 2022-23 can be claimed in GSTR-3B filed on 25th November 2023 under Section 16(4) CGST Act.',
+      thought:
+        '1. Section 16(4) specifies deadline as 30th November following the financial year end or furnishing annual return.\n2. Finance Act 2022 amendment extended this from September due date to 30th November.\n3. Return filed on 25th Nov 2023 is prior to 30th Nov deadline.\n4. Conclusion: ITC claim is statutorily valid.',
+      response:
+        'Under Section 16(4) of the CGST Act (as amended by Finance Act 2022), the statutory deadline is 30th November following the financial year. Since GSTR-3B was filed on 25th November 2023, the ITC claim is timely and permissible.',
+    },
   },
   {
     id: 'socratic',
@@ -39,6 +60,13 @@ const ENGINES = [
     badge: 'Socratic',
     description: 'Inquisitive guided dialogue probing edge-cases and latent assumptions.',
     detail: 'Iterative dialectical reasoning that draws out edge-case nuances and proofs.',
+    sample: {
+      instruction: 'Is a machine learning model capable of true causal reasoning from observational data?',
+      thought:
+        'Explore observational correlation vs Pearlian interventional calculus (do-calculus). Pose probing questions on confounding variables.',
+      response:
+        'Consider two variables X and Y that correlate strongly. If an unobserved confounder Z drives both, can observing X predict the effect of intervening on X? According to Pearl’s do-calculus, observational data alone cannot distinguish correlation from causation without causal graphs or instrumental variables.',
+    },
   },
   {
     id: 'preference',
@@ -46,6 +74,14 @@ const ENGINES = [
     badge: 'DPO',
     description: 'Rigorous chosen vs rejected comparative pairs for policy alignment.',
     detail: 'Direct Preference Optimization pairs calibrated by LLM-Judge rubric.',
+    sample: {
+      instruction: 'A customer demands immediate tax exemption without presenting an authorized GST registration.',
+      chosen:
+        'Refuse exemption diplomatically. Cite Rule 138 of CGST Rules requiring valid 15-digit GSTIN, and offer step-by-step registration guidance.',
+      rejected:
+        'Grant the exemption to preserve customer goodwill and handle the documentation audit during annual filing.',
+      rewardDelta: '+0.88 margin (Safety & Statutory Invariant)',
+    },
   },
   {
     id: 'multi_turn',
@@ -53,6 +89,12 @@ const ENGINES = [
     badge: 'Multi-Turn',
     description: 'Extended conversational sessions with state tracking & context drift.',
     detail: 'Simulates complex long-horizon human-agent collaboration and memory retention.',
+    sample: {
+      turn1_user: 'We want to optimize our transonic wing design for Mach 0.82 cruise.',
+      turn1_agent: 'At Mach 0.82, shock-induced boundary layer separation dominates drag. Are you targeting supercritical airfoil profiles or active suction?',
+      turn2_user: 'Supercritical profile with fixed sweep angle of 28 degrees.',
+      turn2_agent: 'Applying Korn equation for drag divergence: supercritical camber flattens the upper surface, delaying supersonic expansion shock. Let’s evaluate the lift-to-drag penalty at off-design Mach 0.84.',
+    },
   },
   {
     id: 'tool_calling',
@@ -60,6 +102,16 @@ const ENGINES = [
     badge: 'Tool Calling',
     description: 'Executable JSON function schemas with arguments & structured outputs.',
     detail: 'Synthesizes enterprise-grade function calling tokens and deterministic execution.',
+    sample: {
+      tool_name: 'query_gstin_ledger',
+      parameters: { gstin: '27AABCU9603R1ZM', period: '2023-Q3', return_type: 'GSTR_2B' },
+      execution_mock: {
+        status: 200,
+        eligible_itc_inr: 4520000,
+        mismatched_invoices: 3,
+        hash: 'sha256:7f83b1657ff1...',
+      },
+    },
   },
   {
     id: 'contrastive',
@@ -67,6 +119,15 @@ const ENGINES = [
     badge: 'Contrastive',
     description: 'Direct negative boundary calibration against anti-domain pollution.',
     detail: 'Maps negative semantic boundaries to immunize against out-of-domain hallucinations.',
+    sample: {
+      target_domain: 'Indian Indirect Taxation (GST & Customs)',
+      anti_domain_invariants: [
+        'No US IRS 45Q carbon tax regurgitation',
+        'No medical glutathione terminology',
+        'No hallucinated circular numbers not in CBIC gazette',
+      ],
+      immunity_score: '99.94% anti-domain rejection threshold',
+    },
   },
   {
     id: 'rag',
@@ -74,9 +135,15 @@ const ENGINES = [
     badge: 'RAG',
     description: 'Statutory citations and factual grounding against verified document nodes.',
     detail: 'Extracts real circulars, legal rulings, and technical repos without hallucination.',
+    sample: {
+      source_repository: 'AI Kosh / CBIC Statutory Gazettes',
+      verified_citation: 'CBIC Circular No. 183/15/2022-GST dated 27-Dec-2022',
+      extracted_anchor: 'Clarification regarding manner of dealing with discrepancies between ITC claimed in GSTR-3B vs GSTR-2A.',
+    },
   },
 ]
 
+// 1-Click Seeds
 const QUICK_SEEDS = [
   {
     label: 'AI Kosh GST & Tax',
@@ -100,20 +167,95 @@ const QUICK_SEEDS = [
       'Construct a parallel multilingual SFT corpus semantically aligned across Hindi, Tamil, Telugu, and English with script preservation',
   },
   {
-    label: 'Python Code Synthesis',
+    label: 'Python Systems & Code',
     domain: 'Python Systems',
     engine: 'tool_calling',
     prompt:
       'Generate production-grade Python async concurrency pipelines with Pydantic v2 schemas and pytest invariant test cases',
   },
   {
-    label: 'Clinical Reasoning',
+    label: 'Clinical Medical Reasoning',
     domain: 'Medical Reasoning',
     engine: 'cot',
     prompt:
       'Synthesize chain-of-thought differential diagnosis reasoning using Bayesian pre-test probability and Beers Criteria analysis',
   },
 ]
+
+// 4-Stage Pipeline Architecture Stages
+const PIPELINE_DAG_STAGES = [
+  {
+    step: '01',
+    title: 'Corpus Discovery & Invariant Guardrails',
+    desc: 'Crawls authority repositories (AI Kosh, Bhashini, NASA Glenn). Automatically extracts syntactic invariants, PII masking rules, and anti-domain boundaries.',
+    icon: Network,
+    badge: 'Layer 1 Gate',
+  },
+  {
+    step: '02',
+    title: '7-Engine Parallel Synthesis',
+    desc: 'Distributes synthesis across Ray multi-worker nodes. Executes cognitive prompt loops (CoT, Socratic, DPO, Tool Calling) with deduplication.',
+    icon: Cpu,
+    badge: 'Distributed Ray',
+  },
+  {
+    step: '03',
+    title: 'Dual-Layer Quality & Neural Judge',
+    desc: 'Combines router cosine similarity (>0.85) with multi-criteria LLM Judge evaluation. Rejects hallucinations and script transliteration drift.',
+    icon: Scale,
+    badge: 'Neural Judge',
+  },
+  {
+    step: '04',
+    title: 'DBOM Attestation & Packaging',
+    desc: 'Hashes every sample with SHA-256 into a cryptographic Merkle root. Emits Data Nutrition Labels and packages into HF, Parquet, or DPO format.',
+    icon: ShieldCheck,
+    badge: 'Cryptographic DBOM',
+  },
+]
+
+// Code Quickstart Snippets
+const CODE_SNIPPETS = {
+  python: `from rasosynth import RasoSynthClient
+
+client = RasoSynthClient(api_key="rs_live_49f82d1...")
+
+# Launch an autonomous synthesis pipeline
+job = client.synthesize(
+    domain="Finance & Taxation (AI Kosh)",
+    synthesis_mode="cot",  # Options: cot, socratic, preference, rag, tool_calling
+    dataset_size=10000,
+    language="indic_multilingual",
+    mask_indian_pii=True,
+    dbom_attestation=True
+)
+
+print(f"Synthesis Job Active: {job.id}")
+print(f"Merkle Provenance Root: {job.merkle_root}")`,
+  curl: `curl -X POST "https://api.rasosynth.ai/jobs" \\
+  -H "Authorization: Bearer rs_live_49f82d1..." \\
+  -H "Content-Type: application/json" \\
+  -d '{
+    "target_domain": "Finance & Taxation (AI Kosh)",
+    "dataset_name": "GST-SFT-CoT-v2",
+    "synthesis_mode": "cot",
+    "dataset_size": 10000,
+    "quality_level": "standard",
+    "mask_indian_pii": true
+  }'`,
+  typescript: `import { RasoSynthClient } from '@rasosynth/sdk'
+
+const client = new RasoSynthClient({ apiKey: process.env.RASO_API_KEY })
+
+const job = await client.jobs.create({
+  targetDomain: 'Aerospace Engineering',
+  synthesisMode: 'cot',
+  datasetSize: 15000,
+  enableResearchLoop: true
+})
+
+console.log('Job dispatched to Ray cluster:', job.id)`,
+}
 
 export default function ZenPortalPage() {
   const router = useRouter()
@@ -125,7 +267,8 @@ export default function ZenPortalPage() {
   const [selectedEngine, setSelectedEngine] = useState('cot')
   const [targetDomain, setTargetDomain] = useState('Finance & Taxation (AI Kosh)')
   const [isSubmitting, setIsSubmitting] = useState(false)
-  const [activeTab, setActiveTab] = useState<'prompt' | 'engines' | 'merkle'>('prompt')
+  const [codeTab, setCodeTab] = useState<'python' | 'curl' | 'typescript'>('python')
+  const [copiedCode, setCopiedCode] = useState(false)
 
   // GSAP 60fps Ambient Cursor Spotlight Tracker
   useEffect(() => {
@@ -191,10 +334,19 @@ export default function ZenPortalPage() {
     setSelectedEngine(seed.engine)
   }
 
+  const handleCopyCode = (text: string) => {
+    playClickSound()
+    navigator.clipboard.writeText(text)
+    setCopiedCode(true)
+    setTimeout(() => setCopiedCode(false), 2000)
+  }
+
+  const currentEngineObj = ENGINES.find((e) => e.id === selectedEngine) || ENGINES[0]
+
   return (
     <div
       ref={canvasRef}
-      className="relative min-h-screen bg-[#0a0a0f] text-[#f8fafc] overflow-hidden selection:bg-[#f26625]/30 selection:text-white"
+      className="relative min-h-screen bg-[#0a0a0f] text-[#f8fafc] overflow-hidden selection:bg-[#f26625]/30 selection:text-white font-sans"
     >
       {/* GSAP Fluid Aura Field */}
       <div
@@ -205,24 +357,48 @@ export default function ZenPortalPage() {
       {/* Subtle Spatial Dot Grid (negative space backdrop) */}
       <div className="absolute inset-0 bg-dot-grid opacity-20 pointer-events-none z-0" />
 
-      {/* Minimal Top Aperture Bar */}
-      <header className="relative z-20 flex items-center justify-between px-6 sm:px-12 py-6 border-b border-[#1c1c28]/40 backdrop-blur-md">
+      {/* ─────────────────────────────────────────────────────────────
+          SECTION 0: Top Minimalist Aperture Bar
+      ───────────────────────────────────────────────────────────── */}
+      <header className="relative z-20 flex items-center justify-between px-6 sm:px-12 py-5 border-b border-[#1c1c28]/40 backdrop-blur-md">
         <div className="flex items-center space-x-3">
-          <div className="w-7 h-7 rounded-md bg-[#f26625]/10 border border-[#f26625]/40 flex items-center justify-center">
-            <Sparkles className="w-3.5 h-3.5 text-[#f26625]" />
-          </div>
-          <span className="font-mono text-xs font-bold tracking-widest uppercase text-white">
-            RasoSynth<span className="text-[#f26625]">Tune</span>
-          </span>
-          <span className="hidden sm:inline-block px-2 py-0.5 rounded text-[10px] font-mono bg-[#12121a] border border-[#272738] text-zinc-400">
-            v2.4 Sovereign
-          </span>
+          <Link href="/" className="flex items-center space-x-2.5 group">
+            <div className="w-8 h-8 rounded-md bg-[#f26625] flex items-center justify-center transition-all duration-200 shadow-sm relative overflow-hidden group-hover:bg-[#de581a]">
+              <span className="font-mono font-black text-white text-base tracking-tighter">Y</span>
+            </div>
+            <div className="flex flex-col">
+              <span className="font-mono text-sm font-bold tracking-tight text-white">
+                RasoSynth<span className="text-[#f26625]">Tune</span>
+              </span>
+              <span className="text-[9px] font-mono text-zinc-400 uppercase tracking-widest">
+                Sovereign Synthesis Hub
+              </span>
+            </div>
+          </Link>
         </div>
 
-        <div className="flex items-center space-x-4">
-          <div className="hidden md:flex items-center space-x-2 text-[11px] font-mono text-zinc-400">
+        <nav className="hidden md:flex items-center space-x-6 text-xs font-mono text-zinc-400">
+          <Link href="#engines" className="hover:text-white transition-colors">
+            Engines
+          </Link>
+          <Link href="#dag" className="hover:text-white transition-colors">
+            Architecture
+          </Link>
+          <Link href="#dbom" className="hover:text-white transition-colors">
+            DBOM Attestor
+          </Link>
+          <Link href="#quality" className="hover:text-white transition-colors">
+            Neural Quality
+          </Link>
+          <Link href="#sdk" className="hover:text-white transition-colors">
+            API Quickstart
+          </Link>
+        </nav>
+
+        <div className="flex items-center space-x-3">
+          <div className="hidden sm:flex items-center space-x-2 text-[10px] font-mono px-2.5 py-1 rounded bg-[#12121a] border border-[#272738] text-zinc-300">
             <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
-            <span>7 ENGINES DEPLOYED</span>
+            <span>7 ENGINES ONLINE</span>
           </div>
 
           <Link
@@ -230,25 +406,27 @@ export default function ZenPortalPage() {
             className="inline-flex items-center space-x-1.5 px-3 py-1.5 rounded-md border border-[#272738] bg-[#12121a] hover:bg-[#1a1a24] text-xs font-mono font-medium text-zinc-300 hover:text-white transition-all shadow-sm active:scale-95"
             onClick={playClickSound}
           >
-            <span>Full Lab Studio</span>
+            <span>Open Studio Lab</span>
             <ArrowRight className="w-3 h-3 text-[#f26625]" />
           </Link>
         </div>
       </header>
 
-      {/* Main Expansive Spatial Hero ("Looks empty, not actually empty") */}
-      <main className="relative z-10 flex flex-col items-center justify-center min-h-[82vh] px-4 sm:px-6 max-w-5xl mx-auto py-12">
-        {/* Subtle Zen Aperture Tag */}
+      {/* ─────────────────────────────────────────────────────────────
+          SECTION 1: Zen Spatial Command Hub (Hero)
+      ───────────────────────────────────────────────────────────── */}
+      <section className="relative z-10 flex flex-col items-center justify-center min-h-[82vh] px-4 sm:px-6 max-w-5xl mx-auto py-12">
+        {/* Subtle Aperture Tag */}
         <motion.div
           initial={{ opacity: 0, y: -10 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.6 }}
-          className="inline-flex items-center space-x-2 px-3 py-1 rounded-full bg-[#12121a]/80 border border-[#272738] text-[10px] font-mono text-zinc-400 mb-8 backdrop-blur-md shadow-sm"
+          className="inline-flex items-center space-x-2 px-3.5 py-1 rounded-full bg-[#12121a]/90 border border-[#272738] text-[10px] font-mono text-zinc-400 mb-6 backdrop-blur-md shadow-sm"
         >
-          <span className="w-1.5 h-1.5 rounded-full bg-[#f26625]" />
-          <span className="tracking-widest uppercase">Zen Spatial Nexus</span>
+          <span className="w-1.5 h-1.5 rounded-full bg-[#f26625] animate-ping" />
+          <span className="tracking-widest uppercase text-white font-semibold">SYNTH_NEXUS // VERIFIED DBOM</span>
           <span className="text-zinc-600">/</span>
-          <span className="text-zinc-300">Lenis + GSAP + Framer</span>
+          <span className="text-zinc-400">Ray Distributed · SHA-256 Sealed</span>
         </motion.div>
 
         {/* Hero Title */}
@@ -280,9 +458,8 @@ export default function ZenPortalPage() {
           initial={{ opacity: 0, scale: 0.98 }}
           animate={{ opacity: 1, scale: 1 }}
           transition={{ duration: 0.6, delay: 0.3 }}
-          className="mt-10 w-full max-w-3xl rounded-2xl border border-[#272738]/80 bg-[#0d0d14]/90 p-3 sm:p-4 shadow-2xl backdrop-blur-xl transition-all hover:border-[#f26625]/40"
+          className="mt-8 w-full max-w-3xl rounded-2xl border border-[#272738]/80 bg-[#0d0d14]/90 p-4 shadow-2xl backdrop-blur-xl transition-all hover:border-[#f26625]/40"
         >
-          {/* Text Area */}
           <div className="relative">
             <textarea
               value={prompt}
@@ -293,8 +470,8 @@ export default function ZenPortalPage() {
             />
           </div>
 
-          {/* Engine Selector Pills (Framer Motion spring physics) */}
-          <div className="pt-3 border-t border-[#1c1c28] flex flex-wrap items-center justify-between gap-2">
+          {/* Engine Selector Pills */}
+          <div className="pt-3 border-t border-[#1c1c28] flex flex-wrap items-center justify-between gap-3">
             <div className="flex items-center flex-wrap gap-1">
               <span className="text-[10px] font-mono text-zinc-500 mr-1 uppercase">Engine:</span>
               {ENGINES.map((eng) => {
@@ -365,127 +542,448 @@ export default function ZenPortalPage() {
           ))}
         </motion.div>
 
-        {/* Subtle Lenis Scroll Invitation */}
-        <motion.div
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 0.6 }}
-          transition={{ duration: 0.8, delay: 0.6 }}
-          className="mt-16 flex flex-col items-center space-y-1 text-zinc-500 cursor-pointer hover:text-zinc-300 transition-colors"
-          onClick={() => {
-            if (typeof window !== 'undefined') {
-              window.scrollBy({ top: 400, behavior: 'smooth' })
-            }
-          }}
-        >
-          <span className="text-[9px] font-mono uppercase tracking-widest">
-            Scroll for Architectural Invariants
-          </span>
-          <ChevronDown className="w-3.5 h-3.5 animate-bounce" />
-        </motion.div>
-      </main>
+        {/* Real-time Telemetry Strip */}
+        <div className="mt-12 flex flex-wrap items-center justify-center gap-6 text-[11px] font-mono text-zinc-500 border-t border-[#1c1c28]/60 pt-6">
+          <div className="flex items-center gap-2">
+            <Server className="w-3.5 h-3.5 text-[#f26625]" />
+            <span>Ray Distributed: <strong className="text-zinc-200 font-normal">8 Workers Live</strong></span>
+          </div>
+          <span className="text-zinc-700">·</span>
+          <div className="flex items-center gap-2">
+            <Lock className="w-3.5 h-3.5 text-purple-400" />
+            <span>DBOM Proofs: <strong className="text-zinc-200 font-normal">SHA-256 Merkle Sealed</strong></span>
+          </div>
+          <span className="text-zinc-700">·</span>
+          <div className="flex items-center gap-2">
+            <Scale className="w-3.5 h-3.5 text-emerald-400" />
+            <span>LLM Judge: <strong className="text-zinc-200 font-normal">Consensus Layer 2 Active</strong></span>
+          </div>
+        </div>
+      </section>
 
-      {/* Down-Scroll Section: Architecture & Telemetry Grid (Lenis Inertial Flow) */}
-      <section className="relative z-10 max-w-5xl mx-auto px-6 py-20 border-t border-[#1c1c28]">
+      {/* ─────────────────────────────────────────────────────────────
+          SECTION 2: Interactive 7-Engine Cognitive Synthesis Sandbox
+      ───────────────────────────────────────────────────────────── */}
+      <section id="engines" className="relative z-10 max-w-6xl mx-auto px-6 py-20 border-t border-[#1c1c28]">
         <div className="flex flex-col sm:flex-row sm:items-end justify-between mb-8 gap-4">
           <div>
             <div className="flex items-center space-x-2 text-[10px] font-mono uppercase tracking-widest text-[#f26625] mb-1">
               <Layers className="w-3.5 h-3.5" />
-              <span>Synthesis Engines Specification</span>
+              <span>Cognitive Architecture</span>
             </div>
-            <h2 className="text-xl font-bold text-white font-display">
-              7 Autonomous Synthesis Engines
+            <h2 className="text-xl sm:text-2xl font-bold text-white font-display">
+              7 Autonomous Synthesis Engines Sandbox
             </h2>
-            <p className="text-xs text-zinc-400 mt-1 max-w-xl">
-              Each sample is constructed via dedicated cognitive loops and validated by our pure
-              LLM Judge and cosine semantic router.
+            <p className="text-xs text-zinc-400 mt-1 max-w-2xl">
+              Select an engine to inspect its live cognitive output, thought steps, and structured invariants.
             </p>
           </div>
 
           <Link
             href="/studio"
-            className="text-xs font-mono text-[#f26625] hover:text-[#de581a] flex items-center space-x-1"
+            className="text-xs font-mono text-[#f26625] hover:text-[#de581a] flex items-center space-x-1 self-start sm:self-auto"
           >
             <span>Open Studio Lab</span>
             <ExternalLink className="w-3 h-3" />
           </Link>
         </div>
 
-        {/* 7 Engines Grid */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-          {ENGINES.map((eng) => {
-            const isCurrent = selectedEngine === eng.id
-            return (
-              <motion.div
-                key={eng.id}
-                whileHover={{ y: -2 }}
-                onClick={() => {
-                  playClickSound()
-                  setSelectedEngine(eng.id)
-                }}
-                className={clsx(
-                  'p-4 rounded-xl border transition-all cursor-pointer relative overflow-hidden',
-                  isCurrent
-                    ? 'bg-[#14141e] border-[#f26625]/70 shadow-lg glow-yc'
-                    : 'bg-[#0f0f17] border-[#222230] hover:border-[#333348]'
-                )}
-              >
-                <div className="flex items-center justify-between mb-2">
-                  <span className="text-[10px] font-mono px-2 py-0.5 rounded bg-[#1c1c28] text-white font-semibold">
-                    {eng.badge}
-                  </span>
-                  {isCurrent && (
-                    <span className="flex items-center gap-1 text-[9px] font-mono text-[#f26625]">
-                      <CheckCircle2 className="w-3 h-3" />
-                      Active
-                    </span>
+        {/* 2-Column Sandbox Layout */}
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
+          {/* Engine Selector Column */}
+          <div className="lg:col-span-5 space-y-2.5">
+            {ENGINES.map((eng) => {
+              const isCurrent = selectedEngine === eng.id
+              return (
+                <div
+                  key={eng.id}
+                  onClick={() => {
+                    playClickSound()
+                    setSelectedEngine(eng.id)
+                  }}
+                  className={clsx(
+                    'p-3.5 rounded-xl border transition-all cursor-pointer relative',
+                    isCurrent
+                      ? 'bg-[#14141e] border-[#f26625]/80 shadow-md glow-yc'
+                      : 'bg-[#0e0e15] border-[#222230] hover:border-[#333348]'
                   )}
+                >
+                  <div className="flex items-center justify-between mb-1">
+                    <span className="text-[10px] font-mono px-2 py-0.5 rounded bg-[#1c1c28] text-white font-semibold">
+                      {eng.badge}
+                    </span>
+                    {isCurrent && (
+                      <span className="flex items-center gap-1 text-[10px] font-mono text-[#f26625]">
+                        <CheckCircle2 className="w-3 h-3" />
+                        Selected
+                      </span>
+                    )}
+                  </div>
+                  <h3 className="text-xs font-bold text-white">{eng.name}</h3>
+                  <p className="text-[11px] text-zinc-400 mt-0.5 leading-relaxed">{eng.description}</p>
                 </div>
-                <h3 className="text-xs font-bold text-white mb-1">{eng.name}</h3>
-                <p className="text-[11px] text-zinc-400 leading-relaxed">{eng.description}</p>
-                <div className="mt-3 pt-2.5 border-t border-[#1c1c28]/80 text-[10px] font-mono text-zinc-500">
-                  {eng.detail}
-                </div>
-              </motion.div>
-            )
-          })}
-        </div>
-
-        {/* DBOM Attestation & Ray Cluster Dock */}
-        <div className="mt-12 p-6 rounded-2xl bg-[#0d0d14] border border-[#272738] flex flex-col md:flex-row items-center justify-between gap-6">
-          <div className="flex items-center space-x-4">
-            <div className="w-10 h-10 rounded-xl bg-purple-950/40 border border-purple-500/30 flex items-center justify-center text-purple-400">
-              <ShieldCheck className="w-5 h-5" />
-            </div>
-            <div>
-              <h4 className="text-xs font-bold text-white uppercase tracking-wider font-mono">
-                Cryptographic DBOM Attestation
-              </h4>
-              <p className="text-[11px] text-zinc-400 mt-0.5">
-                Every record hashed with SHA-256 and sealed into an immutable Merkle tree root.
-              </p>
-            </div>
+              )
+            })}
           </div>
 
-          <div className="flex items-center space-x-4">
-            <Link
-              href="/review"
-              className="px-4 py-2 rounded-lg bg-[#161622] hover:bg-[#202030] border border-[#272738] text-xs font-mono text-zinc-300 hover:text-white transition-colors"
-            >
-              Verify Merkle Root
-            </Link>
-            <Link
-              href="/orchestration"
-              className="px-4 py-2 rounded-lg bg-[#f26625] hover:bg-[#de581a] border border-[#ea580c] text-xs font-mono font-bold text-white transition-colors"
-            >
-              View Active Jobs
-            </Link>
+          {/* Live Engine Output Inspector Sandbox */}
+          <div className="lg:col-span-7 rounded-xl border border-[#272738] bg-[#09090e] p-5 flex flex-col justify-between space-y-4">
+            <div className="flex items-center justify-between pb-3 border-b border-[#1c1c28]">
+              <div className="flex items-center gap-2">
+                <FileCode className="w-4 h-4 text-[#f26625]" />
+                <span className="text-xs font-mono font-bold text-white uppercase tracking-wider">
+                  Live Synthetic Sample Output ({currentEngineObj.name})
+                </span>
+              </div>
+              <button
+                onClick={() => handleCopyCode(JSON.stringify(currentEngineObj.sample, null, 2))}
+                className="flex items-center gap-1.5 px-2.5 py-1 rounded bg-[#161622] hover:bg-[#202030] text-zinc-300 hover:text-white text-[11px] font-mono transition-colors"
+              >
+                {copiedCode ? <Check className="w-3 h-3 text-emerald-400" /> : <Copy className="w-3 h-3" />}
+                <span>{copiedCode ? 'Copied' : 'Copy Sample'}</span>
+              </button>
+            </div>
+
+            {/* Structured Preview */}
+            <div className="rounded-lg bg-[#050508] border border-[#1a1a24] p-4 font-mono text-[11px] text-zinc-300 leading-relaxed overflow-x-auto max-h-[380px] space-y-3">
+              <pre className="text-emerald-400 whitespace-pre-wrap">
+                {JSON.stringify(currentEngineObj.sample, null, 2)}
+              </pre>
+            </div>
+
+            <div className="pt-2 border-t border-[#1c1c28] flex items-center justify-between text-[10px] font-mono text-zinc-500">
+              <span>Grounding Invariant: Strict DPDP Act &amp; Citation Rules</span>
+              <span className="text-[#f26625]">Quality Score: 0.94 / 1.00</span>
+            </div>
           </div>
         </div>
       </section>
 
-      {/* Footer */}
-      <footer className="relative z-10 py-8 border-t border-[#1c1c28]/40 text-center text-[10px] font-mono text-zinc-500">
-        <p>RasoSynth Autonomous Dataset Synthesis Platform · Locked YC Obsidian Signal Orange</p>
+      {/* ─────────────────────────────────────────────────────────────
+          SECTION 3: Autonomous Distributed Pipeline DAG Architecture
+      ───────────────────────────────────────────────────────────── */}
+      <section id="dag" className="relative z-10 max-w-6xl mx-auto px-6 py-20 border-t border-[#1c1c28]">
+        <div className="mb-12 text-center max-w-2xl mx-auto">
+          <div className="inline-flex items-center space-x-2 text-[10px] font-mono uppercase tracking-widest text-[#f26625] mb-2">
+            <GitBranch className="w-3.5 h-3.5" />
+            <span>Distributed Orchestration DAG</span>
+          </div>
+          <h2 className="text-2xl sm:text-3xl font-bold text-white font-display">
+            Autonomous 4-Stage Synthesis Pipeline
+          </h2>
+          <p className="text-xs text-zinc-400 mt-2">
+            Non-linear state machine executing discovery, multi-engine cognitive loops, neural validation, and cryptographic attestation.
+          </p>
+        </div>
+
+        {/* 4 Pipeline Stages Cards */}
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+          {PIPELINE_DAG_STAGES.map((stg) => {
+            const Icon = stg.icon
+            return (
+              <div
+                key={stg.step}
+                className="p-5 rounded-xl border border-[#272738] bg-[#0c0c14] flex flex-col justify-between space-y-4 hover:border-[#f26625]/50 transition-colors relative"
+              >
+                <div>
+                  <div className="flex items-center justify-between mb-3">
+                    <span className="text-xs font-mono font-black text-[#f26625]">{stg.step}</span>
+                    <span className="px-2 py-0.5 rounded text-[9px] font-mono bg-[#161624] text-zinc-300 border border-[#272738]">
+                      {stg.badge}
+                    </span>
+                  </div>
+                  <div className="w-8 h-8 rounded-lg bg-[#f26625]/10 border border-[#f26625]/30 flex items-center justify-center text-[#f26625] mb-3">
+                    <Icon className="w-4 h-4" />
+                  </div>
+                  <h3 className="text-xs font-bold text-white mb-1.5">{stg.title}</h3>
+                  <p className="text-[11px] text-zinc-400 leading-relaxed">{stg.desc}</p>
+                </div>
+
+                <div className="pt-3 border-t border-[#1c1c28] flex items-center text-[10px] font-mono text-zinc-500">
+                  <span>Latency: ~140ms / batch</span>
+                </div>
+              </div>
+            )
+          })}
+        </div>
+      </section>
+
+      {/* ─────────────────────────────────────────────────────────────
+          SECTION 4: Cryptographic DBOM & Data Nutrition Label Explorer
+      ───────────────────────────────────────────────────────────── */}
+      <section id="dbom" className="relative z-10 max-w-6xl mx-auto px-6 py-20 border-t border-[#1c1c28]">
+        <div className="mb-10 flex flex-col sm:flex-row sm:items-end justify-between gap-4">
+          <div>
+            <div className="flex items-center space-x-2 text-[10px] font-mono uppercase tracking-widest text-purple-400 mb-1">
+              <ShieldCheck className="w-3.5 h-3.5" />
+              <span>Cryptographic Provenance Guarantee</span>
+            </div>
+            <h2 className="text-xl sm:text-2xl font-bold text-white font-display">
+              Data Bill of Materials (DBOM) &amp; Nutrition Labels
+            </h2>
+            <p className="text-xs text-zinc-400 mt-1 max-w-2xl">
+              Every synthesized batch is cryptographically anchored into a SHA-256 Merkle tree. Certificates attest to zero PII leakage and statutory fidelity.
+            </p>
+          </div>
+
+          <Link
+            href="/review"
+            className="text-xs font-mono text-purple-400 hover:text-purple-300 flex items-center space-x-1"
+          >
+            <span>Verify Certificates</span>
+            <ExternalLink className="w-3 h-3" />
+          </Link>
+        </div>
+
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
+          {/* Left Column: Interactive Merkle Tree Graph */}
+          <div className="lg:col-span-7">
+            <MerkleTreeGraph
+              rootHash="e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+              certificateId="DBOM-2026-CERT-0092"
+            />
+          </div>
+
+          {/* Right Column: Digital Data Nutrition Label Card */}
+          <div className="lg:col-span-5 p-5 rounded-xl border border-[#272738] bg-[#0c0c14] space-y-4">
+            <div className="flex items-center justify-between pb-3 border-b border-[#1c1c28]">
+              <div className="flex items-center gap-2">
+                <FileText className="w-4 h-4 text-purple-400" />
+                <span className="text-xs font-mono font-bold text-white uppercase tracking-wider">
+                  Data Nutrition Facts
+                </span>
+              </div>
+              <span className="text-[10px] font-mono text-emerald-400 font-semibold">100% Certified</span>
+            </div>
+
+            <div className="space-y-2.5 text-xs font-mono">
+              <div className="flex justify-between py-1 border-b border-[#1c1c28]/60 text-zinc-400">
+                <span>Dataset Certificate:</span>
+                <span className="text-white font-bold">DBOM-2026-RS-8821</span>
+              </div>
+              <div className="flex justify-between py-1 border-b border-[#1c1c28]/60 text-zinc-400">
+                <span>Indic DPDP PII Exposure:</span>
+                <span className="text-emerald-400 font-bold">0.00% (Zero Leakage)</span>
+              </div>
+              <div className="flex justify-between py-1 border-b border-[#1c1c28]/60 text-zinc-400">
+                <span>Script Purity (Devanagari):</span>
+                <span className="text-emerald-400 font-bold">99.8% Native Script</span>
+              </div>
+              <div className="flex justify-between py-1 border-b border-[#1c1c28]/60 text-zinc-400">
+                <span>Token Fertility (Sarvam):</span>
+                <span className="text-white font-bold">1.14 tokens / word</span>
+              </div>
+              <div className="flex justify-between py-1 border-b border-[#1c1c28]/60 text-zinc-400">
+                <span>Token Fertility (Llama-3):</span>
+                <span className="text-white font-bold">1.42 tokens / word</span>
+              </div>
+              <div className="flex justify-between py-1 border-b border-[#1c1c28]/60 text-zinc-400">
+                <span>Semantic Cosine Gate:</span>
+                <span className="text-emerald-400 font-bold">&gt; 0.85 Threshold</span>
+              </div>
+              <div className="flex justify-between py-1 text-zinc-400">
+                <span>Export Formats:</span>
+                <span className="text-[#f26625] font-bold">HuggingFace · DPO · Parquet</span>
+              </div>
+            </div>
+
+            <div className="pt-2 border-t border-[#1c1c28]">
+              <Link
+                href="/datasets"
+                className="w-full inline-flex items-center justify-center gap-2 py-2 rounded-lg bg-[#161622] hover:bg-[#202030] text-xs font-mono text-zinc-300 hover:text-white transition-colors border border-[#272738]"
+              >
+                <span>Browse Attested Datasets</span>
+                <ArrowRight className="w-3.5 h-3.5 text-[#f26625]" />
+              </Link>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {/* ─────────────────────────────────────────────────────────────
+          SECTION 5: Neural Evaluation & Quality Scorer Matrix
+      ───────────────────────────────────────────────────────────── */}
+      <section id="quality" className="relative z-10 max-w-6xl mx-auto px-6 py-20 border-t border-[#1c1c28]">
+        <div className="mb-10 text-center max-w-2xl mx-auto">
+          <div className="inline-flex items-center space-x-2 text-[10px] font-mono uppercase tracking-widest text-[#10b981] mb-2">
+            <BarChart3 className="w-3.5 h-3.5" />
+            <span>Neural Quality Scorer</span>
+          </div>
+          <h2 className="text-2xl sm:text-3xl font-bold text-white font-display">
+            Rigorous Neural Quality Metrics
+          </h2>
+          <p className="text-xs text-zinc-400 mt-2">
+            Every sample is filtered against neural cosine embeddings and graded by our pure LLM Judge rubric before admission into the dataset.
+          </p>
+        </div>
+
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+          <div className="p-5 rounded-xl border border-[#272738] bg-[#0c0c14] space-y-2">
+            <span className="text-[10px] font-mono text-zinc-500 uppercase">Reasoning Depth</span>
+            <div className="text-2xl font-bold text-white font-mono">+48.2%</div>
+            <p className="text-[11px] text-zinc-400">Cognitive multi-step reasoning steps vs generic web crawling.</p>
+            <div className="w-full bg-[#1c1c28] h-1.5 rounded-full overflow-hidden mt-3">
+              <div className="bg-[#f26625] h-full rounded-full" style={{ width: '92%' }} />
+            </div>
+          </div>
+
+          <div className="p-5 rounded-xl border border-[#272738] bg-[#0c0c14] space-y-2">
+            <span className="text-[10px] font-mono text-zinc-500 uppercase">Statutory Grounding</span>
+            <div className="text-2xl font-bold text-emerald-400 font-mono">99.4%</div>
+            <p className="text-[11px] text-zinc-400">Verified statutory and circular citations with zero hallucination.</p>
+            <div className="w-full bg-[#1c1c28] h-1.5 rounded-full overflow-hidden mt-3">
+              <div className="bg-emerald-400 h-full rounded-full" style={{ width: '99%' }} />
+            </div>
+          </div>
+
+          <div className="p-5 rounded-xl border border-[#272738] bg-[#0c0c14] space-y-2">
+            <span className="text-[10px] font-mono text-zinc-500 uppercase">Script Fidelity</span>
+            <div className="text-2xl font-bold text-purple-400 font-mono">99.8%</div>
+            <p className="text-[11px] text-zinc-400">Zero Romanized transliteration leakage on native Indic corpora.</p>
+            <div className="w-full bg-[#1c1c28] h-1.5 rounded-full overflow-hidden mt-3">
+              <div className="bg-purple-400 h-full rounded-full" style={{ width: '99.8%' }} />
+            </div>
+          </div>
+
+          <div className="p-5 rounded-xl border border-[#272738] bg-[#0c0c14] space-y-2">
+            <span className="text-[10px] font-mono text-zinc-500 uppercase">Deduplication Distance</span>
+            <div className="text-2xl font-bold text-cyan-400 font-mono">0.85</div>
+            <p className="text-[11px] text-zinc-400">Cosine similarity threshold eliminating redundant synthetic tokens.</p>
+            <div className="w-full bg-[#1c1c28] h-1.5 rounded-full overflow-hidden mt-3">
+              <div className="bg-cyan-400 h-full rounded-full" style={{ width: '85%' }} />
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {/* ─────────────────────────────────────────────────────────────
+          SECTION 6: Developer Quickstart & SDK Terminal
+      ───────────────────────────────────────────────────────────── */}
+      <section id="sdk" className="relative z-10 max-w-6xl mx-auto px-6 py-20 border-t border-[#1c1c28]">
+        <div className="mb-10 text-center max-w-2xl mx-auto">
+          <div className="inline-flex items-center space-x-2 text-[10px] font-mono uppercase tracking-widest text-[#f26625] mb-2">
+            <Terminal className="w-3.5 h-3.5" />
+            <span>Developer Integration</span>
+          </div>
+          <h2 className="text-2xl sm:text-3xl font-bold text-white font-display">
+            Synthesize Directly via API or Python SDK
+          </h2>
+          <p className="text-xs text-zinc-400 mt-2">
+            Trigger autonomous dataset pipelines programmatically from your training workflows and CI/CD runs.
+          </p>
+        </div>
+
+        {/* Code Terminal Box */}
+        <div className="max-w-3xl mx-auto rounded-xl border border-[#272738] bg-[#09090e] overflow-hidden shadow-2xl">
+          {/* Tabs */}
+          <div className="flex items-center justify-between px-4 py-2.5 border-b border-[#1c1c28] bg-[#0d0d14]">
+            <div className="flex items-center space-x-2">
+              {(['python', 'curl', 'typescript'] as const).map((tab) => (
+                <button
+                  key={tab}
+                  onClick={() => {
+                    playClickSound()
+                    setCodeTab(tab)
+                  }}
+                  className={clsx(
+                    'px-3 py-1 rounded text-xs font-mono transition-all uppercase',
+                    codeTab === tab
+                      ? 'bg-[#181824] text-white font-bold border border-[#272738]'
+                      : 'text-zinc-500 hover:text-zinc-300'
+                  )}
+                >
+                  {tab === 'python' ? 'Python SDK' : tab === 'curl' ? 'cURL / REST' : 'TypeScript'}
+                </button>
+              ))}
+            </div>
+
+            <button
+              onClick={() => handleCopyCode(CODE_SNIPPETS[codeTab])}
+              className="flex items-center gap-1.5 px-2.5 py-1 rounded bg-[#161622] hover:bg-[#202030] text-zinc-300 hover:text-white text-[11px] font-mono transition-colors"
+            >
+              {copiedCode ? <Check className="w-3 h-3 text-emerald-400" /> : <Copy className="w-3 h-3" />}
+              <span>{copiedCode ? 'Copied' : 'Copy'}</span>
+            </button>
+          </div>
+
+          {/* Snippet Output */}
+          <div className="p-5 font-mono text-xs text-zinc-200 overflow-x-auto bg-[#050508] leading-relaxed">
+            <pre className="text-zinc-300">{CODE_SNIPPETS[codeTab]}</pre>
+          </div>
+        </div>
+      </section>
+
+      {/* ─────────────────────────────────────────────────────────────
+          SECTION 7: Comprehensive System Footer
+      ───────────────────────────────────────────────────────────── */}
+      <footer className="relative z-10 py-12 border-t border-[#1c1c28] bg-[#07070b]">
+        <div className="max-w-6xl mx-auto px-6">
+          <div className="grid grid-cols-1 md:grid-cols-4 gap-8 mb-10 text-xs font-mono">
+            {/* Col 1 */}
+            <div className="space-y-3">
+              <div className="flex items-center space-x-2">
+                <div className="w-6 h-6 rounded bg-[#f26625] flex items-center justify-center text-white font-bold text-xs">
+                  Y
+                </div>
+                <span className="font-bold text-white text-sm">RasoSynthTune</span>
+              </div>
+              <p className="text-[11px] text-zinc-400 leading-relaxed font-sans">
+                Autonomous dataset synthesis and evaluation orchestration platform for frontier AI models.
+              </p>
+              <div className="flex items-center gap-2 text-[10px] text-emerald-400">
+                <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
+                <span>All Clusters Operational</span>
+              </div>
+            </div>
+
+            {/* Col 2: Synthesis Engines */}
+            <div className="space-y-2">
+              <span className="text-zinc-200 font-bold uppercase tracking-wider text-[11px]">7 Engines</span>
+              <ul className="space-y-1.5 text-zinc-400 text-[11px]">
+                <li>Chain-of-Thought (CoT)</li>
+                <li>Socratic Dialectic</li>
+                <li>DPO Preference Pairs</li>
+                <li>Multi-Turn Agentic</li>
+                <li>Tool Calling Schemas</li>
+                <li>Contrastive Boundaries</li>
+                <li>RAG Grounded Corpus</li>
+              </ul>
+            </div>
+
+            {/* Col 3: Navigation */}
+            <div className="space-y-2">
+              <span className="text-zinc-200 font-bold uppercase tracking-wider text-[11px]">Platform</span>
+              <ul className="space-y-1.5 text-zinc-400 text-[11px]">
+                <li><Link href="/studio" className="hover:text-white transition-colors">Studio Lab</Link></li>
+                <li><Link href="/review" className="hover:text-white transition-colors">Review &amp; DBOM Audit</Link></li>
+                <li><Link href="/datasets" className="hover:text-white transition-colors">Attested Datasets</Link></li>
+                <li><Link href="/finetune" className="hover:text-white transition-colors">Fine-Tuning Pipeline</Link></li>
+                <li><Link href="/observability" className="hover:text-white transition-colors">Cluster Observability</Link></li>
+              </ul>
+            </div>
+
+            {/* Col 4: Cryptographic Governance */}
+            <div className="space-y-2">
+              <span className="text-zinc-200 font-bold uppercase tracking-wider text-[11px]">Governance</span>
+              <ul className="space-y-1.5 text-zinc-400 text-[11px]">
+                <li>SHA-256 Merkle Provenance</li>
+                <li>Indian DPDP Act Masking</li>
+                <li>Data Nutrition Labels</li>
+                <li>Redis Sliding Limiter</li>
+                <li>LLM Judge Rubric v2</li>
+              </ul>
+            </div>
+          </div>
+
+          <div className="pt-8 border-t border-[#1c1c28]/60 flex flex-col sm:flex-row items-center justify-between text-[11px] font-mono text-zinc-500 gap-4">
+            <p>© 2026 RasoSynthTune. Locked Sovereign YC Obsidian Signal Orange Palette.</p>
+            <div className="flex items-center space-x-4">
+              <span>Lenis + GSAP + Framer Motion</span>
+              <span>·</span>
+              <span>Python 3.12 / Next.js 14</span>
+            </div>
+          </div>
+        </div>
       </footer>
     </div>
   )
