@@ -23,20 +23,20 @@ def test_merkle_tree_graph_mathematical_consistency():
     assert folded_root == root
 
 
-def test_realtime_palette_specifications():
-    """Verify color palette definitions have valid hex codes and high contrast properties."""
-    palettes = [
-        {"id": "neon-saffron", "primary": "#f26625", "contrast": "8.4:1"},
-        {"id": "cyber-emerald", "primary": "#10b981", "contrast": "8.4:1"},
-        {"id": "electric-violet", "primary": "#a855f7", "contrast": "8.4:1"},
-        {"id": "tokyo-cyan", "primary": "#06b6d4", "contrast": "8.8:1"},
-        {"id": "solar-flare", "primary": "#f59e0b", "contrast": "9.1:1"},
-    ]
-
-    for p in palettes:
-        assert p["primary"].startswith("#")
-        assert len(p["primary"]) == 7
-        assert ":" in p["contrast"]
+def test_locked_flagship_color_palette():
+    """Verify definitive YC Obsidian Signal Orange color palette specification."""
+    palette = {
+        "primary": "#f26625",
+        "hover": "#de581a",
+        "muted": "#ea580c",
+        "background": "#0a0a0f",
+        "surface": "#12121a",
+        "contrast_ratio": "8.4:1",
+    }
+    assert palette["primary"] == "#f26625"
+    assert palette["background"] == "#0a0a0f"
+    assert len(palette["primary"]) == 7
+    assert ":" in palette["contrast_ratio"]
 
 
 def test_audio_sound_effect_frequencies():
