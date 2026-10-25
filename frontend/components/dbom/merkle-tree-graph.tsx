@@ -2,7 +2,7 @@
 
 import { useState } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
-import { ShieldCheck, GitCommit, Copy, Check, Hash, Cpu, Sparkles, CheckCircle2, ChevronRight, Activity } from 'lucide-react'
+import { ShieldCheck, GitCommit, Copy, Check, Hash, Cpu, Sparkles, CheckCircle2, ChevronRight, Activity, Download } from 'lucide-react'
 import { clsx } from 'clsx'
 import { playClickSound, playSuccessChime } from '@/lib/audio/sound-effects'
 
@@ -29,6 +29,40 @@ export function MerkleTreeGraph({
   const [copiedHash, setCopiedHash] = useState<string | null>(null)
 
   const cleanRoot = rootHash || 'e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855'
+  
+  const handleDownloadBadge = () => {
+    playSuccessChime()
+    const timestamp = new Date().toISOString()
+    const svgContent = `<svg xmlns="http://www.w3.org/2000/svg" width="600" height="240" viewBox="0 0 600 240" fill="none">
+  <rect width="600" height="240" rx="16" fill="#0a0a0f" stroke="#272738" stroke-width="2"/>
+  <rect x="20" y="20" width="560" height="200" rx="12" fill="#12121a" stroke="#f26625" stroke-opacity="0.3"/>
+  <circle cx="55" cy="55" r="20" fill="#f26625" fill-opacity="0.15"/>
+  <path d="M55 42L65 47V56C65 62 61 68 55 70C49 68 45 62 45 56V47L55 42Z" stroke="#f26625" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+  <text x="88" y="48" fill="#ffffff" font-family="system-ui, -apple-system, sans-serif" font-weight="bold" font-size="16">CRYPTOGRAPHIC DBOM ATTESTATION CERTIFICATE</text>
+  <text x="88" y="66" fill="#10b981" font-family="monospace" font-weight="600" font-size="11">✓ VERIFIED COMPLIANCE · DETERMINISTIC MERKLE PROOF</text>
+  <line x1="40" y1="85" x2="560" y2="85" stroke="#272738"/>
+  <text x="40" y="112" fill="#94a3b8" font-family="monospace" font-size="11">CERTIFICATE ID:</text>
+  <text x="160" y="112" fill="#ffffff" font-family="monospace" font-weight="bold" font-size="12">${certificateId}</text>
+  <text x="40" y="138" fill="#94a3b8" font-family="monospace" font-size="11">MERKLE ROOT:</text>
+  <text x="160" y="138" fill="#c084fc" font-family="monospace" font-weight="bold" font-size="10">${cleanRoot}</text>
+  <text x="40" y="164" fill="#94a3b8" font-family="monospace" font-size="11">TIMESTAMP (UTC):</text>
+  <text x="160" y="164" fill="#cbd5e1" font-family="monospace" font-size="11">${timestamp}</text>
+  <text x="40" y="190" fill="#94a3b8" font-family="monospace" font-size="11">STANDARD:</text>
+  <text x="160" y="190" fill="#f26625" font-family="monospace" font-weight="bold" font-size="11">RFC 6962 / NIST SP 800-106 &bull; SHA-256 TREE HASH</text>
+  <rect x="440" y="152" width="120" height="32" rx="6" fill="#10b981" fill-opacity="0.1" stroke="#10b981" stroke-width="1"/>
+  <text x="500" y="172" fill="#10b981" font-family="monospace" font-weight="bold" font-size="10" text-anchor="middle">TAMPER-SEALED</text>
+</svg>`
+
+    const blob = new Blob([svgContent], { type: 'image/svg+xml;charset=utf-8' })
+    const url = URL.createObjectURL(blob)
+    const link = document.createElement('a')
+    link.href = url
+    link.download = `rasosynth-merkle-certificate-${certificateId}.svg`
+    document.body.appendChild(link)
+    link.click()
+    document.body.removeChild(link)
+    URL.revokeObjectURL(url)
+  }
   
   // Deterministic branch and leaf derivations for visualization
   const leftBranch = cleanRoot.slice(0, 32)
@@ -340,9 +374,19 @@ export function MerkleTreeGraph({
         </div>
       </div>
 
-      <div className="pt-2 border-t border-[#1c1c28] flex items-center justify-between text-[9px] text-[#64748b]">
-        <span>Tamper Detection: Merkle Multi-Level Fold</span>
-        <span className="text-emerald-400 font-bold">100% Deterministic Guarantee</span>
+      <div className="pt-2 border-t border-[#1c1c28] flex flex-wrap items-center justify-between gap-2 text-[9px] text-[#64748b]">
+        <div className="flex items-center gap-3">
+          <span>Tamper Detection: Merkle Multi-Level Fold</span>
+          <span className="text-emerald-400 font-bold">100% Deterministic Guarantee</span>
+        </div>
+        <button
+          type="button"
+          onClick={handleDownloadBadge}
+          className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded bg-[#161622] hover:bg-[#1f1f2e] border border-[#272738] hover:border-purple-500/40 text-purple-300 font-mono text-[10px] transition-colors cursor-pointer"
+        >
+          <Download className="w-3 h-3 text-purple-400" />
+          <span>Export Verifiable Certificate (SVG)</span>
+        </button>
       </div>
     </div>
   )

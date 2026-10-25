@@ -19,6 +19,7 @@ import {
 } from '@/components/ui/select'
 import { useSearchParams } from 'next/navigation'
 import { api } from '@/lib/api/client'
+import { TelemetryChart } from '@/components/finetune/telemetry-chart'
 
 const API_BASE = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000'
 
@@ -270,6 +271,16 @@ function DetailPane({ job, logs, lossHistory, onCancel, onCopy, onReconnect, log
           )}
         </CardContent>
       </Card>
+
+      {/* Real-time Loss Convergence & GPU Telemetry */}
+      <TelemetryChart
+        lossHistory={lossHistory}
+        currentEpoch={job.current_epoch}
+        totalEpochs={job.total_epochs}
+        trainLoss={job.train_loss}
+        evalLoss={job.eval_loss}
+        status={job.status}
+      />
 
       <Card className="bg-[#12121a] border-[#272738] rounded-md card-shadow">
         <CardHeader className="pb-2 border-b border-[#272738]">

@@ -34,6 +34,7 @@ const INDUSTRY_PRESETS = [
     source: 'AI Kosh',
     prompt: 'Synthesize a curriculum-structured SFT dataset for Indian indirect and direct tax advisory tasks. Cover GST input-tax-credit reconciliation under Section 16(4) CGST Act, GSTR-2B vs purchase-register discrepancies, TDS/TCS compliance under Section 194Q, and Income Tax Appellate Tribunal reasoning chains. Apply a 40-40-20 difficulty split: (easy) definitional lookups with statutory citations; (medium) multi-statute cross-reference reasoning with computation steps; (hard) adversarial audit scenarios with contradictory facts and appeal strategy. Each sample must include: (1) a specific taxpayer scenario as instruction grounded in a real GST circular or ITAT ruling reference; (2) a structured response with statutory citation, step-by-step calculation, and compliance action — no hallucinated circular numbers. Enforce diversity across: industry verticals (manufacturing, e-commerce, services, exports), taxpayer scales (SME, large enterprise, individual), and query intent (classification, computation, dispute resolution, penalty mitigation). Exclude generic accounting advice unrelated to Indian tax law.',
     type: 'sft',
+    category: 'indic',
     language: 'hinglish',
     scriptMode: 'romanized',
     formalityRegister: 'formal',
@@ -43,12 +44,30 @@ const INDUSTRY_PRESETS = [
     sources: ['AI Kosh', 'OpenML', 'India.gov.in'],
   },
   {
+    id: 'indic-legal',
+    title: 'Bhartiya Nyaya Sanhita (BNS)',
+    domain: 'Indian Law & Constitutional Jurisprudence',
+    source: 'eCourts & SCI',
+    prompt: 'Synthesize a high-precision legal CoT curriculum covering the Bharatiya Nyaya Sanhita (BNS 2023), BNSS, and Indian Evidence Act transitions. Cover: (1) statutory cross-mapping between Indian Penal Code (IPC) and corresponding BNS sections with legislative intent analysis; (2) bail jurisprudence under Section 479 BNSS; (3) electronic evidence admissibility under Section 61 BSA; (4) structured legal opinion drafting with precedent analysis from Supreme Court of India constitutional bench judgments. Include three-tiered complexity: (easy) direct statutory cross-reference definitions; (medium) multi-statute procedural applications; (hard) adversarial appellate briefs with contradictory precedent reconciliation.',
+    type: 'reasoning',
+    category: 'indic',
+    language: 'indic_multilingual',
+    scriptMode: 'native',
+    formalityRegister: 'formal',
+    parallelBilingual: true,
+    preservedTerms: ['BNS 2023', 'Section 479 BNSS', 'Bhartiya Sakshya Adhiniyam', 'Ratio Decidendi', 'Mandamus'],
+    antiDomains: ['us code', 'uk common law without indian adoption', 'hallucinated precedent citations'],
+    size: 20000,
+    sources: ['eCourts India', 'Supreme Court Reports', 'Legislative Dept'],
+  },
+  {
     id: 'aerospace-airfoil',
     title: 'Aerospace & Aerodynamics',
     domain: 'Aerospace Engineering & Aerodynamics',
     source: 'NASA Glenn & FAA',
     prompt: 'Build a chain-of-thought reasoning dataset for aeronautical engineering covering: transonic airfoil design trade-offs (NACA 6-series vs supercritical profiles), compressible Navier-Stokes boundary-layer analysis, FAA FAR Part 25 structural-load certification, and propulsion thermodynamic cycle analysis (Brayton cycle efficiency). Apply a staged difficulty curriculum: (easy) first-principles derivations with worked governing equations; (medium) multi-constraint design optimisation with CFD parameter reasoning and regulatory cross-checks; (hard) failure-mode analysis with competing FAR requirements and certification risk trade-offs. Each sample: instruction specifies a concrete engineering constraint scenario; response walks through governing equations, design trade-space, and regulatory compliance rationale with NASA TM or AIAA paper identifiers where applicable. Anti-domain: exclude undergraduate textbook regurgitation without applied engineering context, and never cite retracted NASA reports or superseded FAR revisions.',
     type: 'reasoning',
+    category: 'stem',
     language: 'en',
     scriptMode: 'native',
     formalityRegister: 'formal',
@@ -64,6 +83,7 @@ const INDUSTRY_PRESETS = [
     source: 'Bhashini Data Vatika',
     prompt: 'Construct a parallel multilingual SFT corpus semantically aligned across Hindi (Devanagari), Tamil (Tamil script), Telugu (Telugu script), and English for healthcare access and e-governance domains. Each sample must be a bilingual instruction-response pair where semantic equivalence is preserved across scripts — not literal translation. Cover: (1) primary health-centre symptom-triage dialogues grounded in NHP India and WHO SEARO guidelines; (2) Jan Dhan, Aadhaar, and UMANG app navigation assistance with step-by-step procedural guidance; (3) RTI application drafting in plain-language Indic. Difficulty tiers: (easy) single-intent queries with direct factual answers; (medium) multi-step procedural guidance requiring ordered reasoning; (hard) ambiguous multi-domain queries requiring clarification and cross-scheme knowledge. Enforce script-native output — no transliteration unless explicitly requested. Maintain register-appropriate formality: formal for government transactions, empathetic-neutral for health queries. Anti-domain: exclude machine-translated pairs lacking human post-editing, and never generate diagnosis or prescription content without appropriate advisory caveats.',
     type: 'sft',
+    category: 'indic',
     language: 'indic_multilingual',
     scriptMode: 'native',
     formalityRegister: 'formal',
@@ -79,10 +99,25 @@ const INDUSTRY_PRESETS = [
     source: 'GitHub & HF',
     prompt: 'Generate a code-first SFT dataset for Python software engineering tasks at production quality. Cover: (1) algorithmically optimal solutions to competitive-programming-grade problems with time-space complexity proof; (2) async/await concurrency patterns with asyncio and structured concurrency; (3) type-annotated API design with Pydantic v2 and FastAPI; (4) data-pipeline construction with pandas, polars, and Apache Arrow; (5) ML engineering utilities including custom PyTorch training loops and HuggingFace Trainer extensions. Each sample: instruction is a realistic engineering task with explicit acceptance criteria and constraints; response includes fully runnable code with docstrings, PEP 484 type hints, and inline comments explaining non-obvious design decisions. Apply difficulty split: (easy) single-function implementations with clear spec; (medium) module-level design with pytest test suite covering edge cases; (hard) system-design-level problems requiring architectural reasoning and trade-off justification. Anti-domain: exclude trivial Hello World examples, deprecated Python 2 syntax, and any hallucinated library APIs not verifiable in official PyPI documentation.',
     type: 'coding',
+    category: 'code',
     language: 'en',
     antiDomains: ['hello world', 'python 2 syntax', 'hallucinated pypi apis', 'giant panda bear'],
     size: 15000,
     sources: ['HuggingFace', 'GitHub', 'ArXiv'],
+  },
+  {
+    id: 'distributed-consensus',
+    title: 'Raft & Rust Consensus',
+    domain: 'Distributed Systems & Formal Verification',
+    source: 'USENIX & ACM',
+    prompt: 'Construct an advanced systems-engineering dataset for fault-tolerant distributed systems in Rust. Cover: (1) formal Raft and Paxos consensus state machine transitions with TLA+ model checking specs; (2) split-brain resolution, term elections, and log replication under partial network partitions; (3) lock-free async concurrency with Tokio, Crossbeam, and atomics; (4) write-ahead logging (WAL) crash recovery and LSM-tree compaction heuristics. Every response must provide provably correct Rust implementations with type safety guarantees and test fixtures simulating Byzantine delays.',
+    type: 'coding',
+    category: 'code',
+    language: 'en',
+    preservedTerms: ['Raft Term', 'LogCompaction', 'Tokio::select', 'CompareAndSwap', 'Linearizability'],
+    antiDomains: ['single threaded nodejs', 'deprecated crates', 'trivial mock code'],
+    size: 15000,
+    sources: ['GitHub', 'ArXiv', 'USENIX ATC'],
   },
   {
     id: 'clinical-reasoning',
@@ -91,6 +126,7 @@ const INDUSTRY_PRESETS = [
     source: 'PubMed & Open Data',
     prompt: 'Synthesize a chain-of-thought clinical reasoning dataset following the diagnostic framework taught in evidence-based medicine residency programs. Cover: (1) systematic differential-diagnosis generation using Bayesian pre-test probability reasoning and illness-script matching; (2) interpretation of lab panels (CBC, CMP, LFTs, troponin curves, ABG) in full clinical context; (3) drug-drug interaction analysis using Beers Criteria-style structured reasoning; (4) SOAP note construction for complex multi-morbidity presentations. Difficulty tiers: (easy) single-system presentations with classic textbook findings and a clear primary diagnosis; (medium) atypical presentations requiring exclusion reasoning and confirmatory test selection; (hard) critically ill multi-system cases with time-sensitive decision-making under diagnostic uncertainty. Each sample: instruction presents a de-identified patient vignette with vitals, HPI, and relevant labs; response applies a structured reasoning chain — illness script → problem representation → differential ranking → diagnostic workup plan → treatment rationale. Ground responses in UpToDate-equivalent clinical guidelines (AHA, ATS, IDSA, ACC). Anti-domain: never generate specific drug dosages without advisory disclaimers; exclude any case vignette containing real or identifiable patient information.',
     type: 'reasoning',
+    category: 'stem',
     language: 'en',
     antiDomains: ['real patient identifiers', 'prescriptions without disclaimers', 'tax law', 'software bugs'],
     size: 10000,
@@ -140,6 +176,7 @@ function StudioContent() {
   const [autoDetectNotice, setAutoDetectNotice] = useState<string | null>(null)
   const [coverageMatrix, setCoverageMatrix] = useState<{ dimensions?: Record<string, any>; cells?: Array<Record<string, any>>; total_cells?: number } | null>(null)
   const [activePreset, setActivePreset] = useState<string>('aikosh-tax')
+  const [selectedCategory, setSelectedCategory] = useState<'all' | 'indic' | 'code' | 'stem'>('all')
   const [idealSamples, setIdealSamples] = useState<Array<{ instruction: string; response: string }>>([])
   const [showAdvanced, setShowAdvanced] = useState(false)
   const [showAnchors, setShowAnchors] = useState(false)
@@ -341,16 +378,43 @@ function StudioContent() {
       {/* Industry Presets */}
       {!isZenMode && (
         <div className="space-y-3">
-          <div className="flex items-center justify-between">
+          <div className="flex flex-wrap items-center justify-between gap-2">
             <span className="text-xs font-mono font-bold uppercase tracking-wider text-white flex items-center gap-1.5">
               <Sparkles className="w-3.5 h-3.5 text-[#f26625]" />
-              Industry Presets
+              Domain Curricula & Linguistic Presets
             </span>
             <span className="text-[11px] font-mono text-[#10b981]">Grounded Schemas</span>
           </div>
 
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-3">
-            {INDUSTRY_PRESETS.map((preset) => {
+          {/* Facet Filter Toolbar */}
+          <div className="flex flex-wrap items-center gap-2">
+            {[
+              { id: 'all', label: 'All Curricula' },
+              { id: 'indic', label: 'Indic Vernacular & Legal' },
+              { id: 'code', label: 'Code & Distributed Systems' },
+              { id: 'stem', label: 'Aerospace & Healthcare' },
+            ].map((cat) => (
+              <button
+                key={cat.id}
+                type="button"
+                onClick={() => {
+                  playClickSound()
+                  setSelectedCategory(cat.id as any)
+                }}
+                className={clsx(
+                  "px-3 py-1 text-xs font-mono rounded-md border transition-all cursor-pointer",
+                  selectedCategory === cat.id
+                    ? "bg-[#f26625]/20 text-[#f26625] border-[#f26625] font-bold shadow-sm"
+                    : "bg-[#0e0e17] text-[#94a3b8] border-[#272738] hover:text-white hover:border-[#3b3b52]"
+                )}
+              >
+                {cat.label}
+              </button>
+            ))}
+          </div>
+
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 xl:grid-cols-7 gap-3">
+            {INDUSTRY_PRESETS.filter(p => selectedCategory === 'all' || (p as any).category === selectedCategory).map((preset) => {
               const isSelected = activePreset === preset.id
               return (
                 <button
