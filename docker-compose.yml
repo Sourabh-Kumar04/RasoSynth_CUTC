@@ -74,6 +74,10 @@ services:
       QDRANT_URL: http://qdrant:6333
       ENABLE_CELERY: "true"
       PYTHONUNBUFFERED: "1"
+      MODAL_TOKEN_ID: ${MODAL_TOKEN_ID:-}
+      MODAL_TOKEN_SECRET: ${MODAL_TOKEN_SECRET:-}
+      RUNPOD_API_KEY: ${RUNPOD_API_KEY:-}
+      HF_TOKEN: ${HF_TOKEN:-}
     depends_on:
       redis:
         condition: service_healthy
@@ -112,6 +116,10 @@ services:
       QDRANT_URL: http://qdrant:6333
       ENABLE_CELERY: "true"
       PYTHONUNBUFFERED: "1"
+      MODAL_TOKEN_ID: ${MODAL_TOKEN_ID:-}
+      MODAL_TOKEN_SECRET: ${MODAL_TOKEN_SECRET:-}
+      RUNPOD_API_KEY: ${RUNPOD_API_KEY:-}
+      HF_TOKEN: ${HF_TOKEN:-}
     depends_on:
       redis:
         condition: service_healthy
