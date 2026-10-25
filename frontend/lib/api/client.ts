@@ -1842,6 +1842,10 @@ dataset_samples_generated_total 4520`
     return this.request<any>(`/api/finetune/jobs/${jobId}`)
   }
 
+  async getFineTuneLogs(jobId: string, limit: number = 200) {
+    return this.request<{ job_id: string; logs: any[] }>(`/api/finetune/jobs/${jobId}/logs?limit=${limit}`)
+  }
+
   async cancelFineTuneJob(jobId: string) {
     return this.request<any>(`/api/finetune/jobs/${jobId}`, { method: 'DELETE' })
   }

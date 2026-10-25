@@ -528,43 +528,94 @@ function FineTuneContent() {
     return () => clearInterval(id)
   }, [tab, fetchJobs])
 
-  // ── WebSocket ─────────────────────────────────────────────────────────────
+  // ── WebSocket & Resilient Polling Stream ──────────────────────────────────
+
+  const pollingTimerRef = useRef<NodeJS.Timeout | null>(null)
 
   const connectStream = useCallback((jobId: string) => {
     wsRef.current?.close()
+    if (pollingTimerRef.current) clearInterval(pollingTimerRef.current)
     setLogs([])
-    const ws = new WebSocket(
-      `${API_BASE.replace(/^http/, 'ws')}/api/finetune/jobs/${jobId}/stream`
-    )
-    wsRef.current = ws
-    ws.onmessage = e => {
-      try {
-        const ev = JSON.parse(e.data)
-        if (ev.type === 'ping') return
-        setLogs(p => [...p, { ...ev, timestamp: new Date().toISOString() }])
-        if (ev.type === 'progress') {
-          setSelectedJob(p =>
-            p ? {
-              ...p,
-              progress: ev.progress ?? p.progress,
-              current_epoch: Math.floor(ev.epoch ?? p.current_epoch),
-              train_loss: ev.loss ?? p.train_loss,
-            } : p
-          )
-        }
-        if (ev.type === 'completed') { fetchJobs(); toast('Training completed!', 'success') }
-        if (ev.type === 'error')     { fetchJobs(); toast(`Error: ${ev.message}`, 'error') }
-        if (ev.type === 'cancelled') { fetchJobs() }
-      } catch {}
+
+    // Determine target WebSocket endpoint
+    let wsUrl: string
+    if (process.env.NEXT_PUBLIC_API_URL) {
+      wsUrl = `${process.env.NEXT_PUBLIC_API_URL.replace(/^http/, 'ws')}/api/finetune/jobs/${jobId}/stream`
+    } else if (typeof window !== 'undefined' && window.location.hostname !== 'localhost') {
+      wsUrl = `wss://sourabh-kumar04-rasosynthtune.hf.space/api/finetune/jobs/${jobId}/stream`
+    } else {
+      wsUrl = `ws://localhost:8000/api/finetune/jobs/${jobId}/stream`
     }
-    ws.onerror = () => toast('Stream connection lost', 'error')
+
+    // Resilient polling fallback if WS fails in serverless / restricted networks
+    const startPollingFallback = () => {
+      if (pollingTimerRef.current) return
+      pollingTimerRef.current = setInterval(async () => {
+        try {
+          const [jobRes, logsRes] = await Promise.all([
+            api.getFineTuneJob(jobId),
+            api.getFineTuneLogs(jobId, 100),
+          ])
+          if (jobRes) {
+            setSelectedJob(p => p ? { ...p, ...jobRes } : jobRes)
+            if (['completed', 'failed', 'cancelled'].includes(jobRes.status)) {
+              if (pollingTimerRef.current) clearInterval(pollingTimerRef.current)
+              fetchJobs()
+            }
+          }
+          if (logsRes?.logs && Array.isArray(logsRes.logs) && logsRes.logs.length > 0) {
+            setLogs(logsRes.logs)
+          }
+        } catch {}
+      }, 3000)
+    }
+
+    try {
+      const ws = new WebSocket(wsUrl)
+      wsRef.current = ws
+
+      ws.onmessage = e => {
+        try {
+          const ev = JSON.parse(e.data)
+          if (ev.type === 'ping') return
+          setLogs(p => [...p, { ...ev, timestamp: new Date().toISOString() }])
+          if (ev.type === 'progress') {
+            setSelectedJob(p =>
+              p ? {
+                ...p,
+                progress: ev.progress ?? p.progress,
+                current_epoch: Math.floor(ev.epoch ?? p.current_epoch),
+                train_loss: ev.loss ?? p.train_loss,
+              } : p
+            )
+          }
+          if (ev.type === 'completed') { fetchJobs(); toast('Training completed!', 'success') }
+          if (ev.type === 'error')     { fetchJobs(); toast(`Error: ${ev.message}`, 'error') }
+          if (ev.type === 'cancelled') { fetchJobs() }
+        } catch {}
+      }
+
+      ws.onerror = () => {
+        // Automatically switch to resilient HTTP polling fallback
+        startPollingFallback()
+      }
+
+      ws.onclose = () => {
+        startPollingFallback()
+      }
+    } catch {
+      startPollingFallback()
+    }
   }, [fetchJobs, toast])
 
   useEffect(() => {
     logsEndRef.current?.scrollIntoView({ behavior: 'smooth' })
   }, [logs])
 
-  useEffect(() => () => { wsRef.current?.close() }, [])
+  useEffect(() => () => {
+    wsRef.current?.close()
+    if (pollingTimerRef.current) clearInterval(pollingTimerRef.current)
+  }, [])
 
   // ── Actions ───────────────────────────────────────────────────────────────
 
