@@ -4,7 +4,7 @@ import { useState, useEffect, useCallback, useRef } from 'react'
 import {
   ClipboardCheck, CheckCircle2, XCircle, Flag, Pencil,
   ChevronLeft, ChevronRight, RefreshCw, Play,
-  Loader2, AlertCircle, X, Download, CheckSquare, Square, ShieldCheck,
+  Loader2, AlertCircle, X, Download, CheckSquare, Square, ShieldCheck, GitCompare,
 } from 'lucide-react'
 import { clsx } from 'clsx'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
@@ -18,6 +18,7 @@ import {
 } from '@/components/ui/select'
 import { api } from '@/lib/api/client'
 import { MerkleTreeGraph } from '@/components/dbom/merkle-tree-graph'
+import { GroundingDiffModal } from '@/components/review/grounding-diff-modal'
 
 const API_BASE = process.env.NEXT_PUBLIC_API_URL || ''
 
@@ -143,6 +144,7 @@ export default function ReviewPage() {
   // HITL: jobs currently paused at the review gate
   const [pausedJobs, setPausedJobs] = useState<string[]>([])
   const [showMerkleProof, setShowMerkleProof] = useState(false)
+  const [diffModalItem, setDiffModalItem] = useState<ReviewItem | null>(null)
 
   const { toasts, push: toast } = useToast()
   const PAGE_SIZE = 20
@@ -354,6 +356,7 @@ export default function ReviewPage() {
               onEditInst={setEditInst} onEditResp={setEditResp}
               onNotes={setNotes} onReviewer={saveReviewer}
               onResume={resumeJob}
+              onOpenDiff={setDiffModalItem}
             />
           )}
         </div>
@@ -644,9 +647,23 @@ export default function ReviewPage() {
                                 )}
                               </div>
                             )}
-                            <p className="text-[10px] font-mono text-[#64748b] mt-1 truncate">
-                              Job: {item.job_id.slice(0, 8)}
-                            </p>
+                            <div className="flex items-center justify-between mt-2 pt-1.5 border-t border-[#1e1e2d]">
+                              <p className="text-[10px] font-mono text-[#64748b] truncate">
+                                Job: {item.job_id.slice(0, 8)}
+                              </p>
+                              <button
+                                type="button"
+                                className="inline-flex items-center gap-1 text-[10px] font-mono text-cyan-400 hover:text-white bg-cyan-950/30 hover:bg-cyan-900/50 border border-cyan-800/40 px-2 py-0.5 rounded transition-colors"
+                                onClick={(e) => {
+                                  e.stopPropagation()
+                                  setDiffModalItem(item)
+                                }}
+                                title="Inspect Source Grounding Diff"
+                              >
+                                <GitCompare className="h-3 w-3 text-cyan-400" />
+                                <span>Grounding Diff</span>
+                              </button>
+                            </div>
                           </div>
                         </div>
                       </div>
@@ -701,6 +718,7 @@ export default function ReviewPage() {
                   onEditInst={setEditInst} onEditResp={setEditResp}
                   onNotes={setNotes} onReviewer={saveReviewer}
                   onResume={resumeJob}
+                  onOpenDiff={setDiffModalItem}
                 />
               </div>
             )
@@ -716,6 +734,19 @@ export default function ReviewPage() {
           }
         </div>
       </div>
+
+      {/* Grounding Diff Modal */}
+      <GroundingDiffModal
+        item={diffModalItem}
+        isOpen={!!diffModalItem}
+        onClose={() => setDiffModalItem(null)}
+        onAct={(action) => {
+          if (diffModalItem) {
+            act(action, diffModalItem)
+            setDiffModalItem(null)
+          }
+        }}
+      />
     </div>
   )
 }
@@ -731,17 +762,32 @@ interface DPProps {
   onEditInst: (v: string) => void; onEditResp: (v: string) => void
   onNotes: (v: string) => void; onReviewer: (v: string) => void
   onResume: (jobId: string) => void
+  onOpenDiff?: (item: ReviewItem) => void
 }
 
 function DetailPane({
   item, editing, editInstruction, editResponse, notes, reviewer,
   actionLoading, onAct, onSetEditing, onEditInst, onEditResp, onNotes, onReviewer, onResume,
+  onOpenDiff,
 }: DPProps) {
   return (
     <Card className="bg-[#12121a] border-[#272738] rounded-md card-shadow">
       <CardHeader className="pb-2 border-b border-[#272738]">
         <div className="flex items-center justify-between flex-wrap gap-2">
-          <CardTitle className="text-sm font-bold text-white">Sample Quality Audit</CardTitle>
+          <div className="flex items-center gap-2">
+            <CardTitle className="text-sm font-bold text-white">Sample Quality Audit</CardTitle>
+            {onOpenDiff && (
+              <Button
+                variant="outline"
+                size="sm"
+                className="h-6 px-2 text-[10px] rounded border-[#272738] bg-[#0a0a0f] text-cyan-400 hover:text-white hover:bg-cyan-950/40 font-mono flex items-center gap-1"
+                onClick={() => onOpenDiff(item)}
+              >
+                <GitCompare className="h-3 w-3 text-cyan-400" />
+                <span>Grounding Diff</span>
+              </Button>
+            )}
+          </div>
           <span className={clsx('text-[10px] font-mono px-2.5 py-0.5 rounded-md border', STATUS_PILL[item.review_status])}>
             {item.review_status}
           </span>
@@ -824,14 +870,25 @@ function DetailPane({
         )}
 
         {item.source_text && (
-          <details className="rounded-md border border-[#272738] bg-[#0a0a0f] p-3">
-            <summary className="cursor-pointer text-xs font-bold text-white hover:text-[#f26625] transition-colors">
-              Inspect Grounded Reference Context
-            </summary>
-            <div className="mt-2 max-h-40 overflow-y-auto whitespace-pre-wrap text-xs leading-relaxed text-[#94a3b8] font-mono">
+          <div className="rounded-md border border-[#272738] bg-[#0a0a0f] p-3 space-y-2">
+            <div className="flex items-center justify-between">
+              <span className="text-xs font-bold text-white font-mono">Grounded Reference Context</span>
+              {onOpenDiff && (
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="h-6 px-2 text-[10px] rounded border-[#272738] bg-[#12121a] text-cyan-400 hover:text-white hover:bg-cyan-950/40 font-mono flex items-center gap-1"
+                  onClick={() => onOpenDiff(item)}
+                >
+                  <GitCompare className="h-3 w-3 text-cyan-400" />
+                  <span>Inspect Diff</span>
+                </Button>
+              )}
+            </div>
+            <div className="max-h-32 overflow-y-auto whitespace-pre-wrap text-xs leading-relaxed text-[#94a3b8] font-mono bg-[#050508] p-2 rounded border border-[#1e1e2d]">
               {item.source_text}
             </div>
-          </details>
+          </div>
         )}
 
         {/* DPO Contrast Pair: Rejected Baseline */}

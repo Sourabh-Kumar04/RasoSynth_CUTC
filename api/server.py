@@ -2580,7 +2580,7 @@ async def export_dataset(dataset_id: str, request: dict = None):
         raise HTTPException(status_code=404, detail=f"Dataset {dataset_id} not found")
 
     export_format = (request or {}).get("format", "jsonl").lower()
-    if export_format not in {"json", "jsonl", "csv", "parquet", "zip", "sql", "qdrant"}:
+    if export_format not in {"json", "jsonl", "csv", "parquet", "zip", "tar.gz", "tar", "sql", "qdrant"}:
         raise HTTPException(status_code=400, detail=f"Unsupported export format: {export_format}")
 
     instruction_format = (request or {}).get("instruction_format")
@@ -2670,15 +2670,18 @@ async def export_dataset(dataset_id: str, request: dict = None):
     output_dir = Path(output_path).parent if output_path else Path("outputs") / dataset.get("job_id", job_id)
 
     # Determine file to return
-    if export_format == "zip":
-        # Create a zip of the output directory
-        zip_path = output_dir.parent / f"{output_dir.name}.zip"
-        if not zip_path.exists():
+    if export_format in ("zip", "tar.gz", "tar"):
+        # Create an archive of the output directory
+        archive_type = "zip" if export_format == "zip" else "gztar"
+        ext = "zip" if export_format == "zip" else "tar.gz"
+        archive_path = output_dir.parent / f"{output_dir.name}.{ext}"
+        if not archive_path.exists():
             import shutil
-            shutil.make_archive(str(zip_path.with_suffix("")), "zip", output_dir)
-        file_path = zip_path
-        media_type = "application/zip"
-        download_name = f"{dataset.get('name', output_dir.name)}.zip"
+            output_dir.mkdir(parents=True, exist_ok=True)
+            shutil.make_archive(str(archive_path).replace(f".{ext}", ""), archive_type, output_dir)
+        file_path = archive_path
+        media_type = "application/zip" if export_format == "zip" else "application/gzip"
+        download_name = f"{dataset.get('name', output_dir.name)}.{ext}"
     else:
         # Try the exact exported file
         candidate = output_dir / f"{output_dir.name}.{export_format}"
