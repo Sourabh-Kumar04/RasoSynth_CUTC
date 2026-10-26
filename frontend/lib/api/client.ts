@@ -1878,6 +1878,33 @@ dataset_samples_generated_total 4520`
     return this.request<string>(`/api/finetune/jobs/${jobId}/modelfile`)
   }
 
+  async getSignedDownloadUrl(
+    jobOrDatasetId: string,
+    options?: { ttlSeconds?: number; format?: string }
+  ): Promise<{
+    job_id: string
+    token: string
+    expires_at: number
+    expires_in_seconds: number
+    format: string
+    download_url: string
+  }> {
+    return this.request<{
+      job_id: string
+      token: string
+      expires_at: number
+      expires_in_seconds: number
+      format: string
+      download_url: string
+    }>(`/jobs/${jobOrDatasetId}/signed-url`, {
+      method: 'POST',
+      body: JSON.stringify({
+        ttl_seconds: options?.ttlSeconds ?? 3600,
+        format: options?.format || 'jsonl',
+      }),
+    })
+  }
+
   // ── Review API ────────────────────────────────────────────────────────────
 
   async getReviewQueue(params?: { status?: string; job_id?: string; page?: number; page_size?: number }) {

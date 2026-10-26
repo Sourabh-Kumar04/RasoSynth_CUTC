@@ -230,6 +230,31 @@ def _sign_approved_examples(query: str, examples: list[dict]) -> str:
     return hmac.new(shared_secret.encode(), payload.encode(), "sha256").hexdigest()
 
 
+def _sign_download_token(job_id: str, expires_at: int) -> str:
+    """Generate an HMAC-SHA256 signature for presigned dataset downloads."""
+    from core.config import get_settings
+    shared_secret = os.getenv("JWT_SECRET") or get_settings().jwt_secret or _csrf_manager._secret
+    payload = f"dataset_download:{job_id}:{expires_at}"
+    return hmac.new(shared_secret.encode(), payload.encode(), "sha256").hexdigest()
+
+
+def _verify_download_token(job_id: str, token: Optional[str], expires_at: Optional[int]) -> bool:
+    """Verify an ephemeral download token against expiration and HMAC signature."""
+    if not token or expires_at is None:
+        return False
+    try:
+        expires_int = int(expires_at)
+    except (ValueError, TypeError):
+        return False
+
+    # Check expiration (with 60-second grace window for clock drift)
+    if time.time() > (expires_int + 60):
+        return False
+
+    expected_sig = _sign_download_token(job_id, expires_int)
+    return hmac.compare_digest(expected_sig, str(token).strip())
+
+
 class CSRFMiddleware(BaseHTTPMiddleware):
     """Middleware that validates CSRF tokens on state-changing methods (POST, PUT, DELETE).
 
@@ -250,7 +275,7 @@ class CSRFMiddleware(BaseHTTPMiddleware):
 
         # Check if path should be skipped
         path = request.url.path
-        if path in self.SKIP_PATHS or path.startswith(("/auth/", "/docs", "/redoc", "/openapi")) or path.endswith(("/export", "/download")):
+        if path in self.SKIP_PATHS or path.startswith(("/auth/", "/docs", "/redoc", "/openapi")) or path.endswith(("/export", "/download", "/signed-url")):
             return await call_next(request)
 
         # Machine-to-machine API requests with Authorization: Bearer or X-API-Key are immune to CSRF
@@ -3049,18 +3074,129 @@ def _resolve_dynamic_disk_dataset(identifier: str) -> Optional[dict]:
     return None
 
 
+
+class SignedUrlRequest(BaseModel):
+    ttl_seconds: int = Field(3600, ge=60, le=86400, description="Token validity duration in seconds (60 to 86400)")
+    format: Optional[str] = Field("jsonl", description="Target export format: jsonl, csv, xml, parquet, json")
+
+
+class SignedUrlResponse(BaseModel):
+    job_id: str
+    token: str
+    expires_at: int
+    expires_in_seconds: int
+    format: str
+    download_url: str
+
+
+@app.post("/jobs/{job_id}/signed-url", response_model=SignedUrlResponse, tags=["Jobs"])
+@app.post("/datasets/{job_id}/signed-url", response_model=SignedUrlResponse, tags=["Datasets"])
+@app.get("/jobs/{job_id}/signed-url", response_model=SignedUrlResponse, tags=["Jobs"])
+@app.get("/datasets/{job_id}/signed-url", response_model=SignedUrlResponse, tags=["Datasets"])
+async def create_presigned_download_url(
+    job_id: str,
+    request: Request,
+    ttl_seconds: int = Query(3600, ge=60, le=86400, description="Token validity in seconds (default 3600)"),
+    format: Optional[str] = Query(None, description="Dataset format: jsonl, csv, xml, parquet, json"),
+):
+    """Generate an ephemeral HMAC-SHA256 presigned token for streaming private datasets."""
+    final_ttl = ttl_seconds
+    final_format = (format or "jsonl").lower().strip()
+
+    if request.method == "POST":
+        try:
+            raw_body = await request.body()
+            if raw_body:
+                body_data = json.loads(raw_body)
+                if "ttl_seconds" in body_data and isinstance(body_data["ttl_seconds"], int):
+                    final_ttl = max(60, min(86400, body_data["ttl_seconds"]))
+                if "format" in body_data and body_data["format"]:
+                    final_format = str(body_data["format"]).lower().strip()
+        except Exception:
+            pass
+
+    expires_at = int(time.time()) + final_ttl
+    token = _sign_download_token(job_id, expires_at)
+    download_path = f"/jobs/{job_id}/download?token={token}&expires={expires_at}&format={final_format}"
+
+    return SignedUrlResponse(
+        job_id=job_id,
+        token=token,
+        expires_at=expires_at,
+        expires_in_seconds=final_ttl,
+        format=final_format,
+        download_url=download_path,
+    )
+
+
 @app.get("/jobs/{job_id}/download", tags=["Jobs"])
 @app.get("/datasets/{job_id}/download", tags=["Datasets"])
 async def download_job_dataset(
     job_id: str,
     format: Optional[str] = Query(None, description="Export format: jsonl, csv, xml, parquet, json"),
+    token: Optional[str] = Query(None, description="Ephemeral HMAC-SHA256 presigned token"),
+    expires: Optional[int] = Query(None, description="Unix timestamp expiration of signed token"),
     request: Request = None,
 ):
     """Download the completed dataset file for a job or dataset ID.
     
     Dynamically negotiates formats (JSONL, CSV, XML, Parquet, JSON) and resolves
     data from local storage or dynamically streams from the database.
+    Requires an ephemeral presigned token, Bearer auth, or public benchmark preset.
     """
+    # 0. Authorization check: Ephemeral Presigned Token, Bearer Auth, or Public Benchmark
+    is_public_benchmark = (
+        job_id.lower() in {
+            "flagship", "flagship-preview", "indic-gst-benchmark",
+            "sarvam-2b-indic", "pubmed-contraindication", "itat-mca-tax"
+        }
+        or job_id.lower().startswith("flagship")
+    )
+
+    authorized = False
+    if token and expires is not None:
+        if _verify_download_token(job_id, token, expires):
+            authorized = True
+        else:
+            raise HTTPException(
+                status_code=403,
+                detail="Invalid or expired download token. Please request a new signed URL via POST /jobs/{job_id}/signed-url."
+            )
+    elif token or expires is not None:
+        raise HTTPException(
+            status_code=403,
+            detail="Both 'token' and 'expires' parameters are required for presigned dataset access."
+        )
+
+    if not authorized and request:
+        auth_header = request.headers.get("Authorization", "")
+        if auth_header.startswith("Bearer "):
+            token_str = auth_header[7:].strip()
+            try:
+                auth_mgr = get_auth_manager()
+                token_data = auth_mgr.verify_token(token_str)
+                if token_data:
+                    authorized = True
+            except Exception:
+                pass
+
+    if not authorized and is_public_benchmark:
+        authorized = True
+
+    if not authorized and os.getenv("ALLOW_ANONYMOUS_DOWNLOADS", "false").lower() == "true":
+        authorized = True
+
+    if not authorized:
+        raise HTTPException(
+            status_code=403,
+            detail=(
+                f"Unauthorized dataset access for '{job_id}'. "
+                "Private dataset streaming requires a valid HMAC-SHA256 presigned token "
+                "(?token=...&expires=...) or Bearer token header. "
+                "Generate an ephemeral signed URL via POST /jobs/{job_id}/signed-url."
+            ),
+        )
+
     # 1. Content negotiation for requested format
     req_format = (format or "").lower().strip()
     if not req_format and request:

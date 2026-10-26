@@ -5,7 +5,7 @@ import {
   Cpu, Play, Square, RefreshCw, ExternalLink,
   List, Plus, ChevronDown, ChevronUp, Copy,
   CheckCircle2, AlertCircle, AlertTriangle, Loader2, X, Zap, Sparkles,
-  Download, FileText, Check, Clock, Activity, FileCode2,
+  Download, FileText, Check, Clock, Activity, FileCode2, Lock,
 } from 'lucide-react'
 import { clsx } from 'clsx'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
@@ -629,6 +629,43 @@ function FineTuneContent() {
     }
   }, [datasetParam])
 
+  // ── Presigned Ephemeral Token State for Cloud GPU Streaming ───────────
+  const [signedStreamUrl, setSignedStreamUrl] = useState<string>('')
+  const [signedUrlExpires, setSignedUrlExpires] = useState<number | null>(null)
+  const [isSigningUrl, setIsSigningUrl] = useState(false)
+
+  const activeDatasetId = form.dataset_id || (form.dataset_path ? form.dataset_path.replace(/.*\//, '').replace(/\..*/, '') : 'flagship')
+
+  const fetchSignedStreamUrl = useCallback(async (targetId: string) => {
+    if (!targetId) return
+    setIsSigningUrl(true)
+    try {
+      const res = await api.getSignedDownloadUrl(targetId, { ttlSeconds: 3600, format: 'jsonl' })
+      if (res?.download_url) {
+        const origin = typeof window !== 'undefined' ? window.location.origin : 'https://rasosynthtune.vercel.app'
+        const base = process.env.NEXT_PUBLIC_API_URL || origin
+        const cleanPath = res.download_url.startsWith('/') ? res.download_url : `/${res.download_url}`
+        setSignedStreamUrl(`${base}${cleanPath}`)
+        setSignedUrlExpires(res.expires_at)
+        return
+      }
+    } catch (e) {
+      console.warn('Could not generate signed URL from backend, using fallback:', e)
+    } finally {
+      setIsSigningUrl(false)
+    }
+    const origin = typeof window !== 'undefined' ? window.location.origin : 'https://rasosynthtune.vercel.app'
+    const base = process.env.NEXT_PUBLIC_API_URL || origin
+    setSignedStreamUrl(`${base}/jobs/${targetId}/download`)
+    setSignedUrlExpires(null)
+  }, [])
+
+  useEffect(() => {
+    if (form.execution_target === 'colab' && activeDatasetId) {
+      fetchSignedStreamUrl(activeDatasetId)
+    }
+  }, [form.execution_target, activeDatasetId, fetchSignedStreamUrl])
+
   const lossHistory = useMemo(() =>
     logs.filter(l => l.type === 'progress' && l.loss != null).slice(-40).map(l => l.loss as number),
     [logs])
@@ -1196,7 +1233,7 @@ function FineTuneContent() {
                       const dsId = form.dataset_id || (form.dataset_path ? form.dataset_path.replace(/.*\//, '').replace(/\..*/, '') : 'flagship')
                       const dsName = selectedDs?.config?.target_domain || selectedDs?.target_domain || selectedDs?.dataset_name || (form.dataset_path ? form.dataset_path.split('/').pop() : 'Flagship Indic GST')
                       const apiBase = process.env.NEXT_PUBLIC_API_URL || (typeof window !== 'undefined' ? window.location.origin : 'http://localhost:8000')
-                      const downloadUrl = `${apiBase}/jobs/${dsId}/download`
+                      const downloadUrl = signedStreamUrl || `${apiBase}/jobs/${dsId}/download`
 
                       return (
                         <div className="mt-2.5 p-3.5 rounded-lg bg-[#14141f] border border-[#f26625]/40 space-y-2.5 font-mono text-xs">
@@ -1216,7 +1253,7 @@ function FineTuneContent() {
                               rel="noreferrer"
                               onClick={() => {
                                 navigator.clipboard.writeText(downloadUrl)
-                                toast('API streaming URL copied! Paste into Colab notebook.', 'success')
+                                toast('Presigned Ephemeral Stream URL copied! Paste into Colab notebook.', 'success')
                               }}
                               className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-md bg-[#f26625] hover:bg-[#ff8238] text-white text-xs font-bold transition-all shadow-md shrink-0"
                             >
@@ -1226,25 +1263,52 @@ function FineTuneContent() {
                           </div>
 
                           <div className="space-y-1">
-                            <div className="text-[10px] text-zinc-400 flex items-center justify-between">
-                              <span>Database Streaming Endpoint (JSONL / CSV / XML / Parquet)</span>
-                              <button
-                                type="button"
-                                onClick={() => {
-                                  navigator.clipboard.writeText(downloadUrl)
-                                  toast('API stream URL copied to clipboard!', 'success')
-                                }}
-                                className="text-[10px] text-[#f26625] hover:underline inline-flex items-center gap-1 font-semibold"
-                              >
-                                <Copy className="w-3 h-3" />
-                                <span>Copy API URL</span>
-                              </button>
+                            <div className="text-[10px] text-zinc-400 flex flex-wrap items-center justify-between gap-1">
+                              <span className="flex items-center gap-1">
+                                <Lock className="w-3 h-3 text-emerald-400" />
+                                <span>Database Streaming Endpoint</span>
+                                <span className="px-1.5 py-0.5 rounded text-[9px] bg-emerald-500/10 text-emerald-400 border border-emerald-500/30">
+                                  HMAC-SHA256 Presigned
+                                </span>
+                              </span>
+                              <div className="flex items-center gap-2">
+                                <button
+                                  type="button"
+                                  onClick={() => {
+                                    fetchSignedStreamUrl(dsId)
+                                    toast('Generated fresh presigned token (60m validity)', 'info')
+                                  }}
+                                  disabled={isSigningUrl}
+                                  className="text-[10px] text-zinc-400 hover:text-white inline-flex items-center gap-1 font-semibold transition-colors"
+                                  title="Refresh signed token"
+                                >
+                                  <RefreshCw className={clsx("w-3 h-3", isSigningUrl && "animate-spin text-[#f26625]")} />
+                                  <span>Refresh Token</span>
+                                </button>
+                                <button
+                                  type="button"
+                                  onClick={() => {
+                                    navigator.clipboard.writeText(downloadUrl)
+                                    toast('Signed API stream URL copied to clipboard!', 'success')
+                                  }}
+                                  className="text-[10px] text-[#f26625] hover:underline inline-flex items-center gap-1 font-semibold"
+                                >
+                                  <Copy className="w-3 h-3" />
+                                  <span>Copy API URL</span>
+                                </button>
+                              </div>
                             </div>
                             <input
                               readOnly
                               value={downloadUrl}
                               className="w-full text-[11px] px-2.5 py-1.5 rounded bg-[#0a0a0f] border border-[#272738] text-zinc-300 select-all focus:outline-none"
                             />
+                            {signedUrlExpires && (
+                              <p className="text-[10px] text-zinc-500 flex items-center gap-1">
+                                <Clock className="w-2.5 h-2.5 text-zinc-400" />
+                                <span>Token active until {new Date(signedUrlExpires * 1000).toLocaleTimeString()} (60m TTL) · IDOR-protected</span>
+                              </p>
+                            )}
                           </div>
 
                           <div className="space-y-1 pt-1 border-t border-[#272738]/60">

@@ -16,6 +16,18 @@ const nextConfig = {
       bodySizeLimit: '10mb',
     },
   },
+  async rewrites() {
+    return [
+      {
+        source: '/jobs/:path*',
+        destination: '/api/proxy/jobs/:path*',
+      },
+      {
+        source: '/datasets/:path*',
+        destination: '/api/proxy/datasets/:path*',
+      },
+    ]
+  },
   webpack: (config) => {
     config.resolve.alias['@'] = path.resolve(__dirname)
     config.resolve.modules = [
