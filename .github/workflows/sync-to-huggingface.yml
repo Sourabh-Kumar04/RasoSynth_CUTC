@@ -28,5 +28,27 @@ jobs:
           if [[ "$SPACE" != *"/"* ]]; then
             SPACE="Sourabh-Kumar04/$SPACE"
           fi
+          echo "Preparing Hugging Face Space metadata for $SPACE..."
+
+          # Prepend required Hugging Face Space frontmatter to README.md
+          cat << 'EOF' > /tmp/hf_frontmatter.txt
+---
+title: RasoSynthTune
+emoji: ⚡
+colorFrom: red
+colorTo: yellow
+sdk: docker
+app_port: 8000
+pinned: false
+---
+
+EOF
+          cat /tmp/hf_frontmatter.txt README.md > /tmp/README_HF.md
+          mv /tmp/README_HF.md README.md
+
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git commit -am "chore(hf): attach Space configuration metadata"
+
           echo "Syncing repository to Hugging Face Space: $SPACE..."
-          git push --force https://oauth2:$HF_TOKEN@huggingface.co/spaces/$SPACE master:main
+          git push --force https://oauth2:$HF_TOKEN@huggingface.co/spaces/$SPACE HEAD:main
