@@ -4,7 +4,7 @@ import { useState, useEffect, useRef, useCallback, useMemo, Suspense } from 'rea
 import {
   Cpu, Play, Square, RefreshCw, ExternalLink,
   List, Plus, ChevronDown, ChevronUp, Copy,
-  CheckCircle2, AlertCircle, Loader2, X, Zap, Sparkles,
+  CheckCircle2, AlertCircle, AlertTriangle, Loader2, X, Zap, Sparkles,
   Download, FileText, Check, Clock, Activity, FileCode2,
 } from 'lucide-react'
 import { clsx } from 'clsx'
@@ -34,6 +34,8 @@ interface SupportedModel {
 interface FTJob {
   id: string
   status: 'pending' | 'running' | 'completed' | 'failed' | 'cancelled'
+  is_simulated?: boolean
+  weights_are_placeholders?: boolean
   base_model: string; output_model_name: string; progress: number
   current_epoch: number; total_epochs: number; train_loss: number | null
   eval_loss: number | null; error: string | null; output_path: string | null
@@ -45,9 +47,10 @@ interface LogLine {
   type: string; epoch?: number; step?: number; loss?: number
   eval_loss?: number; progress?: number; message?: string
   path?: string; url?: string; output_path?: string; timestamp: string
+  is_simulated?: boolean; execution_mode?: string
 }
 
-interface Toast { id: number; message: string; variant: 'success' | 'error' | 'info' }
+interface Toast { id: number; message: string; variant: 'success' | 'error' | 'info' | 'warning' }
 
 // ── Toast hook ────────────────────────────────────────────────────────────────
 
@@ -152,7 +155,9 @@ function LogRow({ line }: { line: LogLine }) {
   switch (line.type) {
     case 'progress':   text = `epoch ${line.epoch}  step ${line.step}  loss=${line.loss}  (${line.progress}%)`; break
     case 'eval':       text = `eval_loss=${line.eval_loss}  @ epoch ${line.epoch}`; break
-    case 'completed':  text = `✓ done → ${line.output_path}`; break
+    case 'completed':  text = line.is_simulated
+      ? `⚠ SIMULATED done → ${line.output_path || ''} (placeholder weights)`
+      : `✓ done → ${line.output_path}`; break
     case 'pushed':     text = `✓ pushed → ${line.url}`; break
     case 'saved':      text = `✓ saved → ${line.path}`; break
     case 'error':      text = `✗ ${line.message}`; break
@@ -376,14 +381,20 @@ function DetailPane({ job, logs, lossHistory, onCancel, onCopy, onReconnect, log
                 <Sparkles className="w-4 h-4 text-[#f26625]" />
                 Fine-Tuned Model Deliverables
               </CardTitle>
-              <span className="text-[10px] font-mono text-emerald-400 font-bold px-2 py-0.5 rounded bg-emerald-950/40 border border-emerald-500/30">
-                Ready for Production
+              <span className={`text-[10px] font-mono font-bold px-2 py-0.5 rounded border ${
+                job.is_simulated || job.weights_are_placeholders
+                  ? 'text-amber-400 bg-amber-950/40 border-amber-500/30'
+                  : 'text-emerald-400 bg-emerald-950/40 border-emerald-500/30'
+              }`}>
+                {job.is_simulated || job.weights_are_placeholders ? 'Simulated / Placeholder Weights' : 'Ready for Production'}
               </span>
             </div>
           </CardHeader>
           <CardContent className="p-4 space-y-3">
             <p className="text-xs text-[#94a3b8]">
-              Training converged successfully. Weights, adapter parameters, and cryptographic DBOM verification seals have been compiled into self-contained deployable artifacts.
+              {job.is_simulated || job.weights_are_placeholders
+                ? 'This run used a simulated execution path. Packaged adapter/GGUF files are demo placeholders, not GPU-trained model weights.'
+                : 'Training converged successfully. Weights, adapter parameters, and cryptographic DBOM verification seals have been compiled into self-contained deployable artifacts.'}
             </p>
 
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5 pt-1">
@@ -602,7 +613,7 @@ function FineTuneContent() {
     load_in_4bit: true, bf16: true,
     push_to_hub: false, hf_token: '', hf_org: '',
     chat_template: 'alpaca', output_dir: 'outputs/finetune',
-    execution_target: 'colab',
+    execution_target: 'local',
     webhook_url: '',
   })
 
@@ -740,9 +751,21 @@ function FineTuneContent() {
             )
           }
           if (ev.type === 'completed') {
-            setSelectedJob(p => p ? { ...p, status: 'completed', progress: 100 } : p)
+            const simulated = Boolean(ev.is_simulated || ev.weights_are_placeholders)
+            setSelectedJob(p => p ? {
+              ...p,
+              status: 'completed',
+              progress: 100,
+              is_simulated: simulated,
+              weights_are_placeholders: Boolean(ev.weights_are_placeholders),
+            } : p)
             fetchJobs()
-            toast('Training completed!', 'success')
+            toast(
+              simulated
+                ? 'Simulated fine-tune finished — placeholder weights only'
+                : 'Training completed!',
+              simulated ? 'warning' : 'success',
+            )
           }
           if (ev.type === 'error') {
             setSelectedJob(p => p ? { ...p, status: 'failed', error: ev.message } : p)
@@ -856,9 +879,11 @@ function FineTuneContent() {
             t.variant === 'success' && 'bg-emerald-950/80 text-white border-emerald-500/40',
             t.variant === 'error'   && 'bg-rose-950/80 text-white border-rose-500/40',
             t.variant === 'info'    && 'bg-[#12121a] text-white border-[#272738]',
+            t.variant === 'warning' && 'bg-amber-950/80 text-amber-100 border-amber-500/40',
           )}>
             {t.variant === 'success' && <CheckCircle2 className="h-3.5 w-3.5 shrink-0 text-[#10b981]" />}
             {t.variant === 'error'   && <AlertCircle className="h-3.5 w-3.5 shrink-0 text-rose-400" />}
+            {t.variant === 'warning' && <AlertTriangle className="h-3.5 w-3.5 shrink-0 text-amber-400" />}
             {t.message}
           </div>
         ))}
@@ -1154,12 +1179,35 @@ function FineTuneContent() {
                       onValueChange={v => f('execution_target', v)}>
                       <SelectTrigger className="rounded-md border-[#272738] bg-[#0a0a0f] text-white text-xs font-mono"><SelectValue /></SelectTrigger>
                       <SelectContent className="bg-[#12121a] border-[#272738] text-white text-xs font-mono">
-                        <SelectItem value="colab">Google Colab (Automated Cloud GPU — Free &amp; Zero-Setup)</SelectItem>
-                        <SelectItem value="local">Local Hardware (PyTorch / Unsloth)</SelectItem>
-                        <SelectItem value="modal">Modal Serverless GPU (NVIDIA A10G)</SelectItem>
-                        <SelectItem value="runpod">RunPod Cloud GPU (A40 / H100)</SelectItem>
+                        <SelectItem value="local">Local Hardware (real PEFT / Unsloth)</SelectItem>
+                        <SelectItem value="colab">Colab bridge (SIMULATED demo placeholders)</SelectItem>
+                        <SelectItem value="modal">Modal (SIMULATED stub — not a real GPU job)</SelectItem>
+                        <SelectItem value="runpod">RunPod (SIMULATED stub — not a real GPU job)</SelectItem>
                       </SelectContent>
                     </Select>
+                    {form.execution_target !== 'local' && (
+                      <div className="mt-2 space-y-2">
+                        <p className="text-[10px] font-mono text-amber-400/90 leading-relaxed border border-amber-500/30 bg-amber-950/20 rounded-md px-2 py-1.5">
+                          Demo path: progress and downloadable adapters are placeholders, not GPU-trained weights. Choose Local for real training.
+                        </p>
+                        {form.execution_target === 'colab' && (
+                          <div className="p-2.5 rounded-md bg-[#161622] border border-[#f26625]/30 flex flex-col sm:flex-row sm:items-center justify-between gap-2 text-xs font-mono">
+                            <span className="text-zinc-300">
+                              <strong className="text-[#f26625]">Real GPU Training:</strong> Open our 1-click Unsloth notebook in Google Colab.
+                            </span>
+                            <a
+                              href="https://colab.research.google.com/github/Sourabh-Kumar04/RasoSynth_CUTC/blob/master/finetuning/RasoSynthTune_FineTuning_Colab.ipynb"
+                              target="_blank"
+                              rel="noreferrer"
+                              className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded bg-[#f26625]/20 hover:bg-[#f26625]/30 text-[#f26625] hover:text-white border border-[#f26625]/40 transition-colors shrink-0"
+                            >
+                              <ExternalLink className="w-3.5 h-3.5" />
+                              <span>Open in Colab</span>
+                            </a>
+                          </div>
+                        )}
+                      </div>
+                    )}
                   </div>
                 </div>
               </Section>
