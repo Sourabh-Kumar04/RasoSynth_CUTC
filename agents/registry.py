@@ -206,6 +206,7 @@ class AgentRegistryInitializer:
         from agents.agents.quality import QualityEvaluationAgent, DedupAgent, ToxicityAgent
         from agents.agents.synthetic import SyntheticGenerationAgent, ValidationAgent
         from agents.agents.optimization import FineTuningAgent, CurriculumAgent
+        from agents.agents.curation import ContextAgent, HumanArbiterAgent
         from agents.agents.infrastructure import (
             GPUSchedulingAgent,
             StorageOptimizationAgent,
@@ -323,6 +324,22 @@ class AgentRegistryInitializer:
             "Creates learning progression for datasets",
             [AgentCapability.TEXT_PROCESSING],
             lambda c: CurriculumAgent(c),
+        )
+
+        AgentRegistry.register(
+            AgentType.CONTEXT,
+            "Context Agent",
+            "Builds bounded evidence packs with stable source references",
+            [AgentCapability.TEXT_PROCESSING, AgentCapability.REASONING],
+            lambda c: ContextAgent(c),
+        )
+
+        AgentRegistry.register(
+            AgentType.HUMAN_ARBITER,
+            "Human Arbiter Agent",
+            "Routes uncertain samples to the authoritative human review queue",
+            [AgentCapability.VALIDATION, AgentCapability.QUALITY_SCORING],
+            lambda c: HumanArbiterAgent(c),
         )
 
         AgentRegistry.register(

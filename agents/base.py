@@ -33,6 +33,7 @@ class AgentType(Enum):
     LANGUAGE_DETECTION = "language_detection"
     SEMANTIC_RECONSTRUCTION = "semantic_reconstruction"
     KNOWLEDGE_GRAPH = "knowledge_graph"
+    CONTEXT = "context"
 
     # Quality
     QUALITY_EVALUATION = "quality_evaluation"
@@ -43,6 +44,7 @@ class AgentType(Enum):
     SYNTHETIC_GENERATION = "synthetic_generation"
     VALIDATION = "validation"
     CONSENSUS = "consensus"
+    HUMAN_ARBITER = "human_arbiter"
 
     # Optimization
     FINE_TUNING = "fine_tuning"

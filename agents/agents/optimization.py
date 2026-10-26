@@ -101,12 +101,17 @@ class FineTuningAgent(Agent):
 
             optimized.append(opt_sample)
 
-        format_compliance = 0.95
+        format_compliance = (
+            sum(bool(sample.get("input")) and bool(sample.get("output")) for sample in optimized)
+            / max(len(optimized), 1)
+        )
 
         return {
             "samples": optimized,
             "format": "chat" if target_model == "general" else "code_completion",
-            "augmentations": ["back_translation", "paraphrasing"] if level == "advanced" else [],
+            # Transformations must be performed by an explicit augmentation
+            # provider.  Listing them here without running one was misleading.
+            "augmentations": [],
             "metadata": {
                 "target_model": target_model,
                 "optimization_level": level,
@@ -192,10 +197,17 @@ class CurriculumAgent(Agent):
         strategy: str
     ) -> Dict[str, Any]:
         """Create a curriculum for the samples."""
-        sorted_samples = sorted(
-            samples,
-            key=lambda s: hash(str(s)) % 100
-        )
+        def difficulty(sample: Any) -> tuple[float, int]:
+            if isinstance(sample, dict):
+                metadata = sample.get("metadata") or {}
+                explicit = metadata.get("difficulty", sample.get("difficulty"))
+                try:
+                    return (float(explicit), len(str(sample.get("instruction") or sample.get("input") or sample.get("content") or "")))
+                except (TypeError, ValueError):
+                    return (0.0, len(str(sample.get("instruction") or sample.get("input") or sample.get("content") or "")))
+            return (0.0, len(str(sample)))
+
+        sorted_samples = sorted(samples, key=difficulty)
 
         if strategy == "progressive":
             num_stages = 5
@@ -218,7 +230,7 @@ class CurriculumAgent(Agent):
                 "weight": 1.0 / (i + 1),
             })
 
-        difficulty_order = [s["id"] for s in sorted_samples[:100]]
+        difficulty_order = [str(s.get("id", index)) if isinstance(s, dict) else str(index) for index, s in enumerate(sorted_samples[:100])]
 
         return {
             "stages": stages,

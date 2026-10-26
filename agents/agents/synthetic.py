@@ -5,7 +5,7 @@ Agents for generating synthetic training data and validating generated
 content for quality and safety.
 """
 
-from typing import Dict, List, Optional, Any
+from typing import Dict, List, Optional, Any, Callable, Awaitable
 from datetime import datetime, timezone
 
 from agents.base import Agent, AgentConfig, AgentType, AgentState, TaskResult, AgentContext
@@ -36,12 +36,13 @@ class SyntheticGenerationAgent(Agent):
 
         try:
             task_input = task if isinstance(task, dict) else {"config": task}
-            config = task_input.get("config", {})
+            config = {**task_input.get("config", {}), **task_input}
             count = config.get("count", 100)
             template = config.get("template", {})
             domain = config.get("domain", "general")
+            generator = config.get("generator")
 
-            generated = await self._generate_synthetic(count, template, domain)
+            generated = await self._generate_synthetic(count, template, domain, generator, context)
 
             self._generation_stats["total_generated"] += len(generated)
             self._generation_history.append({
@@ -61,7 +62,7 @@ class SyntheticGenerationAgent(Agent):
                     "count": len(generated),
                     "quality_metrics": await self._assess_quality(generated),
                 },
-                confidence=0.82,
+                confidence=0.82 if generated else 0.0,
                 execution_time_ms=execution_time,
                 artifacts={"synthetic_samples": generated},
                 metrics={
@@ -85,34 +86,47 @@ class SyntheticGenerationAgent(Agent):
         self,
         count: int,
         template: Dict,
-        domain: str
+        domain: str,
+        generator: Optional[Callable[..., Awaitable[List[Dict[str, Any]]]]],
+        context: AgentContext,
     ) -> List[Dict[str, Any]]:
-        """Generate synthetic data samples."""
-        samples = []
+        """Delegate generation to a configured provider; never fabricate samples.
 
-        for i in range(min(count, 1000)):
-            sample = {
-                "id": f"synth_{domain}_{i}",
-                "content": f"Synthetic content for {domain} sample {i}",
-                "label": i % 10,
-                "metadata": {
-                    "source": "synthetic",
-                    "domain": domain,
-                    "generated_at": datetime.now(timezone.utc).isoformat(),
-                }
-            }
-            samples.append(sample)
+        The application pipeline owns the model/router invocation.  This role
+        enforces the agent contract and records provenance around that real
+        output.  It intentionally returns no samples when no generator is
+        supplied, so an unavailable provider cannot look like a successful run.
+        """
+        if not callable(generator):
+            return []
+
+        generated = await generator(
+            count=min(max(int(count), 0), 1000),
+            template=template,
+            domain=domain,
+            context=context,
+        )
+        samples = [sample for sample in (generated or []) if isinstance(sample, dict)]
+        for sample in samples:
+            metadata = sample.setdefault("metadata", {})
+            metadata.setdefault("source", "synthetic")
+            metadata.setdefault("domain", domain)
+            metadata.setdefault("generated_at", datetime.now(timezone.utc).isoformat())
 
         self._generation_stats["successful"] += len(samples)
         return samples
 
     async def _assess_quality(self, samples: List[Dict]) -> Dict[str, float]:
         """Assess quality of generated samples."""
+        if not samples:
+            return {"diversity_score": 0.0, "coherence_score": 0.0, "novelty_score": 0.0, "safety_score": 0.0}
+        unique = len({str(sample.get("content") or sample.get("instruction") or sample) for sample in samples})
+        complete = sum(bool(sample.get("instruction") or sample.get("content")) and bool(sample.get("response") or sample.get("output")) for sample in samples)
         return {
-            "diversity_score": 0.85,
-            "coherence_score": 0.82,
-            "novelty_score": 0.78,
-            "safety_score": 0.95,
+            "diversity_score": round(unique / len(samples), 3),
+            "coherence_score": round(complete / len(samples), 3),
+            "novelty_score": 0.0,  # Requires a reference corpus; do not invent it.
+            "safety_score": 0.0,  # Requires the configured safety reviewer.
         }
 
     async def cleanup(self) -> None:
@@ -198,8 +212,18 @@ class ValidationAgent(Agent):
         recommendations = []
 
         for sample in samples[:1000]:
+            metadata = sample.get("metadata", {}) if isinstance(sample, dict) else {}
             for vtype in validation_types:
-                score = (hash(str(sample) + vtype) % 100) / 100
+                if vtype == "quality":
+                    score = 1.0 if isinstance(sample, dict) and (sample.get("instruction") or sample.get("input")) and (sample.get("response") or sample.get("output")) else 0.0
+                elif vtype == "safety":
+                    # Safety is passable only when a real upstream review has
+                    # left an explicit result.  Unknown is not silently safe.
+                    score = float(metadata.get("safety_score", 0.0) or 0.0)
+                elif vtype == "consistency":
+                    score = float(metadata.get("quality_score", 0.0) or 0.0)
+                else:
+                    score = 0.0
 
                 if score >= 0.7:
                     results[vtype]["passed"] += 1
@@ -300,7 +324,19 @@ class ConsensusAgent(Agent):
         disagreed = []
 
         for i, sample in enumerate(samples[:1000]):
-            votes = [hash(str(sample) + str(m)) % 2 for m in range(num_models)]
+            metadata = sample.get("metadata", {}) if isinstance(sample, dict) else {}
+            votes = metadata.get("review_votes") or (sample.get("review_votes") if isinstance(sample, dict) else None)
+            votes = [int(bool(vote)) for vote in (votes or [])]
+            # Missing independent votes is a disagreement requiring review, not
+            # a fabricated consensus.
+            if len(votes) < num_models:
+                disagreed.append({
+                    "sample_id": i,
+                    "votes": votes,
+                    "disagreement_level": 1.0,
+                    "reason": "insufficient_independent_votes",
+                })
+                continue
             agreement = votes.count(1) / len(votes)
 
             if agreement >= threshold or (1 - agreement) >= threshold:

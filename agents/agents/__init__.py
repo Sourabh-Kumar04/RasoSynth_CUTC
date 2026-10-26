@@ -19,6 +19,7 @@ from agents.agents.extraction import WebCrawlerAgent, OCRAgent, MultimodalAgent
 from agents.agents.quality import QualityEvaluationAgent, DedupAgent, ToxicityAgent
 from agents.agents.synthetic import SyntheticGenerationAgent, ValidationAgent, ConsensusAgent
 from agents.agents.optimization import FineTuningAgent, CurriculumAgent
+from agents.agents.curation import ContextAgent, HumanArbiterAgent
 from agents.agents.infrastructure import GPUSchedulingAgent, StorageOptimizationAgent, DistributionAgent
 
 __all__ = [
@@ -37,6 +38,8 @@ __all__ = [
     "ConsensusAgent",
     "FineTuningAgent",
     "CurriculumAgent",
+    "ContextAgent",
+    "HumanArbiterAgent",
     "GPUSchedulingAgent",
     "StorageOptimizationAgent",
     "DistributionAgent",

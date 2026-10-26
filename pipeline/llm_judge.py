@@ -35,7 +35,7 @@ DEFAULT_PROVIDERS = [
     "nvidia_nim",
     "openai",
     "anthropic",
-    "gemini",
+    "google_gemini",
     "openrouter",
 ]
 
@@ -144,16 +144,20 @@ class JudgeCache:
         self._hits = 0
         self._misses = 0
 
-    def _key(self, instruction: str, response: str, source: str = "") -> str:
+    def _key(
+        self, instruction: str, response: str, source: str = "", provider: str = ""
+    ) -> str:
         """Content-addressed cache key."""
-        content = f"{instruction}\n{response}\n{source}"
+        # Provider is part of the key: a reviewer ensemble needs independent
+        # votes, not a cached response from whichever provider answered first.
+        content = f"{provider}\n{instruction}\n{response}\n{source}"
         return hashlib.sha256(content.encode()).hexdigest()[:32]
 
     async def get(
-        self, instruction: str, response: str, source: str = ""
+        self, instruction: str, response: str, source: str = "", provider: str = ""
     ) -> Optional[JudgeResult]:
         """Try to get cached result."""
-        key = self._key(instruction, response, source)
+        key = self._key(instruction, response, source, provider)
         now = time.time()
 
         # Tier 1: Memory cache
@@ -258,27 +262,26 @@ class LLMJudge:
             )
 
         # Check cache
-        cached = await self.cache.get(instruction, response, source)
-        if cached:
-            return cached
-
-        # Build prompt
-        source_block = f"Source material:\n{source}\n\n" if source else ""
-        prompt = JUDGE_PROMPT_TEMPLATE.format(
-            instruction=instruction[:1500],
-            source_block=source_block,
-            response=response[:2000],
-        )
-
         # Try providers in order
         for provider_name in self.providers:
+            cached = await self.cache.get(instruction, response, source, provider_name)
+            if cached:
+                return cached
+
+            # Build prompt only when an uncached provider needs a verdict.
+            source_block = f"Source material:\n{source}\n\n" if source else ""
+            prompt = JUDGE_PROMPT_TEMPLATE.format(
+                instruction=instruction[:1500],
+                source_block=source_block,
+                response=response[:2000],
+            )
             for attempt in range(self.max_retries):
                 try:
                     result = await self._call_provider(
                         provider_name, prompt, instruction, response
                     )
                     # Cache and return
-                    key = self.cache._key(instruction, response, source)
+                    key = self.cache._key(instruction, response, source, provider_name)
                     await self.cache.set(key, result)
                     self._costs[provider_name] += result.latency_ms
                     self._calls[provider_name] += 1
@@ -302,14 +305,19 @@ class LLMJudge:
         if not self.router:
             raise RuntimeError("No router configured")
 
-        # Route to provider
+        # Bind each jury member to its declared provider. Without this the
+        # router's default ordering could make a "multi-provider" panel ask
+        # the same model repeatedly.
         result = await self.router.route(
             TaskType.QUALITY_CHECK,
             prompt,
             temperature=0.1,  # Low temperature for consistency
             max_tokens=200,
+            preferred_providers=[provider_name],
             response_format={"type": "json_object"},  # Force JSON output
         )
+        if result is None:
+            raise RuntimeError(f"Provider {provider_name} returned no response")
 
         # Parse JSON response
         content = result.content.strip()

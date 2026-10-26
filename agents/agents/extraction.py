@@ -35,12 +35,12 @@ class WebCrawlerAgent(Agent):
 
         try:
             task_input = task if isinstance(task, dict) else {"urls": [task]}
-            urls = task_input.get("urls", [])
-            max_depth = task_input.get("max_depth", 2)
-            patterns = task_input.get("include_patterns", [".*"])
-            filters = task_input.get("exclude_patterns", [])
-
-            results = await self._crawl_urls(urls, max_depth, patterns, filters)
+            # Fetching belongs to pipeline.extraction, which has timeout,
+            # robots, and provenance policy enforcement.  This agent adapts its
+            # real page artifacts; it never represents placeholder text as a
+            # crawl result.
+            pages = task_input.get("pages") or task_input.get("extracted_pages") or context.extracted_data
+            results = await self._crawl_urls(pages)
 
             execution_time = (datetime.now(timezone.utc) - start_time).total_seconds() * 1000
 
@@ -73,41 +73,40 @@ class WebCrawlerAgent(Agent):
         finally:
             self.update_state(AgentState.IDLE)
 
-    async def _crawl_urls(
-        self,
-        urls: List[str],
-        max_depth: int,
-        include_patterns: List[str],
-        exclude_patterns: List[str]
-    ) -> Dict[str, Any]:
-        """Crawl URLs and extract content."""
+    async def _crawl_urls(self, pages: List[Dict[str, Any]]) -> Dict[str, Any]:
+        """Normalize page artifacts emitted by the canonical crawler."""
         crawled = []
         failed = []
         content = []
         bytes_total = 0
         max_depth_found = 0
 
-        for url in urls[:100]:  # Limit for safety
+        for page in (pages or [])[:100]:  # Limit for safety
+            if not isinstance(page, dict):
+                failed.append(str(page))
+                continue
+            url = str(page.get("url") or page.get("source_url") or "").strip()
+            text = str(page.get("text") or page.get("content") or "").strip()
+            if not url or not text:
+                failed.append(url or "missing_url_or_content")
+                continue
             if url in self._visited_urls:
                 continue
 
             self._visited_urls.add(url)
-
-            try:
-                page_content = {
-                    "url": url,
-                    "title": f"Title for {url}",
-                    "text": f"Extracted content from {url}",
-                    "links": [f"{url}/page{i}" for i in range(5)],
-                    "metadata": {"crawled_at": datetime.now(timezone.utc).isoformat()},
-                }
-
-                content.append(page_content)
-                crawled.append(url)
-                bytes_total += len(str(page_content))
-
-            except Exception:
-                failed.append(url)
+            page_content = {
+                "url": url,
+                "title": str(page.get("title") or ""),
+                "text": text,
+                "links": list(page.get("links") or []),
+                "metadata": {
+                    **(page.get("metadata") or {}),
+                    "adapted_at": datetime.now(timezone.utc).isoformat(),
+                },
+            }
+            content.append(page_content)
+            crawled.append(url)
+            bytes_total += len(text.encode("utf-8"))
 
         self._crawl_stats["pages_crawled"] += len(crawled)
         self._crawl_stats["pages_failed"] += len(failed)
@@ -155,7 +154,7 @@ class OCRAgent(Agent):
 
         try:
             task_input = task if isinstance(task, dict) else {"images": [task]}
-            images = task_input.get("images", [])
+            images = task_input.get("ocr_results") or task_input.get("images", [])
             language = task_input.get("language", "en")
             enhance = task_input.get("enhance", True)
 
@@ -194,7 +193,7 @@ class OCRAgent(Agent):
 
     async def _process_images(
         self,
-        images: List[str],
+        images: List[Any],
         language: str,
         enhance: bool
     ) -> Dict[str, Any]:
@@ -203,17 +202,17 @@ class OCRAgent(Agent):
         texts = []
         confidences = []
 
-        for img in images[:50]:  # Limit for safety
-            try:
-                text = f"OCR extracted text from {img}"
-                confidence = 0.85 + (hash(img) % 15) / 100
-
-                processed.append(img)
-                texts.append(text)
-                confidences.append(confidence)
-
-            except Exception:
-                pass
+        for image in images[:50]:  # Limit for safety
+            # OCR engines belong to the extraction provider.  Preserve only
+            # their actual results rather than fabricating transcriptions.
+            if not isinstance(image, dict):
+                continue
+            text = str(image.get("text") or "").strip()
+            if not text:
+                continue
+            processed.append(image.get("image") or image.get("path") or image.get("url") or "unknown")
+            texts.append(text)
+            confidences.append(float(image.get("confidence", 0.0) or 0.0))
 
         self._ocr_stats["pages_processed"] += len(processed)
         self._ocr_stats["chars_extracted"] += sum(len(t) for t in texts)
@@ -298,7 +297,7 @@ class MultimodalAgent(Agent):
 
     async def _extract_multimodal(
         self,
-        documents: List[str],
+        documents: List[Any],
         extract_tables: bool,
         extract_images: bool
     ) -> Dict[str, Any]:
@@ -309,34 +308,27 @@ class MultimodalAgent(Agent):
         images = []
         structured = []
 
-        for doc in documents[:50]:
-            try:
-                docs_processed.append(doc)
-
-                texts.append(f"Text content from {doc}")
-
-                if extract_tables:
-                    tables.append({
-                        "source": doc,
-                        "headers": ["Col1", "Col2", "Col3"],
-                        "rows": [["a", "b", "c"], ["d", "e", "f"]],
-                    })
-
-                if extract_images:
-                    images.append({
-                        "source": doc,
-                        "type": "embedded",
-                        "count": 2,
-                    })
-
-                structured.append({
-                    "document_id": doc,
-                    "type": "pdf" if ".pdf" in doc else "html",
-                    "page_count": 10,
-                })
-
-            except Exception:
-                pass
+        for document in documents[:50]:
+            # This is an adapter for a real multimodal extractor's artifacts.
+            # Absence of such artifacts is represented as zero extraction.
+            if not isinstance(document, dict):
+                continue
+            document_id = document.get("id") or document.get("url") or document.get("path")
+            if not document_id:
+                continue
+            docs_processed.append(document_id)
+            text = str(document.get("text") or "").strip()
+            if text:
+                texts.append(text)
+            if extract_tables:
+                tables.extend(table for table in (document.get("tables") or []) if isinstance(table, dict))
+            if extract_images:
+                images.extend(image for image in (document.get("images") or []) if isinstance(image, dict))
+            structured.append({
+                "document_id": document_id,
+                "type": document.get("type") or "unknown",
+                "page_count": document.get("page_count"),
+            })
 
         self._extraction_stats["documents_processed"] += len(docs_processed)
         self._extraction_stats["tables_extracted"] += len(tables)

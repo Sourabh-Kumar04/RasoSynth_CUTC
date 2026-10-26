@@ -37,6 +37,7 @@ router = APIRouter(prefix="/api/finetune", tags=["finetune"])
 class CreateFineTuneJobRequest(BaseModel):
     dataset_path: str = Field("", description="Path to JSONL training file")
     dataset_id: str = Field("", description="DB Dataset ID (output_path resolved automatically)")
+    dataset_version_id: str = Field("", description="Immutable approved dataset version ID")
 
     base_model: str = Field("HuggingFaceTB/SmolLM2-1.7B-Instruct")
     output_model_name: str = ""
@@ -64,8 +65,8 @@ class CreateFineTuneJobRequest(BaseModel):
 
     @model_validator(mode="after")
     def check_dataset_source(self) -> "CreateFineTuneJobRequest":
-        if not self.dataset_path and not self.dataset_id:
-            raise ValueError("Either dataset_path or dataset_id must be provided")
+        if not self.dataset_path and not self.dataset_id and not self.dataset_version_id:
+            raise ValueError("Provide dataset_version_id, dataset_id, or dataset_path")
         if self.fp16 and self.bf16:
             raise ValueError("fp16 and bf16 cannot both be True")
         return self
@@ -102,6 +103,24 @@ async def create_finetune_job(
     db=Depends(_db),
 ):
     payload = body.model_dump()
+
+    # Preferred path: resolve an immutable version. This prevents a training
+    # job from silently consuming a changed "latest" export.
+    version_id = str(payload.get("dataset_version_id") or "").strip()
+    if version_id:
+        get_version = getattr(db, "get_dataset_version", None) or (
+            getattr(db.db, "get_dataset_version", None) if hasattr(db, "db") else None
+        )
+        version = await get_version(version_id) if get_version else None
+        if version is None:
+            raise HTTPException(status_code=404, detail=f"Dataset version '{version_id}' was not found")
+        if (version.get("status") if isinstance(version, dict) else getattr(version, "status", None)) != "approved":
+            raise HTTPException(status_code=409, detail="Only approved immutable dataset versions may be trained")
+        version_path = version.get("output_path") if isinstance(version, dict) else getattr(version, "output_path", None)
+        if not version_path or not os.path.isfile(version_path):
+            raise HTTPException(status_code=409, detail="Dataset version artifact is unavailable; export it again before training")
+        payload["dataset_path"] = version_path
+        payload["dataset_id"] = version_id
 
     # Rate limiting: max active queued jobs check
     if manager:

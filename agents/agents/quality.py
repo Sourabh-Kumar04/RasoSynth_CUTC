@@ -7,6 +7,9 @@ potentially harmful or toxic content.
 
 from typing import Dict, List, Optional, Any
 from datetime import datetime, timezone
+import hashlib
+import json
+import re
 
 from agents.base import Agent, AgentConfig, AgentType, AgentState, TaskResult, AgentContext
 
@@ -94,8 +97,11 @@ class QualityEvaluationAgent(Agent):
         for i, sample in enumerate(samples[:1000]):
             sample_scores = {}
 
+            text = self._sample_text(sample)
+            metadata = sample.get("metadata", {}) if isinstance(sample, dict) else {}
+            provenance = metadata.get("provenance", {}) if isinstance(metadata, dict) else {}
             for dim in dimensions:
-                score = 0.5 + (hash(str(sample) + dim) % 50) / 100
+                score = self._score_dimension(dim, text, sample, provenance)
                 threshold = self._quality_thresholds.get(dim, 0.7)
                 sample_scores[dim] = {
                     "score": score,
@@ -103,7 +109,7 @@ class QualityEvaluationAgent(Agent):
                     "threshold": threshold,
                 }
 
-            overall = sum(s["score"] for s in sample_scores.values()) / len(sample_scores)
+            overall = sum(s["score"] for s in sample_scores.values()) / max(len(sample_scores), 1)
             sample_scores["overall"] = {
                 "score": overall,
                 "passed": overall >= 0.7,
@@ -115,6 +121,27 @@ class QualityEvaluationAgent(Agent):
             })
 
         return scores
+
+    @staticmethod
+    def _sample_text(sample: Any) -> str:
+        if isinstance(sample, dict):
+            return " ".join(str(sample.get(key, "")) for key in ("instruction", "input", "output", "response", "content"))
+        return str(sample)
+
+    @staticmethod
+    def _score_dimension(dim: str, text: str, sample: Any, provenance: Dict[str, Any]) -> float:
+        """A deterministic, explainable pre-screen—not a claim of LLM judgment."""
+        normalized = " ".join(text.split())
+        length_score = min(len(normalized) / 240, 1.0)
+        if dim == "completeness":
+            return round(length_score, 3)
+        if dim == "accuracy":
+            return 0.9 if provenance.get("source_url") else 0.45
+        if dim == "freshness":
+            return 0.8 if provenance.get("retrieved_at") else 0.5
+        if dim == "consistency":
+            return 0.9 if isinstance(sample, dict) and any(sample.get(k) for k in ("output", "response")) else 0.5
+        return round(0.4 + 0.6 * length_score, 3)
 
     async def _summarize_scores(self, scores: List[Dict[str, Any]]) -> Dict[str, Any]:
         """Summarize evaluation scores."""
@@ -216,7 +243,8 @@ class DedupAgent(Agent):
         seen_hashes = {}
 
         for i, sample in enumerate(samples[:10000]):
-            sample_hash = hash(str(sample)) % 1000000
+            canonical = json.dumps(sample, sort_keys=True, ensure_ascii=False, default=str) if isinstance(sample, dict) else str(sample)
+            sample_hash = hashlib.sha256(canonical.encode("utf-8")).hexdigest()
 
             if sample_hash in seen_hashes:
                 duplicates.append({
@@ -316,16 +344,22 @@ class ToxicityAgent(Agent):
         toxic_items = []
         categories = {"hate": 0, "violence": 0, "sexual": 0, "self_harm": 0}
 
+        patterns = {
+            "hate": re.compile(r"\b(?:racial slur|ethnic cleansing)\b", re.IGNORECASE),
+            "violence": re.compile(r"\b(?:how to kill|build a bomb|mass shooting)\b", re.IGNORECASE),
+            "sexual": re.compile(r"\b(?:sexual assault|child sexual)\b", re.IGNORECASE),
+            "self_harm": re.compile(r"\b(?:how to suicide|kill myself)\b", re.IGNORECASE),
+        }
         for i, item in enumerate(content[:10000]):
-            toxicity_score = (hash(str(item)) % 100) / 200  # Simulated
-
-            if toxicity_score > threshold:
-                toxic_items.append({
-                    "idx": i,
-                    "score": toxicity_score,
-                    "category": list(categories.keys())[hash(str(item)) % 4],
-                })
-                categories[list(categories.keys())[hash(str(item)) % 4]] += 1
+            text = str(item)
+            matched = [name for name, pattern in patterns.items() if pattern.search(text)]
+            # This is a conservative keyword safety screen.  A score of 1 is
+            # used only for an explicit match; ambiguous content remains for
+            # the configured model/human review instead of being fabricated.
+            if matched and 1.0 > threshold:
+                category = matched[0]
+                toxic_items.append({"idx": i, "score": 1.0, "category": category})
+                categories[category] += 1
 
         return {
             "toxic_count": len(toxic_items),

@@ -1,7 +1,8 @@
 """Database management with SQLAlchemy supporting both PostgreSQL and SQLite."""
 import uuid
 import os
-from datetime import datetime, timezone
+import hashlib
+from datetime import datetime, timezone, timedelta
 from typing import Optional
 
 def utc_now() -> datetime:
@@ -82,6 +83,156 @@ class Dataset(Base):
 
     job = relationship("Job", back_populates="datasets")
     samples = relationship("Sample", back_populates="dataset", cascade="all, delete-orphan")
+
+
+class DatasetVersion(Base):
+    """Immutable, trainable snapshot of a dataset and its provenance manifest."""
+    __tablename__ = "dataset_versions"
+
+    id = Column(PG_UUID(as_uuid=False), primary_key=True, default=lambda: str(uuid.uuid4()))
+    dataset_id = Column(PG_UUID(as_uuid=False), ForeignKey("datasets.id", ondelete="CASCADE"), nullable=False, index=True)
+    version = Column(String(64), nullable=False)
+    status = Column(String(32), nullable=False, default="approved", index=True)
+    sample_count = Column(Integer, nullable=False, default=0)
+    content_hash = Column(String(64), nullable=False, index=True)
+    manifest = Column(JSON, default=dict)
+    output_path = Column(String(512), nullable=False)
+    created_at = Column(DateTime, default=utc_now)
+
+    def to_dict(self) -> dict:
+        return {
+            "id": self.id, "dataset_id": self.dataset_id, "version": self.version,
+            "status": self.status, "sample_count": self.sample_count,
+            "content_hash": self.content_hash, "manifest": self.manifest or {},
+            "output_path": self.output_path,
+            "created_at": self.created_at.isoformat() if self.created_at else None,
+        }
+
+
+class ContextBundle(Base):
+    """Persisted evidence window used to construct a dataset and audit it later."""
+    __tablename__ = "context_bundles"
+
+    id = Column(PG_UUID(as_uuid=False), primary_key=True, default=lambda: str(uuid.uuid4()))
+    job_id = Column(PG_UUID(as_uuid=False), ForeignKey("jobs.id", ondelete="CASCADE"), nullable=False, index=True)
+    content_hash = Column(String(64), nullable=False, index=True)
+    source_count = Column(Integer, default=0)
+    evidence = Column(JSON, default=list)
+    created_at = Column(DateTime, default=utc_now)
+
+    def to_dict(self) -> dict:
+        return {
+            "id": self.id, "job_id": self.job_id, "content_hash": self.content_hash,
+            "source_count": self.source_count, "evidence": self.evidence or [],
+            "created_at": self.created_at.isoformat() if self.created_at else None,
+        }
+
+
+class ReviewCalibrationReport(Base):
+    """Immutable record of automated-review alignment with human decisions."""
+    __tablename__ = "review_calibration_reports"
+
+    id = Column(PG_UUID(as_uuid=False), primary_key=True, default=lambda: str(uuid.uuid4()))
+    report = Column(JSON, nullable=False)
+    created_at = Column(DateTime, default=utc_now, index=True)
+
+    def to_dict(self) -> dict:
+        return {
+            "id": self.id,
+            "report": self.report or {},
+            "created_at": self.created_at.isoformat() if self.created_at else None,
+        }
+
+
+class WorkflowSchedule(Base):
+    """Durable definition for periodic refresh, recrawl, or retraining work."""
+    __tablename__ = "workflow_schedules"
+
+    id = Column(PG_UUID(as_uuid=False), primary_key=True, default=lambda: str(uuid.uuid4()))
+    name = Column(String(255), nullable=False)
+    workflow_type = Column(String(64), nullable=False, index=True)
+    interval_seconds = Column(Integer, nullable=False)
+    workflow_config = Column(JSON, default=dict)
+    enabled = Column(Integer, nullable=False, default=1, index=True)
+    next_run_at = Column(DateTime, nullable=False, index=True)
+    last_run_at = Column(DateTime)
+    created_at = Column(DateTime, default=utc_now)
+    updated_at = Column(DateTime, default=utc_now, onupdate=utc_now)
+
+    def to_dict(self) -> dict:
+        return {
+            "id": self.id, "name": self.name, "workflow_type": self.workflow_type,
+            "interval_seconds": self.interval_seconds, "workflow_config": self.workflow_config or {},
+            "enabled": bool(self.enabled),
+            "next_run_at": self.next_run_at.isoformat() if self.next_run_at else None,
+            "last_run_at": self.last_run_at.isoformat() if self.last_run_at else None,
+            "created_at": self.created_at.isoformat() if self.created_at else None,
+        }
+
+
+class WorkflowScheduleRun(Base):
+    """Immutable execution history for a schedule occurrence."""
+    __tablename__ = "workflow_schedule_runs"
+
+    id = Column(PG_UUID(as_uuid=False), primary_key=True, default=lambda: str(uuid.uuid4()))
+    schedule_id = Column(PG_UUID(as_uuid=False), ForeignKey("workflow_schedules.id", ondelete="CASCADE"), nullable=False, index=True)
+    job_id = Column(PG_UUID(as_uuid=False), ForeignKey("jobs.id", ondelete="SET NULL"), index=True)
+    status = Column(String(32), nullable=False, default="queued", index=True)
+    detail = Column(JSON, default=dict)
+    started_at = Column(DateTime, default=utc_now)
+    finished_at = Column(DateTime)
+
+    def to_dict(self) -> dict:
+        return {
+            "id": self.id, "schedule_id": self.schedule_id, "job_id": self.job_id,
+            "status": self.status, "detail": self.detail or {},
+            "started_at": self.started_at.isoformat() if self.started_at else None,
+            "finished_at": self.finished_at.isoformat() if self.finished_at else None,
+        }
+
+
+class SourceSnapshot(Base):
+    """Immutable source capture, including retrieval metadata and raw content."""
+    __tablename__ = "source_snapshots"
+
+    id = Column(PG_UUID(as_uuid=False), primary_key=True, default=lambda: str(uuid.uuid4()))
+    source_id = Column(PG_UUID(as_uuid=False), ForeignKey("sources.id", ondelete="SET NULL"), index=True)
+    job_id = Column(PG_UUID(as_uuid=False), ForeignKey("jobs.id", ondelete="CASCADE"), nullable=False, index=True)
+    url = Column(String(2048), nullable=False)
+    content_hash = Column(String(64), nullable=False, index=True)
+    content_type = Column(String(128))
+    license = Column(String)
+    content = Column(Text, nullable=False, default="")
+    metadata_ = Column("metadata", JSON, default=dict)
+    retrieved_at = Column(DateTime, default=utc_now)
+
+    def to_dict(self) -> dict:
+        return {
+            "id": self.id, "source_id": self.source_id, "job_id": self.job_id,
+            "url": self.url, "content_hash": self.content_hash, "content_type": self.content_type,
+            "license": self.license, "metadata": self.metadata_ or {},
+            "retrieved_at": self.retrieved_at.isoformat() if self.retrieved_at else None,
+        }
+
+
+class EvidenceChunk(Base):
+    """Auditable chunk from a source snapshot used by context/synthesis stages."""
+    __tablename__ = "evidence_chunks"
+
+    id = Column(PG_UUID(as_uuid=False), primary_key=True, default=lambda: str(uuid.uuid4()))
+    snapshot_id = Column(PG_UUID(as_uuid=False), ForeignKey("source_snapshots.id", ondelete="CASCADE"), nullable=False, index=True)
+    chunk_index = Column(Integer, nullable=False)
+    content_hash = Column(String(64), nullable=False, index=True)
+    content = Column(Text, nullable=False)
+    metadata_ = Column("metadata", JSON, default=dict)
+    created_at = Column(DateTime, default=utc_now)
+
+    def to_dict(self) -> dict:
+        return {
+            "id": self.id, "snapshot_id": self.snapshot_id, "chunk_index": self.chunk_index,
+            "content_hash": self.content_hash, "content": self.content,
+            "metadata": self.metadata_ or {},
+        }
 
 
 class Sample(Base):
@@ -327,6 +478,13 @@ class DatabaseManager:
                 ("ix_jobs_created_at", "jobs", "created_at"),
                 ("ix_datasets_job_id", "datasets", "job_id"),
                 ("ix_datasets_created_at", "datasets", "created_at"),
+                ("ix_dataset_versions_dataset_id", "dataset_versions", "dataset_id"),
+                ("ix_context_bundles_job_id", "context_bundles", "job_id"),
+                ("ix_review_calibration_reports_created_at", "review_calibration_reports", "created_at"),
+                ("ix_workflow_schedules_due", "workflow_schedules", "next_run_at"),
+                ("ix_workflow_schedule_runs_schedule_id", "workflow_schedule_runs", "schedule_id"),
+                ("ix_source_snapshots_job_id", "source_snapshots", "job_id"),
+                ("ix_evidence_chunks_snapshot_id", "evidence_chunks", "snapshot_id"),
                 ("ix_samples_dataset_id", "samples", "dataset_id"),
                 ("ix_finetune_jobs_status", "finetune_jobs", "status"),
                 ("ix_finetune_jobs_dataset_id", "finetune_jobs", "dataset_id"),
@@ -438,6 +596,49 @@ class DatabaseManager:
             _ = (dataset.id, dataset.job_id, dataset.name, dataset.type, dataset.size, dataset.created_at, dataset.output_path, dataset.metadata_)
             return dataset
 
+    async def create_dataset_version(
+        self, dataset_id: str, version: str, sample_count: int, content_hash: str,
+        manifest: dict, output_path: str, status: str = "approved",
+    ) -> DatasetVersion:
+        async with self.session_maker() as session:
+            record = DatasetVersion(
+                dataset_id=dataset_id, version=version, sample_count=sample_count,
+                content_hash=content_hash, manifest=manifest, output_path=output_path,
+                status=status,
+            )
+            session.add(record)
+            await self._commit_with_retry(session)
+            _ = record.id
+            return record
+
+    async def get_dataset_version(self, version_id: str) -> Optional[DatasetVersion]:
+        if not _is_valid_uuid(version_id):
+            return None
+        async with self.session_maker() as session:
+            record = await session.get(DatasetVersion, version_id)
+            if record:
+                _ = record.id
+            return record
+
+    async def create_context_bundle(self, job_id: str, content_hash: str, evidence: list[dict]) -> ContextBundle:
+        async with self.session_maker() as session:
+            record = ContextBundle(
+                job_id=job_id, content_hash=content_hash,
+                source_count=len(evidence), evidence=evidence,
+            )
+            session.add(record)
+            await self._commit_with_retry(session)
+            _ = record.id
+            return record
+
+    async def create_review_calibration_report(self, report: dict) -> ReviewCalibrationReport:
+        async with self.session_maker() as session:
+            record = ReviewCalibrationReport(report=report)
+            session.add(record)
+            await self._commit_with_retry(session)
+            _ = record.id
+            return record
+
     async def list_datasets(self, limit: int = 100) -> list[Dataset]:
         """List all datasets ordered by creation date."""
         async with self.session_maker() as session:
@@ -509,13 +710,127 @@ class DatabaseManager:
                 url=url,
                 source_type=source_type,
                 title=title,
-                metadata=metadata,
+                metadata_=metadata,
                 license=license
             )
             session.add(source)
             await self._commit_with_retry(session)
             _ = (source.id, source.url, source.source_type, source.title)
             return source
+
+    async def create_source_snapshot(
+        self, job_id: str, source: dict, content: str = "", content_type: Optional[str] = None,
+    ) -> SourceSnapshot:
+        """Persist a discovery/extraction capture without overwriting past evidence."""
+        source_metadata = source.get("metadata") or {}
+        url = str(source.get("url") or source_metadata.get("source_url") or "").strip()
+        if not url:
+            raise ValueError("source snapshot requires a URL")
+        text = str(content or source.get("content") or "")
+        digest = hashlib.sha256(text.encode("utf-8")).hexdigest()
+        async with self.session_maker() as session:
+            source_row = Source(
+                url=url,
+                source_type=str(source.get("source_type") or "web"),
+                title=str(source.get("title") or source_metadata.get("source_title") or ""),
+                metadata_=source_metadata,
+                license=source.get("license") or source_metadata.get("license"),
+            )
+            session.add(source_row)
+            await session.flush()
+            snapshot = SourceSnapshot(
+                source_id=source_row.id, job_id=job_id, url=url, content_hash=digest,
+                content_type=content_type or source.get("content_type"),
+                license=source_row.license, content=text, metadata_=source_metadata,
+            )
+            session.add(snapshot)
+            await self._commit_with_retry(session)
+            _ = snapshot.id
+            return snapshot
+
+    async def create_evidence_chunks(self, snapshot_id: str, chunks: list[dict]) -> list[EvidenceChunk]:
+        """Persist immutable, content-addressed chunks for a source capture."""
+        async with self.session_maker() as session:
+            records = []
+            for index, chunk in enumerate(chunks):
+                content = str(chunk.get("content") or "").strip()
+                if not content:
+                    continue
+                record = EvidenceChunk(
+                    snapshot_id=snapshot_id, chunk_index=int(chunk.get("chunk_index", index)),
+                    content_hash=hashlib.sha256(content.encode("utf-8")).hexdigest(),
+                    content=content, metadata_=chunk.get("metadata") or {},
+                )
+                session.add(record)
+                records.append(record)
+            await self._commit_with_retry(session)
+            return records
+
+    async def create_workflow_schedule(
+        self, name: str, workflow_type: str, interval_seconds: int, workflow_config: dict,
+        next_run_at: Optional[datetime] = None,
+    ) -> WorkflowSchedule:
+        if interval_seconds < 60:
+            raise ValueError("schedule interval must be at least 60 seconds")
+        async with self.session_maker() as session:
+            record = WorkflowSchedule(
+                name=name, workflow_type=workflow_type, interval_seconds=interval_seconds,
+                workflow_config=workflow_config, next_run_at=next_run_at or utc_now(),
+            )
+            session.add(record)
+            await self._commit_with_retry(session)
+            return record
+
+    async def claim_due_workflow_schedules(self, limit: int = 20) -> list[WorkflowSchedule]:
+        """Atomically claim due schedules by advancing their next occurrence."""
+        from sqlalchemy import select
+        now = utc_now()
+        async with self.session_maker() as session:
+            stmt = (
+                select(WorkflowSchedule)
+                .where(WorkflowSchedule.enabled == 1, WorkflowSchedule.next_run_at <= now)
+                .order_by(WorkflowSchedule.next_run_at)
+                .limit(limit)
+                .with_for_update(skip_locked=True)
+            )
+            records = list((await session.execute(stmt)).scalars().all())
+            for record in records:
+                record.last_run_at = now
+                record.next_run_at = now + timedelta(seconds=record.interval_seconds)
+            await self._commit_with_retry(session)
+            return records
+
+    async def create_workflow_schedule_run(self, schedule_id: str, job_id: Optional[str], detail: dict) -> WorkflowScheduleRun:
+        async with self.session_maker() as session:
+            record = WorkflowScheduleRun(schedule_id=schedule_id, job_id=job_id, detail=detail)
+            session.add(record)
+            await self._commit_with_retry(session)
+            return record
+
+    async def list_workflow_schedules(self, limit: int = 100) -> list[WorkflowSchedule]:
+        from sqlalchemy import select
+        async with self.session_maker() as session:
+            return list((await session.execute(
+                select(WorkflowSchedule).order_by(WorkflowSchedule.next_run_at).limit(limit)
+            )).scalars().all())
+
+    async def list_workflow_schedule_runs(self, schedule_id: str, limit: int = 100) -> list[WorkflowScheduleRun]:
+        from sqlalchemy import select
+        async with self.session_maker() as session:
+            return list((await session.execute(
+                select(WorkflowScheduleRun)
+                .where(WorkflowScheduleRun.schedule_id == schedule_id)
+                .order_by(WorkflowScheduleRun.started_at.desc()).limit(limit)
+            )).scalars().all())
+
+    async def finish_workflow_schedule_run(self, run_id: str, status: str, detail: Optional[dict] = None) -> None:
+        async with self.session_maker() as session:
+            record = await session.get(WorkflowScheduleRun, run_id)
+            if record:
+                record.status = status
+                record.detail = detail or record.detail
+                record.finished_at = utc_now()
+                await self._commit_with_retry(session)
 
     # ── Fine-tune job helpers ─────────────────────────────────────────────
 
@@ -849,6 +1164,51 @@ class AsyncDB:
         """Create a new dataset and return its ID."""
         dataset = await self.db.create_dataset(job_id, name, type, size, metadata, output_path)
         return {"id": dataset.id, "job_id": dataset.job_id}
+
+    async def create_dataset_version(self, **kwargs) -> dict:
+        record = await self.db.create_dataset_version(**kwargs)
+        return record.to_dict()
+
+    async def get_dataset_version(self, version_id: str) -> Optional[dict]:
+        record = await self.db.get_dataset_version(version_id)
+        return record.to_dict() if record else None
+
+    async def create_context_bundle(self, job_id: str, content_hash: str, evidence: list[dict]) -> dict:
+        record = await self.db.create_context_bundle(job_id, content_hash, evidence)
+        return record.to_dict()
+
+    async def create_review_calibration_report(self, report: dict) -> dict:
+        record = await self.db.create_review_calibration_report(report)
+        return record.to_dict()
+
+    async def create_source_snapshot(self, job_id: str, source: dict, content: str = "", content_type: Optional[str] = None) -> dict:
+        record = await self.db.create_source_snapshot(job_id, source, content, content_type)
+        return record.to_dict()
+
+    async def create_evidence_chunks(self, snapshot_id: str, chunks: list[dict]) -> list[dict]:
+        records = await self.db.create_evidence_chunks(snapshot_id, chunks)
+        return [record.to_dict() for record in records]
+
+    async def create_workflow_schedule(self, **kwargs) -> dict:
+        record = await self.db.create_workflow_schedule(**kwargs)
+        return record.to_dict()
+
+    async def claim_due_workflow_schedules(self, limit: int = 20) -> list[dict]:
+        records = await self.db.claim_due_workflow_schedules(limit)
+        return [record.to_dict() for record in records]
+
+    async def create_workflow_schedule_run(self, schedule_id: str, job_id: Optional[str], detail: dict) -> dict:
+        record = await self.db.create_workflow_schedule_run(schedule_id, job_id, detail)
+        return record.to_dict()
+
+    async def finish_workflow_schedule_run(self, run_id: str, status: str, detail: Optional[dict] = None) -> None:
+        await self.db.finish_workflow_schedule_run(run_id, status, detail)
+
+    async def list_workflow_schedules(self, limit: int = 100) -> list[dict]:
+        return [record.to_dict() for record in await self.db.list_workflow_schedules(limit)]
+
+    async def list_workflow_schedule_runs(self, schedule_id: str, limit: int = 100) -> list[dict]:
+        return [record.to_dict() for record in await self.db.list_workflow_schedule_runs(schedule_id, limit)]
 
     async def list_datasets(self, limit: int = 100) -> list[dict]:
         """List all datasets ordered by creation date."""

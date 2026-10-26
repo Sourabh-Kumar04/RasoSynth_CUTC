@@ -46,6 +46,7 @@ class FineTuneConfig:
     # Dataset
     dataset_path: str = ""
     dataset_id: str = ""
+    dataset_version_id: str = ""
 
     # Model
     base_model: str = "unsloth/llama-3-8b"

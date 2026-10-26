@@ -1,4 +1,4 @@
-"""Enhanced API schemas with constraint analysis and advanced features."""
+"""Compatibility schemas for the public job and operational API contracts."""
 from pydantic import BaseModel, Field, field_validator, AliasChoices
 from typing import Optional, Literal, Any
 from datetime import datetime
@@ -208,6 +208,11 @@ class JobRequest(BaseModel):
     human_review: bool = Field(default=False, description="Pause for human review of a sample of generated examples")
     human_review_percentage: float = Field(default=10.0, ge=0.0, le=100.0)
     human_review_mode: Literal["blocking", "async"] = "blocking"
+    llm_review_enabled: bool = Field(default=False, description="Run an independent multi-provider reviewer panel before HITL")
+    llm_review_providers: list[str] = Field(default_factory=list, max_length=5)
+    llm_review_sample_limit: int = Field(default=50, ge=1, le=500)
+    llm_review_threshold: float = Field(default=0.75, ge=0.0, le=1.0)
+    llm_review_consensus: float = Field(default=0.80, ge=0.0, le=1.0)
     balance_dimensions: list[str] = Field(default_factory=lambda: ["topic", "language", "source", "difficulty"])
     minimum_reference_documents: int = Field(default=1)
     planner_enabled: bool = Field(default=True)

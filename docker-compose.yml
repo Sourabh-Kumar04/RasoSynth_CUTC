@@ -135,6 +135,32 @@ services:
         reservations:
           memory: 512M
 
+  celery_beat:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    command: ["/app/.venv/bin/celery", "-A", "workers.celery_app.celery_app", "beat", "--loglevel=INFO"]
+    env_file:
+      - .env
+    environment:
+      REDIS_URL: redis://redis:6379/0
+      POSTGRES_URL: postgresql+asyncpg://${POSTGRES_USER:-dataset_user}:${POSTGRES_PASSWORD:-dataset_pass}@postgres:5432/${POSTGRES_DB:-dataset_engine}
+      QDRANT_URL: http://qdrant:6333
+      ENABLE_CELERY: "true"
+      PYTHONUNBUFFERED: "1"
+    depends_on:
+      redis:
+        condition: service_healthy
+      postgres:
+        condition: service_healthy
+    restart: unless-stopped
+    deploy:
+      resources:
+        limits:
+          memory: 512M
+        reservations:
+          memory: 128M
+
   frontend:
     build:
       context: ./frontend

@@ -161,9 +161,9 @@ from api.planning.planner import WorkflowPlanner
 from api.execution.executor import AsyncJobExecutor, ProgressTracker
 from api.observability.metrics import APIMetrics, ValidationMetrics
 
-# Note: CheckpointResponse, RestoreCheckpointResponse, ProviderSwitchResponse,
-# FailoverResponse, FailoverHistoryResponse and other response classes are in
-# api/schemas.py (module). Import them directly in server.py to avoid circular imports.
+# Operational compatibility schemas live in ``api.legacy_schemas``. Keeping
+# them outside this package removes the former ``api/schemas.py`` vs package
+# import collision; new endpoint schemas belong in the focused modules above.
 
 __all__ = [
     # Base Schemas
@@ -322,20 +322,4 @@ __all__ = [
     "APIMetrics",
     "ValidationMetrics",
 
-    # From api/schemas.py
-    "CheckpointResponse",
-    "RestoreCheckpointResponse",
-    "ProviderSwitchResponse",
-    "FailoverResponse",
-    "FailoverHistoryResponse",
-    "ProviderTestRequest",
-    "ProviderTestResponse",
-    "ReportResponse",
-    "ResearchRequest",
-    "ResearchResponse",
-    "AdaptabilityRequest",
-    "AdaptabilityResponse",
-    "JobRequest",
-    "JobResponse",
-    "JobDetailResponse",
 ]

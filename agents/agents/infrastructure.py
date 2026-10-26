@@ -7,6 +7,7 @@ distribution across platforms.
 
 from typing import Dict, List, Optional, Any
 from datetime import datetime, timezone
+import json
 
 from agents.base import Agent, AgentConfig, AgentType, AgentState, TaskResult, AgentContext
 
@@ -197,30 +198,44 @@ class StorageOptimizationAgent(Agent):
         shard_size_mb: int
     ) -> Dict[str, Any]:
         """Optimize storage with compression and sharding."""
-        total_size_mb = len(dataset) * 0.1  # Simulated
-        shard_size_samples = shard_size_mb * 10
+        # Plan storage using the actual serialised payload. Compression is an
+        # exporter concern; reporting an invented ratio here is misleading.
+        serialized_sizes = [len(json.dumps(sample, default=str, ensure_ascii=False).encode("utf-8")) for sample in dataset]
+        total_size_bytes = sum(serialized_sizes)
+        shard_size_bytes = max(int(shard_size_mb), 1) * 1024 * 1024
 
         shards = []
-        for i in range(0, len(dataset), shard_size_samples):
-            shard_data = dataset[i:i + shard_size_samples]
+        start_idx = 0
+        shard_bytes = 0
+        shard_index = 0
+        for index, sample_size in enumerate(serialized_sizes):
+            if index > start_idx and shard_bytes + sample_size > shard_size_bytes:
+                shards.append({
+                    "shard_id": f"shard_{shard_index}", "start_idx": start_idx,
+                    "end_idx": index, "sample_count": index - start_idx,
+                    "uncompressed_size_mb": round(shard_bytes / (1024 * 1024), 6),
+                })
+                shard_index += 1
+                start_idx, shard_bytes = index, 0
+            shard_bytes += sample_size
+        if serialized_sizes:
             shard = {
-                "shard_id": f"shard_{i // shard_size_samples}",
-                "start_idx": i,
-                "end_idx": min(i + shard_size_samples, len(dataset)),
-                "sample_count": len(shard_data),
-                "compressed_size_mb": len(shard_data) * 0.05,
+                "shard_id": f"shard_{shard_index}",
+                "start_idx": start_idx,
+                "end_idx": len(dataset),
+                "sample_count": len(dataset) - start_idx,
+                "uncompressed_size_mb": round(shard_bytes / (1024 * 1024), 6),
             }
             shards.append(shard)
 
-        compressed_size = sum(s["compressed_size_mb"] for s in shards)
-        compression_ratio = total_size_mb / max(compressed_size, 0.1)
-
         return {
             "shards": shards,
-            "original_size_gb": total_size_mb / 1024,
-            "compressed_size_gb": compressed_size / 1024,
-            "compression_ratio": compression_ratio,
-            "compression_type": compression,
+            "original_size_gb": total_size_bytes / (1024 ** 3),
+            "compressed_size_gb": total_size_bytes / (1024 ** 3),
+            "compression_ratio": 1.0,
+            "compression_type": "none",
+            "requested_compression": compression,
+            "compression_applied": False,
         }
 
     async def cleanup(self) -> None:
@@ -305,9 +320,9 @@ class DistributionAgent(Agent):
             try:
                 result = {
                     "destination": dest,
-                    "status": "success",
-                    "bytes_transferred": len(dataset) * 100,
-                    "endpoint": f"https://{dest}.com/datasets/uploaded",
+                    "status": "planned",
+                    "bytes_transferred": 0,
+                    "reason": "Transfer is executed by ExportPipeline after this planning step.",
                 }
                 results.append(result)
                 total_bytes += result["bytes_transferred"]

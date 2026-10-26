@@ -24,17 +24,6 @@ from workers.distributed.ray_executor import (
     EmbeddingActor,
     InferenceWorker,
 )
-from workers.distributed.celery_tasks import (
-    TaskRouter,
-    PipelineTask,
-    CrawlTask,
-    ExtractTask,
-    FilterTask,
-    TransformTask,
-    ValidateTask,
-    PackageTask,
-    DeliveryTask,
-)
 from workers.distributed.pipeline import (
     PipelineGraph,
     PipelineStage,
@@ -75,17 +64,6 @@ __all__ = [
     "ModelActor",
     "EmbeddingActor",
     "InferenceWorker",
-
-    # Celery
-    "TaskRouter",
-    "PipelineTask",
-    "CrawlTask",
-    "ExtractTask",
-    "FilterTask",
-    "TransformTask",
-    "ValidateTask",
-    "PackageTask",
-    "DeliveryTask",
 
     # Pipeline
     "PipelineGraph",

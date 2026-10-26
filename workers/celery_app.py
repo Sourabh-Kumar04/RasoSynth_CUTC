@@ -4,6 +4,8 @@ from celery import Celery, chain, group, chord
 from celery.signals import worker_ready, worker_shutdown
 import asyncio
 
+from core.provider_router import ProviderRouter
+
 celery_app = Celery(
     "dataset_engine",
     broker=os.getenv("REDIS_URL", "redis://localhost:6379/0"),
@@ -35,6 +37,19 @@ celery_app.conf.update(
         "workers.tasks.export": {"rate_limit": "5/m"},
     }
 )
+
+# Beat enqueues durable Celery tasks; it never owns a background thread in the
+# API process. Run it separately with `celery -A workers.celery_app beat`.
+celery_app.conf.beat_schedule = {
+    "reviewer-calibration-daily": {
+        "task": "workers.tasks.calibrate_reviewers",
+        "schedule": 24 * 60 * 60,
+    },
+    "workflow-schedule-dispatch": {
+        "task": "workers.tasks.dispatch_due_schedules",
+        "schedule": 60.0,
+    },
+}
 
 
 @celery_app.task(bind=True, name="workers.tasks.discovery")
@@ -218,28 +233,169 @@ def export_task(self, job_id: str, samples: list[dict], format: str, config: dic
     time_limit=None,
     soft_time_limit=None,
 )
-def run_pipeline_task(job_id: str, config: dict):
+def run_pipeline_task(job_id: str, config: dict, schedule_run_id: str | None = None):
     """Run the production orchestrator in a worker-owned service lifespan.
 
     Dataset jobs use the same LangGraph pipeline, persistence, websocket, and
     review queue as the API path. The older stage-task chord is retained for
     explicit stage-level use, but is not the production job runner.
     """
-    from api.schemas import JobRequest
+    from api.legacy_schemas import JobRequest
     from api.server import app, lifespan, run_pipeline
 
     async def execute():
         request = JobRequest.model_validate(config)
         async with lifespan(app):
-            await run_pipeline(job_id, request)
+            try:
+                await run_pipeline(job_id, request)
+                if schedule_run_id and getattr(app.state, "db", None):
+                    status = await app.state.db.get_job_status(job_id)
+                    final_status = "completed" if status and status.get("status") == "completed" else "failed"
+                    await app.state.db.finish_workflow_schedule_run(
+                        schedule_run_id, final_status, {"job_id": job_id, "job_status": status or {}},
+                    )
+            except Exception as exc:
+                if schedule_run_id and getattr(app.state, "db", None):
+                    await app.state.db.finish_workflow_schedule_run(
+                        schedule_run_id, "failed", {"job_id": job_id, "error": str(exc)},
+                    )
+                raise
 
     asyncio.run(execute())
 
 
-@celery_app.task(name="workers.tasks.refresh_dataset")
-def refresh_dataset_task(dataset_id: str):
-    """Periodic task for dataset refresh."""
-    return {"dataset_id": dataset_id, "refreshed": True}
+@celery_app.task(name="workers.tasks.dispatch_due_schedules")
+def dispatch_due_schedules_task() -> dict:
+    """Claim durable schedule occurrences and dispatch their concrete work.
+
+    Schedule definitions and runs live in PostgreSQL/SQLite, not Celery Beat,
+    so changing a cadence or auditing an execution survives worker restarts.
+    """
+    async def run() -> dict:
+        from api.server import app, lifespan
+
+        dispatched, failures = [], []
+        async with lifespan(app):
+            db = getattr(app.state, "db", None)
+            if db is None:
+                return {"status": "skipped", "reason": "database unavailable"}
+            for schedule in await db.claim_due_workflow_schedules(limit=20):
+                config = dict(schedule.get("workflow_config") or {})
+                workflow_type = schedule.get("workflow_type")
+                try:
+                    if workflow_type not in {"recrawl", "refresh", "retrain"}:
+                        raise ValueError(f"unsupported workflow type: {workflow_type}")
+                    if workflow_type == "retrain":
+                        version_id = str(config.get("dataset_version_id") or "")
+                        version = await db.get_dataset_version(version_id)
+                        if not version or version.get("status") != "approved":
+                            raise ValueError("retraining requires an approved immutable dataset version")
+                        dataset_path = str(version.get("output_path") or "")
+                        if not dataset_path or not os.path.isfile(dataset_path):
+                            raise ValueError("immutable dataset artifact is unavailable")
+                        config["dataset_id"] = version_id
+                        config["dataset_version_id"] = version_id
+                        config["dataset_path"] = dataset_path
+                        run_record = await db.create_workflow_schedule_run(
+                            schedule["id"], None, {"workflow_type": workflow_type, "config": config},
+                        )
+                        run_scheduled_retrain_task.delay(run_record["id"], config)
+                        dispatched.append({"schedule_id": schedule["id"], "run_id": run_record["id"], "dataset_version_id": version_id})
+                        continue
+                    config["scheduled_workflow_type"] = workflow_type
+                    config["scheduled_from_id"] = schedule["id"]
+                    job = await db.create_job(config)
+                    run_record = await db.create_workflow_schedule_run(
+                        schedule["id"], job["id"], {"workflow_type": workflow_type, "config": config},
+                    )
+                    run_pipeline_task.delay(job["id"], config, run_record["id"])
+                    dispatched.append({"schedule_id": schedule["id"], "run_id": run_record["id"], "job_id": job["id"]})
+                except Exception as exc:
+                    run_record = await db.create_workflow_schedule_run(
+                        schedule["id"], None, {"workflow_type": workflow_type, "error": str(exc)},
+                    )
+                    await db.finish_workflow_schedule_run(run_record["id"], "blocked", run_record["detail"])
+                    failures.append({"schedule_id": schedule["id"], "error": str(exc)})
+        return {"status": "completed", "dispatched": dispatched, "failures": failures}
+
+    return asyncio.run(run())
+
+
+@celery_app.task(name="workers.tasks.run_scheduled_retrain")
+def run_scheduled_retrain_task(schedule_run_id: str, config: dict) -> dict:
+    """Run a gated fine-tune schedule against its immutable dataset version."""
+    async def run() -> dict:
+        from api.server import app, lifespan
+
+        async with lifespan(app):
+            db = getattr(app.state, "db", None)
+            manager = getattr(app.state, "ft_manager", None)
+            if db is None or manager is None:
+                raise RuntimeError("fine-tune manager or database unavailable")
+            try:
+                fine_tune_job = await manager.create_job(config)
+                fine_tune_job_id = fine_tune_job["id"]
+                active_task = getattr(manager, "_tasks", {}).get(fine_tune_job_id)
+                if active_task is not None:
+                    await active_task
+                final = await manager.get_job(fine_tune_job_id)
+                final_status = final.get("status", "failed") if final else "failed"
+                await db.finish_workflow_schedule_run(
+                    schedule_run_id,
+                    "completed" if final_status == "completed" else "failed",
+                    {"finetune_job_id": fine_tune_job_id, "finetune_status": final_status},
+                )
+                return {"status": final_status, "finetune_job_id": fine_tune_job_id}
+            except Exception as exc:
+                await db.finish_workflow_schedule_run(schedule_run_id, "failed", {"error": str(exc)})
+                raise
+
+    return asyncio.run(run())
+
+
+@celery_app.task(name="workers.tasks.calibrate_reviewers")
+def calibrate_reviewers_task() -> dict:
+    """Measure automated-review agreement against completed human decisions.
+
+    This is intentionally read-only. Its report is suitable for alerting and
+    threshold changes, while human decisions remain the dataset authority.
+    """
+    from core.evaluation.judge_calibrator import calibrate_judge_alignment
+
+    async def run() -> dict:
+        # Reuse the canonical lifespan to get the same database configuration
+        # and fallback behavior as the API, not a second worker-only database.
+        from api.server import app, lifespan
+
+        async with lifespan(app):
+            service = getattr(app.state, "review_service", None)
+            if service is None:
+                return {"status": "skipped", "reason": "review service unavailable"}
+
+            queue = await service.get_queue(page=1, page_size=500)
+            items = list(queue.get("items", []))
+            for page in range(2, queue.get("total_pages", 1) + 1):
+                next_page = await service.get_queue(page=page, page_size=500)
+                items.extend(next_page.get("items", []))
+
+            evaluations = []
+            for item in items:
+                status = item.get("review_status")
+                if status not in {"approved", "rejected"}:
+                    continue
+                ensemble = (item.get("metadata") or {}).get("review_ensemble", {})
+                score = ensemble.get("score")
+                if isinstance(score, (int, float)):
+                    evaluations.append({"human_decision": status, "judge_score": score})
+
+            report = calibrate_judge_alignment(evaluations)
+            database = getattr(app.state, "db", None)
+            saved = None
+            if database and hasattr(database, "create_review_calibration_report"):
+                saved = await database.create_review_calibration_report(report)
+            return {"status": "completed", "report": report, "report_id": (saved or {}).get("id")}
+
+    return asyncio.run(run())
 
 
 @worker_ready.connect

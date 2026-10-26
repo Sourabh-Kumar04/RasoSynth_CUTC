@@ -7,6 +7,7 @@ for better retrieval across web and structured data sources.
 
 from typing import Dict, List, Optional, Any
 from datetime import datetime, timezone
+from urllib.parse import urlparse
 
 from agents.base import Agent, AgentConfig, AgentType, AgentState, TaskResult, AgentContext
 
@@ -35,7 +36,11 @@ class SourceDiscoveryAgent(Agent):
             query = task_input.get("query", "")
             keywords = task_input.get("keywords", [])
 
-            sources = await self._discover_sources(domain, query, keywords)
+            # Discovery is deliberately an evidence-aware role.  Network search is
+            # performed by the canonical discovery pipeline; this agent ranks the
+            # concrete candidates it produced instead of manufacturing URLs.
+            candidates = task_input.get("sources") or context.sources
+            sources = await self._discover_sources(domain, query, keywords, candidates)
             rankings = await self._rank_sources(sources)
 
             self._discovered_sources.extend(sources)
@@ -51,7 +56,7 @@ class SourceDiscoveryAgent(Agent):
                     "rankings": rankings,
                     "total_discovered": len(sources),
                 },
-                confidence=0.85,
+                confidence=0.9 if sources else 0.4,
                 execution_time_ms=execution_time,
                 metrics={
                     "sources_found": len(sources),
@@ -74,39 +79,44 @@ class SourceDiscoveryAgent(Agent):
         self,
         domain: str,
         query: str,
-        keywords: List[str]
+        keywords: List[str],
+        candidates: List[Dict[str, Any]],
     ) -> List[Dict[str, Any]]:
-        """Discover data sources matching the domain."""
-        sources = []
+        """Validate and rank candidates supplied by an actual search provider.
 
-        # Web sources
-        web_sources = [
-            {"url": f"https://example.com/{domain}", "type": "web", "format": "html"},
-            {"url": f"https://api.example.com/data", "type": "api", "format": "json"},
-        ]
+        This agent must not fabricate sources.  Returning an empty list signals
+        that discovery needs a search/crawl provider, rather than making fake
+        provenance look real in the rest of the workflow.
+        """
+        sources: List[Dict[str, Any]] = []
+        seen_urls: set[str] = set()
+        query_terms = {term.lower() for term in (query.split() + keywords) if term}
 
-        # Structured data sources
-        structured_sources = [
-            {"url": "https://commoncrawl.org/", "type": "web_archive", "format": "warc"},
-            {"url": "https://huggingface.co/datasets", "type": "dataset_repo", "format": "various"},
-        ]
-
-        # Domain-specific sources
-        domain_sources = []
-        if "code" in domain.lower():
-            domain_sources.append({"url": "https://github.com", "type": "code", "format": "git"})
-            domain_sources.append({"url": "https://stackoverflow.com", "type": "q&a", "format": "html"})
-        if "medical" in domain.lower() or "health" in domain.lower():
-            domain_sources.append({"url": "https://pubmed.ncbi.nlm.nih.gov/", "type": "academic", "format": "xml"})
-            domain_sources.append({"url": "https://clinicaltrials.gov/", "type": "clinical", "format": "xml"})
-
-        all_sources = web_sources + structured_sources + domain_sources
-
-        for source in all_sources:
-            source["domain"] = domain
-            source["quality_score"] = 0.7 + (hash(source["url"]) % 30) / 100
-            source["estimated_size_gb"] = (hash(source["url"]) % 1000) / 10
-            sources.append(source)
+        for candidate in candidates or []:
+            if not isinstance(candidate, dict):
+                continue
+            url = str(candidate.get("url") or candidate.get("source_url") or "").strip()
+            parsed = urlparse(url)
+            if parsed.scheme not in {"http", "https"} or not parsed.netloc or url in seen_urls:
+                continue
+            seen_urls.add(url)
+            title = str(candidate.get("title") or "")
+            text = str(candidate.get("text") or candidate.get("content") or "")
+            haystack = f"{title} {text}".lower()
+            term_coverage = (
+                sum(term in haystack for term in query_terms) / len(query_terms)
+                if query_terms else 0.0
+            )
+            has_license = bool(candidate.get("license") or (candidate.get("metadata") or {}).get("license"))
+            has_content = bool(text)
+            quality = round(min(1.0, 0.35 + 0.35 * term_coverage + 0.2 * has_content + 0.1 * has_license), 3)
+            sources.append({
+                **candidate,
+                "url": url,
+                "domain": domain or parsed.netloc,
+                "quality_score": quality,
+                "relevance_score": round(term_coverage, 3),
+            })
 
         return sources
 
@@ -116,7 +126,7 @@ class SourceDiscoveryAgent(Agent):
         for source in sources:
             url = source["url"]
             quality = source.get("quality_score", 0.5)
-            relevance = source.get("relevance_score", 0.5)
+            relevance = source.get("relevance_score", 0.0)
             rankings[url] = (quality + relevance) / 2
 
         self._source_rankings.update(rankings)
@@ -211,7 +221,8 @@ class SearchOptimizationAgent(Agent):
             "weight": 1.0,
         })
 
-        # Synonym expansion
+        # Synonym expansion is transparent, bounded query reformulation; it is
+        # not presented as retrieved evidence.
         synonyms = await self._expand_synonyms(query, domain)
         for syn in synonyms[:5]:
             queries.append({
@@ -229,7 +240,7 @@ class SearchOptimizationAgent(Agent):
                 "weight": 0.6,
             })
 
-        # Boolean variations
+        # Phrase and domain variations are useful to real search backends.
         if " " in query:
             queries.append({
                 "query": f'"{query}"',
@@ -237,7 +248,21 @@ class SearchOptimizationAgent(Agent):
                 "weight": 0.9,
             })
 
-        return queries
+        if domain and "." in domain and " " not in domain:
+            queries.append({
+                "query": f"site:{domain} {query}".strip(),
+                "type": "site_restricted",
+                "weight": 0.85,
+            })
+
+        unique_queries: List[Dict[str, Any]] = []
+        seen = set()
+        for item in queries:
+            normalized = item["query"].strip().lower()
+            if normalized and normalized not in seen:
+                seen.add(normalized)
+                unique_queries.append(item)
+        return unique_queries
 
     async def _expand_synonyms(self, query: str, domain: str) -> List[str]:
         """Expand query with synonyms."""
