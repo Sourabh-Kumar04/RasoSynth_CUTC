@@ -376,8 +376,8 @@ export default function ZenPortalPage() {
           <Link href="/" className="flex items-center space-x-2.5 group">
             <BrandLogo size={32} />
             <div className="flex flex-col">
-              <span className="font-mono text-sm font-bold tracking-tight text-white">
-                RasoSynth<span className="text-[#f26625]">Tune</span>
+              <span className="font-display text-sm font-bold tracking-tight text-white">
+                Raso<span className="bg-gradient-to-r from-[#f26625] via-[#ff8238] to-[#f59e0b] bg-clip-text text-transparent">Synth</span><span className="text-[#94a3b8] font-semibold">Tune</span>
               </span>
               <span className="text-[9px] font-mono text-zinc-400 uppercase tracking-widest">
                 Sovereign Synthesis Hub
@@ -1149,7 +1149,9 @@ export default function ZenPortalPage() {
             <div className="space-y-3">
               <div className="flex items-center space-x-2">
                 <BrandLogo size={24} />
-                <span className="font-bold text-white text-sm">RasoSynthTune</span>
+                <span className="font-display font-bold text-white text-sm tracking-tight">
+                  Raso<span className="bg-gradient-to-r from-[#f26625] via-[#ff8238] to-[#f59e0b] bg-clip-text text-transparent">Synth</span><span className="text-[#94a3b8] font-semibold">Tune</span>
+                </span>
               </div>
               <p className="text-[11px] text-zinc-400 leading-relaxed font-sans">
                 Autonomous dataset synthesis and evaluation orchestration platform for frontier AI models.
