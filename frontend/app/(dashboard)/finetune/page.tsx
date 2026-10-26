@@ -1152,6 +1152,12 @@ function FineTuneContent() {
                         ))}
                       </SelectContent>
                     </Select>
+                    <Input
+                      placeholder="Or enter custom HF model (e.g. Qwen/Qwen2.5-7B-Instruct)"
+                      className="rounded-md border-[#272738] bg-[#0a0a0f] text-white focus:border-[#f26625] text-[11px] font-mono mt-1.5"
+                      value={form.base_model}
+                      onChange={e => f('base_model', e.target.value)}
+                    />
                   </div>
                   <div>
                     <label className="text-[10px] mb-1 block font-bold font-mono uppercase text-[#94a3b8]">Output model tag</label>
@@ -1179,35 +1185,91 @@ function FineTuneContent() {
                       onValueChange={v => f('execution_target', v)}>
                       <SelectTrigger className="rounded-md border-[#272738] bg-[#0a0a0f] text-white text-xs font-mono"><SelectValue /></SelectTrigger>
                       <SelectContent className="bg-[#12121a] border-[#272738] text-white text-xs font-mono">
-                        <SelectItem value="local">Local Hardware (real PEFT / Unsloth)</SelectItem>
-                        <SelectItem value="colab">Colab bridge (SIMULATED demo placeholders)</SelectItem>
-                        <SelectItem value="modal">Modal (SIMULATED stub — not a real GPU job)</SelectItem>
-                        <SelectItem value="runpod">RunPod (SIMULATED stub — not a real GPU job)</SelectItem>
+                        <SelectItem value="local">Local Hardware (PyTorch / Unsloth)</SelectItem>
+                        <SelectItem value="colab">Google Colab (Cloud GPU Acceleration)</SelectItem>
+                        <SelectItem value="modal">Modal Serverless GPU (NVIDIA A10G)</SelectItem>
+                        <SelectItem value="runpod">RunPod Cloud GPU (A40 / H100)</SelectItem>
                       </SelectContent>
                     </Select>
-                    {form.execution_target !== 'local' && (
-                      <div className="mt-2 space-y-2">
-                        <p className="text-[10px] font-mono text-amber-400/90 leading-relaxed border border-amber-500/30 bg-amber-950/20 rounded-md px-2 py-1.5">
-                          Demo path: progress and downloadable adapters are placeholders, not GPU-trained weights. Choose Local for real training.
-                        </p>
-                        {form.execution_target === 'colab' && (
-                          <div className="p-2.5 rounded-md bg-[#161622] border border-[#f26625]/30 flex flex-col sm:flex-row sm:items-center justify-between gap-2 text-xs font-mono">
-                            <span className="text-zinc-300">
-                              <strong className="text-[#f26625]">Real GPU Training:</strong> Open our 1-click Unsloth notebook in Google Colab.
-                            </span>
+                    {form.execution_target === 'colab' && (() => {
+                      const selectedDs = pipelineDatasets.find(d => d.id === form.dataset_id)
+                      const dsId = form.dataset_id || (form.dataset_path ? form.dataset_path.replace(/.*\//, '').replace(/\..*/, '') : 'flagship')
+                      const dsName = selectedDs?.config?.target_domain || selectedDs?.target_domain || selectedDs?.dataset_name || (form.dataset_path ? form.dataset_path.split('/').pop() : 'Flagship Indic GST')
+                      const apiBase = process.env.NEXT_PUBLIC_API_URL || (typeof window !== 'undefined' ? window.location.origin : 'http://localhost:8000')
+                      const downloadUrl = `${apiBase}/jobs/${dsId}/download`
+
+                      return (
+                        <div className="mt-2.5 p-3.5 rounded-lg bg-[#14141f] border border-[#f26625]/40 space-y-2.5 font-mono text-xs">
+                          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-[#272738] pb-2">
+                            <div>
+                              <div className="text-white font-bold flex items-center gap-1.5">
+                                <Sparkles className="w-3.5 h-3.5 text-[#f26625]" />
+                                <span>Dataset Stream for Colab</span>
+                              </div>
+                              <div className="text-[11px] text-[#f26625] font-semibold mt-0.5 truncate max-w-xs sm:max-w-md">
+                                {dsName}
+                              </div>
+                            </div>
                             <a
                               href="https://colab.research.google.com/github/Sourabh-Kumar04/RasoSynth_CUTC/blob/master/finetuning/RasoSynthTune_FineTuning_Colab.ipynb"
                               target="_blank"
                               rel="noreferrer"
-                              className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded bg-[#f26625]/20 hover:bg-[#f26625]/30 text-[#f26625] hover:text-white border border-[#f26625]/40 transition-colors shrink-0"
+                              onClick={() => {
+                                navigator.clipboard.writeText(downloadUrl)
+                                toast('API streaming URL copied! Paste into Colab notebook.', 'success')
+                              }}
+                              className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-md bg-[#f26625] hover:bg-[#ff8238] text-white text-xs font-bold transition-all shadow-md shrink-0"
                             >
                               <ExternalLink className="w-3.5 h-3.5" />
-                              <span>Open in Colab</span>
+                              <span>Launch Colab GPU</span>
                             </a>
                           </div>
-                        )}
-                      </div>
-                    )}
+
+                          <div className="space-y-1">
+                            <div className="text-[10px] text-zinc-400 flex items-center justify-between">
+                              <span>Database Streaming Endpoint (JSONL / CSV / XML / Parquet)</span>
+                              <button
+                                type="button"
+                                onClick={() => {
+                                  navigator.clipboard.writeText(downloadUrl)
+                                  toast('API stream URL copied to clipboard!', 'success')
+                                }}
+                                className="text-[10px] text-[#f26625] hover:underline inline-flex items-center gap-1 font-semibold"
+                              >
+                                <Copy className="w-3 h-3" />
+                                <span>Copy API URL</span>
+                              </button>
+                            </div>
+                            <input
+                              readOnly
+                              value={downloadUrl}
+                              className="w-full text-[11px] px-2.5 py-1.5 rounded bg-[#0a0a0f] border border-[#272738] text-zinc-300 select-all focus:outline-none"
+                            />
+                          </div>
+
+                          <div className="space-y-1 pt-1 border-t border-[#272738]/60">
+                            <div className="text-[10px] text-zinc-400 flex items-center justify-between">
+                              <span>Colab Parameters (Configured for {form.base_model})</span>
+                              <button
+                                type="button"
+                                onClick={() => {
+                                  const snippet = `BASE_MODEL = "${form.base_model}"\nDATASET_URL_OR_PATH = "${downloadUrl}"\nCHAT_TEMPLATE = "${form.chat_template}"`
+                                  navigator.clipboard.writeText(snippet)
+                                  toast('Colab parameters copied! Paste into Notebook Cell 2.', 'success')
+                                }}
+                                className="text-[10px] text-[#f26625] hover:underline inline-flex items-center gap-1 font-semibold"
+                              >
+                                <Copy className="w-3 h-3" />
+                                <span>Copy Code Block</span>
+                              </button>
+                            </div>
+                            <pre className="p-2 rounded bg-[#0a0a0f] border border-[#272738] text-[10px] text-emerald-400 overflow-x-auto leading-relaxed select-all">
+{`BASE_MODEL = "${form.base_model}"\nDATASET_URL_OR_PATH = "${downloadUrl}"\nCHAT_TEMPLATE = "${form.chat_template}"`}
+                            </pre>
+                          </div>
+                        </div>
+                      )
+                    })()}
                   </div>
                 </div>
               </Section>

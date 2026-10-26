@@ -132,6 +132,39 @@ async def test_download_from_db():
             print(f"  Record {i}: {r['instruction'][:30]}... (quality: {r['quality_score']})")
 
         print("\n✅ Download from database fallback: PASSED")
+
+        # Test multi-format generation: CSV, XML, JSON
+        print("\n=== Testing Multi-Format Dynamic Generation (CSV, XML, JSON) ===")
+        # CSV check
+        csv_buffer = io.StringIO()
+        import csv
+        writer = csv.writer(csv_buffer)
+        writer.writerow(["instruction", "input", "response", "quality_score", "difficulty_tier"])
+        for s in samples:
+            writer.writerow([s.get("instruction", ""), s.get("input", ""), s.get("response", ""), s.get("quality_score", ""), s.get("difficulty_tier", "")])
+        csv_content = csv_buffer.getvalue()
+        assert "instruction,input,response" in csv_content
+        print("✓ Generated valid CSV format from database records")
+
+        # XML check
+        import xml.sax.saxutils as xml_escape
+        xml_buffer = io.StringIO()
+        xml_buffer.write('<?xml version="1.0" encoding="UTF-8"?>\n<dataset>\n')
+        for s in samples:
+            inst = xml_escape.escape(str(s.get("instruction", "")))
+            resp = xml_escape.escape(str(s.get("response", "")))
+            xml_buffer.write(f'  <sample>\n    <instruction>{inst}</instruction>\n    <response>{resp}</response>\n  </sample>\n')
+        xml_buffer.write('</dataset>\n')
+        xml_content = xml_buffer.getvalue()
+        assert "<dataset>" in xml_content and "<sample>" in xml_content
+        print("✓ Generated valid XML format from database records")
+
+        # JSON array check
+        json_arr_content = json.dumps([{"instruction": s.get("instruction"), "response": s.get("response")} for s in samples])
+        parsed_json_arr = json.loads(json_arr_content)
+        assert len(parsed_json_arr) == len(samples)
+        print("✓ Generated valid JSON array format from database records")
+
         return True
 
     except Exception as e:

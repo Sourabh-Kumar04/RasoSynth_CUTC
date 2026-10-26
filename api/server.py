@@ -3012,53 +3012,279 @@ async def get_job_report(job_id: str):
     }
 
 
+def _resolve_dynamic_disk_dataset(identifier: str) -> Optional[dict]:
+    """Dynamically scan configured output directories without hardcoding paths."""
+    from pathlib import Path
+    target = identifier.strip().lower()
+    candidate_roots = [Path("outputs"), Path("data")]
+
+    for root in candidate_roots:
+        if not root.exists():
+            continue
+        # Direct folder or file match
+        for item in root.glob("*"):
+            norm_name = item.name.lower()
+            if target in norm_name or (target == "flagship" and "flagship" in norm_name):
+                if item.is_dir():
+                    # Look for data files inside
+                    for ext in ("jsonl", "parquet", "csv", "xml", "json"):
+                        matches = list(item.glob(f"*.{ext}"))
+                        if matches:
+                            return {
+                                "id": item.name,
+                                "name": item.name,
+                                "type": ext,
+                                "output_path": str(matches[0]),
+                                "dir": item,
+                            }
+                elif item.is_file():
+                    ext = item.suffix.lstrip(".").lower()
+                    return {
+                        "id": item.stem,
+                        "name": item.stem,
+                        "type": ext,
+                        "output_path": str(item),
+                        "dir": item.parent,
+                    }
+    return None
+
+
 @app.get("/jobs/{job_id}/download", tags=["Jobs"])
-async def download_job_dataset(job_id: str):
-    """Download the completed dataset file for a job.
+@app.get("/datasets/{job_id}/download", tags=["Datasets"])
+async def download_job_dataset(
+    job_id: str,
+    format: Optional[str] = Query(None, description="Export format: jsonl, csv, xml, parquet, json"),
+    request: Request = None,
+):
+    """Download the completed dataset file for a job or dataset ID.
     
-    If the file exists on disk, returns it directly.
-    Otherwise, generates the dataset from samples in the database.
+    Dynamically negotiates formats (JSONL, CSV, XML, Parquet, JSON) and resolves
+    data from local storage or dynamically streams from the database.
     """
+    # 1. Content negotiation for requested format
+    req_format = (format or "").lower().strip()
+    if not req_format and request:
+        accept = request.headers.get("accept", "").lower()
+        if "text/csv" in accept:
+            req_format = "csv"
+        elif "application/xml" in accept or "text/xml" in accept:
+            req_format = "xml"
+        elif "parquet" in accept:
+            req_format = "parquet"
+        elif "application/json" in accept and "x-ndjson" not in accept:
+            req_format = "json"
+        elif "x-ndjson" in accept:
+            req_format = "jsonl"
+
+    if req_format not in {"jsonl", "csv", "xml", "parquet", "json"}:
+        req_format = "jsonl"
+
+    media_types = {
+        "jsonl": "application/x-ndjson",
+        "csv": "text/csv; charset=utf-8",
+        "xml": "application/xml; charset=utf-8",
+        "parquet": "application/vnd.apache.parquet",
+        "json": "application/json; charset=utf-8",
+    }
+
+    # 2. Check dynamic filesystem discovery
+    disk_match = _resolve_dynamic_disk_dataset(job_id)
+    if disk_match:
+        # Check if requested format file already exists in directory
+        disk_dir = disk_match.get("dir")
+        if disk_dir and Path(disk_dir).is_dir():
+            target_format_files = list(Path(disk_dir).glob(f"*.{req_format}"))
+            if target_format_files:
+                from fastapi.responses import FileResponse
+                chosen_file = target_format_files[0]
+                return FileResponse(
+                    path=str(chosen_file),
+                    filename=chosen_file.name,
+                    media_type=media_types.get(req_format, "application/octet-stream"),
+                )
+        if disk_match.get("type") == req_format and Path(disk_match.get("output_path", "")).exists():
+            from fastapi.responses import FileResponse
+            return FileResponse(
+                path=disk_match["output_path"],
+                filename=Path(disk_match["output_path"]).name,
+                media_type=media_types.get(req_format, "application/octet-stream"),
+            )
+
     if not db:
         raise HTTPException(status_code=503, detail="Database not available")
 
-    # Fetch job status
-    job = await db.get_job_status(job_id)
-    if not job:
-        raise HTTPException(status_code=404, detail=f"Job {job_id} not found")
+    # 3. Dynamic Database Resolution (No hardcoded IDs)
+    dataset = await db.get_dataset(job_id) if hasattr(db, "get_dataset") else None
+    if not dataset:
+        job = await db.get_job_status(job_id)
+        if not job:
+            # Check by dataset name / alias across db
+            all_datasets = await db.get_datasets() if hasattr(db, "get_datasets") else []
+            for ds in all_datasets:
+                if job_id.lower() in (ds.get("name") or "").lower():
+                    dataset = ds
+                    break
+        else:
+            datasets = await db.get_datasets_by_job(job_id)
+            if datasets:
+                dataset = datasets[0]
 
-    # Find datasets belonging to this job
-    datasets = await db.get_datasets_by_job(job_id)
-    if not datasets:
-        raise HTTPException(status_code=404, detail=f"No datasets found for job {job_id}")
+    if not dataset:
+        raise HTTPException(status_code=404, detail=f"Dataset or Job '{job_id}' not found")
 
-    dataset = datasets[0]
     output_path = dataset.get("output_path")
 
-    # If file exists on disk, return it directly
-    if output_path and Path(output_path).exists():
-        from fastapi.responses import FileResponse
-        export_format = dataset.get("type", "jsonl")
-        media_types = {
-            "jsonl": "application/x-ndjson",
-            "csv": "text/csv",
-            "parquet": "application/octet-stream",
-        }
-        media_type = media_types.get(export_format, "application/octet-stream")
-        download_name = f"{dataset.get('name', 'dataset')}.{export_format}"
-        return FileResponse(
-            path=str(output_path),
-            filename=download_name,
-            media_type=media_type,
-        )
+    # If requested format file already exists on disk, return it directly
+    if output_path:
+        cand_p = Path(output_path).with_suffix(f".{req_format}")
+        if cand_p.exists():
+            from fastapi.responses import FileResponse
+            return FileResponse(
+                path=str(cand_p),
+                filename=cand_p.name,
+                media_type=media_types.get(req_format, "application/octet-stream"),
+            )
 
-    # Otherwise, generate from the DB samples dynamically
+    # 4. Dynamic Multi-Format Streaming from Database
     page_size = 1000
     first_page = await db.get_samples(dataset["id"], limit=page_size, offset=0)
     if not first_page:
         raise HTTPException(status_code=404, detail="No samples found for this dataset")
 
-    async def sample_generator():
+    download_name = f"{dataset.get('name', 'dataset')}.{req_format}"
+
+    # Parquet format: chunked Arrow table
+    if req_format == "parquet":
+        try:
+            import pyarrow as pa
+            import pyarrow.parquet as pq
+            import io
+            all_samples = await db.get_samples(dataset["id"], limit=50000)
+            rows = []
+            for s in all_samples:
+                rows.append({
+                    "instruction": str(s.get("instruction", "")),
+                    "input": str(s.get("input", "")),
+                    "response": str(s.get("response", "")),
+                    "quality_score": float(s.get("quality_score", 0.0) or 0.0),
+                    "difficulty_tier": int(s.get("difficulty_tier", 1) or 1),
+                })
+            table = pa.Table.from_pylist(rows)
+            buf = io.BytesIO()
+            pq.write_table(table, buf)
+            buf.seek(0)
+            from fastapi.responses import Response
+            return Response(
+                content=buf.getvalue(),
+                media_type="application/vnd.apache.parquet",
+                headers={"Content-Disposition": f"attachment; filename={download_name}"},
+            )
+        except Exception as e:
+            logger.warning("Parquet dynamic export failed, falling back to JSONL: %s", e)
+            req_format = "jsonl"
+            download_name = f"{dataset.get('name', 'dataset')}.jsonl"
+
+    from fastapi.responses import StreamingResponse
+
+    # XML Streaming Generator
+    if req_format == "xml":
+        import xml.sax.saxutils as xml_escape
+
+        async def xml_generator():
+            yield '<?xml version="1.0" encoding="UTF-8"?>\n<dataset>\n'
+            offset = 0
+            page = first_page
+            while page:
+                for sample in page:
+                    inst = xml_escape.escape(str(sample.get("instruction", "")))
+                    inp = xml_escape.escape(str(sample.get("input", "")))
+                    resp = xml_escape.escape(str(sample.get("response", "")))
+                    score = sample.get("quality_score", "")
+                    tier = sample.get("difficulty_tier", "")
+                    yield f'  <sample>\n    <instruction>{inst}</instruction>\n    <input>{inp}</input>\n    <response>{resp}</response>\n    <quality_score>{score}</quality_score>\n    <difficulty_tier>{tier}</difficulty_tier>\n  </sample>\n'
+                offset += len(page)
+                if len(page) < page_size:
+                    break
+                page = await db.get_samples(dataset["id"], limit=page_size, offset=offset)
+            yield '</dataset>\n'
+
+        return StreamingResponse(
+            xml_generator(),
+            media_type="application/xml; charset=utf-8",
+            headers={"Content-Disposition": f"attachment; filename={download_name}"},
+        )
+
+    # CSV Streaming Generator
+    if req_format == "csv":
+        import csv
+        import io
+
+        async def csv_generator():
+            s_io = io.StringIO()
+            writer = csv.writer(s_io)
+            writer.writerow(["instruction", "input", "response", "quality_score", "difficulty_tier"])
+            yield s_io.getvalue()
+            s_io.seek(0)
+            s_io.truncate(0)
+
+            offset = 0
+            page = first_page
+            while page:
+                for sample in page:
+                    writer.writerow([
+                        sample.get("instruction", ""),
+                        sample.get("input", ""),
+                        sample.get("response", ""),
+                        sample.get("quality_score", ""),
+                        sample.get("difficulty_tier", ""),
+                    ])
+                    yield s_io.getvalue()
+                    s_io.seek(0)
+                    s_io.truncate(0)
+                offset += len(page)
+                if len(page) < page_size:
+                    break
+                page = await db.get_samples(dataset["id"], limit=page_size, offset=offset)
+
+        return StreamingResponse(
+            csv_generator(),
+            media_type="text/csv; charset=utf-8",
+            headers={"Content-Disposition": f"attachment; filename={download_name}"},
+        )
+
+    # Standard JSON Array Generator
+    if req_format == "json":
+        async def json_array_generator():
+            yield "[\n"
+            first_item = True
+            offset = 0
+            page = first_page
+            while page:
+                for sample in page:
+                    item = {
+                        "instruction": sample.get("instruction", ""),
+                        "response": sample.get("response", ""),
+                        "input": sample.get("input", ""),
+                        "quality_score": sample.get("quality_score"),
+                        "difficulty_tier": sample.get("difficulty_tier"),
+                    }
+                    prefix = "" if first_item else ",\n"
+                    first_item = False
+                    yield prefix + "  " + json.dumps(item, ensure_ascii=False)
+                offset += len(page)
+                if len(page) < page_size:
+                    break
+                page = await db.get_samples(dataset["id"], limit=page_size, offset=offset)
+            yield "\n]\n"
+
+        return StreamingResponse(
+            json_array_generator(),
+            media_type="application/json; charset=utf-8",
+            headers={"Content-Disposition": f"attachment; filename={download_name}"},
+        )
+
+    # Default JSONL Streaming Generator
+    async def jsonl_generator():
         offset = 0
         page = first_page
         while page:
@@ -3077,12 +3303,10 @@ async def download_job_dataset(job_id: str):
                 break
             page = await db.get_samples(dataset["id"], limit=page_size, offset=offset)
 
-    from fastapi.responses import StreamingResponse
-    download_name = f"{dataset.get('name', 'dataset')}.jsonl"
     return StreamingResponse(
-        sample_generator(),
+        jsonl_generator(),
         media_type="application/x-ndjson",
-        headers={"Content-Disposition": f"attachment; filename={download_name}"}
+        headers={"Content-Disposition": f"attachment; filename={download_name}"},
     )
 
 
@@ -3874,21 +4098,17 @@ async def get_dataset_dbom(job_id: str):
     import json
     from core.export.dbom_attestor import generate_dbom_attestation, generate_nutrition_label_markdown
 
-    # Check for flagship pre-attested releases
-    flagship_paths = {
-        "flagship": ("outputs/flagship_indic_gst/flagship_indic_gst_sft.dbom.json", "outputs/flagship_indic_gst/flagship_indic_gst_sft.nutrition.md"),
-        "flagship_indic_gst": ("outputs/flagship_indic_gst/flagship_indic_gst_sft.dbom.json", "outputs/flagship_indic_gst/flagship_indic_gst_sft.nutrition.md"),
-        "flagship_clinical": ("outputs/flagship_clinical/flagship_clinical_sft.dbom.json", "outputs/flagship_clinical/flagship_clinical_sft.nutrition.md"),
-        "flagship_corporate_law": ("outputs/flagship_corporate_law/flagship_corporate_law_sft.dbom.json", "outputs/flagship_corporate_law/flagship_corporate_law_sft.nutrition.md"),
-    }
-    if job_id.lower() in flagship_paths:
-        dbom_p, nut_p = flagship_paths[job_id.lower()]
-        flagship_dbom = Path(dbom_p)
-        flagship_nut = Path(nut_p)
-        if flagship_dbom.exists():
-            with open(flagship_dbom, "r", encoding="utf-8") as f:
+    # Check dynamic filesystem discovery (no hardcoded paths)
+    disk_match = _resolve_dynamic_disk_dataset(job_id)
+    if disk_match and disk_match.get("dir"):
+        disk_dir = Path(disk_match["dir"])
+        dbom_files = list(disk_dir.glob("*.dbom.json"))
+        if dbom_files:
+            cand_dbom = dbom_files[0]
+            with open(cand_dbom, "r", encoding="utf-8") as f:
                 dbom = json.load(f)
-            nut_md = flagship_nut.read_text(encoding="utf-8") if flagship_nut.exists() else generate_nutrition_label_markdown(dbom)
+            nut_files = list(disk_dir.glob("*.nutrition.md"))
+            nut_md = nut_files[0].read_text(encoding="utf-8") if nut_files else generate_nutrition_label_markdown(dbom)
             return {
                 "job_id": job_id,
                 "dbom": dbom,
