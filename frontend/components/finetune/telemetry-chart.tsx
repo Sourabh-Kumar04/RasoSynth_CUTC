@@ -23,6 +23,7 @@ interface TelemetryChartProps {
   status: 'pending' | 'running' | 'completed' | 'failed' | 'cancelled'
   targetPlatform?: 'local' | 'modal' | 'runpod'
   gpuDeviceName?: string
+  isSimulated?: boolean
 }
 
 export function TelemetryChart({
@@ -33,11 +34,12 @@ export function TelemetryChart({
   evalLoss,
   status,
   targetPlatform = 'local',
-  gpuDeviceName = 'Local Multiprocess Container / Emulated NVIDIA A10G (24GB VRAM)',
+  gpuDeviceName = 'Simulated Container Pool / Emulated NVIDIA A10G (24GB VRAM)',
+  isSimulated = true,
 }: TelemetryChartProps) {
   const [hoveredIdx, setHoveredIdx] = useState<number | null>(null)
 
-  // Fallback demo loss curve if empty
+  // Fallback loss curve if empty
   const losses = useMemo(() => {
     if (lossHistory.length >= 2) return lossHistory
     if (status === 'running' || status === 'completed') {
@@ -51,6 +53,10 @@ export function TelemetryChart({
   const minLoss = Math.min(...losses)
   const maxLoss = Math.max(...losses)
   const lossDeltaPct = (((initialLoss - latestLoss) / initialLoss) * 100).toFixed(1)
+
+  // Dynamic cost calculation based on epochs/steps
+  const estGpuHours = ((totalEpochs || 1) * 0.04).toFixed(2)
+  const estCost = ((totalEpochs || 1) * 0.14).toFixed(2)
 
   // SVG Chart Dimensions
   const SVG_W = 500
@@ -89,6 +95,11 @@ export function TelemetryChart({
           <div>
             <h3 className="text-xs font-bold font-mono uppercase tracking-wider text-white flex items-center gap-2">
               Neural Convergence & GPU Telemetry
+              {isSimulated && (
+                <span className="px-1.5 py-0.5 rounded text-[9px] font-mono font-bold bg-amber-500/10 text-amber-400 border border-amber-500/30 uppercase tracking-wider">
+                  Simulated
+                </span>
+              )}
               {status === 'running' && (
                 <span className="flex h-2 w-2 relative">
                   <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-[#10b981] opacity-75"></span>
@@ -120,7 +131,7 @@ export function TelemetryChart({
           <span>Eval Loss: <strong className="text-white">{evalLoss !== null && evalLoss !== undefined ? evalLoss.toFixed(4) : (latestLoss * 1.15).toFixed(4)}</strong></span>
         </div>
         <div className="flex items-center gap-2">
-          <span>Est. Compute Cost: <strong className="text-emerald-400 font-bold">$0.42</strong> <span className="text-[10px] text-zinc-500">(0.12 GPU-hrs @ $0.35/hr)</span></span>
+          <span>Est. Cost (Simulated): <strong className="text-emerald-400 font-bold">${estCost}</strong> <span className="text-[10px] text-zinc-500">({estGpuHours} GPU-hrs @ $0.35/hr)</span></span>
           <span className="text-zinc-700">·</span>
           <span className="text-emerald-400 font-bold">Optimal Convergence</span>
         </div>

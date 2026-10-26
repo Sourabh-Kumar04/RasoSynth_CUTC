@@ -644,7 +644,7 @@ export default function ResearchPage() {
             <div className="p-3 rounded-md bg-[#0a0a0f] border border-[#272738] flex flex-col sm:flex-row sm:items-center justify-between gap-2 text-xs font-mono">
               <span className="text-[#94a3b8] flex items-center gap-1.5">
                 <Info className="h-3.5 w-3.5 text-cyan-400" />
-                Toggle heuristics on or off to inspect their measured impact on synthesis quality and reasoning depth.
+                Toggle heuristics on or off to inspect their benchmark impact on synthesis quality and reasoning depth.
               </span>
               <span className="text-emerald-400 font-bold">
                 {activeTechniquesCount} Active / {DEFAULT_HEURISTICS.length - activeTechniquesCount} Bypassed
@@ -699,9 +699,9 @@ export default function ResearchPage() {
                         <p className="text-[10px] text-[#94a3b8] mt-1 leading-relaxed font-mono">{h.desc}</p>
                       </div>
 
-                      {/* Measured Impact Indicator */}
+                      {/* Benchmark Impact Indicator */}
                       <div className="pt-2 border-t border-[#1c1c28] flex items-center justify-between text-[10px] font-mono">
-                        <span className="text-[#64748b] uppercase">Measured Impact:</span>
+                        <span className="text-[#64748b] uppercase">Benchmark Impact:</span>
                         <span className={clsx('font-bold px-1.5 py-0.5 rounded', isEnabled ? 'bg-emerald-950/60 text-emerald-400 border border-emerald-800/40' : 'bg-slate-900 text-[#64748b]')}>
                           {isEnabled ? h.impact : 'Inactive'}
                         </span>

@@ -81,8 +81,12 @@ export default function OrchestrationPage() {
       const response = await api.getJobs({ limit: 20 }).catch(() => ({ data: [] }))
       const jobList = response.data || []
       setJobs(jobList)
-      if (!selectedJob && jobList.length > 0) {
-        setSelectedJob(jobList[0])
+      if (jobList.length > 0) {
+        setSelectedJob((prev: any) => {
+          if (!prev) return jobList[0]
+          const updated = jobList.find((j: any) => j.id === prev.id)
+          return updated ? { ...prev, ...updated } : prev
+        })
       }
     } catch {
       console.debug('Failed to load orchestration jobs')

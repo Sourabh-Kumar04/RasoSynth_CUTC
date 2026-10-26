@@ -28,7 +28,7 @@ export function MerkleTreeGraph({
   const [selectedNodeId, setSelectedNodeId] = useState<string>('leaf-0')
   const [copiedHash, setCopiedHash] = useState<string | null>(null)
 
-  const cleanRoot = rootHash || 'e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855'
+  const cleanRoot = rootHash || '9b87df7a3982f6e9b418a096c429712a5542a1ef248f27af'
   
   const handleDownloadBadge = () => {
     playSuccessChime()

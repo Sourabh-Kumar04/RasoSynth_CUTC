@@ -1386,43 +1386,48 @@ class ExtractionPipeline:
                     if response.status_code == 200:
                         data = response.json()
 
-                        content_parts = [f"Dataset: {data.get('metadata', {}).get('title', source.title or '')}"]
+                        content_parts = []
+                        title = data.get('metadata', {}).get('title', source.title or '').strip()
+                        if title:
+                            content_parts.append(title)
                         description = data.get('metadata', {}).get('description', '')
                         if description:
                             # Clean HTML tags from description
                             import re
-                            clean_description = re.sub('<[^<]+?>', '', description)
-                            content_parts.append(f"Description: {clean_description[:500]}")
+                            clean_description = re.sub('<[^<]+?>', '', description).strip()
+                            if len(clean_description) > 60:
+                                content_parts.append(clean_description[:2000])
 
-                        # Try to get actual files
+                        # Try to get actual text files content (do NOT emit raw file names or byte counts as text)
                         files = data.get('files', [])
+                        text_samples = []
                         if files:
-                            content_parts.append("\nAvailable files:")
-                            for file_info in files[:3]:  # First 3 files
-                                file_name = file_info.get('key', 'unknown')
+                            for file_info in files[:3]:
+                                file_name = (file_info.get('key') or '').lower()
                                 file_size = file_info.get('size', 0)
-                                content_parts.append(f"- {file_name} ({file_size} bytes)")
-
-                                # Try to download and read small text files
-                                if file_size < 100000:  # Only files < 100KB
+                                # Only read small plain text/markdown/json files
+                                if file_size < 100000 and any(file_name.endswith(ext) for ext in ('.txt', '.md', '.json', '.csv')):
                                     file_url = file_info.get('links', {}).get('self')
                                     if file_url:
                                         try:
                                             file_response = await client.get(file_url)
-                                            if file_response.status_code == 200:
-                                                file_content = file_response.text[:500]  # First 500 chars
-                                                content_parts.append(f"  Sample content: {file_content}")
+                                            if file_response.status_code == 200 and len(file_response.text.strip()) > 50:
+                                                text_samples.append(file_response.text[:2000])
                                         except Exception:
                                             pass
 
-                        content = "\n".join(content_parts)
-                        extracted = await self._process_text(content, source.url, "utf-8")
-                        extracted.metadata["source_type"] = "zenodo"
-                        extracted.metadata["zenodo_id"] = zenodo_id
-                        # Medium confidence - we have structured info but not full file contents for large files
-                        extracted.confidence = 0.6
-                        yield extracted
-                        return
+                        if text_samples:
+                            content_parts.extend(text_samples)
+
+                        combined_text = "\n\n".join(content_parts).strip()
+                        # Require substantive text (>120 chars) to prevent metadata / file listings from polluting synthesis
+                        if len(combined_text) > 120:
+                            extracted = await self._process_text(combined_text, source.url, "utf-8")
+                            extracted.metadata["source_type"] = "zenodo"
+                            extracted.metadata["zenodo_id"] = zenodo_id
+                            extracted.confidence = 0.6 if text_samples else 0.4
+                            yield extracted
+                            return
 
             # If we can't access actual dataset files, don't yield anything
             # This prevents metadata from being used as dataset content

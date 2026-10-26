@@ -856,7 +856,7 @@ export default function ZenPortalPage() {
         </div>
 
         <div className="mt-4 p-3 rounded-lg bg-[#0e0e16] border border-[#1f1f2e] text-[10px] font-mono text-zinc-400 text-center">
-          * Latency measured on local multi-worker container benchmark (45ms corpus discovery, 280ms synthesis, 120ms neural evaluation, 15ms Merkle packaging). Real LLM provider API latency varies from 1.2s to 4.5s depending on model and context window size.
+          * Latency benchmarked on local multi-worker container setup (45ms corpus discovery, 280ms synthesis, 120ms neural evaluation, 15ms Merkle packaging). Real LLM provider API latency varies from 1.2s to 4.5s depending on model and context window size.
         </div>
       </section>
 
@@ -953,7 +953,7 @@ export default function ZenPortalPage() {
                     Pairwise hash siblings: H(Leaf0 || Leaf1). Matches root:
                   </p>
                   <code className="text-[10px] text-emerald-300 block bg-[#12101e] p-1.5 rounded overflow-x-auto truncate">
-                    e3b0c44298fc1c149afbf4c8996fb92427ae...
+                    9b87df7a3982f6e9b418a096c429712a...
                   </code>
                 </div>
               </div>
@@ -965,8 +965,8 @@ export default function ZenPortalPage() {
           {/* Left Column: Interactive Merkle Tree Graph */}
           <div className="lg:col-span-7">
             <MerkleTreeGraph
-              rootHash="e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
-              certificateId="DBOM-2026-CERT-0092"
+              rootHash="9b87df7a3982f6e9b418a096c429712a5542a1ef248f27af"
+              certificateId="DBOM-FLAGSHIP-GST"
             />
           </div>
 
