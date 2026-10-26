@@ -1684,7 +1684,12 @@ dataset_samples_generated_total 4520`
 
     if (endpoint.startsWith('/api/finetune/jobs')) {
       if (endpoint.includes('/model_card')) {
-        return parse("# RasoSynth Fine-Tuned Model\n\nDBOM Provenance Seal: `7e19a79c3f46f33d7b9e02c67b9319e34a6efb01dbf6c31a84f50e82c59a35e4`\n\nFinal Train Loss: 0.2140");
+        const urlJobId = endpoint.split('/')[4] || 'default';
+        let seed = 0;
+        for (let i = 0; i < urlJobId.length; i++) seed = (seed * 31 + urlJobId.charCodeAt(i)) >>> 0;
+        const dynLoss = (0.18 + (seed % 200) / 1000).toFixed(4);
+        const hex = seed.toString(16).padStart(8, '0').repeat(8).slice(0, 64);
+        return parse(`# RasoSynth Fine-Tuned Model\n\nExecution Target: Simulated (Accelerated Container Pool)\nDBOM Provenance Seal: \`${hex}\`\n\nFinal Train Loss: ${dynLoss}`);
       }
       if (endpoint.includes('/modelfile')) {
         return parse("FROM ./model-q4_k_m.gguf\nPARAMETER temperature 0.3\nPARAMETER top_p 0.95");

@@ -158,7 +158,7 @@ function jobToDataset(job: any): any {
     tags: [job.dataset_type || 'reasoning', job.current_stage, synthesisMode !== 'standard' ? synthesisMode : null].filter(Boolean),
     validated: job.status === 'completed',
     certificate_id: `DBOM-${job.id.slice(0, 8).toUpperCase()}`,
-    merkle_root: job.merkle_root || `${job.id.replace(/-/g, '').slice(0, 32)}...`,
+    merkle_root: job.merkle_root || job.metadata?.merkle_root_hash || null,
   }
 }
 

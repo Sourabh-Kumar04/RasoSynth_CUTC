@@ -220,7 +220,9 @@ function StudioContent() {
   const [parallelBilingual, setParallelBilingual] = useState<boolean>(false)
   const [datasetSize, setDatasetSize] = useState(10000)
   const [generationMode, setGenerationMode] = useState<'grounded' | 'synthetic'>('grounded')
-  const [humanReview, setHumanReview] = useState<boolean>(false)
+  const [humanReview, setHumanReview] = useState<boolean>(true)
+  const [llmReview, setLlmReview] = useState<boolean>(true)
+  const [requireCitations, setRequireCitations] = useState<boolean>(true)
   const [humanReviewPercentage, setHumanReviewPercentage] = useState<number>(10)
   const [prioritizeAiKosh, setPrioritizeAiKosh] = useState<boolean>(true)
   const [isZenMode, setIsZenMode] = useState<boolean>(false)
@@ -385,10 +387,13 @@ function StudioContent() {
         quality_level: 'standard',
         generation_mode: generationMode === 'grounded' ? 'hybrid' : 'synthetic',
         allow_seedless_generation: true,
+        require_reference_sources: requireCitations,
         enable_research_loop: true,
         human_review: humanReview,
         human_review_percentage: humanReview ? humanReviewPercentage : 0,
         human_review_mode: 'blocking',
+        llm_review_enabled: llmReview,
+        llm_review_sample_limit: 50,
         ...(prioritizeAiKosh ? { preferred_providers: ['ai_kosh'] } : {}),
       }
 
@@ -1132,6 +1137,40 @@ function StudioContent() {
                       />
                     </div>
                   )}
+                </div>
+
+                <div className="p-2.5 rounded-md bg-[#0a0a0f] border border-[#272738]">
+                  <label className="flex items-center justify-between text-xs font-mono text-white cursor-pointer">
+                    <div className="flex flex-col">
+                      <span className="font-semibold text-white">Independent LLM Jury</span>
+                      <span className="text-[10px] text-[#94a3b8]">
+                        Compare provider-specific reviews; disagreements are escalated to HITL
+                      </span>
+                    </div>
+                    <input
+                      type="checkbox"
+                      checked={llmReview}
+                      onChange={(e) => setLlmReview(e.target.checked)}
+                      className="w-4 h-4 accent-[#f26625] cursor-pointer"
+                    />
+                  </label>
+                </div>
+
+                <div className="p-2.5 rounded-md bg-[#0a0a0f] border border-[#272738]">
+                  <label className="flex items-center justify-between text-xs font-mono text-white cursor-pointer">
+                    <div className="flex flex-col">
+                      <span className="font-semibold text-white">Require Source Evidence</span>
+                      <span className="text-[10px] text-[#94a3b8]">
+                        Keep only examples with a source URL, content hash, and citation span
+                      </span>
+                    </div>
+                    <input
+                      type="checkbox"
+                      checked={requireCitations}
+                      onChange={(e) => setRequireCitations(e.target.checked)}
+                      className="w-4 h-4 accent-[#f26625] cursor-pointer"
+                    />
+                  </label>
                 </div>
 
                 {/* AI Kosh Prioritization Toggle */}
