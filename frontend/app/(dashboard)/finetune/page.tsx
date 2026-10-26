@@ -685,11 +685,10 @@ function FineTuneContent() {
         {
           cell_type: "code",
           execution_count: null,
-          metadata: { cellView: "form" },
+          metadata: {},
           outputs: [],
           source: [
-            "#@title 🚀 1. Verify GPU Allocation & Install Dependencies\n",
-            "#@markdown Automatically provisions GPU drivers, Unsloth, and PyTorch environment.\n",
+            "# 1. Verify GPU Allocation & Install Dependencies\n",
             "!nvidia-smi\n",
             "!pip install -q --no-deps unsloth \"unsloth[colab-new] @ git+https://github.com/unslothai/unsloth.git\"\n",
             "!pip install -q --no-deps trl peft accelerate bitsandbytes datasets transformers\n",
@@ -699,20 +698,19 @@ function FineTuneContent() {
         {
           cell_type: "code",
           execution_count: null,
-          metadata: { cellView: "form" },
+          metadata: {},
           outputs: [],
           source: [
-            "#@title ⚙️ 2. Autonomous Configuration (Pre-Configured from Studio)\n",
-            "#@markdown Training parameters pre-synchronized with your RasoSynthTune session.\n",
-            `BASE_MODEL = "${form.base_model}" #@param {type:"string"}\n`,
-            `DATASET_URL_OR_PATH = "${downloadUrl}" #@param {type:"string"}\n`,
-            `OUTPUT_MODEL_NAME = "${form.output_model_name || `finetune-${dsId.slice(0, 8)}`}" #@param {type:"string"}\n`,
-            `CHAT_TEMPLATE = "${form.chat_template}" #@param ["alpaca", "chatml", "llama-3", "mistral", "zephyr"]\n`,
-            `MAX_SEQ_LENGTH = 2048 #@param {type:"integer"}\n`,
-            `NUM_EPOCHS = ${form.num_train_epochs} #@param {type:"integer"}\n`,
-            `LEARNING_RATE = ${form.learning_rate} #@param {type:"number"}\n`,
-            `LORA_R = ${form.lora_r} #@param {type:"integer"}\n`,
-            `LORA_ALPHA = ${form.lora_alpha} #@param {type:"integer"}\n`,
+            "# 2. Configuration & Dataset Stream (Pre-Configured from Studio)\n",
+            `BASE_MODEL = "${form.base_model}"\n`,
+            `DATASET_URL_OR_PATH = "${downloadUrl}"\n`,
+            `OUTPUT_MODEL_NAME = "${form.output_model_name || `finetune-${dsId.slice(0, 8)}`}"\n`,
+            `CHAT_TEMPLATE = "${form.chat_template}"\n`,
+            `MAX_SEQ_LENGTH = 2048\n`,
+            `NUM_EPOCHS = ${form.num_train_epochs}\n`,
+            `LEARNING_RATE = ${form.learning_rate}\n`,
+            `LORA_R = ${form.lora_r}\n`,
+            `LORA_ALPHA = ${form.lora_alpha}\n`,
             `print(f"✓ Studio Config Loaded: {BASE_MODEL} | Epochs: {NUM_EPOCHS} | Chat Template: {CHAT_TEMPLATE}")\n`,
             `print(f"✓ Streaming Endpoint: {DATASET_URL_OR_PATH[:65]}...")\n`
           ]
@@ -720,11 +718,10 @@ function FineTuneContent() {
         {
           cell_type: "code",
           execution_count: null,
-          metadata: { cellView: "form" },
+          metadata: {},
           outputs: [],
           source: [
-            "#@title 📦 3. Load Base Model & Attach 4-Bit QLoRA Adapters\n",
-            "#@markdown Loads base weights in 4-bit precision and initializes LoRA rank matrices.\n",
+            "# 3. Load Base Model & Attach 4-Bit QLoRA Adapters\n",
             "from unsloth import FastLanguageModel\n",
             "import torch\n",
             "\n",
@@ -751,11 +748,10 @@ function FineTuneContent() {
         {
           cell_type: "code",
           execution_count: null,
-          metadata: { cellView: "form" },
+          metadata: {},
           outputs: [],
           source: [
-            "#@title 📥 4. Stream & Format Instruction Dataset\n",
-            "#@markdown Streams encrypted dataset from RasoSynthTune and formats for Chat Template.\n",
+            "# 4. Stream & Format Instruction Dataset\n",
             "import os\n",
             "import json\n",
             "import urllib.request\n",
@@ -797,11 +793,10 @@ function FineTuneContent() {
         {
           cell_type: "code",
           execution_count: null,
-          metadata: { cellView: "form" },
+          metadata: {},
           outputs: [],
           source: [
-            "#@title 🔥 5. Execute SFT Fine-Tuning Run\n",
-            "#@markdown Runs QLoRA optimization with gradient accumulation and loss tracking.\n",
+            "# 5. Execute SFT Fine-Tuning Run\n",
             "from trl import SFTTrainer\n",
             "from transformers import TrainingArguments\n",
             "\n",
@@ -838,11 +833,10 @@ function FineTuneContent() {
         {
           cell_type: "code",
           execution_count: null,
-          metadata: { cellView: "form" },
+          metadata: {},
           outputs: [],
           source: [
-            "#@title 🧪 6. Test Model Inference & Validation\n",
-            "#@markdown Generates verification responses using fine-tuned weights.\n",
+            "# 6. Test Model Inference & Validation\n",
             "FastLanguageModel.for_inference(model)\n",
             "inputs = tokenizer(\n",
             "    [ALPACA_PROMPT.format(\n",
@@ -861,11 +855,10 @@ function FineTuneContent() {
         {
           cell_type: "code",
           execution_count: null,
-          metadata: { cellView: "form" },
+          metadata: {},
           outputs: [],
           source: [
-            "#@title 💾 7. Export Model Weights & LoRA Adapters\n",
-            "#@markdown Saves trained adapters locally or publishes to Hugging Face Hub.\n",
+            "# 7. Export Model Weights & LoRA Adapters\n",
             "model.save_pretrained(OUTPUT_MODEL_NAME)\n",
             "tokenizer.save_pretrained(OUTPUT_MODEL_NAME)\n",
             "print(f\"✓ Saved LoRA adapter weights to: {OUTPUT_MODEL_NAME}\")\n"
@@ -1554,69 +1547,84 @@ function FineTuneContent() {
                             )}
                           </div>
 
+                          <div className="space-y-1 pt-1 border-t border-[#272738]/60">
+                            <div className="text-[10px] text-zinc-400 flex items-center justify-between">
+                              <span className="flex items-center gap-1.5 font-semibold text-zinc-300">
+                                <FileCode2 className="w-3.5 h-3.5 text-[#f26625]" />
+                                <span>Notebook Code Cell (Configured for {form.base_model})</span>
+                              </span>
+                              <button
+                                type="button"
+                                onClick={() => {
+                                  const snippet = `BASE_MODEL = "${form.base_model}"\nDATASET_URL_OR_PATH = "${downloadUrl}"\nCHAT_TEMPLATE = "${form.chat_template}"\nNUM_EPOCHS = ${form.num_train_epochs}\nLEARNING_RATE = ${form.learning_rate}\nLORA_R = ${form.lora_r}\nLORA_ALPHA = ${form.lora_alpha}`
+                                  navigator.clipboard.writeText(snippet)
+                                  toast('Colab code block copied! Paste into Notebook Cell 2.', 'success')
+                                }}
+                                className="text-[10px] text-[#f26625] hover:underline inline-flex items-center gap-1 font-semibold"
+                              >
+                                <Copy className="w-3 h-3" />
+                                <span>Copy Code Block</span>
+                              </button>
+                            </div>
+                            <pre className="p-2.5 rounded bg-[#0a0a0f] border border-[#272738] text-[10px] text-emerald-400 overflow-x-auto leading-relaxed select-all">
+{`BASE_MODEL = "${form.base_model}"
+DATASET_URL_OR_PATH = "${downloadUrl}"
+CHAT_TEMPLATE = "${form.chat_template}"
+NUM_EPOCHS = ${form.num_train_epochs}
+LEARNING_RATE = ${form.learning_rate}
+LORA_R = ${form.lora_r}
+LORA_ALPHA = ${form.lora_alpha}`}
+                            </pre>
+                          </div>
+
                           <div className="space-y-1.5 pt-1 border-t border-[#272738]/60">
                             <div className="text-[10px] text-zinc-400 flex items-center justify-between">
                               <span className="flex items-center gap-1.5 font-semibold text-zinc-300">
-                                <Activity className="w-3 h-3 text-[#f26625]" />
-                                <span>Colab Cell Execution Outputs (Zero Manual Copy-Paste)</span>
+                                <Activity className="w-3 h-3 text-emerald-400" />
+                                <span>Cell Execution Outputs Preview</span>
                               </span>
-                              <div className="flex items-center gap-2">
-                                <span className="text-[9px] px-1.5 py-0.5 rounded bg-emerald-500/10 text-emerald-400 border border-emerald-500/30">
-                                  Form View Active · Code Hidden
-                                </span>
-                                <button
-                                  type="button"
-                                  onClick={() => setShowRawColabParams(v => !v)}
-                                  className="text-[9px] text-[#f26625] hover:underline font-mono"
-                                >
-                                  {showRawColabParams ? 'Hide Raw Variables' : 'View Raw Variables'}
-                                </button>
-                              </div>
+                              <span className="text-[9px] px-1.5 py-0.5 rounded bg-emerald-500/10 text-emerald-400 border border-emerald-500/30">
+                                4 Stages Ready
+                              </span>
                             </div>
 
-                            {!showRawColabParams ? (
-                              <div className="p-3 rounded bg-[#0a0a0f] border border-[#272738] space-y-2 text-[11px] font-mono leading-relaxed">
-                                <div className="flex items-start gap-2 border-b border-[#1c1c2b] pb-2">
-                                  <span className="px-1.5 py-0.5 text-[9px] font-bold rounded bg-blue-500/15 text-blue-400 shrink-0">
-                                    Cell 1 [GPU & Setup]
-                                  </span>
-                                  <div className="text-zinc-300">
-                                    <span className="text-emerald-400 font-semibold">Tesla T4 GPU (15,109 MiB)</span> · CUDA 12.2 · Unsloth FastLanguageModel initialized (<span className="text-white font-medium">2.4x speedup, 70% VRAM saving</span>).
-                                  </div>
-                                </div>
-
-                                <div className="flex items-start gap-2 border-b border-[#1c1c2b] pb-2">
-                                  <span className="px-1.5 py-0.5 text-[9px] font-bold rounded bg-purple-500/15 text-purple-400 shrink-0">
-                                    Cell 2 [Data Stream]
-                                  </span>
-                                  <div className="text-zinc-300">
-                                    Streaming <span className="text-[#f26625] font-semibold">{dsName}</span> from signed endpoint · Chat Template: <span className="text-amber-300 font-semibold">{form.chat_template}</span> · Cryptographic DBOM Attested.
-                                  </div>
-                                </div>
-
-                                <div className="flex items-start gap-2 border-b border-[#1c1c2b] pb-2">
-                                  <span className="px-1.5 py-0.5 text-[9px] font-bold rounded bg-emerald-500/15 text-emerald-400 shrink-0">
-                                    Cell 3 [QLoRA Setup]
-                                  </span>
-                                  <div className="text-zinc-300">
-                                    Base Model: <span className="text-white font-semibold">{form.base_model}</span> (4-bit NF4 quantized) · LoRA Rank <span className="text-emerald-400">r={form.lora_r}</span>, alpha={form.lora_alpha} · Trainable params: <span className="text-white">~11.2M (0.54%)</span>.
-                                  </div>
-                                </div>
-
-                                <div className="flex items-start gap-2">
-                                  <span className="px-1.5 py-0.5 text-[9px] font-bold rounded bg-amber-500/15 text-amber-400 shrink-0">
-                                    Cell 4 [SFT Training]
-                                  </span>
-                                  <div className="text-zinc-300">
-                                    Training Configuration: <span className="text-white">{form.num_train_epochs} Epochs</span> · lr={form.learning_rate} · Batch={form.per_device_train_batch_size} · AdamW 8-bit · Loss convergence target: <span className="text-emerald-400">&lt;0.70</span>.
-                                  </div>
+                            <div className="p-3 rounded bg-[#0a0a0f] border border-[#272738] space-y-2 text-[11px] font-mono leading-relaxed">
+                              <div className="flex items-start gap-2 border-b border-[#1c1c2b] pb-2">
+                                <span className="px-1.5 py-0.5 text-[9px] font-bold rounded bg-blue-500/15 text-blue-400 shrink-0">
+                                  Cell 1 [GPU & Setup]
+                                </span>
+                                <div className="text-zinc-300">
+                                  <span className="text-emerald-400 font-semibold">Tesla T4 GPU (15,109 MiB)</span> · CUDA 12.2 · Unsloth FastLanguageModel initialized (<span className="text-white font-medium">2.4x speedup, 70% VRAM saving</span>).
                                 </div>
                               </div>
-                            ) : (
-                              <pre className="p-2.5 rounded bg-[#0a0a0f] border border-[#272738] text-[10px] text-emerald-400 overflow-x-auto leading-relaxed select-all">
-{`BASE_MODEL = "${form.base_model}"\nDATASET_URL_OR_PATH = "${downloadUrl}"\nCHAT_TEMPLATE = "${form.chat_template}"\nEPOCHS = ${form.num_train_epochs}\nLORA_R = ${form.lora_r}\nLORA_ALPHA = ${form.lora_alpha}`}
-                              </pre>
-                            )}
+
+                              <div className="flex items-start gap-2 border-b border-[#1c1c2b] pb-2">
+                                <span className="px-1.5 py-0.5 text-[9px] font-bold rounded bg-purple-500/15 text-purple-400 shrink-0">
+                                  Cell 2 [Data Stream]
+                                </span>
+                                <div className="text-zinc-300">
+                                  Streaming <span className="text-[#f26625] font-semibold">{dsName}</span> from signed endpoint · Chat Template: <span className="text-amber-300 font-semibold">{form.chat_template}</span> · Cryptographic DBOM Attested.
+                                </div>
+                              </div>
+
+                              <div className="flex items-start gap-2 border-b border-[#1c1c2b] pb-2">
+                                <span className="px-1.5 py-0.5 text-[9px] font-bold rounded bg-emerald-500/15 text-emerald-400 shrink-0">
+                                  Cell 3 [QLoRA Setup]
+                                </span>
+                                <div className="text-zinc-300">
+                                  Base Model: <span className="text-white font-semibold">{form.base_model}</span> (4-bit NF4 quantized) · LoRA Rank <span className="text-emerald-400">r={form.lora_r}</span>, alpha={form.lora_alpha} · Trainable params: <span className="text-white">~11.2M (0.54%)</span>.
+                                </div>
+                              </div>
+
+                              <div className="flex items-start gap-2">
+                                <span className="px-1.5 py-0.5 text-[9px] font-bold rounded bg-amber-500/15 text-amber-400 shrink-0">
+                                  Cell 4 [SFT Training]
+                                </span>
+                                <div className="text-zinc-300">
+                                  Training Configuration: <span className="text-white">{form.num_train_epochs} Epochs</span> · lr={form.learning_rate} · Batch={form.per_device_train_batch_size} · AdamW 8-bit · Loss convergence target: <span className="text-emerald-400">&lt;0.70</span>.
+                                </div>
+                              </div>
+                            </div>
                           </div>
                         </div>
                       )
