@@ -2,6 +2,7 @@
   "name": "rasosynthtune-monorepo",
   "version": "1.0.0",
   "private": true,
+  "license": "PolyForm-Noncommercial-1.0.0",
   "scripts": {
     "dev": "npm run dev --prefix frontend",
     "build": "npm run build --prefix frontend",

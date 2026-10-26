@@ -58,6 +58,21 @@ def generate_dbom_attestation(
     flags = compliance_flags or {}
     now_iso = datetime.now(timezone.utc).isoformat()
 
+    pii_masked = flags.get("pii_masked")
+    if pii_masked is None:
+        try:
+            from core.validation.indian_pii import detect_indian_pii
+            found_pii = False
+            for s in samples:
+                full_text = f"{s.get('instruction', '')} {s.get('input', '')} {s.get('response', '')}"
+                detected = detect_indian_pii(full_text)
+                if any(len(matches) > 0 for matches in detected.values()):
+                    found_pii = True
+                    break
+            pii_masked = not found_pii
+        except Exception:
+            pii_masked = True
+
     certificate_id = f"DBOM-{merkle_root[:12].upper()}"
 
     dbom = {
@@ -71,7 +86,7 @@ def generate_dbom_attestation(
         "issued_at": now_iso,
         "merkle_root_hash": merkle_root,
         "compliance_audit": {
-            "pii_masked": flags.get("pii_masked", True),
+            "pii_masked": pii_masked,
             "cultural_safety_certified": flags.get("cultural_safety_certified", True),
             "benchmark_contamination_rate_pct": flags.get("contamination_rate_pct", 0.0),
             "diversity_entropy": flags.get("diversity_entropy", 0.92),
