@@ -29,8 +29,6 @@ logging.basicConfig(
 )
 logger = logging.getLogger(__name__)
 
-# Import original schemas module
-from api import schemas as original_schemas
 from api.schemas import (
     BaseSchema, ConstraintType, Constraint, SemanticRequest,
     DatasetConfig, DatasetGenerationRequest, WorkflowConfig, WorkflowStep,
@@ -39,45 +37,35 @@ from api.schemas import (
     AsyncJobExecutor, ProgressTracker, APIMetrics, ValidationMetrics,
 )
 
-# Import original schemas from api/schemas.py directly, bypassing the api/schemas/ package
-import importlib.util
-import os
-
-_schemas_path = os.path.join(os.path.dirname(__file__), "schemas.py")
-_spec = importlib.util.spec_from_file_location("legacy_schemas", _schemas_path)
-_legacy_schemas = importlib.util.module_from_spec(_spec)
-import sys
-sys.modules["legacy_schemas"] = _legacy_schemas
-_spec.loader.exec_module(_legacy_schemas)
-
-CheckpointResponse = getattr(_legacy_schemas, 'CheckpointResponse', None)
-RestoreCheckpointResponse = getattr(_legacy_schemas, 'RestoreCheckpointResponse', None)
-ProviderSwitchResponse = getattr(_legacy_schemas, 'ProviderSwitchResponse', None)
-FailoverResponse = getattr(_legacy_schemas, 'FailoverResponse', None)
-FailoverHistoryResponse = getattr(_legacy_schemas, 'FailoverHistoryResponse', None)
-CreateCheckpointRequest = getattr(_legacy_schemas, 'CreateCheckpointRequest', None)
-RestoreCheckpointRequest = getattr(_legacy_schemas, 'RestoreCheckpointRequest', None)
-ProviderSwitchRequest = getattr(_legacy_schemas, 'ProviderSwitchRequest', None)
-FailoverRequest = getattr(_legacy_schemas, 'FailoverRequest', None)
-CheckpointStage = getattr(_legacy_schemas, 'CheckpointStage', None)
-ProviderContextSchema = getattr(_legacy_schemas, 'ProviderContextSchema', None)
-
-JobRequest = getattr(_legacy_schemas, 'JobRequest', None)
-JobResponse = getattr(_legacy_schemas, 'JobResponse', None)
-JobDetailResponse = getattr(_legacy_schemas, 'JobDetailResponse', None)
-ProviderStatus = getattr(_legacy_schemas, 'ProviderStatus', None)
-ProviderTestRequest = getattr(_legacy_schemas, 'ProviderTestRequest', None)
-ProviderTestResponse = getattr(_legacy_schemas, 'ProviderTestResponse', None)
-ReportResponse = getattr(_legacy_schemas, 'ReportResponse', None)
-ErrorResponse = getattr(_legacy_schemas, 'ErrorResponse', None)
-HealthResponse = getattr(_legacy_schemas, 'HealthResponse', None)
-ConstraintAnalysis = getattr(_legacy_schemas, 'ConstraintAnalysis', None)
-ResearchRequest = getattr(_legacy_schemas, 'ResearchRequest', None)
-ResearchResponse = getattr(_legacy_schemas, 'ResearchResponse', None)
-AdaptabilityRequest = getattr(_legacy_schemas, 'AdaptabilityRequest', None)
-AdaptabilityResponse = getattr(_legacy_schemas, 'AdaptabilityResponse', None)
-DeliveryRequestSchema = getattr(_legacy_schemas, 'DeliveryRequestSchema', None)
-DeliveryResponseSchema = getattr(_legacy_schemas, 'DeliveryResponseSchema', None)
+from api.legacy_schemas import (
+    AdaptabilityRequest,
+    AdaptabilityResponse,
+    CheckpointResponse,
+    CheckpointStage,
+    ConstraintAnalysis,
+    CreateCheckpointRequest,
+    DeliveryRequestSchema,
+    DeliveryResponseSchema,
+    ErrorResponse,
+    FailoverHistoryResponse,
+    FailoverRequest,
+    FailoverResponse,
+    HealthResponse,
+    JobDetailResponse,
+    JobRequest,
+    JobResponse,
+    ProviderContextSchema,
+    ProviderStatus,
+    ProviderSwitchRequest,
+    ProviderSwitchResponse,
+    ProviderTestRequest,
+    ProviderTestResponse,
+    ReportResponse,
+    ResearchRequest,
+    ResearchResponse,
+    RestoreCheckpointRequest,
+    RestoreCheckpointResponse,
+)
 from core.config import get_settings
 from core.intent import UserIntent
 from core.provider_router import ProviderRouter, TaskType
@@ -92,6 +80,7 @@ from api.auth import get_auth_manager, UserRole, User, get_current_user
 from api.review import router as review_router
 from api.quality import router as quality_router
 from api.finetune import router as finetune_router
+from api.schedules import router as schedules_router
 
 # Rate limiter for security (distributed Redis-backed with in-memory fallback)
 class RateLimiter:
@@ -858,6 +847,7 @@ app = FastAPI(lifespan=lifespan)
 app.include_router(review_router)
 app.include_router(quality_router)
 app.include_router(finetune_router)
+app.include_router(schedules_router)
 
 # Observability & Security: Add custom middleware
 app.add_middleware(TracingMiddleware)
@@ -2983,6 +2973,11 @@ async def get_job_dataset_summary(job_id: str):
             status_queue = await review_service.get_queue(status=status, job_id=job_id, page=1, page_size=1)
             review[status] += status_queue.get("total", 0)
 
+    job_quality = job.get("quality_score") if isinstance(job, dict) else getattr(job, "quality_score", None)
+    if job_quality is None and isinstance(job, dict):
+        job_quality = (job.get("metadata") or {}).get("quality_score")
+    canonical_mean = job_quality if job_quality is not None else (round(sum(scores) / len(scores), 4) if scores else None)
+
     return {
         "job_id": job_id,
         "dataset_id": dataset["id"],
@@ -2990,7 +2985,7 @@ async def get_job_dataset_summary(job_id: str):
         "sample_count": dataset.get("size", len(stored)),
         "balance_report": dataset_meta.get("balance_report"),
         "provenance": dataset_meta.get("provenance"),
-        "quality": {"mean": round(sum(scores) / len(scores), 4) if scores else None, "scored_samples": len(scores)},
+        "quality": {"mean": canonical_mean, "scored_samples": len(scores)},
         "sources": dict(sources),
         "languages": dict(languages),
         "topics": dict(topics),
@@ -3900,9 +3895,9 @@ async def get_dataset_dbom(job_id: str):
                 "nutrition_label_md": nut_md,
             }
 
-    job = await db.get_job(job_id) if db else None
-    domain = (job.target_domain if job else None) or f"Dataset {job_id[:8]}"
-    config = (job.config or {}) if job and hasattr(job, "config") else {}
+    job = await db.get_job_status(job_id) if db else None
+    config = (job.get("config") if isinstance(job, dict) else getattr(job, "config", {})) or {}
+    domain = config.get("target_domain") or config.get("prompt") or (job.get("target_domain") if isinstance(job, dict) else getattr(job, "target_domain", None)) or f"Dataset {job_id[:8]}"
     lang = config.get("language", "en")
 
     # Check if this job has already exported a DBOM certificate on disk
