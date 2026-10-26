@@ -8,6 +8,7 @@ References:
 Enhanced orchestrator with intelligent reasoning and constraint handling.
 """
 import asyncio
+import hashlib
 import json
 import os
 import logging
@@ -1756,6 +1757,15 @@ class DatasetOrchestrator:
         }
         context = f"{user_prompt} {target_domain}".lower()
         keywords = [w for w in re.split(r'\W+', context) if len(w) >= 3 and w not in stop_words]
+
+        # Domain terminology and entity aliases for domain grounding
+        if any(t in context for t in ["gst", "tax", "taxation"]):
+            keywords.extend(["cgst", "sgst", "igst", "cbic", "gstr", "itc", "invoice", "invoicing", "turnover", "cess", "e-way", "taxpayer"])
+        if any(t in context for t in ["patient", "medical", "hospital", "doctor"]):
+            keywords.extend(["consent", "treatment", "records", "surgery", "informed", "clinical", "negligence", "physician", "complaint", "mci"])
+        if any(t in context for t in ["corporate", "law", "company", "companies"]):
+            keywords.extend(["nclt", "director", "shareholder", "board", "resolution", "statutory", "mca", "roc"])
+
         if not keywords:
             return 0.90
 
@@ -2389,9 +2399,11 @@ class DatasetOrchestrator:
         job_meta["quality_score"] = composite_score
         job["quality_score"] = composite_score
 
+        retries = int(state.get("synthesis_retries", 0))
         if not passed:
+            retries += 1
             logger.warning(
-                f"[{job_id}] Quality Eval topic fidelity gate FAILED: topic_fidelity={avg_topic:.2f} (<0.80) or composite={composite_score:.2f}. "
+                f"[{job_id}] Quality Eval topic fidelity gate FAILED (attempt {retries}): topic_fidelity={avg_topic:.2f} (<0.80) or composite={composite_score:.2f}. "
                 "Marking for HITL review."
             )
         else:
@@ -2402,6 +2414,7 @@ class DatasetOrchestrator:
         return {
             **state,
             "quality_eval_passed": passed,
+            "synthesis_retries": retries,
             "quality_breakdown": quality_breakdown,
             "quality_score": composite_score,
             "missing_reference_count": missing_reference_count,
@@ -2418,9 +2431,8 @@ class DatasetOrchestrator:
         """Route conditionally after quality evaluation."""
         if state.get("quality_eval_passed", True):
             return "pass"
-        retries = state.get("synthesis_retries", 0)
-        if retries < 1:
-            state["synthesis_retries"] = retries + 1
+        retries = int(state.get("synthesis_retries", 0))
+        if retries <= 1:
             return "retry_synthesis"
         return "pass"
 

@@ -691,6 +691,12 @@ class FilteringPipeline:
         redacted = re.sub(r'\b[2-9]\d{3}[\s-]?\d{4}[\s-]?\d{4}\b', '[REDACTED_AADHAAR]', redacted)
         # PAN (Permanent Account Number: 5 uppercase letters, 4 digits, 1 uppercase letter)
         redacted = re.sub(r'\b[A-Z]{5}[0-9]{4}[A-Z]{1}\b', '[REDACTED_PAN]', redacted)
+        # GSTIN (Goods and Services Tax ID Number)
+        redacted = re.sub(r'\b[0-9]{2}[A-Z]{5}[0-9]{4}[A-Z]{1}[1-9A-Z]{1}Z[0-9A-Z]{1}\b', '[REDACTED_GSTIN]', redacted, flags=re.IGNORECASE)
+        # UPI ID (Virtual Payment Address)
+        redacted = re.sub(r'\b[a-zA-Z0-9.\-_]{2,256}@(okaxis|okhdfcbank|okicici|oksbi|paytm|ybl|apl|upi)\b', '[REDACTED_UPI]', redacted, flags=re.IGNORECASE)
+        # Indian Vehicle Registration Number
+        redacted = re.sub(r'\b[A-Z]{2}[ -]?[0-9]{1,2}[ -]?[A-Z]{1,3}[ -]?[0-9]{4}\b', '[REDACTED_VEHICLE_NO]', redacted, flags=re.IGNORECASE)
         # Indian Mobile Numbers (+91 or starting with 6-9)
         redacted = re.sub(r'\b(?:\+91|91)?[\s-]?[6-9]\d{9}\b', '[REDACTED_PHONE]', redacted)
         # US SSN
@@ -711,6 +717,9 @@ class FilteringPipeline:
         pii_patterns = [
             r'\b[2-9]\d{3}[\s-]?\d{4}[\s-]?\d{4}\b',           # India Aadhaar (DPDP Act)
             r'\b[A-Z]{5}[0-9]{4}[A-Z]{1}\b',                  # India PAN card (DPDP Act)
+            r'\b[0-9]{2}[A-Z]{5}[0-9]{4}[A-Z]{1}[1-9A-Z]{1}Z[0-9A-Z]{1}\b',  # India GSTIN (DPDP Act)
+            r'\b[a-zA-Z0-9.\-_]{2,256}@(okaxis|okhdfcbank|okicici|oksbi|paytm|ybl|apl|upi)\b',  # India UPI ID
+            r'\b[A-Z]{2}[ -]?[0-9]{1,2}[ -]?[A-Z]{1,3}[ -]?[0-9]{4}\b',  # India Vehicle Registration
             r'\b(?:\+91|91)?[\s-]?[6-9]\d{9}\b',             # India Mobile (DPDP Act)
             r'\b[A-Z]{1}[0-9]{7}\b',                         # India Passport
             r'\b\d{3}-\d{2}-\d{4}\b',                        # US SSN
