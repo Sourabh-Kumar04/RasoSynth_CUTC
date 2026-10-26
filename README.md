@@ -1,15 +1,26 @@
 # RasoSynthTune
 
-> **Autonomous AI Dataset Synthesis & Sovereign Fine-Tuning Platform**
+### Autonomous Dataset Synthesis, Cryptographic Provenance & Sovereign Fine-Tuning
 
-[![Live Production](https://img.shields.io/badge/Live_Production-rasosynthtune--indiaai.vercel.app-f26625?style=flat&logo=vercel)](https://rasosynthtune-indiaai.vercel.app)
-[![CI Gate](https://github.com/Sourabh-Kumar04/RasoSynth_CUTC/actions/workflows/ci.yml/badge.svg)](https://github.com/Sourabh-Kumar04/RasoSynth_CUTC/actions/workflows/ci.yml)
-[![Open In Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/Sourabh-Kumar04/RasoSynth_CUTC/blob/master/finetuning/RasoSynthTune_FineTuning_Colab.ipynb)
-[![License: PolyForm Noncommercial](https://img.shields.io/badge/License-PolyForm_Noncommercial_1.0.0-blue.svg)](LICENSE)
-[![Python 3.11+](https://img.shields.io/badge/Python-3.11%20%7C%203.12-3776ab?logo=python)](pyproject.toml)
-[![Next.js 14](https://img.shields.io/badge/Frontend-Next.js_14-000000?logo=nextdotjs)](frontend/)
+[![Live Production](https://img.shields.io/badge/Live_Production-rasosynthtune--indiaai.vercel.app-f26625?style=for-the-badge&logo=vercel&logoColor=white)](https://rasosynthtune-indiaai.vercel.app)
+[![Open In Colab](https://img.shields.io/badge/Google_Colab-1--Click_Fine--Tuning-F9AB00?style=for-the-badge&logo=googlecolab&logoColor=white)](https://colab.research.google.com/github/Sourabh-Kumar04/RasoSynth_CUTC/blob/master/finetuning/RasoSynthTune_FineTuning_Colab.ipynb)
+[![CI Gate](https://img.shields.io/badge/CI_Gate-Passing-10b981?style=for-the-badge&logo=githubactions&logoColor=white)](https://github.com/Sourabh-Kumar04/RasoSynth_CUTC/actions/workflows/ci.yml)
+[![License: PolyForm Noncommercial](https://img.shields.io/badge/License-PolyForm_NC_1.0-6366f1?style=for-the-badge)](LICENSE)
 
-RasoSynthTune is an autonomous data refinery and fine-tuning platform. It discovers authoritative domain sources, enforces DPDP Act statutory compliance, synthesizes multi-turn reasoning datasets across 7 cognitive modes, seals every record in a cryptographic **SHA-256 Merkle DBOM**, and trains open-source LLMs through a unified pipeline.
+<p align="center">
+  <a href="https://rasosynthtune-indiaai.vercel.app"><b>Explore Live Demo</b></a> •
+  <a href="https://colab.research.google.com/github/Sourabh-Kumar04/RasoSynth_CUTC/blob/master/finetuning/RasoSynthTune_FineTuning_Colab.ipynb"><b>Launch Colab GPU</b></a> •
+  <a href="#1-python-sdk"><b>Python SDK</b></a> •
+  <a href="#2-developer-cli-rasosynthtune"><b>CLI Guide</b></a> •
+  <a href="#autonomous-pipeline-architecture"><b>Architecture</b></a> •
+  <a href="docs/TECHNICAL_BRIEFING.md"><b>Technical Briefing</b></a>
+</p>
+
+---
+
+**RasoSynthTune** is an autonomous data refinery and model customization engine designed for high-stakes, specialized domains (taxation, healthcare, corporate law, and Indic languages). It turns raw unstructured domain knowledge into verified, audit-ready instruction datasets and fine-tunes open-source LLMs without requiring manual prompt engineering or brittle scraping pipelines.
+
+Every dataset produced is cryptographically attested with a **Data Bill of Materials (DBOM)**—a tamper-evident SHA-256 Merkle root that mathematically proves training data provenance and ensures statutory compliance under the **Digital Personal Data Protection (DPDP) Act 2023** and **EU AI Act**.
 
 ---
 
