@@ -257,16 +257,14 @@ class FireworksProvider(BaseProvider):
             )
 
     async def _execute_embed(self, text: str, **kwargs) -> EmbeddingResponse:
-        return EmbeddingResponse(
-            embedding=[0.0] * 1536,
-            model="fireworks-embed-unsupported",
-            tokens_used=len(text) // 4,
-            provider=self.name,
+        raise NotImplementedError(
+            "Fireworks AI does not support text embeddings via this provider interface. Route to OpenAI/Ollama/Gemini."
         )
 
     async def embed(self, text: str, model: str | None = None):
-        response = await self._execute_embed(text)
-        return response.embedding
+        raise NotImplementedError(
+            "Fireworks AI does not support text embeddings via this provider interface. Route to OpenAI/Ollama/Gemini."
+        )
 
     def get_capabilities(self) -> list:
         from providers.core_lib.base import ProviderCapability
