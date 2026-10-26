@@ -1159,54 +1159,56 @@ class ExtractionPipeline:
                     )
                     yield extracted
                     return
-            # If we don't have precomputed sample_rows, try to fetch a sample via datasets SDK
+            # If we don't have precomputed sample_rows, try to fetch a sample safely with strict timeout
             try:
-                from datasets import load_dataset, get_dataset_config_names
-                ds_id = source.metadata__.get("id") or source.title
-                if ds_id:
-                    # Try to load the first config and a few rows
+                import asyncio
+                def _safe_load_hf():
+                    from datasets import load_dataset, get_dataset_config_names
+                    ds_id = source.metadata__.get("id") or source.title
+                    if not ds_id:
+                        return None
                     configs = get_dataset_config_names(ds_id)
                     config = configs[0] if configs else "default"
-                    # Load streaming slice to get a few rows
                     ds = load_dataset(
                         ds_id,
                         config,
                         split="train",
                         streaming=True,
-                        trust_remote_code=True,
+                        trust_remote_code=False,
                     )
-                    head = list(ds.take(3))
-                    if head:
-                        import json
-                        sample_lines = []
-                        for row in head:
-                            if isinstance(row, dict):
-                                sample_lines.append(json.dumps(row, ensure_ascii=False))
-                            else:
-                                sample_lines.append(str(row))
-                        sample_content = "\n".join(sample_lines)
-                        if sample_content:
-                            content = f"Dataset: {source.title}\nDescription: {source.description or ''}\n\nSample data (first {len(head)} rows):\n{sample_content}"
-                            extracted = ExtractedContent(
-                                content=content,
-                                content_type="huggingface_dataset_sample",
-                                language="en",
-                                url=source.url,
-                                confidence=0.9,
-                                metadata={
-                                    "downloads": source.metadata__.get("downloads", 0),
-                                    "tags": source.metadata__.get("tags", []),
-                                    "author": source.metadata__.get("author", ""),
-                                    "source_type": "huggingface_dataset",
-                                    "fetched_via_sdk": True,
-                                    "sample_rows_used": len(head)
-                                }
-                            )
-                            yield extracted
-                            return
+                    return list(ds.take(3))
+
+                head = await asyncio.wait_for(asyncio.to_thread(_safe_load_hf), timeout=8.0)
+                if head:
+                    import json
+                    sample_lines = []
+                    for row in head:
+                        if isinstance(row, dict):
+                            sample_lines.append(json.dumps(row, ensure_ascii=False))
+                        else:
+                            sample_lines.append(str(row))
+                    sample_content = "\n".join(sample_lines)
+                    if sample_content:
+                        content = f"Dataset: {source.title}\nDescription: {source.description or ''}\n\nSample data (first {len(head)} rows):\n{sample_content}"
+                        extracted = ExtractedContent(
+                            content=content,
+                            content_type="huggingface_dataset_sample",
+                            language="en",
+                            url=source.url,
+                            confidence=0.9,
+                            metadata={
+                                "downloads": source.metadata__.get("downloads", 0),
+                                "tags": source.metadata__.get("tags", []),
+                                "author": source.metadata__.get("author", ""),
+                                "source_type": "huggingface_dataset",
+                                "fetched_via_sdk": True,
+                                "sample_rows_used": len(head)
+                            }
+                        )
+                        yield extracted
+                        return
             except Exception as sdk_err:
-                # SDK not available or failed; fall back to metadata with low confidence
-                self._LOG.debug(f"HF SDK sample extraction failed for {source.url}: {sdk_err}")
+                self._LOG.debug(f"HF SDK sample extraction safely bypassed for {source.url}: {sdk_err}")
                 pass
             # Fallback: do not yield metadata-only content to avoid irrelevant data
             # Under-delivering with no data is better than including irrelevant metadata
@@ -1306,8 +1308,12 @@ class ExtractionPipeline:
                         dataset_ref = match.group(1)
 
                 if dataset_ref:
-                    # Download the dataset to access actual files
-                    path = kagglehub.dataset_download(dataset_ref)
+                    # Download small dataset safely without blocking the event loop
+                    import asyncio
+                    path = await asyncio.wait_for(
+                        asyncio.to_thread(kagglehub.dataset_download, dataset_ref),
+                        timeout=10.0
+                    )
 
                     # Read common file types to extract content
                     import os

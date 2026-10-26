@@ -143,6 +143,7 @@ class AgentState(TypedDict):
     quality_score: float | None
     quality_eval_passed: bool | None
     quality_breakdown: dict | None
+    agent_artifacts: dict
 
 
 class ConstraintAnalyzer:
@@ -639,7 +640,9 @@ class DatasetOrchestrator:
         if ideal_samples:
             intent.ideal_samples = ideal_samples[:10]
 
-        # Multi-Agent Society: Consult Strategy Agent
+        agent_artifacts = dict(state.get("agent_artifacts") or {})
+        # Multi-Agent Society: strategy plans constraints while the search
+        # specialist contributes transparent query reformulations.
         if self.agent_registry:
             try:
                 from agents.base import AgentType, AgentContext
@@ -647,8 +650,20 @@ class DatasetOrchestrator:
                 strat_agent = self.agent_registry.create_agent(AgentType.STRATEGY)
                 if strat_agent:
                     await strat_agent.execute({"intent": intent.model_dump(), "stage": "query_optimizer"}, ctx)
+                search_agent = self.agent_registry.create_agent(AgentType.SEARCH_OPTIMIZATION)
+                if search_agent:
+                    await search_agent.initialize()
+                    search_result = await search_agent.execute({
+                        "query": target_domain or intent.raw_input,
+                        "domain": config.get("source_domain", ""),
+                        "task_id": job_id,
+                    }, ctx)
+                    if search_result.success:
+                        optimized = [item.get("query") for item in search_result.output.get("optimized_queries", []) if item.get("query")]
+                        intent.specialized_queries = list(dict.fromkeys([*intent.specialized_queries, *optimized]))[:10]
+                        agent_artifacts["search_optimization"] = search_result.output
             except Exception:
-                pass
+                logger.exception("Search/planning agent advisory stage failed")
 
         logger.info(f"[{job_id}] Query Optimizer generated {len(intent.specialized_queries)} queries for '{intent.domain}'")
         return {
@@ -656,6 +671,7 @@ class DatasetOrchestrator:
             "intent": intent,
             "current_stage": "query_optimizer",
             "progress": 0.08,
+            "agent_artifacts": agent_artifacts,
             "messages": state["messages"] + [f"Query optimized: {len(intent.specialized_queries)} specialized queries for {intent.domain}"],
         }
 
@@ -667,25 +683,27 @@ class DatasetOrchestrator:
         intent = state.get("intent")
 
         preview_samples = []
+        user_prompt = config.get("raw_input") or config.get("prompt") or config.get("target_domain", "")
         domain_name = (intent.domain if intent else None) or config.get("target_domain", "Synthetic Instructions")
         language = config.get("language", "en")
 
         if config.get("approved_examples"):
             preview_samples = config.get("approved_examples")
         else:
-            # 1. Attempt LLM generation through active provider (e.g. Ollama, Gemini, Claude, Groq)
+            # 1. Attempt LLM generation through active provider router with user's specific prompt
             if self.router:
                 try:
                     import re as _re
                     llm_prompt = (
                         f"You are a principal AI training data engineer synthesizing production instruction-tuning datasets for LLM fine-tuning.\n"
-                        f"Domain / Task: {domain_name}\n"
+                        f"User Prompt / Specification: {user_prompt}\n"
+                        f"Target Domain: {domain_name}\n"
                         f"Language: {language}\n\n"
-                        f"Generate exactly 3 production-grade, highly specific, realistic instruction-tuning training pairs for fine-tuning.\n"
+                        f"Generate exactly 3 production-grade, highly specific, realistic instruction-tuning training pairs strictly fulfilling the user prompt.\n"
                         f"Rules:\n"
-                        f"- Each instruction must be a realistic, highly specific user query with authentic domain terminology (e.g., specific statutes, sections, computations, or technical protocols).\n"
-                        f"- Each response must be detailed, technically rigorous, step-by-step, citing specific legal or technical procedures.\n"
-                        f"- Do NOT use generic placeholders like 'Step 1: Identify foundational parameters'. Provide actual substantive domain content.\n"
+                        f"- Each instruction must directly address the specific query or scenario requested in the user prompt.\n"
+                        f"- Each response must be detailed, accurate, step-by-step, adhering to the requested domain knowledge and constraints.\n"
+                        f"- Do NOT use generic placeholders like 'Step 1: Identify foundational parameters'. Provide substantive domain content.\n"
                         f"- Return ONLY valid JSON format as a list of 3 objects with keys 'instruction' and 'response'.\n\n"
                         f"Example JSON format:\n"
                         f'[\n  {{"instruction": "...", "response": "..."}},\n  {{"instruction": "...", "response": "..."}},\n  {{"instruction": "...", "response": "..."}}\n]'
@@ -741,51 +759,68 @@ class DatasetOrchestrator:
                                         "domain": domain_name,
                                         "quality_score": round(0.94 + (i * 0.02), 2),
                                         "difficulty_tier": 3 + i,
+                                        "preview_origin": "llm_router",
                                     }
                                 })
                         logger.info(f"[{job_id}] Early preview synthesized {len(preview_samples)} realistic samples via LLM router")
                 except Exception as e:
                     logger.warning(f"Early preview LLM generation attempt failed: {e}")
 
-            # 2. If LLM produced < 3 samples (e.g. offline fallback), generate domain-grounded realistic samples
+            # 2. If router yielded < 3 samples, consult Synthesis Agent from Agent Registry
+            if len(preview_samples) < 3 and self.agent_registry:
+                try:
+                    from agents.base import AgentType, AgentContext
+                    ctx = AgentContext(job_id=job_id, dataset_id=job_id, domain=user_prompt)
+                    synth_agent = self.agent_registry.create_agent(AgentType.SYNTHETIC_GENERATION)
+                    if synth_agent:
+                        agent_res = await synth_agent.execute({
+                            "prompt": user_prompt,
+                            "domain": domain_name,
+                            "language": language,
+                            "count": 3 - len(preview_samples),
+                        }, ctx)
+                        if agent_res and agent_res.output and isinstance(agent_res.output, dict):
+                            out_samples = agent_res.output.get("samples") or []
+                            for idx, s in enumerate(out_samples[:3]):
+                                if isinstance(s, dict) and s.get("instruction") and s.get("response"):
+                                    preview_samples.append({
+                                        "instruction": s["instruction"],
+                                        "response": s["response"],
+                                        "metadata": {
+                                            "preview": True,
+                                            "domain": domain_name,
+                                            "quality_score": round(0.93 + (idx * 0.02), 2),
+                                            "difficulty_tier": 3 + idx,
+                                            "preview_origin": "synthesis_agent",
+                                        }
+                                    })
+                except Exception as ag_err:
+                    logger.debug(f"Synthesis Agent preview generation skipped: {ag_err}")
+
+            # 3. If still needed, query SeedlessGenerator with dynamic curriculum plan
             if len(preview_samples) < 3:
-                is_tax_legal = any(w in domain_name.lower() for w in ("tax", "gst", "law", "ruling", "statute", "legal", "compliance"))
-                if is_tax_legal:
-                    preview_samples = [
-                        {
-                            "instruction": "What is the procedure and formula for calculating an inverted duty structure refund under Section 54(3)(ii) of the CGST Act 2017 read with Rule 89(5)?",
-                            "response": "Under Section 54(3)(ii) of the CGST Act, 2017, refund of unutilized Input Tax Credit (ITC) is admissible where credit has accumulated because the tax rate on inputs is higher than on output supplies. As per amended Rule 89(5), Maximum Refund Amount = {(Turnover of inverted rated supply of goods and services) x Net ITC ÷ Adjusted Total Turnover} - {Tax payable on such inverted rated supply of goods and services x (Net ITC ÷ ITC availed on inputs and input services)}. The taxpayer must file Form GST RFD-01 supported by Statement 1A and GSTR-2B reconciliation.",
-                            "metadata": {"preview": True, "domain": domain_name, "quality_score": 0.98, "difficulty_tier": 4}
-                        },
-                        {
-                            "instruction": "Under Section 16(4) of the CGST Act 2017, what is the statutory cutoff date for availing Input Tax Credit for invoices issued during a financial year following the Finance Act 2022 amendment?",
-                            "response": "Following the amendment introduced by the Finance Act 2022 (effective October 1, 2022), the statutory cutoff date under Section 16(4) is the 30th day of November following the end of the financial year to which such invoice relates, or the actual date of furnishing the relevant Annual Return under Section 44, whichever is earlier. Prior to this amendment, the deadline was the due date of furnishing the return under Section 39 for the month of September.",
-                            "metadata": {"preview": True, "domain": domain_name, "quality_score": 0.96, "difficulty_tier": 3}
-                        },
-                        {
-                            "instruction": "Explain the liability of an e-commerce operator to collect Tax Collected at Source (TCS) under Section 52 of the CGST Act, including rate of deduction and monthly deposit deadlines.",
-                            "response": "Under Section 52 of the CGST Act, every electronic commerce operator (not being an agent) is mandated to collect TCS at a notified rate not exceeding 1% (0.5% CGST + 0.5% SGST, or 1% IGST) on the net value of taxable supplies effected through its platform where consideration is collected by the operator. The collected amount must be deposited into the government treasury within 10 days after the end of the month via Form GSTR-8.",
-                            "metadata": {"preview": True, "domain": domain_name, "quality_score": 0.95, "difficulty_tier": 3}
-                        }
-                    ]
-                else:
-                    preview_samples = [
-                        {
-                            "instruction": f"Provide an authoritative technical overview and implementation specifications for {domain_name}.",
-                            "response": f"Implementation of {domain_name} necessitates adherence to established domain standards, systematic validation protocols, and structured error handling. Key technical parameters must be verified prior to deployment, including interface contracts, runtime data invariants, and benchmark compliance.",
-                            "metadata": {"preview": True, "domain": domain_name, "quality_score": 0.94, "difficulty_tier": 3}
-                        },
-                        {
-                            "instruction": f"Describe the step-by-step diagnostic and execution procedure when resolving complex anomalies in {domain_name}.",
-                            "response": f"When addressing anomalies in {domain_name}, the recommended diagnostic protocol comprises: 1) Isolate the root cause by examining telemetry traces and input boundaries; 2) Reproduce the edge case under sandboxed constraints; 3) Apply targeted remediation while preserving regression invariants; 4) Validate state integrity against benchmark test suites.",
-                            "metadata": {"preview": True, "domain": domain_name, "quality_score": 0.92, "difficulty_tier": 3}
-                        },
-                        {
-                            "instruction": f"Identify the primary failure modes, security boundaries, and edge-case hazards associated with {domain_name}.",
-                            "response": f"Critical risk vectors in {domain_name} include unvalidated boundary transitions, silent data drift, authentication token leakage, and desynchronization between persistent storage and runtime caches. Rigorous defensive auditing, automated invariant testing, and comprehensive logging are mandatory mitigations.",
-                            "metadata": {"preview": True, "domain": domain_name, "quality_score": 0.95, "difficulty_tier": 4}
-                        }
-                    ]
+                try:
+                    from pipeline.planner import DatasetPlanner
+                    from pipeline.synthetic_generator import SeedlessGenerator
+                    planner = DatasetPlanner(self.router, config)
+                    dyn_plan = await planner.create_plan(user_prompt)
+                    gen = SeedlessGenerator(self.router, config)
+                    for i in range(3 - len(preview_samples)):
+                        sample_obj = await gen.generate_sample(dyn_plan, {}, cell_index=i, total_cells=3)
+                        if sample_obj and sample_obj.instruction and sample_obj.response:
+                            preview_samples.append({
+                                "instruction": sample_obj.instruction,
+                                "response": sample_obj.response,
+                                "metadata": {
+                                    "preview": True,
+                                    "domain": domain_name,
+                                    "quality_score": 0.94,
+                                    "difficulty_tier": getattr(sample_obj, "difficulty_tier", 3),
+                                    "preview_origin": "curriculum_generator",
+                                }
+                            })
+                except Exception as dyn_err:
+                    logger.debug(f"Curriculum preview generator skipped: {dyn_err}")
 
         # Attach preview samples to job config in DB
         db_target = self.db_manager or self.db
@@ -905,6 +940,20 @@ class DatasetOrchestrator:
         coverage = cov_planner.generate_matrix(plan, target_size=config.get("dataset_size", 100))
 
         plan_dict = plan.model_dump()
+        # The LangGraph remains the executable DAG; this explicit role map is
+        # persisted with the plan so operators can audit who owns each stage.
+        plan_dict["role_workflow"] = [
+            {"role": "planning", "agent": "StrategyAgent", "stage": "plan"},
+            {"role": "search", "agent": "SearchOptimizationAgent", "stage": "query_optimizer"},
+            {"role": "crawl", "agent": "SourceDiscoveryAgent", "stage": "discover"},
+            {"role": "extraction", "agent": "WebCrawlerAgent", "stage": "extract"},
+            {"role": "context", "agent": "ContextBundle", "stage": "filter"},
+            {"role": "synthesis", "agent": "SyntheticGenerationAgent", "stage": "construct"},
+            {"role": "review", "agent": "ReviewEnsemble", "stage": "quality_eval"},
+            {"role": "human_arbitration", "agent": "ReviewService", "stage": "human_review"},
+            {"role": "curation", "agent": "CurriculumAgent", "stage": "balance"},
+            {"role": "training", "agent": "FineTuningAgent", "stage": "finetune"},
+        ]
         plan_dict["strategy_agent"] = strategy_analysis
         plan_dict["research_agent"] = research_analysis
         plan_dict["active_heuristics"] = active_heuristics
@@ -958,8 +1007,8 @@ class DatasetOrchestrator:
         source_types = self._determine_source_types(config)
         excluded_source_urls = set(config.get("excluded_source_urls", []))
 
-        # Generate multiple query variations for better coverage
-        queries = self._get_discovery_queries(intent)
+        # Generate multiple query variations for better coverage (bounded to top 3 to prevent API flooding)
+        queries = self._get_discovery_queries(intent)[:3]
 
         max_sources = min(config.get("max_results", 500), state.get("constraint_analysis", {}).get("estimated_sources", 200))
         batch_size = config.get("batch_size", 50)  # Process in batches
@@ -996,21 +1045,23 @@ class DatasetOrchestrator:
             for query in queries:
                 if self._is_cancelled(job_id):
                     break
-                async for source in discovery.discover(
-                    query, target_domain, source_types, query_is_optimized=True
-                ):
-                    if source.url in excluded_source_urls or source.url in seen_urls:
-                        continue
-                    # Apply domain relevance pre-filter to skip off-topic sources early.
-                    # ``_is_source_relevant`` lives on DatasetOrchestrator and uses intent.
-                    if self._is_source_relevant(source, intent):
-                        seen_urls.add(source.url)
-                        yield source
-                    else:
-                        logger.debug(f"Skipping off-topic source: "
-                                    f"{source.get('url','unknown') if isinstance(source, dict) else getattr(source, 'url', 'unknown')}")
-                    if self._is_cancelled(job_id):
-                        break
+                try:
+                    async for source in discovery.discover(
+                        query, target_domain, source_types, query_is_optimized=True
+                    ):
+                        if source.url in excluded_source_urls or source.url in seen_urls:
+                            continue
+                        # Apply domain relevance pre-filter to skip off-topic sources early.
+                        if self._is_source_relevant(source, intent):
+                            seen_urls.add(source.url)
+                            yield source
+                        else:
+                            logger.debug(f"Skipping off-topic source: "
+                                        f"{source.get('url','unknown') if isinstance(source, dict) else getattr(source, 'url', 'unknown')}")
+                        if self._is_cancelled(job_id) or len(seen_urls) >= 50:
+                            break
+                except Exception as disc_err:
+                    logger.warning(f"Discovery query execution error for '{query}': {disc_err}")
 
         # Use backpressure-aware iterator with bounded memory
         streaming_source = BackpressureIterator(
@@ -1019,42 +1070,40 @@ class DatasetOrchestrator:
             max_memory_mb=config.get("max_memory_mb", 512),
         )
 
-        # Stream processing with bounded memory accumulation
+        # Stream processing with bounded memory accumulation and timeout guard
         sources = []
         batch_count = 0
         progress = StreamProgress()
 
-        async for source in streaming_source:
-            sources.append({
-                "url": source.url,
-                "source_type": source.source_type.value,
-                "title": source.title,
-                "description": source.description,
-                "metadata": source.metadata,
-                "license": source.license,
-                "quality_score": source.quality_score,
-                "language": getattr(source, 'language', language),
-            })
-            progress.total_processed += 1
+        async def _consume_streaming_sources():
+            nonlocal batch_count
+            async for source in streaming_source:
+                sources.append({
+                    "url": source.url,
+                    "source_type": source.source_type.value,
+                    "title": source.title,
+                    "description": source.description,
+                    "metadata": source.metadata,
+                    "license": source.license,
+                    "quality_score": source.quality_score,
+                    "language": getattr(source, 'language', language),
+                })
+                progress.total_processed += 1
 
-            # Update progress every batch
-            if len(sources) % batch_size == 0:
+                # Update progress incrementally so UI never appears frozen
                 batch_count += 1
-                self._update_job_progress(job_id, 0.1 + (len(sources) / max(max_sources, 1)) * 0.15)
-                # Brief yield to event loop for backpressure
+                curr_prog = min(0.28, 0.10 + (len(sources) / max(max_sources, 1)) * 0.18)
+                self._update_job_progress(job_id, curr_prog)
                 await asyncio.sleep(0)
 
-            # Memory-bounded: flush processed sources if accumulating too fast
-            if progress.total_processed >= max_sources:
-                break
+                if progress.total_processed >= max_sources or len(sources) >= 40:
+                    break
 
-            # Yield periodically to prevent unbounded memory growth
-            if batch_count > 0 and batch_count % 10 == 0:
-                # Log telemetry
-                logger.info(
-                    f"Discovery progress: {len(sources)} sources, "
-                    f"rate: {progress.items_per_second:.1f}/s"
-                )
+        discovery_timeout = float(config.get("discovery_timeout_seconds", 45.0))
+        try:
+            await asyncio.wait_for(_consume_streaming_sources(), timeout=discovery_timeout)
+        except asyncio.TimeoutError:
+            logger.info(f"[{job_id}] Discovery stream reached bounded timeout ({discovery_timeout}s); continuing with {len(sources)} sources")
 
         # Log any streaming errors
         errors = streaming_source.get_errors()
@@ -1065,6 +1114,38 @@ class DatasetOrchestrator:
 
         # Update progress
         self._update_job_status(job_id, "discover", 0.3, sources_discovered=len(sources))
+
+        agent_artifacts = dict(state.get("agent_artifacts") or {})
+        # Persist a discovery-time snapshot even before extraction. This
+        # preserves the source URL, licence and search metadata used to make a
+        # later decision reproducible.
+        if self.db and hasattr(self.db, "create_source_snapshot"):
+            snapshot_ids = {}
+            for source in sources:
+                try:
+                    snapshot = await self.db.create_source_snapshot(job_id, source)
+                    snapshot_ids[source["url"]] = snapshot.get("id")
+                except Exception as snapshot_error:
+                    logger.warning("Could not persist discovery snapshot for %s: %s", source.get("url"), snapshot_error)
+            agent_artifacts["discovery_snapshots"] = snapshot_ids
+
+        # The discovery specialist ranks real candidates after the production
+        # crawler/search pipeline produces them. It cannot add invented URLs.
+        if self.agent_registry:
+            try:
+                from agents.base import AgentType, AgentContext
+                discovery_agent = self.agent_registry.create_agent(AgentType.SOURCE_DISCOVERY)
+                if discovery_agent:
+                    await discovery_agent.initialize()
+                    advisory = await discovery_agent.execute({
+                        "task_id": job_id, "domain": target_domain, "query": " ".join(queries), "sources": sources,
+                    }, AgentContext(job_id=job_id, dataset_id=job_id, domain=target_domain, sources=sources))
+                    if advisory.success:
+                        rankings = advisory.output.get("rankings", {})
+                        sources.sort(key=lambda source: rankings.get(source.get("url", ""), 0.0), reverse=True)
+                        agent_artifacts["source_discovery"] = advisory.output
+            except Exception:
+                logger.exception("Source-discovery agent advisory stage failed")
 
         # Set mode flags based on content
         multilingual = any(s.get("language") != "en" for s in sources)
@@ -1082,6 +1163,7 @@ class DatasetOrchestrator:
             "progress": 0.1,
             "multilingual_mode": multilingual,
             "low_resource_mode": low_resource,
+            "agent_artifacts": agent_artifacts,
             "messages": state["messages"] + [
                 f"Discovered {len(sources)} sources",
                 f"Multilingual: {multilingual}",
@@ -1274,8 +1356,8 @@ class DatasetOrchestrator:
                 source_url = source.get("url","") if isinstance(source, dict) else getattr(source,"url","")
                 logger.debug(f"Skipping unreachable source: {source_url}")
 
-        sources = reachable_sources
-        logger.info(f"[{job_id}] Pre-validation: {len(sources)}/{len(state['sources'])} sources reachable")
+        sources = reachable_sources[:20]
+        logger.info(f"[{job_id}] Pre-validation: {len(sources)}/{len(state['sources'])} sources reachable (capped to 20 for concurrent extraction)")
 
         self._update_job_status(job_id, "extract", 0.3)
 
@@ -1321,66 +1403,74 @@ class DatasetOrchestrator:
 
             async with extract_sem:
                 try:
-                    async for content in extraction.extract(source):
-                        source_extracted_count += 1
-                        if content.confidence > 0.3:
-                            safe_metadata = _sanitize_metadata(
-                                {k: v for k, v in content.metadata.items() if k != "analysis"}
-                            )
-                            source_metadata = source.get("metadata", {}) if isinstance(source, dict) else getattr(source, "metadata", {})
-                            source_type = source.get("source_type") if isinstance(source, dict) else getattr(source, "source_type", "")
-                            source_type_value = getattr(source_type, "value", source_type)
-                            safe_metadata.update({
-                                key: value for key, value in {
-                                    "source_url": content.url or source_url,
-                                    "source_type": str(source_type_value) if source_type_value else None,
-                                    "license": source.get("license") if isinstance(source, dict) else getattr(source, "license", None),
-                                    "source_title": source.get("title") if isinstance(source, dict) else getattr(source, "title", None),
-                                    "language": content.language or source_metadata.get("language"),
-                                }.items() if value
-                            })
-                            extracted_items.append({
-                                "content": content.content,
-                                "content_type": content.content_type,
-                                "language": content.language,
-                                "languages_detected": content.languages_detected,
-                                "url": content.url,
-                                "metadata": safe_metadata,
-                                "confidence": content.confidence,
-                                "quality_score": content.quality_score,
-                                "extraction_warnings": content.extraction_warnings,
-                            })
-                            decision = "accepted"
-                        else:
-                            decision = "rejected"
-
-                        duration_ms = (asyncio.get_event_loop().time() - start_time) * 1000
-                        if self.observability:
-                            self.observability.log_pipeline_stage(
-                                job_id=job_id,
-                                stage="extraction",
-                                source_url=content.url or source_url,
-                                duration_ms=duration_ms,
-                                decision=decision,
-                                quality_score=content.quality_score,
-                                threshold=0.3,
-                                issues=content.extraction_warnings,
-                                metadata={
+                    async def _run_extract():
+                        nonlocal source_extracted_count
+                        async for content in extraction.extract(source):
+                            source_extracted_count += 1
+                            if content.confidence > 0.3:
+                                safe_metadata = _sanitize_metadata(
+                                    {k: v for k, v in content.metadata.items() if k != "analysis"}
+                                )
+                                source_metadata = source.get("metadata", {}) if isinstance(source, dict) else getattr(source, "metadata", {})
+                                source_type = source.get("source_type") if isinstance(source, dict) else getattr(source, "source_type", "")
+                                source_type_value = getattr(source_type, "value", source_type)
+                                safe_metadata.update({
+                                    key: value for key, value in {
+                                        "source_url": content.url or source_url,
+                                        "source_type": str(source_type_value) if source_type_value else None,
+                                        "license": source.get("license") if isinstance(source, dict) else getattr(source, "license", None),
+                                        "source_title": source.get("title") if isinstance(source, dict) else getattr(source, "title", None),
+                                        "language": content.language or source_metadata.get("language"),
+                                    }.items() if value
+                                })
+                                extracted_items.append({
+                                    "content": content.content,
                                     "content_type": content.content_type,
                                     "language": content.language,
-                                    "confidence": content.confidence
-                                }
-                            )
+                                    "languages_detected": content.languages_detected,
+                                    "url": content.url,
+                                    "metadata": safe_metadata,
+                                    "confidence": content.confidence,
+                                    "quality_score": content.quality_score,
+                                    "extraction_warnings": content.extraction_warnings,
+                                })
+                                decision = "accepted"
+                            else:
+                                decision = "rejected"
+
+                            duration_ms = (asyncio.get_event_loop().time() - start_time) * 1000
+                            if self.observability:
+                                self.observability.log_pipeline_stage(
+                                    job_id=job_id,
+                                    stage="extraction",
+                                    source_url=content.url or source_url,
+                                    duration_ms=duration_ms,
+                                    decision=decision,
+                                    quality_score=content.quality_score,
+                                    threshold=0.3,
+                                    issues=content.extraction_warnings,
+                                    metadata={
+                                        "content_type": content.content_type,
+                                        "language": content.language,
+                                        "confidence": content.confidence
+                                    }
+                                )
+
+                    # Bounded per-source timeout to prevent hanging on external webs/APIs
+                    await asyncio.wait_for(_run_extract(), timeout=18.0)
                 except Exception as e:
                     error_msg = f"Extraction error for {source_url}: {str(e)}"
                     logger.warning(f"Job {job_id}: {error_msg}")
             return extracted_items
 
         tasks = [_extract_source_task(s) for s in sources]
-        results = await asyncio.gather(*tasks, return_exceptions=True)
-        for r in results:
-            if isinstance(r, list):
-                extracted.extend(r)
+        try:
+            results = await asyncio.wait_for(asyncio.gather(*tasks, return_exceptions=True), timeout=60.0)
+            for r in results:
+                if isinstance(r, list):
+                    extracted.extend(r)
+        except asyncio.TimeoutError:
+            logger.info(f"[{job_id}] Concurrent extraction bounded timeout (60s) reached; proceeding with {len(extracted)} extracted records")
 
         self._update_job_status(
             job_id,
@@ -1390,11 +1480,56 @@ class DatasetOrchestrator:
             samples_processed=len(extracted)
         )
 
+        agent_artifacts = dict(state.get("agent_artifacts") or {})
+        # Promote every accepted extraction into immutable source evidence.
+        # Chunks are bounded for context assembly while the snapshot retains
+        # the original captured content for auditing.
+        if self.db and hasattr(self.db, "create_source_snapshot"):
+            persisted_chunks = 0
+            for item in extracted:
+                try:
+                    snapshot = await self.db.create_source_snapshot(
+                        job_id, item, content=str(item.get("content") or ""), content_type=item.get("content_type"),
+                    )
+                    item.setdefault("metadata", {})["source_snapshot_id"] = snapshot.get("id")
+                    text = str(item.get("content") or "")
+                    chunks = [
+                        {"chunk_index": index // 2000, "content": text[index:index + 2000], "metadata": {"source_url": item.get("url") or (item.get("metadata") or {}).get("source_url")}}
+                        for index in range(0, len(text), 2000)
+                    ]
+                    if chunks and hasattr(self.db, "create_evidence_chunks"):
+                        records = await self.db.create_evidence_chunks(snapshot["id"], chunks)
+                        persisted_chunks += len(records)
+                except Exception as snapshot_error:
+                    logger.warning("Could not persist extracted evidence: %s", snapshot_error)
+            agent_artifacts["evidence_chunks_persisted"] = persisted_chunks
+
+        # The crawler agent is a final artifact-contract check over results
+        # emitted by ExtractionPipeline; it does not perform a second crawl.
+        if self.agent_registry:
+            try:
+                from agents.base import AgentType, AgentContext
+                crawler_agent = self.agent_registry.create_agent(AgentType.WEB_CRAWLER)
+                if crawler_agent:
+                    await crawler_agent.initialize()
+                    advisory = await crawler_agent.execute(
+                        {"task_id": job_id, "pages": extracted},
+                        AgentContext(job_id=job_id, dataset_id=job_id, extracted_data=extracted),
+                    )
+                    if advisory.success:
+                        agent_artifacts["web_crawler"] = {
+                            "metrics": advisory.metrics,
+                            "failed_pages": advisory.output.get("failed_pages", []),
+                        }
+            except Exception:
+                logger.exception("Web-crawler agent artifact validation failed")
+
         return {
             **state,
             "extracted_content": extracted,
             "current_stage": "extract",
             "progress": 0.3,
+            "agent_artifacts": agent_artifacts,
             "messages": state["messages"] + [f"Extracted {len(extracted)} content items"],
         }
 
@@ -2127,10 +2262,86 @@ class DatasetOrchestrator:
         config = job.get("config", {})
         samples = state.get("constructed_samples", [])
 
+        # Enforce deduplication before scoring and certification
+        seen_eval_keys = set()
+        deduped_eval_samples = []
+        for s in samples:
+            if not isinstance(s, dict):
+                continue
+            norm_k = " ".join(f"{s.get('instruction', '')} {s.get('response', '')}".lower().split())
+            if norm_k in seen_eval_keys:
+                continue
+            seen_eval_keys.add(norm_k)
+            deduped_eval_samples.append(s)
+        samples = deduped_eval_samples
+        state["constructed_samples"] = samples
+
         self._update_job_status(job_id, "quality_eval", 0.72)
 
         user_prompt = config.get("raw_input") or config.get("prompt") or config.get("target_domain", "")
         target_domain_str = config.get("target_domain", "")
+
+        # Optional provider-diverse review runs after construction, where each
+        # candidate has its source excerpt and before the existing HITL gate.
+        ensemble_reviewed = 0
+        if config.get("llm_review_enabled", False) and samples:
+            try:
+                from pipeline.review_ensemble import ReviewEnsemble
+
+                panel = ReviewEnsemble(
+                    self.router,
+                    providers=config.get("llm_review_providers"),
+                    approval_threshold=float(config.get("llm_review_threshold", 0.75)),
+                    minimum_consensus=float(config.get("llm_review_consensus", 0.80)),
+                    max_concurrency=int(config.get("llm_review_concurrency", 3)),
+                )
+                review_limit = max(1, int(config.get("llm_review_sample_limit", 50)))
+
+                async def review_candidate(sample: dict) -> None:
+                    verdict = await panel.review(
+                        str(sample.get("instruction", "")),
+                        str(sample.get("response", "")),
+                        source=str(sample.get("source_text", "")),
+                        domain=target_domain_str,
+                    )
+                    sample.setdefault("metadata", {})["review_ensemble"] = verdict.to_dict()
+                    sample["llm_review_score"] = verdict.score
+                    sample["needs_human_review"] = verdict.needs_human_review
+
+                await asyncio.gather(
+                    *(review_candidate(sample) for sample in samples[:review_limit] if isinstance(sample, dict))
+                )
+                ensemble_reviewed = min(len(samples), review_limit)
+            except Exception as review_error:
+                logger.warning("[%s] LLM review ensemble failed; using normal quality/HITL gates: %s", job_id, review_error)
+
+        # Every sample now gets a uniform provenance record. Strict grounded
+        # jobs cannot pass quality evaluation with synthetic/unattributed data.
+        from pipeline.provenance import attach_provenance, has_reference_provenance
+        strict_provenance = bool(config.get("require_reference_sources", False))
+        missing_reference_count = 0
+        for sample in samples:
+            if not isinstance(sample, dict):
+                continue
+            attach_provenance(sample)
+            if strict_provenance and not has_reference_provenance(sample):
+                sample["needs_human_review"] = True
+                missing_reference_count += 1
+
+        evidence_context = []
+        if self.agent_registry:
+            try:
+                from agents.base import AgentContext, AgentType
+                context_agent = self.agent_registry.create_agent(AgentType.CONTEXT)
+                if context_agent:
+                    result = await context_agent.execute(
+                        {"items": samples, "max_items": config.get("context_max_sources", 50)},
+                        AgentContext(job_id=job_id, dataset_id=job_id, domain=target_domain_str),
+                    )
+                    if result.success and isinstance(result.output, dict):
+                        evidence_context = result.output.get("evidence", [])
+            except Exception as context_error:
+                logger.debug("Context agent skipped: %s", context_error)
 
         topic_scores = []
         grounding_scores = []
@@ -2148,7 +2359,7 @@ class DatasetOrchestrator:
                 t_score = self._compute_sample_topic_relevance(inst, resp, user_prompt, target_domain_str)
                 s["topic_score"] = t_score
             topic_scores.append(t_score)
-            grounding_scores.append(float(s.get("quality_score", 0.85) or 0.85))
+            grounding_scores.append(float(s.get("llm_review_score", s.get("quality_score", 0.85)) or 0.85))
             clarity_scores.append(min(1.0, max(0.5, len(inst) / 50.0)))
             completeness_scores.append(min(1.0, max(0.5, len(resp) / 100.0)))
             domain_scores.append(0.92)
@@ -2170,7 +2381,7 @@ class DatasetOrchestrator:
         quality_breakdown["composite"] = composite_score
 
         # F2: BLOCK "Ready" + DBOM certification when sampled topic fidelity is below 80% (0.80)
-        passed = (avg_topic >= 0.80) and (composite_score >= 0.65) or len(samples) == 0
+        passed = ((avg_topic >= 0.80) and (composite_score >= 0.65) and missing_reference_count == 0) or len(samples) == 0
 
         # Persist breakdown into job metadata and dataset record
         job_meta = job.setdefault("metadata", {})
@@ -2193,10 +2404,13 @@ class DatasetOrchestrator:
             "quality_eval_passed": passed,
             "quality_breakdown": quality_breakdown,
             "quality_score": composite_score,
+            "missing_reference_count": missing_reference_count,
+            "evidence_context": evidence_context,
             "current_stage": "quality_eval",
             "progress": 0.75,
             "messages": state["messages"] + [
-                f"Quality eval (topic_fidelity={avg_topic:.2f}, composite={composite_score:.2f}, pass={passed})"
+                f"Quality eval (topic_fidelity={avg_topic:.2f}, composite={composite_score:.2f}, "
+                f"ensemble_reviewed={ensemble_reviewed}, missing_references={missing_reference_count}, pass={passed})"
             ],
         }
 
@@ -2305,18 +2519,18 @@ class DatasetOrchestrator:
                         except Exception as backfill_err:
                             logger.warning(f"Backfill generation error: {backfill_err}")
 
-            # If still short of requested_samples (e.g. strict_source, generator offline, or quota deficit),
-            # clone existing valid samples to guarantee exact count
-            if 0 < len(raw_samples) < requested_samples:
-                import copy
-                orig_len = len(raw_samples)
-                needed = requested_samples - orig_len
-                logger.warning(f"Export stage: still short of {requested_samples} by {needed} samples. Cloning existing valid samples.")
-                for idx in range(needed):
-                    clone = copy.deepcopy(raw_samples[idx % orig_len])
-                    if isinstance(clone, dict):
-                        clone["curriculum_order"] = orig_len + idx
-                    raw_samples.append(clone)
+        # Strict deduplication before certification: Remove any duplicate instruction+response pairs
+        seen_canonical = set()
+        deduped = []
+        for s in raw_samples:
+            inst = getattr(s, "instruction", "") if not isinstance(s, dict) else s.get("instruction", "")
+            resp = getattr(s, "response", "") if not isinstance(s, dict) else s.get("response", "")
+            key = " ".join(f"{inst} {resp}".lower().split())
+            if key in seen_canonical:
+                continue
+            seen_canonical.add(key)
+            deduped.append(s)
+        raw_samples = deduped
 
         # Final guarantee: never exceed requested_samples
         if requested_samples > 0 and len(raw_samples) > requested_samples:
@@ -2342,7 +2556,7 @@ class DatasetOrchestrator:
                     st_res = await storage_agent.execute({"dataset": raw_samples, "compression": "lz4"}, ctx)
                     if st_res and st_res.output:
                         storage_opt_report = st_res.output
-                        logger.info("  ✓ StorageOptimizationAgent calculated dataset sharding & compression ratio")
+                        logger.info("  ✓ StorageOptimizationAgent planned dataset sharding")
 
                 dist_agent = self.agent_registry.create_agent(AgentType.DISTRIBUTION)
                 if dist_agent:
@@ -2356,7 +2570,7 @@ class DatasetOrchestrator:
                     dt_res = await dist_agent.execute({"dataset": raw_samples, "destinations": destinations}, ctx)
                     if dt_res and dt_res.output:
                         distribution_report = dt_res.output
-                        logger.info("  ✓ DistributionAgent verified delivery channels: %s", destinations)
+                        logger.info("  ✓ DistributionAgent prepared delivery channels: %s", destinations)
             except Exception as dist_err:
                 logger.debug(f"Multi-agent export coordination skipped: {dist_err}")
 
@@ -2520,6 +2734,50 @@ class DatasetOrchestrator:
                     output_path=str(export_result.get("dataset", ""))
                 )
 
+                # Persist the actual evidence window and an immutable dataset
+                # version. Training consumes this version ID, never a mutable
+                # "latest" output directory.
+                evidence = []
+                for sample in samples:
+                    sample_metadata = getattr(sample, "metadata", {}) or {}
+                    provenance_record = sample_metadata.get("provenance", {}) if isinstance(sample_metadata, dict) else {}
+                    if provenance_record.get("kind") != "source":
+                        continue
+                    evidence.append({
+                        "source_url": provenance_record.get("source_url"),
+                        "source_hash": provenance_record.get("source_hash"),
+                        "license": provenance_record.get("license"),
+                        "citations": provenance_record.get("citations", []),
+                    })
+                context_evidence = state.get("evidence_context", [])
+                if isinstance(context_evidence, list):
+                    evidence.extend(item for item in context_evidence if isinstance(item, dict))
+                unique_evidence = list({json.dumps(item, sort_keys=True): item for item in evidence}.values())
+                context_payload = json.dumps(unique_evidence, sort_keys=True, default=str)
+                context_hash = hashlib.sha256(context_payload.encode("utf-8")).hexdigest()
+                context_bundle = await self.db.create_context_bundle(job_id, context_hash, unique_evidence)
+
+                sample_fingerprint = "\n".join(
+                    f"{getattr(sample, 'instruction', '')}\n{getattr(sample, 'response', '')}"
+                    for sample in samples
+                )
+                content_hash = hashlib.sha256(sample_fingerprint.encode("utf-8")).hexdigest()
+                version = await self.db.create_dataset_version(
+                    dataset_id=dataset_record["id"],
+                    version="1.0.0",
+                    sample_count=len(samples),
+                    content_hash=content_hash,
+                    output_path=str(export_result.get("dataset", "")),
+                    manifest={
+                        "dataset_id": dataset_record["id"],
+                        "context_bundle_id": context_bundle["id"],
+                        "context_hash": context_hash,
+                        "dbom": metadata_dict.get("dbom", {}),
+                        "quality": state.get("quality_breakdown", {}),
+                    },
+                )
+                metadata_dict["dataset_version_id"] = version["id"]
+
                 # Create sample records
                 sample_data = []
                 for sample in samples:
@@ -2595,6 +2853,20 @@ class DatasetOrchestrator:
         job = state["job"]
         job_id = job["id"]
         samples = state.get("constructed_samples", [])
+
+        # Enforce deduplication before scoring and certification
+        seen_eval_keys = set()
+        deduped_eval_samples = []
+        for s in samples:
+            if not isinstance(s, dict):
+                continue
+            norm_k = " ".join(f"{s.get('instruction', '')} {s.get('response', '')}".lower().split())
+            if norm_k in seen_eval_keys:
+                continue
+            seen_eval_keys.add(norm_k)
+            deduped_eval_samples.append(s)
+        samples = deduped_eval_samples
+        state["constructed_samples"] = samples
         constructed_count = len(samples)
         config = job.get("config", {})
 
@@ -2679,13 +2951,31 @@ class DatasetOrchestrator:
                 if id(s) not in seen_sample_ids:
                     q_score = float(s.get("quality_score", 1.0) or 1.0)
                     h_risk = float(s.get("hallucination_risk", 0.0) or 0.0)
-                    if q_score < 0.70 or h_risk > 0.40:
+                    if q_score < 0.70 or h_risk > 0.40 or s.get("needs_human_review", False):
                         review_samples.append(s)
                         seen_sample_ids.add(id(s))
 
         submitted = 0
         review_service = None
         review_ids = {}
+
+        # Add the arbiter's uncertainty routing to the stratified sample. The
+        # ReviewService remains the only component that can approve/edit data.
+        if self.agent_registry and samples:
+            try:
+                from agents.base import AgentContext, AgentType
+                arbiter = self.agent_registry.create_agent(AgentType.HUMAN_ARBITER)
+                if arbiter:
+                    decision = await arbiter.execute(
+                        {"samples": samples},
+                        AgentContext(job_id=job_id, dataset_id=job_id, domain=str(config.get("target_domain", ""))),
+                    )
+                    if decision.success:
+                        for candidate in (decision.output or {}).get("review_candidates", []):
+                            if candidate not in review_samples:
+                                review_samples.append(candidate)
+            except Exception as arbiter_error:
+                logger.debug("Human arbiter agent skipped: %s", arbiter_error)
 
         if hitl_enabled and review_samples:
             # ── Resolve the ReviewService ──────────────────────────────
