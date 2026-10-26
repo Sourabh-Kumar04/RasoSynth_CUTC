@@ -31,19 +31,7 @@ jobs:
           echo "Preparing Hugging Face Space metadata for $SPACE..."
 
           # Prepend required Hugging Face Space frontmatter to README.md
-          cat << 'EOF' > /tmp/hf_frontmatter.txt
----
-title: RasoSynthTune
-emoji: ⚡
-colorFrom: red
-colorTo: yellow
-sdk: docker
-app_port: 8000
-pinned: false
----
-
-EOF
-          cat /tmp/hf_frontmatter.txt README.md > /tmp/README_HF.md
+          cat deploy/huggingface/space_frontmatter.txt README.md > /tmp/README_HF.md
           mv /tmp/README_HF.md README.md
 
           git config user.name "github-actions[bot]"
