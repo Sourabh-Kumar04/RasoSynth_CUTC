@@ -52,5 +52,10 @@ def test_colab_bridge_headless_execution():
         assert "progress" in event_types
         assert "completed" in event_types
         
+        completed = next(e for e in events if e["type"] == "completed")
+        assert completed.get("is_simulated") is True
+        assert completed.get("weights_are_placeholders") is True
+        assert "SIMULATED" in str(completed.get("message", "")).upper()
+        
     finally:
         shutil.rmtree(temp_dir, ignore_errors=True)

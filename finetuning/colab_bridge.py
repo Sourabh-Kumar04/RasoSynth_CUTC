@@ -189,6 +189,7 @@ class ColabBridgeTrainer:
             "type": "completed",
             "execution_mode": "simulated",
             "is_simulated": True,
+            "weights_are_placeholders": True,
             "output_path": str(job_artifacts_dir),
             "download_zip": str(zip_path),
             "gguf_path": str(gguf_path),
@@ -196,7 +197,11 @@ class ColabBridgeTrainer:
             "eval_loss": final_eval,
             "merkle_root": computed_root,
             "model_seal": model_seal,
-            "message": "Fine-tuning successfully completed. Model weights ready for download."
+            "message": (
+                "SIMULATED fine-tune completed. Loss curves and adapter/GGUF files are "
+                "demo placeholders — not GPU-trained weights. Use execution_target=local "
+                "for real PEFT/Unsloth training."
+            ),
         })
 
         return job_artifacts_dir

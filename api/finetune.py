@@ -60,7 +60,11 @@ class CreateFineTuneJobRequest(BaseModel):
     hf_token: str = ""
     hf_org: str = ""
     chat_template: str = Field("alpaca", pattern="^(alpaca|chatml|llama3|sharegpt|openai_jsonl)$")
-    execution_target: str = Field("colab", pattern="^(local|modal|runpod|serverless|colab|cloud_accelerated)$")
+    execution_target: str = Field(
+        "local",
+        pattern="^(local|modal|runpod|serverless|colab|cloud_accelerated)$",
+        description="Use 'local' for real PEFT/Unsloth training. 'colab'/'modal'/'runpod' may run simulated demo paths.",
+    )
     webhook_url: str = Field("", description="Optional webhook URL to notify on job completion or failure (Discord, Slack, or generic HTTP)")
 
     @model_validator(mode="after")

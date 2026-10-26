@@ -5,7 +5,8 @@ from finetuning.trainer import FineTuneConfig
 def test_finetune_config_validation():
     """Test default values and validation of FineTuneConfig."""
     config = FineTuneConfig()
-    assert config.base_model == "unsloth/llama-3-8b"
+    assert config.base_model == "sarvamai/sarvam-2b-v0.5"
+    assert config.execution_target == "local"
     assert config.learning_rate > 0
     assert config.num_train_epochs >= 1
     assert config.load_in_4bit is True
