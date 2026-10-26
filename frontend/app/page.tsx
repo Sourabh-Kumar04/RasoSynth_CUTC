@@ -192,26 +192,26 @@ const PIPELINE_DAG_STAGES = [
   {
     step: '01',
     title: 'Corpus Discovery & Invariant Guardrails',
-    desc: 'Crawls authority repositories (AI Kosh, Bhashini, NASA Glenn). Automatically extracts syntactic invariants, PII masking rules, and anti-domain boundaries.',
+    desc: 'Crawls authority repositories (AI Kosh, Bhashini, domain registries). Automatically extracts syntactic invariants, PII masking rules, and anti-domain boundaries.',
     icon: Network,
     badge: 'Layer 1 Gate',
-    latency: '~45ms / query',
+    latency: '~45ms / query (benchmark)',
   },
   {
     step: '02',
     title: '7-Engine Parallel Synthesis',
-    desc: 'Distributes synthesis across Ray multi-worker nodes. Executes cognitive prompt loops (CoT, Socratic, DPO, Tool Calling) with deduplication.',
+    desc: 'Distributes synthesis across Celery / Ray multi-worker nodes. Executes cognitive prompt loops (CoT, Socratic, DPO, Tool Calling) with deduplication.',
     icon: Cpu,
-    badge: 'Distributed Ray',
-    latency: '~280ms / batch',
+    badge: 'Distributed Ray / Celery',
+    latency: '~280ms / batch (benchmark)',
   },
   {
     step: '03',
     title: 'Dual-Layer Quality & Neural Judge',
-    desc: 'Combines router cosine similarity (>0.85) with multi-criteria LLM Judge evaluation. Rejects hallucinations and script transliteration drift.',
+    desc: 'Combines semantic cosine deduplication (>0.92) and domain threshold (>0.40) with multi-criteria LLM Judge evaluation. Rejects hallucinations and script drift.',
     icon: Scale,
     badge: 'Neural Judge',
-    latency: '~120ms / sample',
+    latency: '~120ms / sample (benchmark)',
   },
   {
     step: '04',
@@ -985,7 +985,7 @@ export default function ZenPortalPage() {
             <div className="space-y-2.5 text-xs font-mono">
               <div className="flex justify-between py-1 border-b border-[#1c1c28]/60 text-zinc-400">
                 <span>Dataset Certificate:</span>
-                <span className="text-white font-bold">DBOM-2026-RS-8821</span>
+                <span className="text-white font-bold">DBOM-FLAGSHIP-GST</span>
               </div>
               <div className="flex justify-between py-1 border-b border-[#1c1c28]/60 text-zinc-400">
                 <span>Indic DPDP PII Exposure:</span>
@@ -996,16 +996,16 @@ export default function ZenPortalPage() {
                 <span className="text-emerald-400 font-bold">99.8% Native Script</span>
               </div>
               <div className="flex justify-between py-1 border-b border-[#1c1c28]/60 text-zinc-400">
-                <span>Token Fertility (Sarvam):</span>
-                <span className="text-white font-bold">1.14 tokens / word</span>
+                <span>Token Fertility (Sarvam Indic):</span>
+                <span className="text-white font-bold">1.28 tokens / word</span>
               </div>
               <div className="flex justify-between py-1 border-b border-[#1c1c28]/60 text-zinc-400">
-                <span>Token Fertility (Llama-3):</span>
-                <span className="text-white font-bold">1.42 tokens / word</span>
+                <span>Token Fertility (Llama-3 Indic):</span>
+                <span className="text-white font-bold">3.65 tokens / word</span>
               </div>
               <div className="flex justify-between py-1 border-b border-[#1c1c28]/60 text-zinc-400">
                 <span>Semantic Cosine Gate:</span>
-                <span className="text-emerald-400 font-bold">&gt; 0.85 Threshold</span>
+                <span className="text-emerald-400 font-bold">&gt; 0.92 Dedup / 0.40 Domain</span>
               </div>
               <div className="flex justify-between py-1 text-zinc-400">
                 <span>Export Formats:</span>
