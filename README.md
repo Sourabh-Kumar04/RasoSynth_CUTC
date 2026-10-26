@@ -84,6 +84,14 @@ open http://localhost:8000/docs   # API Swagger
 open http://localhost:3000        # Frontend Dashboard
 ```
 
+The Compose stack runs a separate Celery Beat service. It performs the daily
+reviewer-calibration audit without starting scheduler threads in the API
+process. Dataset jobs can enable the independent LLM jury; disputed or
+low-confidence samples are routed to the existing human-review gate.
+Enable **Require Source Evidence** in Studio to enforce a source URL, content
+hash, and citation span on each generated example before it can pass quality
+evaluation.
+
 ### Manual Setup
 
 ```bash

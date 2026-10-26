@@ -1,6 +1,6 @@
 import Link from 'next/link'
 import { TopNav } from '@/components/layout/top-nav'
-import { SubNav } from '@/components/layout/sub-nav'
+import { DashboardNavigation } from '@/components/layout/sub-nav'
 import { BrandLogo } from '@/components/ui/brand-logo'
 import { ShieldCheck, Terminal, Github, ExternalLink, Activity, Info } from 'lucide-react'
 
@@ -19,7 +19,7 @@ export default function DashboardLayout({
       
       <div className="relative z-10 flex flex-col min-h-screen">
         <TopNav />
-        <SubNav />
+        <DashboardNavigation />
         <main className="flex-1 w-full max-w-[1600px] mx-auto p-4 sm:p-6 lg:p-8 space-y-6">
           {children}
         </main>

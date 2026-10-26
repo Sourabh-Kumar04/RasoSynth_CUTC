@@ -34,7 +34,7 @@ const SECONDARY_NAV_LINKS = [
   { href: '/settings', label: 'System Status', fullLabel: 'System Status & Configuration', icon: Settings },
 ]
 
-export function SubNav() {
+export function DashboardNavigation() {
   const pathname = usePathname()
   const [moreOpen, setMoreOpen] = useState(false)
   const dropdownRef = useRef<HTMLDivElement>(null)
@@ -155,9 +155,4 @@ export function SubNav() {
       </div>
     </div>
   )
-}
-
-// Backward-compatible alias for Sidebar
-export function Sidebar() {
-  return <SubNav />
 }

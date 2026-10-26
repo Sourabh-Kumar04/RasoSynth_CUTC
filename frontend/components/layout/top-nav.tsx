@@ -63,10 +63,7 @@ export function TopNav() {
           {/* Logo & Brand */}
           <div className="flex items-center space-x-3 shrink-0">
             <Link href="/" className="flex items-center space-x-2.5 group">
-              <BrandLogo size={32} />
-              <span className="font-bold text-base tracking-tight text-white font-display leading-none">
-                RasoSynth<span className="text-[#f26625]">Tune</span>
-              </span>
+              <BrandLogo size={34} showWordmark wordmarkClassName="text-[17px]" />
             </Link>
           </div>
 

@@ -76,9 +76,9 @@ const config: Config = {
         xs: '0.125rem',
       },
       fontFamily: {
-        sans: ['Plus Jakarta Sans', 'Inter', 'system-ui', 'sans-serif'],
+        sans: ['Manrope', 'sans-serif'],
         mono: ['JetBrains Mono', 'Menlo', 'monospace'],
-        display: ['Plus Jakarta Sans', 'sans-serif'],
+        display: ['Bodoni Moda', 'serif'],
       },
       keyframes: {
         'accordion-down': {
