@@ -49,7 +49,7 @@ class FineTuneConfig:
     dataset_version_id: str = ""
 
     # Model
-    base_model: str = "unsloth/llama-3-8b"
+    base_model: str = "sarvamai/sarvam-2b-v0.5"
     max_seq_length: int = 2048
 
     # LoRA

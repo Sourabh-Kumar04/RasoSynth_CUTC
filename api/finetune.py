@@ -39,7 +39,7 @@ class CreateFineTuneJobRequest(BaseModel):
     dataset_id: str = Field("", description="DB Dataset ID (output_path resolved automatically)")
     dataset_version_id: str = Field("", description="Immutable approved dataset version ID")
 
-    base_model: str = Field("HuggingFaceTB/SmolLM2-1.7B-Instruct")
+    base_model: str = Field("sarvamai/sarvam-2b-v0.5")
     output_model_name: str = ""
 
     lora_r: int = Field(16, ge=4, le=128)
