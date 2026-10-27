@@ -399,7 +399,7 @@ class SeedlessGenerator:
                     TaskType.TEXT_GENERATION,
                     prompt=user_message,
                     system_prompt=system_prompt,
-                    temperature=0.7,
+                    temperature=min(0.95, 0.7 + (attempt * 0.1)),
                     bypass_cache=True,
                 )
 

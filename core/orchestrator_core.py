@@ -2007,9 +2007,11 @@ class DatasetOrchestrator:
 
                 if len(samples) == prev_len:
                     consecutive_empty_batches += 1
-                    if consecutive_empty_batches >= 4:
+                    if hasattr(generator_inst, "reset_seen_topics") and consecutive_empty_batches % 2 == 0:
+                        generator_inst.reset_seen_topics()
+                    if consecutive_empty_batches >= 8:
                         logger.warning(
-                            f"[{job_id}] Synthetic generator yielded no new valid samples after 4 consecutive batches "
+                            f"[{job_id}] Synthetic generator yielded no new valid samples after 8 consecutive batches "
                             f"(attempt_count={attempt_count}). Proceeding with {len(samples)} constructed samples."
                         )
                         break
