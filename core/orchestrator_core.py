@@ -258,8 +258,18 @@ class ConstraintAnalyzer:
         text_body = str(source.get("text", "") or source.get("content", "")).lower()
         full_content = f"{title} {desc} {url} {text_body[:3000]}"
 
-        # Reject web catalog badges, awesome lists, file archives, and raw data dumps
-        if any(bad in full_content for bad in [
+        # Check if source is a specialized dataset repository
+        source_type_val = str(source.get("source_type", "")).lower()
+        is_dataset_source = (
+            source_type_val in ("hf_dataset", "kaggle_dataset", "ai_kosh", "dataset_repo", "openml", "zenodo")
+            or "huggingface.co/datasets" in url
+            or "kaggle.com/datasets" in url
+            or "openml.org" in url
+            or "zenodo.org" in url
+        )
+
+        # Reject web catalog badges, awesome lists, file archives, and raw data dumps (only for general web pages)
+        if not is_dataset_source and any(bad in full_content for bad in [
             "awesome-datascience", "awesome data science", "<div align=", "<img src=",
             "table of contents", "badge.svg", "become a sponsor", "train.csv", "test.csv",
             "available files:", "oleic acid.zip", "tug-891", "heat-pump", "q-methodology",
@@ -299,10 +309,23 @@ class ConstraintAnalyzer:
             if any(term in full_content for term in ["european union", "eu legal", "groningen", "netherlands", "dutch", "uk nhs"]) and not any(term in full_content for term in ["india", "indian"]):
                 return False
 
-        match_count = sum(1 for kw in domain_keywords if kw in full_content)
+        def _kw_matches(kw: str, content: str) -> bool:
+            if kw in content:
+                return True
+            if len(kw) > 4 and kw[:4] in content:
+                return True
+            return False
+
+        match_count = sum(1 for kw in domain_keywords if _kw_matches(kw, full_content))
+        if is_dataset_source:
+            # Datasets are queried directly via platform APIs (HuggingFace Hub, Kaggle).
+            # A dataset matching any key domain/entity keyword (e.g. 'california', 'delhi', 'housing', 'price')
+            # is genuinely relevant.
+            return match_count >= 1
+
         min_required = max(2, min(4, len(domain_keywords) // 4))
         overlap_ratio = match_count / max(1, len(domain_keywords))
-        return match_count >= min_required or overlap_ratio >= 0.20
+        return match_count >= min_required or overlap_ratio >= 0.15
 
     def _estimate_sources(self, config: dict) -> int:
         """Estimate number of discoverable sources dynamically."""
@@ -1935,11 +1958,13 @@ class DatasetOrchestrator:
             max_gen_attempts = max(needed_count * 5, 50)
             attempt_count = 0
             cell_idx = 0
+            consecutive_empty_batches = 0
 
             while len(samples) < target_dataset_size and attempt_count < max_gen_attempts:
                 if self._is_cancelled(job_id):
                     break
 
+                prev_len = len(samples)
                 needed = target_dataset_size - len(samples)
                 batch_size = min(synth_concurrency, needed)
                 batch_tasks = []
@@ -1979,6 +2004,17 @@ class DatasetOrchestrator:
                 curr_len = len(samples)
                 prog = 0.7 + (curr_len / max(1, target_dataset_size)) * 0.2
                 self._update_job_status(job_id, "construct", prog, samples_generated=curr_len)
+
+                if len(samples) == prev_len:
+                    consecutive_empty_batches += 1
+                    if consecutive_empty_batches >= 4:
+                        logger.warning(
+                            f"[{job_id}] Synthetic generator yielded no new valid samples after 4 consecutive batches "
+                            f"(attempt_count={attempt_count}). Proceeding with {len(samples)} constructed samples."
+                        )
+                        break
+                else:
+                    consecutive_empty_batches = 0
 
         if not filtered and (generation_mode in ("synthetic", "hybrid") or allow_seedless):
             logger.info("No crawled reference data found. Launching Pure Synthetic concurrent batch planning & generation.")
