@@ -296,10 +296,10 @@ class SeedlessGenerator:
 
     def _topic_key(self, instruction: str) -> str:
         """Normalise an instruction to a canonical topic key for dedup."""
-        # Strip punctuation, lowercase, keep first ~60 chars
+        # Strip punctuation, lowercase, keep normalized text up to 240 chars for dedup
         key = re.sub(r'[^\w\s]', '', instruction.lower()).strip()
         key = re.sub(r'\s+', ' ', key)
-        return key[:60]
+        return key[:240]
 
     async def generate_sample(
         self,
