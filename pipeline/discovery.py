@@ -2168,19 +2168,60 @@ class DiscoveryPipeline:
         query: str,
         target_domain: str
     ) -> list[DiscoveredSource]:
-        """Search Kaggle for datasets using the official kagglehub SDK.
-
-        Falls back to the undocumented API endpoint if kagglehub is not
-        installed, then to web search as a last resort.
-        """
+        """Search Kaggle for datasets using KaggleApi, kagglehub, or web discovery."""
         sources = []
 
-        # ── Tier 1: Official kagglehub SDK ────────────────────────────
+        # ── Tier 1: Official Kaggle API (authenticated via KAGGLE_USERNAME / KAGGLE_KEY) ──
+        try:
+            kaggle_user = os.getenv("KAGGLE_USERNAME") or self.config.get("kaggle_username")
+            kaggle_key = os.getenv("KAGGLE_KEY") or self.config.get("kaggle_key")
+            kaggle_token = os.getenv("KAGGLE_API_TOKEN")
+            has_creds = (
+                (kaggle_user and kaggle_key)
+                or kaggle_token
+                or os.path.exists(os.path.expanduser("~/.kaggle/access_token"))
+                or os.path.exists(os.path.expanduser("~/.kaggle/kaggle.json"))
+            )
+            if has_creds:
+                if kaggle_user:
+                    os.environ["KAGGLE_USERNAME"] = kaggle_user
+                if kaggle_key:
+                    os.environ["KAGGLE_KEY"] = kaggle_key
+                if kaggle_token:
+                    os.environ["KAGGLE_API_TOKEN"] = kaggle_token
+                from kaggle.api.kaggle_api_extended import KaggleApi
+                k_api = KaggleApi()
+                k_api.authenticate()
+                results = await asyncio.to_thread(k_api.dataset_list, search=query, sort_by="votes")
+                for item in results[:15]:
+                    ref = getattr(item, "ref", "") or str(item)
+                    if not ref:
+                        continue
+                    title = getattr(item, "title", "") or ref
+                    desc = getattr(item, "subtitle", "") or ""
+                    sources.append(DiscoveredSource(
+                        url=f"https://www.kaggle.com/datasets/{ref}",
+                        source_type=SourceType.KAGGLE_DATASET,
+                        title=title,
+                        description=desc,
+                        author=getattr(item, "ownerName", None) or getattr(item, "owner", ""),
+                        size_bytes=int(getattr(item, "totalBytes", 0) or 0),
+                        metadata={
+                            "ref": ref,
+                            "kaggle_dataset_ref": ref,
+                            "downloads": getattr(item, "downloadCount", 0),
+                            "votes": getattr(item, "voteCount", 0),
+                        },
+                    ))
+                if sources:
+                    return sources
+        except Exception as e:
+            self._LOG.debug(f"KaggleApi authenticated search error: {e}")
+
+        # ── Tier 2: Official kagglehub SDK ────────────────────────────
         try:
             import kagglehub
-            # kagglehub provides a native search, but it's limited.
-            # We search with the query and also browse by tag when possible.
-            results = kagglehub.search_datasets(query)
+            results = await asyncio.to_thread(kagglehub.search_datasets, query)
             for item in results[:15]:
                 ref = getattr(item, "ref", "") or item.get("ref", "")
                 title = getattr(item, "title", "") or item.get("title", "")
@@ -2188,7 +2229,7 @@ class DiscoveryPipeline:
                 if not ref:
                     continue
                 sources.append(DiscoveredSource(
-                    url=f"https://kaggle.com/datasets/{ref}",
+                    url=f"https://www.kaggle.com/datasets/{ref}",
                     source_type=SourceType.KAGGLE_DATASET,
                     title=title,
                     description=desc,
@@ -2198,6 +2239,8 @@ class DiscoveryPipeline:
                         if item.get("totalBytes") else None
                     ),
                     metadata={
+                        "ref": ref,
+                        "kaggle_dataset_ref": ref,
                         "downloads": (
                             getattr(item, "downloadCount", 0)
                             or item.get("downloadCount", 0)
@@ -2209,51 +2252,28 @@ class DiscoveryPipeline:
             if sources:
                 return sources
         except ImportError:
-            self._LOG.debug("kagglehub not installed; falling back to API")
+            self._LOG.debug("kagglehub not installed; falling back to web search")
         except Exception as e:
             self._LOG.warning(f"kagglehub search error: {e}")
 
-        # ── Tier 2: Undocumented REST API ──────────────────────────────
+        # ── Tier 3: Search Kaggle datasets via web index ───────────────
         try:
-            kaggle_url = (
-                "https://www.kaggle.com/api/i/documentation."
-                "DatasetsService/DatasetsList"
+            web_results = await self._search_duckduckgo(
+                f"site:kaggle.com/datasets/ {query} {target_domain}",
             )
-            async with self._rate_limiter.acquire(kaggle_url):
-                async with httpx.AsyncClient(
-                    timeout=httpx.Timeout(30.0),
-                ) as client:
-                    response = await client.get(
-                        kaggle_url,
-                        params={
-                            "Query": query,
-                            "SortBy": "DATASET_SORT_BY_DOWNLOADS",
-                            "PageSize": 20,
-                        },
-                    )
-                    if response.status_code == 200:
-                        data = response.json()
-                        for item in data.get("datasets", [])[:15]:
-                            sources.append(DiscoveredSource(
-                                url=f"https://kaggle.com/datasets/{item.get('ref', '')}",
-                                source_type=SourceType.KAGGLE_DATASET,
-                                title=item.get("title", ""),
-                                description=item.get("description", ""),
-                                author=item.get("ownerUsername", ""),
-                                metadata={
-                                    "downloads": item.get("downloadCount", 0),
-                                    "size": item.get("size", ""),
-                                    "tags": item.get("tags", []),
-                                },
-                            ))
+            for res in web_results:
+                if "/datasets/" in res.url:
+                    match = re.search(r'/datasets/([^/]+/[^/?#]+)', res.url)
+                    ref = match.group(1) if match else ""
+                    sources.append(DiscoveredSource(
+                        url=res.url,
+                        source_type=SourceType.KAGGLE_DATASET,
+                        title=res.title,
+                        description=res.description,
+                        metadata={"ref": ref, "kaggle_dataset_ref": ref} if ref else {},
+                    ))
         except Exception as e:
-            self._LOG.warning(f"Kaggle API search error: {e}")
-
-        # ── Tier 3: Fallback web search ────────────────────────────────
-        if not sources:
-            sources.extend(await self._search_duckduckgo(
-                f"site:kaggle.com {query} {target_domain} dataset",
-            ))
+            self._LOG.debug(f"Kaggle web search error: {e}")
 
         return sources
 

@@ -13,6 +13,8 @@ from datetime import datetime
 from pipeline.discovery import SourceType
 from core.provider_router import TaskType
 
+logger = logging.getLogger(__name__)
+
 
 def _is_safe_url(url: str) -> tuple[bool, str]:
     """Validate URL is not targeting internal/private infrastructure.
@@ -376,16 +378,21 @@ class ContentAnalyzer:
 
 class ExtractionPipeline:
     """Enhanced pipeline for extracting from diverse, messy, multilingual sources."""
+    _LOG = logger
 
     def __init__(self, config: dict, router=None):
         self.config = config
         self.router = router
         self.analyzer = ContentAnalyzer(router)
         self.timeout = config.get("timeout", 120)
+        self._LOG = logger
 
     async def extract(self, source) -> AsyncGenerator[ExtractedContent, None]:
         """Extract content from various source types."""
+        # Normalize metadata attributes on source object
+        meta = getattr(source, 'metadata', None) or getattr(source, 'metadata__', {}) or {}
         if isinstance(source, dict):
+            meta = source.get('metadata') or source.get('metadata__') or {}
             class DummySource:
                 pass
             
@@ -393,8 +400,8 @@ class ExtractionPipeline:
             for k, v in source.items():
                 setattr(source_obj, k, v)
                 
-            if 'metadata' in source and not hasattr(source_obj, 'metadata__'):
-                source_obj.metadata__ = source['metadata']
+            source_obj.metadata__ = meta
+            source_obj.metadata = meta
             
             if not hasattr(source_obj, 'url'):
                 source_obj.url = ''
@@ -407,12 +414,20 @@ class ExtractionPipeline:
                     source_obj.source_type = None
             
             source = source_obj
-            
-            source_type = getattr(source, 'source_type', None)
-            url = getattr(source, 'url', '')
         else:
-            source_type = getattr(source, 'source_type', None)
-            url = getattr(source, 'url', '')
+            if not hasattr(source, 'metadata__'):
+                try:
+                    source.metadata__ = meta
+                except AttributeError:
+                    pass
+            if not hasattr(source, 'metadata'):
+                try:
+                    source.metadata = meta
+                except AttributeError:
+                    pass
+            
+        source_type = getattr(source, 'source_type', None)
+        url = getattr(source, 'url', '')
 
         if source_type == SourceType.WEB_PAGE:
             async for content in self.extract_from_url(url):
@@ -1126,15 +1141,12 @@ class ExtractionPipeline:
     async def extract_from_huggingface(self, source) -> AsyncGenerator[ExtractedContent, None]:
         """Extract dataset information from HuggingFace, preferring actual sample data."""
         try:
-            # Try to get actual sample data if available via datasets SDK
+            meta = getattr(source, "metadata", None) or getattr(source, "metadata__", {}) or {}
             sample_content = None
-            # If we already have sample_rows from discovery inspection, use them
-            sample_rows = source.metadata__.get("sample_rows")
+            sample_rows = meta.get("sample_rows")
             if sample_rows and isinstance(sample_rows, list) and len(sample_rows) > 0:
-                # Convert sample rows to a readable string
                 import json
-                # Take up to 3 rows for brevity
-                rows_to_show = sample_rows[:3]
+                rows_to_show = sample_rows[:20]
                 sample_lines = []
                 for row in rows_to_show:
                     if isinstance(row, dict):
@@ -1143,18 +1155,17 @@ class ExtractionPipeline:
                         sample_lines.append(str(row))
                 sample_content = "\n".join(sample_lines)
                 if sample_content:
-                    # Also include dataset title and description as context
-                    content = f"Dataset: {source.title}\nDescription: {source.description or ''}\n\nSample data (first {len(rows_to_show)} rows):\n{sample_content}"
+                    content = f"Dataset: {source.title}\nDescription: {getattr(source, 'description', '') or ''}\n\nSample data ({len(rows_to_show)} rows):\n{sample_content}"
                     extracted = ExtractedContent(
                         content=content,
                         content_type="huggingface_dataset_sample",
                         language="en",
                         url=source.url,
-                        confidence=0.95,  # High confidence because we have actual data
+                        confidence=0.95,
                         metadata={
-                            "downloads": source.metadata__.get("downloads", 0),
-                            "tags": source.metadata__.get("tags", []),
-                            "author": source.metadata__.get("author", ""),
+                            "downloads": meta.get("downloads", 0),
+                            "tags": meta.get("tags", []),
+                            "author": getattr(source, "author", "") or meta.get("author", ""),
                             "source_type": "huggingface_dataset",
                             "sample_rows_used": len(rows_to_show),
                             "total_samples": len(sample_rows) if isinstance(sample_rows, list) else 0
@@ -1162,26 +1173,27 @@ class ExtractionPipeline:
                     )
                     yield extracted
                     return
-            # If we don't have precomputed sample_rows, try to fetch a sample safely with strict timeout
+
+            # Try to fetch actual rows using datasets streaming SDK
             try:
                 import asyncio
                 def _safe_load_hf():
                     from datasets import load_dataset, get_dataset_config_names
-                    ds_id = source.metadata__.get("id") or source.title
+                    ds_id = meta.get("id") or getattr(source, "title", "")
                     if not ds_id:
                         return None
-                    configs = get_dataset_config_names(ds_id)
-                    config = configs[0] if configs else "default"
-                    ds = load_dataset(
-                        ds_id,
-                        config,
-                        split="train",
-                        streaming=True,
-                        trust_remote_code=False,
-                    )
-                    return list(ds.take(3))
+                    try:
+                        configs = get_dataset_config_names(ds_id)
+                        config = configs[0] if configs else None
+                    except Exception:
+                        config = None
+                    kwargs = {"split": "train", "streaming": True, "trust_remote_code": False}
+                    if config:
+                        kwargs["name"] = config
+                    ds = load_dataset(ds_id, **kwargs)
+                    return list(ds.take(20))
 
-                head = await asyncio.wait_for(asyncio.to_thread(_safe_load_hf), timeout=8.0)
+                head = await asyncio.wait_for(asyncio.to_thread(_safe_load_hf), timeout=30.0)
                 if head:
                     import json
                     sample_lines = []
@@ -1192,7 +1204,7 @@ class ExtractionPipeline:
                             sample_lines.append(str(row))
                     sample_content = "\n".join(sample_lines)
                     if sample_content:
-                        content = f"Dataset: {source.title}\nDescription: {source.description or ''}\n\nSample data (first {len(head)} rows):\n{sample_content}"
+                        content = f"Dataset: {source.title}\nDescription: {getattr(source, 'description', '') or ''}\n\nSample data ({len(head)} rows):\n{sample_content}"
                         extracted = ExtractedContent(
                             content=content,
                             content_type="huggingface_dataset_sample",
@@ -1200,9 +1212,9 @@ class ExtractionPipeline:
                             url=source.url,
                             confidence=0.9,
                             metadata={
-                                "downloads": source.metadata__.get("downloads", 0),
-                                "tags": source.metadata__.get("tags", []),
-                                "author": source.metadata__.get("author", ""),
+                                "downloads": meta.get("downloads", 0),
+                                "tags": meta.get("tags", []),
+                                "author": getattr(source, "author", "") or meta.get("author", ""),
                                 "source_type": "huggingface_dataset",
                                 "fetched_via_sdk": True,
                                 "sample_rows_used": len(head)
@@ -1211,13 +1223,27 @@ class ExtractionPipeline:
                         yield extracted
                         return
             except Exception as sdk_err:
-                self._LOG.debug(f"HF SDK sample extraction safely bypassed for {source.url}: {sdk_err}")
-                pass
-            # Fallback: do not yield metadata-only content to avoid irrelevant data
-            # Under-delivering with no data is better than including irrelevant metadata
+                logger.debug(f"HF SDK sample extraction safely bypassed for {source.url}: {sdk_err}")
+
+            # Fallback to metadata / description if streaming SDK couldn't fetch sample rows
+            desc = getattr(source, "description", "") or ""
+            fallback_text = f"Dataset: {source.title}\nDescription: {desc}\nURL: {source.url}"
+            yield ExtractedContent(
+                content=fallback_text,
+                content_type="huggingface_dataset",
+                language="en",
+                url=source.url,
+                confidence=0.75,
+                metadata={
+                    "downloads": meta.get("downloads", 0),
+                    "tags": meta.get("tags", []),
+                    "author": getattr(source, "author", "") or meta.get("author", ""),
+                    "source_type": "huggingface_dataset",
+                }
+            )
             return
         except Exception as e:
-            self._LOG.warning(f"HuggingFace extraction failed: {e}")
+            logger.warning(f"HuggingFace extraction failed: {e}")
             yield ExtractedContent(
                 content="",
                 content_type="error",
@@ -1295,80 +1321,124 @@ class ExtractionPipeline:
     async def extract_from_kaggle(self, source) -> AsyncGenerator[ExtractedContent, None]:
         """Extract actual dataset files from Kaggle, not just metadata."""
         try:
-            # Try to use kagglehub to download and access actual dataset files
+            import tempfile
+            meta = getattr(source, 'metadata', None) or getattr(source, 'metadata__', {}) or {}
+            dataset_ref = meta.get('kaggle_dataset_ref') or meta.get('ref')
+            if not dataset_ref and getattr(source, 'url', ''):
+                import re
+                match = re.search(r'/datasets/([^/]+/[^/?#]+)', source.url)
+                if match:
+                    dataset_ref = match.group(1)
+
+            if not dataset_ref:
+                return
+
+            path = None
+            # 1. Try kagglehub
             try:
                 import kagglehub
-
-                # Get the dataset reference from the URL or metadata
-                dataset_ref = None
-                if hasattr(source, 'metadata__') and source.metadata__.get('kaggle_dataset_ref'):
-                    dataset_ref = source.metadata__['kaggle_dataset_ref']
-                elif source.url:
-                    # Extract from URL like https://kaggle.com/datasets/username/dataset-name
-                    import re
-                    match = re.search(r'/datasets/([^/]+/[^/]+)', source.url)
-                    if match:
-                        dataset_ref = match.group(1)
-
-                if dataset_ref:
-                    # Download small dataset safely without blocking the event loop
-                    import asyncio
-                    path = await asyncio.wait_for(
-                        asyncio.to_thread(kagglehub.dataset_download, dataset_ref),
-                        timeout=10.0
-                    )
-
-                    # Read common file types to extract content
+                import asyncio
+                path = await asyncio.wait_for(
+                    asyncio.to_thread(kagglehub.dataset_download, dataset_ref),
+                    timeout=15.0
+                )
+            except Exception as kh_err:
+                logger.debug(f"kagglehub failed ({kh_err}), trying KaggleApi extended...")
+                # 2. Try official KaggleApi with credentials
+                try:
                     import os
-                    content_parts = [f"Dataset: {source.title}", f"Description: {source.description or ''}"]
+                    kaggle_user = os.getenv("KAGGLE_USERNAME") or self.config.get("kaggle_username")
+                    kaggle_key = os.getenv("KAGGLE_KEY") or self.config.get("kaggle_key")
+                    kaggle_token = os.getenv("KAGGLE_API_TOKEN")
+                    has_creds = (
+                        (kaggle_user and kaggle_key)
+                        or kaggle_token
+                        or os.path.exists(os.path.expanduser("~/.kaggle/access_token"))
+                        or os.path.exists(os.path.expanduser("~/.kaggle/kaggle.json"))
+                    )
+                    if has_creds:
+                        if kaggle_user:
+                            os.environ["KAGGLE_USERNAME"] = kaggle_user
+                        if kaggle_key:
+                            os.environ["KAGGLE_KEY"] = kaggle_key
+                        if kaggle_token:
+                            os.environ["KAGGLE_API_TOKEN"] = kaggle_token
+                        from kaggle.api.kaggle_api_extended import KaggleApi
+                        import asyncio
+                        k_api = KaggleApi()
+                        k_api.authenticate()
+                        temp_dir = tempfile.mkdtemp(prefix="kaggle_")
+                        await asyncio.wait_for(
+                            asyncio.to_thread(k_api.dataset_download_files, dataset_ref, path=temp_dir, unzip=True),
+                            timeout=30.0
+                        )
+                        path = temp_dir
+                except Exception as k_err:
+                    logger.debug(f"KaggleApi download failed: {k_err}")
 
-                    # Look for CSV, JSON, text files to extract actual data
-                    for root, dirs, files in os.walk(path):
-                        for file in files[:5]:  # Limit to first 5 files to avoid too much data
-                            file_path = os.path.join(root, file)
-                            file_ext = os.path.splitext(file)[1].lower()
+            if path and os.path.exists(path):
+                content_parts = [f"Dataset: {source.title}", f"Description: {getattr(source, 'description', '') or ''}"]
+                import os
+                for root, dirs, files in os.walk(path):
+                    for file in files[:5]:
+                        file_path = os.path.join(root, file)
+                        file_ext = os.path.splitext(file)[1].lower()
+                        try:
+                            if file_ext == '.csv':
+                                import pandas as pd
+                                df = pd.read_csv(file_path, nrows=20)
+                                content_parts.append(f"\nFile: {file}\n{df.to_string()}")
+                            elif file_ext == '.json':
+                                import json
+                                with open(file_path, 'r', encoding='utf-8', errors='ignore') as f:
+                                    data = json.load(f)
+                                    preview = data[:10] if isinstance(data, list) else data
+                                    content_parts.append(f"\nFile: {file}\n{json.dumps(preview, indent=2)[:1500]}")
+                            elif file_ext in ['.parquet']:
+                                import pandas as pd
+                                df = pd.read_parquet(file_path)
+                                content_parts.append(f"\nFile: {file}\n{df.head(20).to_string()}")
+                            elif file_ext in ['.txt', '.md']:
+                                with open(file_path, 'r', encoding='utf-8', errors='ignore') as f:
+                                    content_parts.append(f"\nFile: {file}\n{f.read(2000)}")
+                        except Exception as file_e:
+                            logger.debug(f"Could not read Kaggle file {file}: {file_e}")
+                            continue
 
-                            try:
-                                if file_ext == '.csv':
-                                    import pandas as pd
-                                    df = pd.read_csv(file_path, nrows=5)  # First 5 rows
-                                    content_parts.append(f"\nFile: {file}\n{df.to_string()}")
-                                elif file_ext == '.json':
-                                    with open(file_path, 'r') as f:
-                                        data = json.load(f)
-                                        content_parts.append(f"\nFile: {file}\n{json.dumps(data, indent=2)[:500]}")
-                                elif file_ext in ['.txt', '.md', '.py', '.r', '.java', '.cpp', '.c', '.html']:
-                                    with open(file_path, 'r', encoding='utf-8', errors='ignore') as f:
-                                        file_content = f.read(1000)  # First 1000 chars
-                                        content_parts.append(f"\nFile: {file}\n{file_content}")
-                            except Exception as file_e:
-                                self._LOG.debug(f"Could not read file {file}: {file_e}")
-                                continue
-
+                if len(content_parts) > 2:
                     content = "\n".join(content_parts)
                     extracted = await self._process_text(content, source.url, "utf-8")
                     extracted.metadata["source_type"] = "kaggle_dataset"
                     extracted.metadata["local_path"] = path
-                    extracted.confidence = 0.8  # High confidence since we have actual data
+                    extracted.confidence = 0.9
                     yield extracted
                     return
 
-            except ImportError:
-                self._LOG.debug("kagglehub not installed, falling back to metadata")
-            except Exception as kaggle_e:
-                self._LOG.warning(f"Kaggle dataset access failed: {kaggle_e}")
-
-            # If we can't access actual dataset files, don't yield anything
-            # This prevents metadata from being used as dataset content
-            pass
-
+            # Fallback to metadata / description if files could not be downloaded
+            desc = getattr(source, "description", "") or ""
+            fallback_text = f"Dataset: {source.title}\nDescription: {desc}\nURL: {getattr(source, 'url', '')}"
+            yield ExtractedContent(
+                content=fallback_text,
+                content_type="kaggle_dataset",
+                language="en",
+                url=getattr(source, "url", ""),
+                confidence=0.75,
+                metadata={
+                    "downloads": meta.get("downloads", 0),
+                    "tags": meta.get("tags", []),
+                    "author": getattr(source, "author", "") or meta.get("author", ""),
+                    "source_type": "kaggle_dataset",
+                    "ref": dataset_ref,
+                }
+            )
+            return
         except Exception as e:
-            self._LOG.warning(f"Kaggle extraction failed: {e}")
+            logger.warning(f"Kaggle extraction failed: {e}")
             yield ExtractedContent(
                 content="",
                 content_type="error",
                 confidence=0.0,
-                url=source.url,
+                url=getattr(source, "url", ""),
                 extraction_warnings=[f"Kaggle extraction failed: {str(e)}"]
             )
 
