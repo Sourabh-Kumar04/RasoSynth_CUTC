@@ -18,6 +18,7 @@ import {
   ShieldCheck,
   AlertCircle,
   Bot,
+  FileText,
 } from 'lucide-react'
 import { clsx } from 'clsx'
 import { Button } from '@/components/ui/button'
@@ -186,11 +187,18 @@ function usePromptLint(text: string) {
   }
 
   const hasDifficultySplit = lower.includes('difficulty') || lower.includes('easy') || lower.includes('tiers') || lower.includes('curriculum')
-  if (!hasDifficultySplit) {
+  const has4Pillar = lower.includes('[domain & operational scenario]') || (lower.includes('tier 1') && lower.includes('tier 2'))
+  if (!has4Pillar && !hasDifficultySplit) {
     tips.push({
-      text: 'Apply a 40-40-20 difficulty curriculum split for better model generalization.',
-      actionLabel: '+ Add 40-40-20 Curriculum',
-      appendSnippet: ' Apply a 40-40-20 difficulty curriculum split: (easy) definitional lookups; (medium) multi-statute procedural cross-referencing; (hard) adversarial edge-cases.',
+      text: 'Format into 4-Pillar Universal Enterprise Spec (30-35% Factual, 45-50% Multi-Hop, 20-25% Adversarial).',
+      actionLabel: '+ Add 4-Pillar Hierarchy',
+      appendSnippet: '\n\n[CURRICULUM HIERARCHY & DIFFICULTY DISTRIBUTION]\n- Tier 1 (30-35% Factual Grounding): Exact definitions, statutory/protocol citations, and baseline formulas. Zero speculative extrapolation.\n- Tier 2 (45-50% Multi-Hop Reconciliation): Multi-variable problem solving, conflicting inputs, cross-referencing disparate statutes/APIs, and step-by-step arithmetic or logical proofs.\n- Tier 3 (20-25% Adversarial & Boundary Stress-Testing): Incomplete records, contradictory facts, high-risk edge cases requiring explicit refusal, calibrated caveats, or appeal strategy.',
+    })
+  } else if (!hasDifficultySplit) {
+    tips.push({
+      text: 'Apply a 35-45-20 difficulty curriculum split for better model generalization.',
+      actionLabel: '+ Add Curriculum Split',
+      appendSnippet: ' Apply a 3-tier difficulty curriculum: (easy) definitional lookups; (medium) multi-statute procedural cross-referencing; (hard) adversarial edge-cases.',
     })
   }
 
@@ -294,9 +302,33 @@ function StudioContent() {
       .split(',')
       .map(t => t.trim())
       .filter(Boolean)
-    const mergedTerms = Array.from(new Set([...currentList, ...localTerms]))
+    let mergedTerms = Array.from(new Set([...currentList, ...localTerms]))
 
     try {
+      let agentDomain = targetDomain
+      try {
+        const agentRes = await api.analyzeDomain({
+          prompt: queryText,
+          target_domain: targetDomain,
+          language,
+        })
+        if (agentRes) {
+          if (agentRes.domain && agentRes.domain !== 'unknown') {
+            agentDomain = agentRes.domain
+            setTargetDomain(agentRes.domain)
+          }
+          if (Array.isArray(agentRes.preserved_terms) && agentRes.preserved_terms.length > 0) {
+            mergedTerms = Array.from(new Set([...mergedTerms, ...agentRes.preserved_terms]))
+            setPreservedTermsInput(mergedTerms.join(', '))
+          }
+          if (Array.isArray(agentRes.anti_domains) && agentRes.anti_domains.length > 0) {
+            setAntiDomainsInput(agentRes.anti_domains.join(', '))
+          }
+        }
+      } catch (agentErr) {
+        console.warn('Agent domain analysis fallback:', agentErr)
+      }
+
       const previewRes = await api.previewJobSources({
         query: queryText,
         max_sources: 6,
@@ -328,8 +360,8 @@ function StudioContent() {
         // Fetch execution plan and coverage matrix
         try {
           const planRes = await api.planJob({
-            target_domain: dynamicDomain || targetDomain,
-            domain: dynamicDomain || targetDomain,
+            target_domain: agentDomain || dynamicDomain || targetDomain,
+            domain: agentDomain || dynamicDomain || targetDomain,
             dataset_size: 20,
             target_size: 20,
             synthesis_mode: synthesisMode,
@@ -343,19 +375,43 @@ function StudioContent() {
         }
 
         setAutoDetectNotice(
-          `Discovered ${allTerms.length} invariant terms · ${previewRes.sources?.length || 0} authority sources`
+          `Agent Discovered: ${allTerms.length} invariants · ${previewRes.sources?.length || 0} authority sources`
         )
       } else {
         setPreservedTermsInput(mergedTerms.join(', '))
-        setAutoDetectNotice(`Extracted ${mergedTerms.length} invariant terms`)
+        setAutoDetectNotice(`Agent extracted ${mergedTerms.length} invariant terms`)
       }
     } catch {
       setPreservedTermsInput(mergedTerms.join(', '))
-      setAutoDetectNotice(`Extracted ${mergedTerms.length} invariant terms`)
+      setAutoDetectNotice(`Agent extracted ${mergedTerms.length} invariant terms`)
     } finally {
       setIsAutoDetecting(false)
     }
-  }, [prompt, targetDomain, preservedTermsInput, extractSyntacticInvariants])
+  }, [prompt, targetDomain, preservedTermsInput, language, synthesisMode, extractSyntacticInvariants])
+
+  const handleApply4PillarTemplate = useCallback(() => {
+    playClickSound()
+    const cleanPrompt = prompt.trim() || targetDomain || 'Custom Domain Task'
+    const cleanInvariants = preservedTermsInput.trim() || 'Key domain invariants and statutory/technical tokens'
+    const cleanAnti = antiDomainsInput.trim() || 'Homonym collisions, cross-discipline traps, unverified claims'
+
+    const templated = `[DOMAIN & OPERATIONAL SCENARIO]
+${cleanPrompt}
+
+[CURRICULUM HIERARCHY & DIFFICULTY DISTRIBUTION]
+- Tier 1 (30-35% Factual Grounding): Exact definitions, statutory/protocol citations, and baseline formulas. Zero speculative extrapolation.
+- Tier 2 (45-50% Multi-Hop Reconciliation): Multi-variable problem solving, conflicting inputs, cross-referencing disparate statutes/APIs, and step-by-step arithmetic or logical proofs.
+- Tier 3 (20-25% Adversarial & Boundary Stress-Testing): Incomplete records, contradictory facts, high-risk edge cases requiring explicit refusal, calibrated caveats, or appeal strategy.
+
+[STRUCTURAL INVARIANTS]
+Require exact citations to authoritative primary sources. Preserve technical tokens verbatim: ${cleanInvariants}.
+
+[ANTI-DOMAIN BOUNDARIES]
+Strictly exclude homonym collisions, foreign/irrelevant jurisdictions, deprecated versions, toy boilerplate, and unsubstantiated claims: ${cleanAnti}.`
+
+    setPrompt(templated)
+    setAutoDetectNotice('Applied Universal Enterprise 4-Pillar Specification')
+  }, [prompt, targetDomain, preservedTermsInput, antiDomainsInput])
 
   // Launch job
   const handleGenerate = async () => {
@@ -825,17 +881,29 @@ function StudioContent() {
                 </div>
               )}
               <div className="flex flex-wrap items-center justify-between gap-2 pt-2">
-                <Button
-                  type="button"
-                  size="sm"
-                  variant="outline"
-                  onClick={handleAutoDetect}
-                  disabled={isAutoDetecting}
-                  className="h-8 px-3.5 text-xs font-mono font-bold border-[#f26625]/40 text-[#f26625] bg-[#f26625]/10 hover:bg-[#f26625]/20 rounded-md flex items-center gap-1.5 glow-yc transition-all"
-                >
-                  {isAutoDetecting ? <Loader2 className="w-3.5 h-3.5 animate-spin text-[#f26625]" /> : <Sparkles className="w-3.5 h-3.5 text-[#f26625]" />}
-                  <span>{isAutoDetecting ? 'Discovering Invariants…' : 'Auto-Detect Terms & Sources'}</span>
-                </Button>
+                <div className="flex items-center gap-2">
+                  <Button
+                    type="button"
+                    size="sm"
+                    variant="outline"
+                    onClick={handleAutoDetect}
+                    disabled={isAutoDetecting}
+                    className="h-8 px-3.5 text-xs font-mono font-bold border-[#f26625]/40 text-[#f26625] bg-[#f26625]/10 hover:bg-[#f26625]/20 rounded-md flex items-center gap-1.5 glow-yc transition-all"
+                  >
+                    {isAutoDetecting ? <Loader2 className="w-3.5 h-3.5 animate-spin text-[#f26625]" /> : <Bot className="w-3.5 h-3.5 text-[#f26625]" />}
+                    <span>{isAutoDetecting ? 'Agent Analyzing Domain…' : 'Agent Auto-Detect'}</span>
+                  </Button>
+                  <Button
+                    type="button"
+                    size="sm"
+                    variant="outline"
+                    onClick={handleApply4PillarTemplate}
+                    className="h-8 px-3 text-xs font-mono border-[#272738] text-zinc-300 hover:text-white bg-[#12121a] hover:bg-[#1c1c28] rounded-md flex items-center gap-1.5 transition-all"
+                  >
+                    <FileText className="w-3.5 h-3.5 text-amber-400" />
+                    <span>Apply 4-Pillar Spec</span>
+                  </Button>
+                </div>
                 {autoDetectNotice && (
                   <span className="text-[11px] font-mono text-emerald-400 flex items-center gap-1">
                     <Check className="w-3.5 h-3.5 text-emerald-400" />

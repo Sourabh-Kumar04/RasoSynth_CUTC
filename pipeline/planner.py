@@ -29,14 +29,15 @@ class DatasetPlanner:
     async def create_plan(self, prompt: str) -> DatasetPlan:
         """Analyze user prompt and extract a structured plan using the LLM."""
         system_prompt = (
-            "You are an expert ML/AI data architect. Analyze the user prompt to build a comprehensive, structured plan for generating a high-quality dataset. "
+            "You are an expert ML/AI data architect. Analyze the user prompt to build a comprehensive, structured plan for generating a high-quality dataset "
+            "following the Universal Enterprise 4-Pillar Specification (Domain & Scenario, Curriculum Hierarchy 35/45/20 split, Structural Invariants, and Anti-Domain boundaries). "
             "Output ONLY a valid JSON object matching the schema: "
             "{\n"
             "  \"domain\": \"string\",\n"
             "  \"objective\": \"string\",\n"
             "  \"roles\": [\"string\"],\n"
             "  \"metadata_schema\": {\"field_name\": \"type_description\"},\n"
-            "  \"difficulty_distribution\": {\"beginner\": 0.3, \"intermediate\": 0.4, \"advanced\": 0.3},\n"
+            "  \"difficulty_distribution\": {\"beginner\": 0.35, \"intermediate\": 0.45, \"advanced\": 0.20},\n"
             "  \"constraints\": [\"string\"],\n"
             "  \"diversity_attributes\": {\"attribute_name\": [\"value1\", \"value2\"]}\n"
             "}\n"
