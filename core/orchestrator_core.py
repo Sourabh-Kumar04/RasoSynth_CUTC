@@ -1188,10 +1188,13 @@ class DatasetOrchestrator:
 
         is_ml_domain = any(indicator in target_domain for indicator in ml_ai_indicators)
 
-        # Base sources - always include these (prioritize high-quality dataset repositories)
+        # Base sources - include high-quality dataset repositories and foundational knowledge corpora
         source_types = [
             SourceType.HF_DATASET,      # HuggingFace Datasets (primary)
             SourceType.KAGGLE_DATASET,  # Kaggle (primary)
+            SourceType.WIKIPEDIA,       # Wikipedia articles & domain definitions
+            SourceType.BOOKS,           # Open Library & Gutenberg book references
+            SourceType.BLOG,            # Engineering, technical & expert blogs
             SourceType.OPENML,       SourceType.ZENODO,               # Zenodo (primary)
             SourceType.PAPERS_WITH_CODE, # Papers with Code (primary)
             SourceType.WEB_PAGE,         # General web (fallback)

@@ -323,7 +323,7 @@ function StudioContent() {
 
       const previewRes = await api.previewJobSources({
         query: queryText,
-        max_sources: 6,
+        max_sources: 12,
       })
 
       if (previewRes) {
@@ -343,7 +343,7 @@ function StudioContent() {
 
         if (Array.isArray(previewRes.sources) && previewRes.sources.length > 0) {
           setDiscoveredSources(previewRes.sources.map((s: any) => ({
-            name: s.name || s.domain || 'Verified Domain Repository',
+            name: s.title || s.name || s.domain || 'Verified Domain Repository',
             url: s.url,
             source_type: s.source_type || 'discovery',
           })))
@@ -927,15 +927,35 @@ function StudioContent() {
                   </span>
                 </div>
                 <div className="flex flex-wrap gap-1.5">
-                  {discoveredSources.map((s, idx) => (
-                    <span
-                      key={idx}
-                      className="px-2 py-0.5 rounded-sm bg-[#0a0a0f] border border-[#272738] text-[10px] font-mono text-emerald-400 truncate max-w-[220px]"
-                      title={s.name}
-                    >
-                      {s.name}
-                    </span>
-                  ))}
+                  {discoveredSources.map((s, idx) => {
+                    const st = (s.source_type || '').toLowerCase()
+                    const typeLabel = st === 'wikipedia' ? 'Wikipedia' :
+                                      st === 'books' ? 'Book' :
+                                      st === 'blog' ? 'Blog' :
+                                      st.includes('dataset') ? 'Dataset' :
+                                      st === 'arxiv_paper' ? 'Paper' :
+                                      st.includes('github') ? 'Repo' : null
+                    const typeColor = st === 'wikipedia' ? 'bg-sky-950/60 border-sky-800/60 text-sky-400' :
+                                      st === 'books' ? 'bg-amber-950/60 border-amber-800/60 text-amber-400' :
+                                      st === 'blog' ? 'bg-indigo-950/60 border-indigo-800/60 text-indigo-400' :
+                                      st.includes('dataset') ? 'bg-emerald-950/60 border-emerald-800/60 text-emerald-400' :
+                                      'bg-[#161622] border-[#272738] text-zinc-400'
+
+                    return (
+                      <span
+                        key={idx}
+                        className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-sm bg-[#0a0a0f] border border-[#272738] text-[10px] font-mono text-zinc-200 truncate max-w-[280px]"
+                        title={s.name}
+                      >
+                        {typeLabel && (
+                          <span className={`px-1 py-0.2 rounded-[2px] text-[8px] uppercase tracking-wider border font-bold ${typeColor}`}>
+                            {typeLabel}
+                          </span>
+                        )}
+                        <span className="truncate">{s.name}</span>
+                      </span>
+                    )
+                  })}
                 </div>
               </div>
             )}

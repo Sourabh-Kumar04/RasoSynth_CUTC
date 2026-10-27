@@ -450,6 +450,9 @@ class ExtractionPipeline:
         ):
             async for content in self.extract_from_scholar(source):
                 yield content
+        elif source_type in (SourceType.WIKIPEDIA, SourceType.BOOKS, SourceType.BLOG):
+            async for content in self.extract_from_url(url):
+                yield content
         else:
             async for content in self.extract_from_url(url):
                 yield content

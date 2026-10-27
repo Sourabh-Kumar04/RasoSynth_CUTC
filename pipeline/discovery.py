@@ -466,6 +466,9 @@ class SourceType(Enum):
     MOLECULENET = "moleculenet"
     OPEN_IMAGES = "open_images"
     COMMON_VOICE = "common_voice"
+    # ── Text, Reference & Knowledge corpora ────────────────────────────
+    BOOKS = "books"
+    BLOG = "blog"
 
 
 @dataclass
@@ -1212,6 +1215,8 @@ class DiscoveryPipeline:
             SourceType.WEB_PAGE,             # General web (filtered)
             SourceType.PDF_DOCUMENT,         # PDF documents
             SourceType.WIKIPEDIA,            # Wikipedia
+            SourceType.BOOKS,                # Open Library & Gutenberg Books
+            SourceType.BLOG,                 # Engineering & Expert Blogs
             SourceType.GITHUB_REPO,          # GitHub repos (dataset collections)
         ]
 
@@ -1435,6 +1440,10 @@ class DiscoveryPipeline:
                 return await self._discover_stackoverflow(query, target_domain)
             elif source_type == SourceType.WIKIPEDIA:
                 return await self._discover_wikipedia(query, target_domain)
+            elif source_type == SourceType.BOOKS:
+                return await self._discover_books(query, target_domain)
+            elif source_type == SourceType.BLOG:
+                return await self._discover_blogs(query, target_domain)
             elif source_type == SourceType.PDF_DOCUMENT:
                 return await self._discover_pdfs(query, target_domain)
             elif source_type == SourceType.HACKERNEWS:
@@ -2384,6 +2393,164 @@ class DiscoveryPipeline:
             self._LOG.warning(f"Wikipedia search error: {e}")
 
         return sources
+
+    async def _discover_books(
+        self,
+        query: str,
+        target_domain: str
+    ) -> list[DiscoveredSource]:
+        """Search authoritative books from Wikibooks, Open Library, and Project Gutenberg."""
+        sources: list[DiscoveredSource] = []
+        clean_query = query.strip()
+        if not clean_query:
+            return sources
+
+        # 1. Wikibooks API (Fast, authoritative open curriculum, textbooks & monographs)
+        try:
+            wb_resp = await self._fetch(
+                "https://en.wikibooks.org/w/api.php",
+                params={
+                    "action": "query",
+                    "list": "search",
+                    "srsearch": clean_query,
+                    "srlimit": 10,
+                    "format": "json",
+                },
+                max_retries=1,
+                timeout=8.0,
+            )
+            if wb_resp.status_code == 200:
+                wb_data = wb_resp.json()
+                for item in wb_data.get("query", {}).get("search", [])[:8]:
+                    title = item.get("title", "")
+                    if not title:
+                        continue
+                    snippet = re.sub(r'<[^>]+>', '', item.get("snippet", "")).strip()
+                    sources.append(DiscoveredSource(
+                        url=f"https://en.wikibooks.org/wiki/{quote(title)}",
+                        source_type=SourceType.BOOKS,
+                        title=f"Wikibooks: {title}",
+                        description=f"Textbook / Monograph: {snippet or title}",
+                        metadata={
+                            "provider": "wikibooks",
+                            "page_id": item.get("pageid", 0),
+                            "word_count": item.get("wordcount", 0),
+                        },
+                    ))
+        except Exception as e:
+            self._LOG.debug(f"Wikibooks search error: {e}")
+
+        # 2. Open Library API (Book references)
+        try:
+            response = await self._fetch(
+                "https://openlibrary.org/search.json",
+                params={
+                    "q": clean_query,
+                    "limit": 6,
+                    "fields": "key,title,author_name,first_publish_year,subject",
+                },
+                max_retries=1,
+                timeout=5.0,
+            )
+            if response.status_code == 200:
+                data = response.json()
+                for doc in data.get("docs", [])[:5]:
+                    key = doc.get("key", "")
+                    title = doc.get("title", "")
+                    if not key or not title:
+                        continue
+                    authors = doc.get("author_name", [])
+                    author_str = ", ".join(authors[:2]) if authors else ""
+                    year = doc.get("first_publish_year")
+                    subjects = doc.get("subject", [])
+                    subj_str = f" · Subjects: {', '.join(subjects[:3])}" if subjects else ""
+                    sources.append(DiscoveredSource(
+                        url=f"https://openlibrary.org{key}",
+                        source_type=SourceType.BOOKS,
+                        title=f"{title} ({author_str})" if author_str else title,
+                        description=f"Book: {title}{f' by {author_str}' if author_str else ''}{f' ({year})' if year else ''}{subj_str}",
+                        metadata={
+                            "provider": "openlibrary",
+                            "authors": authors,
+                            "publish_year": year,
+                            "openlibrary_key": key,
+                        },
+                        author=author_str,
+                    ))
+        except Exception as e:
+            self._LOG.debug(f"OpenLibrary book search error: {e}")
+
+        # 3. Project Gutenberg / Gutendex API (Classic reference literature)
+        try:
+            gd_resp = await self._fetch(
+                "https://gutendex.com/books/",
+                params={"search": clean_query},
+                max_retries=1,
+                timeout=5.0,
+            )
+            if gd_resp.status_code == 200:
+                gd_data = gd_resp.json()
+                for item in gd_data.get("results", [])[:4]:
+                    b_id = item.get("id")
+                    title = item.get("title", "")
+                    if not b_id or not title:
+                        continue
+                    authors = [a.get("name", "") for a in item.get("authors", []) if a.get("name")]
+                    author_str = ", ".join(authors) if authors else "Public Domain"
+                    sources.append(DiscoveredSource(
+                        url=f"https://www.gutenberg.org/ebooks/{b_id}",
+                        source_type=SourceType.BOOKS,
+                        title=f"Gutenberg: {title}",
+                        description=f"Full-text book by {author_str}",
+                        metadata={
+                            "provider": "gutenberg",
+                            "gutenberg_id": b_id,
+                            "authors": authors,
+                        },
+                        author=author_str,
+                    ))
+        except Exception as e:
+            self._LOG.debug(f"Gutendex search error: {e}")
+
+        return sources
+
+    async def _discover_blogs(
+        self,
+        query: str,
+        target_domain: str
+    ) -> list[DiscoveredSource]:
+        """Search authoritative blogs, engineering articles, and technical deep-dives."""
+        sources: list[DiscoveredSource] = []
+        clean_query = query.strip()
+        if not clean_query:
+            return sources
+
+        blog_queries = [
+            f'"{clean_query}" (site:medium.com OR site:dev.to OR site:substack.com)',
+            f'"{clean_query}" ("engineering blog" OR "technical blog" OR "deep dive")',
+        ]
+
+        seen_urls = set()
+        for bq in blog_queries:
+            results = await self._search_duckduckgo(bq)
+            for res in results:
+                if res.url in seen_urls:
+                    continue
+                seen_urls.add(res.url)
+                sources.append(DiscoveredSource(
+                    url=res.url,
+                    source_type=SourceType.BLOG,
+                    title=f"[Blog] {res.title}" if not res.title.lower().startswith("[blog]") else res.title,
+                    description=res.description or f"Blog article for {clean_query}",
+                    metadata={
+                        **(res.metadata or {}),
+                        "content_type": "blog_post",
+                    },
+                ))
+            if len(sources) >= 10:
+                break
+
+        return sources[:10]
 
     async def _discover_pdfs(
         self,

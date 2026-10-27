@@ -1984,7 +1984,11 @@ async def preview_job_sources(request: SourcePreviewRequest):
         "quality_min_score": 0.0,
     }
     source_config = {**config, "target_domain": request.query}
-    source_types = orchestrator._determine_source_types(source_config)[:5]
+    source_types = orchestrator._determine_source_types(source_config)[:8]
+    from pipeline.discovery import SourceType
+    for st in (SourceType.WIKIPEDIA, SourceType.BOOKS, SourceType.BLOG):
+        if st not in source_types:
+            source_types.append(st)
     discovery = DiscoveryPipeline(config, router=orchestrator.router)
     sources = []
     seen = set()
