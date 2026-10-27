@@ -40,21 +40,7 @@ Your job is to analyze a dataset prompt/goal and discover:
    - 5 to 15 items in lowercase.
 5. "curriculum_topics": 3 to 6 structured topics representing the curriculum progression.
 6. "difficulty_split": {"easy": 35, "medium": 45, "hard": 20} (percentages summing to 100).
-7. "refined_prompt": Enhanced domain specification formatted strictly using the Universal Enterprise Prompt Framework (4-Pillar Spec):
-    [DOMAIN & OPERATIONAL SCENARIO]
-    <Substantive subject matter, regulatory context, or technical scope>
-
-    [CURRICULUM HIERARCHY & DIFFICULTY DISTRIBUTION]
-    - Tier 1 (30-35% Factual Grounding): Exact definitions, statutory/protocol citations, and baseline formulas. Zero speculative extrapolation.
-    - Tier 2 (45-50% Multi-Hop Reconciliation): Multi-variable problem solving, conflicting inputs, cross-referencing disparate statutes/APIs, and step-by-step arithmetic or logical proofs.
-    - Tier 3 (20-25% Adversarial & Boundary Stress-Testing): Incomplete records, contradictory facts, high-risk edge cases requiring explicit refusal, calibrated caveats, or appeal strategy.
-
-    [STRUCTURAL INVARIANTS]
-    Require exact citations to authoritative primary sources. Preserve technical tokens verbatim.
-
-    [ANTI-DOMAIN BOUNDARIES]
-    Strictly exclude homonym collisions, foreign/irrelevant jurisdictions, deprecated versions, toy boilerplate, and unsubstantiated claims.
-    (Do NOT force SFT, CoT, or specific format labels into the prompt text, ensuring the user can freely choose any synthesis engine).
+7. "refined_prompt": Clean, cohesive, natural domain specification. Incorporate the core domain scenario, preserved invariants, boundary exclusions, and a balanced curriculum difficulty distribution (35% factual grounding, 45% multi-hop reconciliation, 20% adversarial edge cases) in fluent, professional natural language. Do NOT use artificial bracketed section tags, and do NOT force SFT, CoT, or specific format labels into the prompt text, ensuring the user can freely choose any synthesis engine.
 8. "confidence": Float between 0.0 and 1.0.
 
 Return ONLY a valid JSON object. No preamble, no markdown code fence, no postscript.
@@ -201,19 +187,13 @@ def heuristic_domain_refinement(prompt: str, target_domain: Optional[str] = None
     inv_summary = ", ".join(invariants[:6]) if invariants else "exact technical tokens"
     anti_summary = ", ".join(poly_anti[:6]) if poly_anti else "homonym collisions"
 
-    four_pillar_prompt = f"""[DOMAIN & OPERATIONAL SCENARIO]
-{prompt or domain}
-
-[CURRICULUM HIERARCHY & DIFFICULTY DISTRIBUTION]
-- Tier 1 (30-35% Factual Grounding): Exact definitions, statutory/protocol citations, and baseline formulas. Zero speculative extrapolation.
-- Tier 2 (45-50% Multi-Hop Reconciliation): Multi-variable problem solving, conflicting inputs, cross-referencing disparate statutes/APIs, and step-by-step arithmetic or logical proofs.
-- Tier 3 (20-25% Adversarial & Boundary Stress-Testing): Incomplete records, contradictory facts, high-risk edge cases requiring explicit refusal, calibrated caveats, or appeal strategy.
-
-[STRUCTURAL INVARIANTS]
-Require exact citations to authoritative primary sources. Preserve technical tokens verbatim: {inv_summary}.
-
-[ANTI-DOMAIN BOUNDARIES]
-Strictly exclude homonym collisions, foreign/irrelevant jurisdictions, deprecated versions, toy boilerplate, and unsubstantiated claims: {anti_summary}."""
+    clean_prompt = prompt.strip() or domain
+    refined_prompt = (
+        f"{clean_prompt}. "
+        f"Apply a 3-tier curriculum (35% easy foundational definitions, 45% medium multi-variable proofs/reconciliation, 20% hard adversarial stress-testing). "
+        f"Require exact citations and strictly preserve technical tokens: {inv_summary}. "
+        f"Exclude homonym collisions and out-of-domain concepts: {anti_summary}."
+    )
 
     return {
         "domain": domain,
@@ -223,7 +203,7 @@ Strictly exclude homonym collisions, foreign/irrelevant jurisdictions, deprecate
         "anti_domains": poly_anti[:20],
         "curriculum_topics": topics,
         "difficulty_split": {"easy": 35, "medium": 45, "hard": 20},
-        "refined_prompt": four_pillar_prompt,
+        "refined_prompt": refined_prompt,
         "confidence": 0.85,
     }
 

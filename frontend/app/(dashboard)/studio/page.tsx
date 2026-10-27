@@ -18,7 +18,6 @@ import {
   ShieldCheck,
   AlertCircle,
   Bot,
-  FileText,
 } from 'lucide-react'
 import { clsx } from 'clsx'
 import { Button } from '@/components/ui/button'
@@ -186,19 +185,12 @@ function usePromptLint(text: string) {
     })
   }
 
-  const hasDifficultySplit = lower.includes('difficulty') || lower.includes('easy') || lower.includes('tiers') || lower.includes('curriculum')
-  const has4Pillar = lower.includes('[domain & operational scenario]') || (lower.includes('tier 1') && lower.includes('tier 2'))
-  if (!has4Pillar && !hasDifficultySplit) {
+  const hasDifficultySplit = lower.includes('difficulty') || lower.includes('easy') || lower.includes('tiers') || lower.includes('curriculum') || lower.includes('split')
+  if (!hasDifficultySplit) {
     tips.push({
-      text: 'Format into 4-Pillar Universal Enterprise Spec (30-35% Factual, 45-50% Multi-Hop, 20-25% Adversarial).',
-      actionLabel: '+ Add 4-Pillar Hierarchy',
-      appendSnippet: '\n\n[CURRICULUM HIERARCHY & DIFFICULTY DISTRIBUTION]\n- Tier 1 (30-35% Factual Grounding): Exact definitions, statutory/protocol citations, and baseline formulas. Zero speculative extrapolation.\n- Tier 2 (45-50% Multi-Hop Reconciliation): Multi-variable problem solving, conflicting inputs, cross-referencing disparate statutes/APIs, and step-by-step arithmetic or logical proofs.\n- Tier 3 (20-25% Adversarial & Boundary Stress-Testing): Incomplete records, contradictory facts, high-risk edge cases requiring explicit refusal, calibrated caveats, or appeal strategy.',
-    })
-  } else if (!hasDifficultySplit) {
-    tips.push({
-      text: 'Apply a 35-45-20 difficulty curriculum split for better model generalization.',
+      text: 'Apply a 3-tier difficulty curriculum (35% easy / 45% medium / 20% hard) for balanced training.',
       actionLabel: '+ Add Curriculum Split',
-      appendSnippet: ' Apply a 3-tier difficulty curriculum: (easy) definitional lookups; (medium) multi-statute procedural cross-referencing; (hard) adversarial edge-cases.',
+      appendSnippet: ' Apply a 3-tier difficulty curriculum: (easy) definitional lookups; (medium) multi-variable reconciliation; (hard) adversarial edge cases.',
     })
   }
 
@@ -388,30 +380,6 @@ function StudioContent() {
       setIsAutoDetecting(false)
     }
   }, [prompt, targetDomain, preservedTermsInput, language, synthesisMode, extractSyntacticInvariants])
-
-  const handleApply4PillarTemplate = useCallback(() => {
-    playClickSound()
-    const cleanPrompt = prompt.trim() || targetDomain || 'Custom Domain Task'
-    const cleanInvariants = preservedTermsInput.trim() || 'Key domain invariants and statutory/technical tokens'
-    const cleanAnti = antiDomainsInput.trim() || 'Homonym collisions, cross-discipline traps, unverified claims'
-
-    const templated = `[DOMAIN & OPERATIONAL SCENARIO]
-${cleanPrompt}
-
-[CURRICULUM HIERARCHY & DIFFICULTY DISTRIBUTION]
-- Tier 1 (30-35% Factual Grounding): Exact definitions, statutory/protocol citations, and baseline formulas. Zero speculative extrapolation.
-- Tier 2 (45-50% Multi-Hop Reconciliation): Multi-variable problem solving, conflicting inputs, cross-referencing disparate statutes/APIs, and step-by-step arithmetic or logical proofs.
-- Tier 3 (20-25% Adversarial & Boundary Stress-Testing): Incomplete records, contradictory facts, high-risk edge cases requiring explicit refusal, calibrated caveats, or appeal strategy.
-
-[STRUCTURAL INVARIANTS]
-Require exact citations to authoritative primary sources. Preserve technical tokens verbatim: ${cleanInvariants}.
-
-[ANTI-DOMAIN BOUNDARIES]
-Strictly exclude homonym collisions, foreign/irrelevant jurisdictions, deprecated versions, toy boilerplate, and unsubstantiated claims: ${cleanAnti}.`
-
-    setPrompt(templated)
-    setAutoDetectNotice('Applied Universal Enterprise 4-Pillar Specification')
-  }, [prompt, targetDomain, preservedTermsInput, antiDomainsInput])
 
   // Launch job
   const handleGenerate = async () => {
@@ -892,16 +860,6 @@ Strictly exclude homonym collisions, foreign/irrelevant jurisdictions, deprecate
                   >
                     {isAutoDetecting ? <Loader2 className="w-3.5 h-3.5 animate-spin text-[#f26625]" /> : <Bot className="w-3.5 h-3.5 text-[#f26625]" />}
                     <span>{isAutoDetecting ? 'Agent Analyzing Domain…' : 'Agent Auto-Detect'}</span>
-                  </Button>
-                  <Button
-                    type="button"
-                    size="sm"
-                    variant="outline"
-                    onClick={handleApply4PillarTemplate}
-                    className="h-8 px-3 text-xs font-mono border-[#272738] text-zinc-300 hover:text-white bg-[#12121a] hover:bg-[#1c1c28] rounded-md flex items-center gap-1.5 transition-all"
-                  >
-                    <FileText className="w-3.5 h-3.5 text-amber-400" />
-                    <span>Apply 4-Pillar Spec</span>
                   </Button>
                 </div>
                 {autoDetectNotice && (

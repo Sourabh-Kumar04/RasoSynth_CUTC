@@ -30,7 +30,7 @@ class DatasetPlanner:
         """Analyze user prompt and extract a structured plan using the LLM."""
         system_prompt = (
             "You are an expert ML/AI data architect. Analyze the user prompt to build a comprehensive, structured plan for generating a high-quality dataset "
-            "following the Universal Enterprise 4-Pillar Specification (Domain & Scenario, Curriculum Hierarchy 35/45/20 split, Structural Invariants, and Anti-Domain boundaries). "
+            "following enterprise curriculum design (Domain, 35/45/20 difficulty split, Structural Invariants, and Anti-Domain boundaries). "
             "Output ONLY a valid JSON object matching the schema: "
             "{\n"
             "  \"domain\": \"string\",\n"
