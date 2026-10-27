@@ -336,6 +336,23 @@ class APIClient {
     })
   }
 
+  async analyzeDomain(data: { prompt: string; target_domain?: string; language?: string }): Promise<{
+    domain: string
+    primary_task: string
+    modality: string
+    preserved_terms: string[]
+    anti_domains: string[]
+    curriculum_topics: string[]
+    difficulty_split: { easy: number; medium: number; hard: number }
+    refined_prompt: string
+    confidence: number
+  }> {
+    return this.request<any>('/agent/analyze-domain', {
+      method: 'POST',
+      body: JSON.stringify(data),
+    })
+  }
+
   async planJob(data: Record<string, any>): Promise<any> {
     return this.request<any>('/jobs/plan', {
       method: 'POST',

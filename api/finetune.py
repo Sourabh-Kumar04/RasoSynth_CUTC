@@ -139,24 +139,11 @@ async def create_finetune_job(
                 detail="Too many active fine-tuning jobs queued (limit: 10). Please wait for active jobs to complete."
             )
 
-    # Auto-resolve dataset path from DB, presets, or samples
+    # Auto-resolve dataset path from DB, local outputs, or samples
     if payload.get("dataset_id") and not payload.get("dataset_path"):
         raw_id = str(payload["dataset_id"]).strip()
 
-        # 1. Check known flagship preset keys
-        flagship_paths = {
-            "flagship": "outputs/flagship_indic_gst/flagship_indic_gst_sft.jsonl",
-            "flagship_indic_gst": "outputs/flagship_indic_gst/flagship_indic_gst_sft.jsonl",
-            "flagship_clinical": "outputs/flagship_clinical_reasoning/clinical_reasoning_sft.jsonl",
-            "flagship_clinical_reasoning": "outputs/flagship_clinical_reasoning/clinical_reasoning_sft.jsonl",
-            "flagship_corporate_law": "outputs/flagship_corporate_law/corporate_law_sft.jsonl",
-        }
-        if raw_id.lower() in flagship_paths:
-            candidate_p = flagship_paths[raw_id.lower()]
-            if os.path.exists(candidate_p):
-                payload["dataset_path"] = candidate_p
-
-        # 2. Query dataset by ID or by job_id
+        # 1. Query dataset by ID or by job_id
         dataset = None
         if not payload.get("dataset_path"):
             get_ds = getattr(db, "get_dataset", None) or (getattr(db.db, "get_dataset", None) if hasattr(db, "db") else None)
@@ -221,14 +208,8 @@ async def create_finetune_job(
             if matched_files:
                 payload["dataset_path"] = matched_files[0]
 
-        # 7. Default fallback to Flagship Indic GST if still not found
         if not payload.get("dataset_path"):
-            flagship_default = "outputs/flagship_indic_gst/flagship_indic_gst_sft.jsonl"
-            if os.path.exists(flagship_default):
-                logger.warning("Dataset ID %s not found on disk; falling back to flagship Indic GST dataset", raw_id)
-                payload["dataset_path"] = flagship_default
-            else:
-                raise HTTPException(status_code=404, detail=f"Dataset or Job ID '{raw_id}' could not be resolved to a training file.")
+            raise HTTPException(status_code=404, detail=f"Dataset or Job ID '{raw_id}' could not be resolved to a training file.")
 
     try:
         return await manager.create_job(payload)

@@ -1880,6 +1880,37 @@ class ExampleBatchPreviewRequest(BaseModel):
         return value
 
 
+class DomainAnalysisRequest(BaseModel):
+    prompt: str
+    target_domain: Optional[str] = None
+    language: Optional[str] = "en"
+
+
+@app.post("/agent/analyze-domain", tags=["Agent"])
+@app.post("/api/agent/analyze-domain", tags=["Agent"])
+async def agent_analyze_domain(request: DomainAnalysisRequest):
+    """
+    Autonomous Semantic Discovery Agent:
+    Discovers canonical domain, preserved terms (syntactic invariants), and anti-domains (polysemy collisions)
+    directly from user instructions.
+    """
+    from core.domain_agent import analyze_dataset_domain, heuristic_domain_refinement
+    router = orchestrator.router if (orchestrator and hasattr(orchestrator, "router")) else None
+    redis_client = cache.redis if (cache and hasattr(cache, "redis")) else None
+
+    try:
+        result = await analyze_dataset_domain(
+            prompt=request.prompt,
+            target_domain=request.target_domain,
+            provider_router=router,
+            redis_client=redis_client,
+        )
+        return result
+    except Exception as e:
+        logger.exception("Domain analysis agent failed: %s", e)
+        return heuristic_domain_refinement(request.prompt, request.target_domain)
+
+
 @app.post("/jobs/preview", tags=["Jobs"])
 async def preview_job_sources(request: SourcePreviewRequest):
     """Build an improved search plan and fetch a small source-only preview."""
@@ -2853,35 +2884,29 @@ async def get_job_records(job_id: str, limit: int = 10):
     from pathlib import Path
     import json
 
-    # Direct resolution for pre-synthesized flagship datasets
-    flagship_files = {
-        "flagship": Path("outputs/flagship_indic_gst/flagship_indic_gst_sft.jsonl"),
-        "flagship_indic_gst": Path("outputs/flagship_indic_gst/flagship_indic_gst_sft.jsonl"),
-        "flagship_clinical": Path("outputs/flagship_clinical/flagship_clinical_sft.jsonl"),
-        "flagship_corporate_law": Path("outputs/flagship_corporate_law/flagship_corporate_law_sft.jsonl"),
-    }
-    target_file = flagship_files.get(job_id.lower())
-    if target_file and target_file.exists():
-        flagship_records = []
-        with open(target_file, "r", encoding="utf-8") as f:
+    # Dynamic resolution from disk datasets if matching output exists
+    disk_info = _resolve_dynamic_disk_dataset(job_id)
+    if disk_info and Path(disk_info["output_path"]).exists() and disk_info["output_path"].endswith(".jsonl"):
+        disk_records = []
+        with open(disk_info["output_path"], "r", encoding="utf-8") as f:
             for idx, line in enumerate(f):
                 if line.strip():
                     item = json.loads(line)
-                    flagship_records.append({
+                    disk_records.append({
                         "id": f"{job_id}-{idx}",
                         "dataset_id": job_id,
                         "instruction": item.get("instruction", ""),
                         "response": item.get("response", ""),
                         "input": item.get("input", ""),
-                        "quality_score": item.get("quality_score", 0.99),
+                        "quality_score": item.get("quality_score", 0.95),
                         "difficulty_tier": item.get("difficulty_tier", 3),
-                        "created_at": "2026-10-20T12:00:00Z",
+                        "created_at": item.get("created_at", "2026-10-26T12:00:00Z"),
                     })
-                if len(flagship_records) >= limit:
+                if len(disk_records) >= limit:
                     break
         return {
-            "records": flagship_records,
-            "count": len(flagship_records),
+            "records": disk_records,
+            "count": len(disk_records),
             "message": None,
         }
 
@@ -3040,7 +3065,19 @@ async def get_job_report(job_id: str):
 def _resolve_dynamic_disk_dataset(identifier: str) -> Optional[dict]:
     """Dynamically scan configured output directories without hardcoding paths."""
     from pathlib import Path
+    p = Path(identifier.strip())
+    if p.exists() and p.is_file():
+        ext = p.suffix.lstrip(".").lower()
+        return {
+            "id": p.stem,
+            "name": p.stem,
+            "type": ext,
+            "output_path": str(p),
+            "dir": p.parent,
+        }
+
     target = identifier.strip().lower()
+    clean_target = p.stem.lower()
     candidate_roots = [Path("outputs"), Path("data")]
 
     for root in candidate_roots:
@@ -3049,7 +3086,7 @@ def _resolve_dynamic_disk_dataset(identifier: str) -> Optional[dict]:
         # Direct folder or file match
         for item in root.glob("*"):
             norm_name = item.name.lower()
-            if target in norm_name or (target == "flagship" and "flagship" in norm_name):
+            if target in norm_name or clean_target in norm_name:
                 if item.is_dir():
                     # Look for data files inside
                     for ext in ("jsonl", "parquet", "csv", "xml", "json"):
@@ -3144,15 +3181,7 @@ async def download_job_dataset(
     data from local storage or dynamically streams from the database.
     Requires an ephemeral presigned token, Bearer auth, or public benchmark preset.
     """
-    # 0. Authorization check: Ephemeral Presigned Token, Bearer Auth, or Public Benchmark
-    is_public_benchmark = (
-        job_id.lower() in {
-            "flagship", "flagship-preview", "indic-gst-benchmark",
-            "sarvam-2b-indic", "pubmed-contraindication", "itat-mca-tax"
-        }
-        or job_id.lower().startswith("flagship")
-    )
-
+    # 0. Authorization check: Ephemeral Presigned Token or Bearer Auth
     authorized = False
     if token and expires is not None:
         if _verify_download_token(job_id, token, expires):
@@ -3179,9 +3208,6 @@ async def download_job_dataset(
                     authorized = True
             except Exception:
                 pass
-
-    if not authorized and is_public_benchmark:
-        authorized = True
 
     if not authorized and os.getenv("ALLOW_ANONYMOUS_DOWNLOADS", "false").lower() == "true":
         authorized = True
@@ -4053,20 +4079,16 @@ async def get_dataset_huggingface_card(job_id: str):
     from core.export.huggingface_exporter import generate_hf_dataset_card
     from core.tokenizer_metrics import estimate_tokenizer_fertility
 
-    # Check for flagship datasets pre-packaged cards
-    flagship_cards = {
-        "flagship": Path("outputs/flagship_indic_gst/README.md"),
-        "flagship_indic_gst": Path("outputs/flagship_indic_gst/README.md"),
-        "flagship_clinical": Path("outputs/flagship_clinical/README.md"),
-        "flagship_corporate_law": Path("outputs/flagship_corporate_law/README.md"),
-    }
-    target_card = flagship_cards.get(job_id.lower())
-    if target_card and target_card.exists():
-        return {
-            "job_id": job_id,
-            "filename": "README.md",
-            "content": target_card.read_text(encoding="utf-8"),
-        }
+    # Check for pre-packaged cards on disk
+    disk_info = _resolve_dynamic_disk_dataset(job_id)
+    if disk_info and disk_info.get("dir"):
+        candidate_readme = Path(disk_info["dir"]) / "README.md"
+        if candidate_readme.exists():
+            return {
+                "job_id": job_id,
+                "filename": "README.md",
+                "content": candidate_readme.read_text(encoding="utf-8"),
+            }
 
     job = await db.get_job(job_id) if db else None
     domain = (job.target_domain if job else None) or f"Dataset {job_id[:8]}"
@@ -4206,13 +4228,8 @@ async def get_dataset_training_recipe(
         else:
             base_model = "meta-llama/Meta-Llama-3.1-8B-Instruct"
 
-    flagship_dirs = {
-        "flagship": "outputs/flagship_indic_gst/flagship_indic_gst_sft.jsonl",
-        "flagship_indic_gst": "outputs/flagship_indic_gst/flagship_indic_gst_sft.jsonl",
-        "flagship_clinical": "outputs/flagship_clinical/flagship_clinical_sft.jsonl",
-        "flagship_corporate_law": "outputs/flagship_corporate_law/flagship_corporate_law_sft.jsonl",
-    }
-    dataset_file = flagship_dirs.get(job_id.lower(), f"dataset-{job_id[:8]}.jsonl")
+    disk_info = _resolve_dynamic_disk_dataset(job_id)
+    dataset_file = disk_info["output_path"] if disk_info else f"dataset-{job_id[:8]}.jsonl"
 
     recipe = generate_training_recipe(
         framework=framework,
@@ -4326,26 +4343,15 @@ async def get_dbom_badge_svg_endpoint(certificate_id: str):
     merkle_root = ""
     status = "verified"
 
-    # Check flagship release
-    if certificate_id.lower() in ("flagship", "flagship_indic_gst", "indic_gst") or certificate_id.startswith("DBOM-D91E91"):
-        flagship_dbom = Path("outputs/flagship_indic_gst/flagship_indic_gst_sft.dbom.json")
-        if flagship_dbom.exists():
-            try:
-                with open(flagship_dbom, "r", encoding="utf-8") as f:
-                    data = json.load(f)
-                merkle_root = data.get("merkle_root_hash", "")
-            except Exception:
-                pass
-    else:
-        for cand in Path("outputs").glob("**/*.dbom.json"):
-            try:
-                with open(cand, "r", encoding="utf-8") as f:
-                    cdata = json.load(f)
-                if cdata.get("certificate_id") == certificate_id or certificate_id in cand.stem:
-                    merkle_root = cdata.get("merkle_root_hash", "")
-                    break
-            except Exception:
-                pass
+    for cand in Path("outputs").glob("**/*.dbom.json"):
+        try:
+            with open(cand, "r", encoding="utf-8") as f:
+                cdata = json.load(f)
+            if cdata.get("certificate_id") == certificate_id or certificate_id in cand.stem:
+                merkle_root = cdata.get("merkle_root_hash", "")
+                break
+        except Exception:
+            pass
 
     if not merkle_root:
         merkle_root = certificate_id.replace("DBOM-", "").lower()

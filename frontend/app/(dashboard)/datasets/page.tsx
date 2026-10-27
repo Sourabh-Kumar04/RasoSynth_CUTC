@@ -162,67 +162,6 @@ function jobToDataset(job: any): any {
   }
 }
 
-// Built-in verified gold-standard flagship community releases with Merkle tree DBOM
-const FLAGSHIP_COMMUNITY_DATASETS = [
-  {
-    id: 'flagship_indic_gst',
-    name: 'Indic GST & Tax Compliance SFT',
-    domain: 'Indian Taxation & GST Compliance',
-    modality: 'text',
-    format: 'parquet',
-    size: '11.2 KB',
-    records: 8,
-    quality: 99,
-    status: 'ready',
-    current_stage: 'completed',
-    created: '2026-10-20',
-    tags: ['taxation', 'cgst', 'sovereign-indic', 'flagship'],
-    validated: true,
-    certificate_id: 'DBOM-FLAGSHIP-GST',
-    merkle_root: '9b87df7a3982f6e9b418a096c429712a...',
-    badge_label: 'Sovereign Indic AI',
-    hf_repo: 'rasosynthtune/indic-gst-law-instruct-v1',
-  },
-  {
-    id: 'flagship_clinical',
-    name: 'Clinical Reasoning & Diagnostic Triage',
-    domain: 'Emergency Medicine & Differential Diagnosis',
-    modality: 'text',
-    format: 'parquet',
-    size: '14.2 KB',
-    records: 6,
-    quality: 99,
-    status: 'ready',
-    current_stage: 'completed',
-    created: '2026-10-20',
-    tags: ['clinical', 'differential-dx', 'hipaa-compliant', 'flagship'],
-    validated: true,
-    certificate_id: 'DBOM-4D618354BE4B',
-    merkle_root: '4d618354be4b7a4c5b28ac8bdc87f1f2...',
-    badge_label: 'Clinical Triage',
-    hf_repo: 'rasosynthtune/clinical-reasoning-triage-v1',
-  },
-  {
-    id: 'flagship_corporate_law',
-    name: 'Indian Corporate Law & MCA-21 Instruct',
-    domain: 'Companies Act 2013 & NCLT Adjudication',
-    modality: 'text',
-    format: 'parquet',
-    size: '12.2 KB',
-    records: 5,
-    quality: 99,
-    status: 'ready',
-    current_stage: 'completed',
-    created: '2026-10-20',
-    tags: ['corporate-law', 'mca-21', 'nclt', 'flagship'],
-    validated: true,
-    certificate_id: 'DBOM-29BBC5134393',
-    merkle_root: '29bbc51343935d09c379ef248f27af23...',
-    badge_label: 'Corporate Law',
-    hf_repo: 'rasosynthtune/corporate-law-mca21-instruct-v1',
-  },
-]
-
 export default function DatasetsPage() {
   const router = useRouter()
   const [search, setSearch] = useState('')
@@ -551,12 +490,7 @@ export default function DatasetsPage() {
       const jobs = Array.isArray(rawJobs) ? rawJobs : []
 
       const mappedDatasets = jobs.map(jobToDataset)
-      const existingIds = new Set(mappedDatasets.map((d: any) => d.id))
-      const combined = [
-        ...mappedDatasets,
-        ...FLAGSHIP_COMMUNITY_DATASETS.filter((f) => !existingIds.has(f.id)),
-      ]
-      setDatasets(combined)
+      setDatasets(mappedDatasets)
     } catch (err: any) {
       console.error('Failed to fetch jobs:', err)
       setError(err.message || 'Failed to load datasets')
@@ -731,81 +665,6 @@ export default function DatasetsPage() {
           </Card>
         </div>
       )}
-
-      {/* Verified Flagship Datasets Showcase */}
-      <div className="space-y-3">
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-2">
-            <ShieldCheck className="h-4 w-4 text-[#10b981]" />
-            <h2 className="text-xs font-mono uppercase tracking-wider text-white font-bold">
-              Flagship Sovereign &amp; Multi-Domain Datasets (Cryptographically Attested)
-            </h2>
-          </div>
-          <Badge variant="outline" className="text-[10px] font-mono border-emerald-500/30 text-[#10b981] bg-emerald-950/20">
-            100% Cryptographic DBOM Verified
-          </Badge>
-        </div>
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-3.5">
-          {FLAGSHIP_COMMUNITY_DATASETS.map((flagship) => (
-            <Card
-              key={flagship.id}
-              className="border-[#272738] bg-[#12121a] hover:border-emerald-500/40 transition-all rounded-md p-4 flex flex-col justify-between"
-            >
-              <div className="space-y-2.5">
-                <div className="flex items-start justify-between gap-2">
-                  <Badge className="bg-emerald-950/40 text-[#10b981] border border-emerald-500/30 text-[9px] font-mono uppercase tracking-wider">
-                    {flagship.badge_label}
-                  </Badge>
-                  <span className="text-[10px] font-mono text-[#94a3b8]">{flagship.records} Samples</span>
-                </div>
-                <div>
-                  <h3 className="text-xs font-bold text-white leading-snug">{flagship.name}</h3>
-                  <p className="text-[11px] text-[#94a3b8] mt-0.5">{flagship.domain}</p>
-                </div>
-                <div className="p-2 rounded-md bg-[#0a0a0f] border border-[#272738] font-mono text-[10px] space-y-1">
-                  <div className="flex items-center justify-between text-[#64748b]">
-                    <span>Cert ID:</span>
-                    <span className="text-emerald-400 font-semibold">{flagship.certificate_id}</span>
-                  </div>
-                  <div className="flex items-center justify-between text-[#64748b]">
-                    <span>Root Hash:</span>
-                    <span className="text-white truncate max-w-[140px]">{flagship.merkle_root}</span>
-                  </div>
-                </div>
-              </div>
-              <div className="flex items-center gap-1.5 mt-3 pt-3 border-t border-[#272738]">
-                <Button
-                  size="sm"
-                  variant="outline"
-                  className="flex-1 h-7 text-[10px] font-mono rounded-md border-[#272738] text-white hover:bg-[#161622] hover:border-emerald-500/30"
-                  onClick={() => handleViewDbom(flagship.id, flagship.name)}
-                >
-                  <ShieldCheck className="h-3 w-3 mr-1 text-[#10b981]" />
-                  DBOM
-                </Button>
-                <Button
-                  size="sm"
-                  variant="outline"
-                  className="flex-1 h-7 text-[10px] font-mono rounded-md border-[#272738] text-white hover:bg-[#161622] hover:border-[#f26625]/30"
-                  onClick={() => handleViewHfCard(flagship.id, flagship.name)}
-                >
-                  <ExternalLink className="h-3 w-3 mr-1 text-[#f26625]" />
-                  HF Card
-                </Button>
-                <Button
-                  size="sm"
-                  variant="outline"
-                  className="flex-1 h-7 text-[10px] font-mono rounded-md border-[#272738] text-white hover:bg-[#161622] hover:border-amber-500/30"
-                  onClick={() => handleOpenRecipeModal(flagship.id)}
-                >
-                  <Terminal className="h-3 w-3 mr-1 text-amber-400" />
-                  Recipe
-                </Button>
-              </div>
-            </Card>
-          ))}
-        </div>
-      </div>
 
       {/* Filters Toolbar */}
       <div className="flex flex-wrap items-center gap-3">

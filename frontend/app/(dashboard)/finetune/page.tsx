@@ -634,7 +634,7 @@ function FineTuneContent() {
   const [signedUrlExpires, setSignedUrlExpires] = useState<number | null>(null)
   const [isSigningUrl, setIsSigningUrl] = useState(false)
 
-  const activeDatasetId = form.dataset_id || (form.dataset_path ? form.dataset_path.replace(/.*\//, '').replace(/\..*/, '') : 'flagship')
+  const activeDatasetId = form.dataset_id || (form.dataset_path ? form.dataset_path.replace(/.*\//, '').replace(/\..*/, '') : (pipelineDatasets[0]?.id || ''))
 
   const fetchSignedStreamUrl = useCallback(async (targetId: string) => {
     if (!targetId) return
@@ -663,9 +663,9 @@ function FineTuneContent() {
   const [showRawColabParams, setShowRawColabParams] = useState(false)
 
   const downloadPreconfiguredNotebook = useCallback(() => {
-    const dsId = form.dataset_id || (form.dataset_path ? form.dataset_path.replace(/.*\//, '').replace(/\..*/, '') : 'flagship')
+    const dsId = form.dataset_id || (form.dataset_path ? form.dataset_path.replace(/.*\//, '').replace(/\..*/, '') : (pipelineDatasets[0]?.id || ''))
     const selectedDs = pipelineDatasets.find(d => d.id === form.dataset_id)
-    const dsName = selectedDs?.config?.target_domain || selectedDs?.target_domain || selectedDs?.dataset_name || (form.dataset_path ? form.dataset_path.split('/').pop() : 'Flagship Indic GST')
+    const dsName = selectedDs?.config?.target_domain || selectedDs?.target_domain || selectedDs?.dataset_name || (pipelineDatasets[0]?.dataset_name || 'Synthesized Dataset')
     const origin = typeof window !== 'undefined' ? window.location.origin : 'https://rasosynthtune.vercel.app'
     const base = process.env.NEXT_PUBLIC_API_URL || origin
     const downloadUrl = signedStreamUrl || `${base}/jobs/${dsId}/download`
@@ -1254,106 +1254,6 @@ function FineTuneContent() {
                 </div>
               )}
 
-              {/* 3 Flagship Benchmark Presets */}
-              <div className="space-y-2 p-3.5 bg-[#0e0e14] border border-[#272738] rounded-md">
-                <div className="flex items-center justify-between pb-1 border-b border-[#1c1c28]">
-                  <p className="text-xs font-bold text-white flex items-center gap-1.5 font-mono">
-                    <Sparkles className="h-3.5 w-3.5 text-[#f26625]" />
-                    1-Click Flagship Benchmark Presets
-                  </p>
-                  <span className="text-[10px] font-mono text-[#10b981] font-semibold">DBOM Merkle Verified</span>
-                </div>
-
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-2.5 pt-1">
-                  {/* Preset 1: Indic GST */}
-                  <div
-                    onClick={() => {
-                      setForm(prev => ({
-                        ...prev,
-                        dataset_path: 'outputs/flagship_indic_gst/flagship_indic_gst_sft.jsonl',
-                        dataset_id: '',
-                        base_model: 'sarvamai/sarvam-2b-v0.5',
-                        output_model_name: 'sarvam-2b-indic-gst-lora',
-                        chat_template: 'chatml',
-                        lora_r: 16,
-                        lora_alpha: 32,
-                        num_train_epochs: 3,
-                        per_device_train_batch_size: 4,
-                        gradient_accumulation_steps: 4,
-                        learning_rate: 0.0002,
-                      }))
-                      toast('Loaded Flagship Indic GST fine-tuning preset', 'success')
-                    }}
-                    className="p-2.5 rounded-md border border-[#272738] bg-[#12121a] hover:border-[#f26625]/50 hover:bg-[#161622] cursor-pointer transition-all space-y-1"
-                  >
-                    <div className="flex items-center justify-between">
-                      <span className="text-[10px] font-mono font-bold text-[#f26625]">AI Kosh / GST</span>
-                      <Zap className="h-3 w-3 text-[#f26625]" />
-                    </div>
-                    <p className="text-xs font-semibold text-white">Indic GST Benchmark</p>
-                    <p className="text-[10px] text-[#94a3b8] font-mono">Sarvam-2B · ChatML · +537% chrF</p>
-                  </div>
-
-                  {/* Preset 2: Clinical Medical Reasoning */}
-                  <div
-                    onClick={() => {
-                      setForm(prev => ({
-                        ...prev,
-                        dataset_path: 'outputs/flagship_clinical_reasoning/clinical_reasoning_sft.jsonl',
-                        dataset_id: '',
-                        base_model: 'sarvamai/sarvam-2b-v0.5',
-                        output_model_name: 'sarvam-2b-clinical-reasoning-lora',
-                        chat_template: 'chatml',
-                        lora_r: 16,
-                        lora_alpha: 32,
-                        num_train_epochs: 3,
-                        per_device_train_batch_size: 4,
-                        gradient_accumulation_steps: 4,
-                        learning_rate: 0.00015,
-                      }))
-                      toast('Loaded Flagship Clinical Reasoning preset', 'success')
-                    }}
-                    className="p-2.5 rounded-md border border-[#272738] bg-[#12121a] hover:border-[#f26625]/50 hover:bg-[#161622] cursor-pointer transition-all space-y-1"
-                  >
-                    <div className="flex items-center justify-between">
-                      <span className="text-[10px] font-mono font-bold text-emerald-400">Clinical PubMed</span>
-                      <Zap className="h-3 w-3 text-emerald-400" />
-                    </div>
-                    <p className="text-xs font-semibold text-white">Clinical Reasoning</p>
-                    <p className="text-[10px] text-[#94a3b8] font-mono">Differential Dx · 100% Contraindication</p>
-                  </div>
-
-                  {/* Preset 3: Corporate Law & Tax */}
-                  <div
-                    onClick={() => {
-                      setForm(prev => ({
-                        ...prev,
-                        dataset_path: 'outputs/flagship_corporate_law/corporate_law_sft.jsonl',
-                        dataset_id: '',
-                        base_model: 'sarvamai/sarvam-2b-v0.5',
-                        output_model_name: 'sarvam-2b-corporate-law-lora',
-                        chat_template: 'chatml',
-                        lora_r: 16,
-                        lora_alpha: 32,
-                        num_train_epochs: 3,
-                        per_device_train_batch_size: 4,
-                        gradient_accumulation_steps: 4,
-                        learning_rate: 0.0002,
-                      }))
-                      toast('Loaded Flagship Corporate Law preset', 'success')
-                    }}
-                    className="p-2.5 rounded-md border border-[#272738] bg-[#12121a] hover:border-[#f26625]/50 hover:bg-[#161622] cursor-pointer transition-all space-y-1"
-                  >
-                    <div className="flex items-center justify-between">
-                      <span className="text-[10px] font-mono font-bold text-cyan-400">ITAT &amp; MCA</span>
-                      <Zap className="h-3 w-3 text-cyan-400" />
-                    </div>
-                    <p className="text-xs font-semibold text-white">Corporate Law QA</p>
-                    <p className="text-[10px] text-[#94a3b8] font-mono">Sec 16(4) · Statutory Grounding</p>
-                  </div>
-                </div>
-              </div>
-
               <Section title="Dataset Source">
                 {pipelineDatasets.length > 0 && (
                   <div className="mb-3">
@@ -1455,8 +1355,8 @@ function FineTuneContent() {
                     </Select>
                     {form.execution_target === 'colab' && (() => {
                       const selectedDs = pipelineDatasets.find(d => d.id === form.dataset_id)
-                      const dsId = form.dataset_id || (form.dataset_path ? form.dataset_path.replace(/.*\//, '').replace(/\..*/, '') : 'flagship')
-                      const dsName = selectedDs?.config?.target_domain || selectedDs?.target_domain || selectedDs?.dataset_name || (form.dataset_path ? form.dataset_path.split('/').pop() : 'Flagship Indic GST')
+                      const dsId = form.dataset_id || (form.dataset_path ? form.dataset_path.replace(/.*\//, '').replace(/\..*/, '') : (pipelineDatasets[0]?.id || ''))
+                      const dsName = selectedDs?.config?.target_domain || selectedDs?.target_domain || selectedDs?.dataset_name || (pipelineDatasets[0]?.dataset_name || 'Synthesized Dataset')
                       const apiBase = process.env.NEXT_PUBLIC_API_URL || (typeof window !== 'undefined' ? window.location.origin : 'http://localhost:8000')
                       const downloadUrl = signedStreamUrl || `${apiBase}/jobs/${dsId}/download`
 
