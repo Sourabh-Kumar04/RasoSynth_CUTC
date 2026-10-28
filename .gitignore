@@ -146,3 +146,25 @@ docs/YC_APPLICATION.md
 transcript.md
 
 
+
+# =============================================================================
+# REPO HYGIENE (optimize/industry-standard): additional generated/secret paths
+# Preventive standard entries; verified zero tracked files match these patterns.
+# =============================================================================
+# Env variants beyond the named ones above; example files stay tracked
+.env.*
+!.env.example
+!.env.*.example
+# Additional secret material
+*.token
+*.secret
+service-account*.json
+id_rsa*
+.aws/
+# Additional generated caches/reports
+.tox/
+.nox/
+.hypothesis/
+coverage.xml
+# Vercel CLI local state
+frontend/.vercel/
