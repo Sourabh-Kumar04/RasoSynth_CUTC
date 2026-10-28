@@ -1165,6 +1165,65 @@ def test_streaming_dataset_sharder():
     assert sharded["manifest"]["total_records"] == 25
 
 
+@pytest.mark.asyncio
+async def test_construction_pipeline_str_dataset_type_normalization():
+    """Verify ConstructionPipeline accepts both enum and string dataset_type without AttributeError."""
+    from unittest.mock import Mock, AsyncMock
+    from pipeline.construction import ConstructionPipeline, DatasetType
+    from core.intent import UserIntent
+
+    router = Mock()
+    router.initialize = AsyncMock(return_value={"initialized": ["mock"], "failed": []})
+
+    pipeline = ConstructionPipeline(router, {"dataset_type": "sft", "language": "en"})
+    sample_obj = type("Sample", (), {"content": "Sample content", "quality_score": 0.8, "metadata": {}})()
+    intent = UserIntent(
+        primary_task="instruction_tuning",
+        domain="General",
+        modality="text",
+        anti_domains=[],
+        key_entities=[],
+        specialized_queries=[],
+        constraints=[],
+        output_format="instruction_response",
+        confidence=0.9,
+        raw_input="test",
+    )
+
+    # Calling with string "sft" should normalize properly to DatasetType.SFT
+    async for _ in pipeline._construct_generator(sample_obj, intent, dataset_type="sft"):
+        pass
+    assert pipeline.dataset_type == DatasetType.SFT
+
+    # Calling with invalid string defaults gracefully to DatasetType.SFT
+    async for _ in pipeline._construct_generator(sample_obj, intent, dataset_type="unknown_mode"):
+        pass
+    assert pipeline.dataset_type == DatasetType.SFT
+
+
+def test_kaggle_language_sample_review_gate():
+    """Verify Kaggle sample review gate validates script conformity before admitting dataset."""
+    from core.validation.cultural_guardrails import validate_script_conformity
+
+    # 1. Hindi requested: English snippet should be rejected
+    english_snippet = "This is an English customer dataset with name, age, and transactions."
+    conforms, reason = validate_script_conformity(english_snippet, "hi", "native")
+    assert not conforms
+    assert "Devanagari script" in reason
+
+    # 2. Hindi requested: Devanagari snippet should be accepted
+    hindi_snippet = "यह वस्तु एवं सेवा कर (जीएसटी) अनुपालन का आधिकारिक डेटासेट है।"
+    conforms, reason = validate_script_conformity(hindi_snippet, "hi", "native")
+    assert conforms
+    assert reason is None or reason == ""
+
+    # 3. Tamil requested: English snippet rejected, Tamil accepted
+    tamil_snippet = "இது சரக்கு மற்றும் சேவை வரி தொடர்பான அதிகாரப்பூர்வ தரவுத்தொகுப்பாகும்."
+    assert not validate_script_conformity(english_snippet, "ta", "native")[0]
+    assert validate_script_conformity(tamil_snippet, "ta", "native")[0]
+
+
+
 
 
 

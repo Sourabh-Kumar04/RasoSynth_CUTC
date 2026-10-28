@@ -308,7 +308,13 @@ class ConstructionPipeline:
         if custom_schema:
             self.schema = self.schema_inferrer._parse_user_schema(custom_schema)
         elif dataset_type:
-            self.dataset_type = dataset_type
+            if isinstance(dataset_type, str):
+                try:
+                    self.dataset_type = DatasetType(dataset_type.lower())
+                except ValueError:
+                    self.dataset_type = DatasetType.SFT
+            else:
+                self.dataset_type = dataset_type
 
         content = filtered_sample.content if hasattr(filtered_sample, 'content') else str(filtered_sample)
         quality = getattr(filtered_sample, 'quality_score', 0.5)
