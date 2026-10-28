@@ -2,7 +2,7 @@
 
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import {
   FlaskConical,
   Database,
@@ -30,11 +30,11 @@ const MOBILE_NAV_ITEMS = [
   { href: '/datasets', label: 'Data Library', icon: Database },
   { href: '/finetune', label: 'Model Training', icon: Cpu },
   { href: '/orchestration', label: 'Pipelines', icon: Workflow },
-  { href: '/quality', label: 'Quality Jury', icon: BarChart2 },
-  { href: '/review', label: 'Data Review', icon: ClipboardCheck },
+  { href: '/quality', label: 'Quality', icon: BarChart2 },
+  { href: '/review', label: 'Review', icon: ClipboardCheck },
   { href: '/observability', label: 'Telemetry', icon: Activity },
   { href: '/research', label: 'Benchmarks', icon: TrendingUp },
-  { href: '/providers', label: 'AI Providers', icon: Beaker },
+  { href: '/providers', label: 'Providers', icon: Beaker },
   { href: '/settings', label: 'System Status', icon: SettingsIcon },
 ]
 
@@ -43,6 +43,29 @@ export function TopNav() {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false)
   const [showTour, setShowTour] = useState(false)
   const [showSearch, setShowSearch] = useState(false)
+  const mobileToggleRef = useRef<HTMLButtonElement>(null)
+  const mobileDrawerRef = useRef<HTMLElement>(null)
+
+  // Mobile drawer is a dialog: Escape closes and returns focus to the
+  // toggle, the page behind it does not scroll, and the active link is
+  // exposed via aria-current="page".
+  useEffect(() => {
+    if (!mobileMenuOpen) return
+    const prevOverflow = document.body.style.overflow
+    document.body.style.overflow = 'hidden'
+    mobileDrawerRef.current?.querySelector('a')?.focus()
+    const onKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') {
+        setMobileMenuOpen(false)
+        mobileToggleRef.current?.focus()
+      }
+    }
+    document.addEventListener('keydown', onKeyDown)
+    return () => {
+      document.body.style.overflow = prevOverflow
+      document.removeEventListener('keydown', onKeyDown)
+    }
+  }, [mobileMenuOpen])
 
   // Global Cmd+K keyboard shortcut listener
   useEffect(() => {
@@ -112,6 +135,11 @@ export function TopNav() {
 
             {/* Mobile menu toggle */}
             <button
+              ref={mobileToggleRef}
+              type="button"
+              aria-expanded={mobileMenuOpen}
+              aria-controls="mobile-nav-drawer"
+              aria-label="Toggle site navigation"
               onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
               className="lg:hidden p-1.5 rounded-lg text-[#94a3b8] hover:text-white hover:bg-[#161622] border border-[#272738]"
             >
@@ -122,7 +150,14 @@ export function TopNav() {
 
         {/* Mobile Navigation Drawer */}
         {mobileMenuOpen && (
-          <nav className="lg:hidden border-t border-[#272738] bg-[#0e0e13] p-4 space-y-1">
+          <nav
+            ref={mobileDrawerRef}
+            id="mobile-nav-drawer"
+            role="dialog"
+            aria-modal="true"
+            aria-label="Site navigation"
+            className="lg:hidden border-t border-[#272738] bg-[#0e0e13] p-4 space-y-1"
+          >
             {MOBILE_NAV_ITEMS.map((item) => {
               const active = pathname === item.href
               const Icon = item.icon
@@ -130,6 +165,7 @@ export function TopNav() {
                 <Link
                   key={item.href}
                   href={item.href}
+                  aria-current={active ? 'page' : undefined}
                   onClick={() => setMobileMenuOpen(false)}
                   className={clsx(
                     'flex items-center space-x-2.5 px-3 py-2 rounded-md text-xs font-medium transition-colors',

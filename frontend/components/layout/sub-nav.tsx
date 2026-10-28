@@ -24,14 +24,14 @@ const PRIMARY_NAV_LINKS = [
   { href: '/datasets', label: 'Data Library', fullLabel: 'Data Library & Exports', icon: Database },
   { href: '/finetune', label: 'Model Training', fullLabel: 'QLoRA Training Studio', icon: Cpu },
   { href: '/orchestration', label: 'Pipelines', fullLabel: 'DAG Execution Engine', icon: Workflow },
-  { href: '/quality', label: 'Quality Jury', fullLabel: 'Quality Inspector', icon: Sparkles },
-  { href: '/review', label: 'Data Review', fullLabel: 'Human-in-the-Loop Review', icon: ClipboardCheck },
+  { href: '/quality', label: 'Quality', fullLabel: 'Quality Inspector', icon: Sparkles },
+  { href: '/review', label: 'Review', fullLabel: 'Human-in-the-Loop Review', icon: ClipboardCheck },
   { href: '/observability', label: 'Telemetry', fullLabel: 'System Insights', icon: Activity },
 ]
 
 const SECONDARY_NAV_LINKS = [
   { href: '/research', label: 'Benchmarks', fullLabel: 'Benchmarks & ROI', icon: BarChart2 },
-  { href: '/providers', label: 'AI Providers', fullLabel: 'AI Providers & Failover', icon: Beaker },
+  { href: '/providers', label: 'Providers', fullLabel: 'AI Providers & Failover', icon: Beaker },
   { href: '/settings', label: 'System Status', fullLabel: 'System Status & Configuration', icon: Settings },
 ]
 
@@ -77,6 +77,7 @@ export function DashboardNavigation() {
                 key={item.href}
                 href={item.href}
                 title={item.fullLabel}
+                  aria-current={active ? 'page' : undefined}
                 className={clsx(
                   'flex items-center space-x-1.5 px-2.5 sm:px-3 py-1.5 rounded-md text-xs font-mono transition-all whitespace-nowrap shrink-0 group focus-visible:ring-2 focus-visible:ring-[#f26625] focus-visible:outline-none',
                   active
@@ -105,6 +106,7 @@ export function DashboardNavigation() {
                   key={item.href}
                   href={item.href}
                   title={item.fullLabel}
+                  aria-current={active ? 'page' : undefined}
                   className={clsx(
                     'flex items-center space-x-1.5 px-2.5 sm:px-3 py-1.5 rounded-md text-xs font-mono transition-all whitespace-nowrap shrink-0 group focus-visible:ring-2 focus-visible:ring-[#f26625] focus-visible:outline-none',
                     active
@@ -128,6 +130,7 @@ export function DashboardNavigation() {
           <div className="relative xl:hidden shrink-0" ref={dropdownRef}>
             <button
               type="button"
+              aria-expanded={moreOpen}
               onClick={() => setMoreOpen(!moreOpen)}
               className={clsx(
                 'flex items-center space-x-1.5 px-2.5 py-1.5 rounded-md text-xs font-mono transition-all whitespace-nowrap shrink-0 border focus-visible:ring-2 focus-visible:ring-[#f26625] focus-visible:outline-none',
@@ -149,6 +152,7 @@ export function DashboardNavigation() {
                     <Link
                       key={item.href}
                       href={item.href}
+                      aria-current={active ? 'page' : undefined}
                       onClick={() => setMoreOpen(false)}
                       className={clsx(
                         'flex items-center space-x-2 px-3 py-2 text-xs transition-colors hover:bg-[#1c1c28]',

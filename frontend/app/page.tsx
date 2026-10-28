@@ -506,7 +506,7 @@ export default function ZenPortalPage() {
                 onClick={() => setIsMobileMenuOpen(false)}
                 className="p-2 rounded bg-[#141420] border border-[#222232] hover:border-[#f26625]/50 flex items-center justify-between"
               >
-                <span>Data Review</span>
+                <span>Review</span>
                 <ArrowRight className="w-3 h-3 text-[#f26625]" />
               </Link>
               <Link
@@ -514,7 +514,7 @@ export default function ZenPortalPage() {
                 onClick={() => setIsMobileMenuOpen(false)}
                 className="p-2 rounded bg-[#141420] border border-[#222232] hover:border-[#f26625]/50 flex items-center justify-between"
               >
-                <span>Quality Jury</span>
+                <span>Quality</span>
                 <ArrowRight className="w-3 h-3 text-[#f26625]" />
               </Link>
               <Link
@@ -538,7 +538,7 @@ export default function ZenPortalPage() {
                 onClick={() => setIsMobileMenuOpen(false)}
                 className="p-2 rounded bg-[#141420] border border-[#222232] hover:border-[#f26625]/50 flex items-center justify-between"
               >
-                <span>AI Providers</span>
+                <span>Providers</span>
                 <ArrowRight className="w-3 h-3 text-[#f26625]" />
               </Link>
               <Link
