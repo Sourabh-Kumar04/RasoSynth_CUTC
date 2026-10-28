@@ -841,7 +841,7 @@ export default function DatasetsPage() {
                             .{dataset.format}
                           </Badge>
                           {dataset.synthesis_mode && dataset.synthesis_mode !== 'standard' && (
-                            <Badge variant="secondary" className="font-mono text-xs bg-purple-950/50 text-purple-300 border border-purple-500/30 rounded px-1 py-0 uppercase">
+                            <Badge variant="secondary" className="font-mono text-xs bg-[#161622] text-zinc-300 border border-[#272738] rounded px-1 py-0 uppercase">
                               {dataset.synthesis_mode}
                             </Badge>
                           )}
@@ -878,7 +878,7 @@ export default function DatasetsPage() {
                               : dataset.status === 'cancelled'
                               ? 'bg-zinc-800 text-zinc-400 border-zinc-700'
                               : dataset.status === 'awaiting_review'
-                              ? 'bg-purple-950/40 text-purple-400 border-purple-500/30'
+                              ? 'bg-amber-950/40 text-amber-400 border-amber-500/30'
                               : 'bg-amber-950/40 text-amber-400 border-amber-500/30'
                           )}
                         >
@@ -891,7 +891,7 @@ export default function DatasetsPage() {
                               : dataset.status === 'cancelled'
                               ? "bg-zinc-400"
                               : dataset.status === 'awaiting_review'
-                              ? "bg-purple-400"
+                              ? "bg-amber-400"
                               : "bg-amber-400 animate-pulse"
                           )} />
                           {dataset.status === 'ready'
@@ -1031,7 +1031,7 @@ export default function DatasetsPage() {
                           : dataset.status === 'cancelled'
                           ? 'bg-zinc-800 text-zinc-400 border-zinc-700'
                           : dataset.status === 'awaiting_review'
-                          ? 'bg-purple-950/40 text-purple-400 border-purple-500/30'
+                          ? 'bg-amber-950/40 text-amber-400 border-amber-500/30'
                           : 'bg-amber-950/40 text-amber-400 border-amber-500/30'
                       )}
                     >
@@ -1044,7 +1044,7 @@ export default function DatasetsPage() {
                           : dataset.status === 'cancelled'
                           ? "bg-zinc-400"
                           : dataset.status === 'awaiting_review'
-                          ? "bg-purple-400"
+                          ? "bg-amber-400"
                           : "bg-amber-400 animate-pulse"
                       )} />
                       {dataset.status === 'ready'

@@ -460,7 +460,7 @@ export default function QualityDashboardPage() {
               Semantic Density &amp; 2D Topic Coverage Visualizer
             </h2>
             <Badge variant="warning" className="text-xs font-mono">DEMO</Badge>
-            <Badge variant="outline" className="text-xs border-[#272738] text-purple-300 font-mono">
+            <Badge variant="outline" className="text-xs border-[#272738] text-zinc-300 font-mono">
               TF-IDF + Truncated SVD Projection
             </Badge>
           </div>
@@ -470,7 +470,7 @@ export default function QualityDashboardPage() {
             disabled={densityLoading}
             className="h-7 text-xs bg-[#1f1f2e] hover:bg-[#2b2b3d] text-white border border-[#3b3b52] font-mono gap-1.5"
           >
-            {densityLoading ? <Loader2 className="h-3 w-3 animate-spin text-purple-400" /> : <Network className="h-3 w-3 text-purple-400" />}
+            {densityLoading ? <Loader2 className="h-3 w-3 animate-spin text-[#f26625]" /> : <Network className="h-3 w-3 text-[#f26625]" />}
             {densityLoading ? "Projecting..." : "Recompute 2D Clusters"}
           </Button>
         </div>

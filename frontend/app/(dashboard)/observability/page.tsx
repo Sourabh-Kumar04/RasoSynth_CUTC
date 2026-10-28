@@ -496,12 +496,12 @@ export default function ObservabilityPage() {
             </CardContent>
           </Card>
 
-          {/* Live Trace Trajectory Timeline Example */}
+          {/* Trace Trajectory Timeline Example */}
           <Card className="border-[#272738] bg-[#12121a] rounded-md card-shadow">
             <CardHeader className="pb-3 border-b border-[#272738]">
               <CardTitle className="text-sm font-bold text-white flex items-center gap-2">
                 <Sparkles className="h-4 w-4 text-[#f26625]" />
-                <span>Self-Correction Trajectory Lifecycle (Sample #8410)</span>
+                <span>Self-Correction Trajectory Lifecycle (Sample #8410, example)</span>
               </CardTitle>
             </CardHeader>
             <CardContent className="p-4">
@@ -590,7 +590,7 @@ export default function ObservabilityPage() {
               ) : (
                 <div className="p-12 text-center text-[#94a3b8] bg-[#0a0a0f] rounded-xl border border-[#272738]">
                   <Activity className="h-10 w-10 mx-auto mb-3 text-[#64748b]" />
-                  <p className="text-xs font-mono font-bold text-[#f26625]">Live Metrics Ready</p>
+                  <p className="text-xs font-mono font-bold text-[#f26625]">Metrics Ready</p>
                   <p className="text-xs font-mono mt-1">Metrics available at /metrics endpoint</p>
                 </div>
               )}

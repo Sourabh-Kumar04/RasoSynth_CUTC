@@ -241,7 +241,7 @@ export default function SettingsPage() {
                 {
                   icon: Database, label: 'Database Engine (Cloud Pooler)',
                   desc: 'POSTGRES_URL — PostgreSQL (asyncpg) on Supabase Cloud Pooler (aws-0-ap-southeast-1)',
-                  status: 'Live Connected',
+                  status: 'Connected',
                 },
                 {
                   icon: Activity, label: 'Redis Cache & Distributed Broker',
@@ -539,7 +539,7 @@ export default function SettingsPage() {
               <div className="flex items-center justify-between">
                 <div>
                   <CardTitle className="text-sm font-bold text-white">Provider API Keys &amp; Gateway Integrations</CardTitle>
-                  <CardDescription className="text-xs text-[#94a3b8]">Live environment key detection and failover routing readiness</CardDescription>
+                  <CardDescription className="text-xs text-[#94a3b8]">Environment key detection and failover routing readiness</CardDescription>
                 </div>
                 <Badge variant="outline" className="text-xs font-mono border-emerald-500/40 text-emerald-400 bg-emerald-950/20">
                   {PROVIDERS_CONFIG.filter(p => p.configured).length} / {PROVIDERS_CONFIG.length} Configured

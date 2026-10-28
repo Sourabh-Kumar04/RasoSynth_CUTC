@@ -704,7 +704,7 @@ export default function ZenPortalPage() {
               7 Autonomous Synthesis Engines Sandbox
             </h2>
             <p className="text-xs text-zinc-400 mt-1 max-w-2xl">
-              Select an engine to inspect its live cognitive output, thought steps, and structured invariants.
+              Select an engine to inspect its example cognitive output, thought steps, and structured invariants.
             </p>
           </div>
 
@@ -915,7 +915,7 @@ export default function ZenPortalPage() {
               </div>
 
               {/* In-Browser Interactive Recomputation Bar */}
-              <div className="pt-3 border-t border-purple-900/40 flex flex-col sm:flex-row sm:items-center justify-between gap-3 bg-[#0a0814] p-3 rounded-lg border border-purple-950">
+              <div className="pt-3 border-t border-[#272738] flex flex-col sm:flex-row sm:items-center justify-between gap-3 bg-[#0a0a0f] p-3 rounded-lg border border-[#272738]">
                 <div className="space-y-0.5">
                   <div className="flex items-center space-x-1.5 text-white font-bold text-xs">
                     <CheckCircle2 className="w-3.5 h-3.5 text-emerald-400" />
@@ -933,7 +933,7 @@ export default function ZenPortalPage() {
                   type="button"
                   onClick={handleRecomputeClientSide}
                   disabled={isRecomputing}
-                  className="px-3 py-1.5 rounded bg-purple-600/30 hover:bg-purple-600/50 border border-purple-500/50 text-white text-xs font-mono transition-all flex items-center justify-center space-x-1.5 disabled:opacity-50 shrink-0"
+                  className="px-3 py-1.5 rounded bg-[#f26625]/15 hover:bg-[#f26625]/25 border border-[#f26625]/30 text-white text-xs font-mono transition-all flex items-center justify-center space-x-1.5 disabled:opacity-50 shrink-0"
                 >
                   {isRecomputing ? (
                     <div className="w-3 h-3 border-2 border-white border-t-transparent rounded-full animate-spin" />
