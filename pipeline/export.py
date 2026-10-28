@@ -295,7 +295,7 @@ class ExportPipeline:
         table_name = f"dataset_{job_id.replace('-', '_')}"
 
         with open(output_path, 'w', encoding='utf-8') as f:
-            f.write(f"-- RasoSynthTune SQL Export\n")
+            f.write("-- RasoSynthTune SQL Export\n")
             f.write(f"-- Job ID: {job_id}\n")
             f.write(f"-- Exported at: {datetime.now(timezone.utc).isoformat()}\n\n")
             f.write(f"CREATE TABLE IF NOT EXISTS {table_name} (\n")

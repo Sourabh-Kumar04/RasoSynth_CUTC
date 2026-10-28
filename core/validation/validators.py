@@ -86,7 +86,7 @@ def validate_no_injection(text: str) -> str:
     # Check SQL injection
     for pattern in SQL_INJECTION_PATTERNS:
         if re.search(pattern, text):
-            raise SecurityError(f"Potential SQL injection detected")
+            raise SecurityError("Potential SQL injection detected")
 
     return text
 
@@ -98,7 +98,7 @@ def validate_no_path_traversal(path: str) -> str:
 
     for pattern in PATH_TRAVERSAL_PATTERNS:
         if re.search(pattern, path, re.IGNORECASE):
-            raise SecurityError(f"Potential path traversal detected")
+            raise SecurityError("Potential path traversal detected")
 
     return path
 

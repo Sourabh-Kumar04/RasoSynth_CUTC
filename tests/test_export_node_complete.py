@@ -176,7 +176,7 @@ async def test_export_node_with_db():
             print(f"✗ Sample count mismatch: expected {len(mock_samples)}, got {len(samples)}")
             return False
 
-        print(f"✓ Sample count matches")
+        print("✓ Sample count matches")
 
         # Verify job was updated in database
         job_record = await db.get_job(job_id)

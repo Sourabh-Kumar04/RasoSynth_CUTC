@@ -2575,7 +2575,7 @@ async def reject_job_preview(job_id: str, payload: RejectPreviewRequest = Body(d
     if orchestrator and hasattr(orchestrator, "reject_preview"):
         success = orchestrator.reject_preview(job_id, updated_prompt=payload.updated_prompt)
         if success:
-            return {"success": True, "message": f"Preview rejected. Re-optimizing query and generating fresh samples."}
+            return {"success": True, "message": "Preview rejected. Re-optimizing query and generating fresh samples."}
     if db:
         status_update: dict[str, Any] = {"status": "running", "current_stage": "query_optimizer"}
         if payload.updated_prompt:

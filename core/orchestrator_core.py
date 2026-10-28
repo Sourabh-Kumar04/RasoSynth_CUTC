@@ -174,7 +174,7 @@ class ConstraintAnalyzer:
 
         # Analyze time constraints
         if config.get("time_period"):
-            warnings.append(f"Time period constraint may limit available sources")
+            warnings.append("Time period constraint may limit available sources")
             analysis.feasibility_score -= 0.1
             strategies.append("Consider broader time range")
 
@@ -3696,7 +3696,7 @@ class DatasetOrchestrator:
                 if len(extracted_content) > 0:
                     error_msg += f"\nThreshold diagnostics: {len(extracted_content)} extracted"
                     if len(filtered_samples) == 0:
-                        error_msg += f", 0 filtered (zero-sample situation)"
+                        error_msg += ", 0 filtered (zero-sample situation)"
                     else:
                         error_msg += f", {len(filtered_samples)} filtered"
 

@@ -436,7 +436,7 @@ async def export_gguf_quantization(job_id: str, manager=Depends(_manager)):
     output_path = getattr(job, "output_path", None) or (job.get("output_path") if isinstance(job, dict) else None) or f"outputs/finetune/{job_id}"
     out_dir = Path(output_path)
     out_dir.mkdir(parents=True, exist_ok=True)
-    gguf_path = out_dir / f"model-q4_k_m.gguf"
+    gguf_path = out_dir / "model-q4_k_m.gguf"
     if not gguf_path.exists():
         with open(gguf_path, "wb") as f:
             f.write(b"GGUF\x03\x00\x00\x00" + b"\x00" * 4096)

@@ -2719,7 +2719,7 @@ class DiscoveryPipeline:
                             url=(
                                 f"https://archive.ics.uci.edu/dataset/{ds_id}"
                                 if ds_id
-                                else f"https://archive.ics.uci.edu/ml/datasets.php"
+                                else "https://archive.ics.uci.edu/ml/datasets.php"
                             ),
                             source_type=SourceType.DATASET_REPO,
                             title=name,

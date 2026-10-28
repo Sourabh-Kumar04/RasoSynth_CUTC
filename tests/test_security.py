@@ -35,14 +35,14 @@ def test_security_headers():
         "Strict-Transport-Security": "max-age=31536000; includeSubDomains",
     }
 
-    print(f"\n--- Security Headers (/health) ---")
+    print("\n--- Security Headers (/health) ---")
     for header, expected_value in expected_headers.items():
         actual = resp.headers.get(header)
         assert actual == expected_value, f"{header}: expected '{expected_value}', got '{actual}'"
         print(f"✓ {header}: {actual}")
 
     # Test CORS preflight
-    print(f"\n--- CORS preflight (/health) ---")
+    print("\n--- CORS preflight (/health) ---")
     resp = client.options(
         "/health",
         headers={"Origin": "http://localhost:3000", "Access-Control-Request-Method": "GET"}
@@ -68,7 +68,7 @@ def test_request_size_validation():
     from api.server import SecurityHeadersMiddleware
     middleware = SecurityHeadersMiddleware(app)
 
-    print(f"✓ SecurityHeadersMiddleware configured")
+    print("✓ SecurityHeadersMiddleware configured")
     print(f"  MAX_BODY_SIZE: {middleware.MAX_BODY_SIZE} bytes")
     assert middleware.MAX_BODY_SIZE > 0
 

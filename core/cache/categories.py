@@ -183,7 +183,7 @@ class WebCache:
 
     async def invalidate_domain(self, domain: str) -> int:
         """Invalidate all cached content from a domain."""
-        pattern = f"web:*"
+        pattern = "web:*"
         keys_to_delete = []
 
         async for key in self.redis.scan_iter(match=pattern):

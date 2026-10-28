@@ -101,7 +101,7 @@ async def run_refinery_demo():
     print("\n" + "=" * 70)
     print("  BENCHMARK RESULTS & QUALITY AUDIT")
     print("=" * 70)
-    print(f"  Metric                     Raw Scraped         Refined Dataset     Delta")
+    print("  Metric                     Raw Scraped         Refined Dataset     Delta")
     print("-" * 70)
     print(f"  Total Samples              {raw_stats['total_samples']:<20}{ref_stats['total_samples']:<20}-{raw_stats['total_samples'] - ref_stats['total_samples']}")
     print(f"  Uniqueness Rate            {raw_stats['uniqueness_rate'] * 100:.1f}%                {ref_stats['uniqueness_rate'] * 100:.1f}%                +{improvements['uniqueness_improvement_pct']}%")

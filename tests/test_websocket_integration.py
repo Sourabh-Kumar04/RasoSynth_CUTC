@@ -79,7 +79,7 @@ def test_websocket_broadcasting():
         assert message_arg.data["progress"] == 0.9, f"Expected progress=0.9, got {message_arg.data['progress']}"
         assert message_arg.data["samples_generated"] == 42, f"Expected 42, got {message_arg.data['samples_generated']}"
 
-        print(f"✓ Progress message broadcasted successfully")
+        print("✓ Progress message broadcasted successfully")
         print(f"  - type: {message_arg.type.value}")
         print(f"  - stage: {message_arg.data['stage']}")
         print(f"  - progress: {message_arg.data['progress']}")

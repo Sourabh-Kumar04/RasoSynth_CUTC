@@ -137,7 +137,7 @@ class GroqProvider(BaseProvider):
         ProviderCapability.FAST_INFERENCE,
     ]
 
-    def __init__(self, config: Optional[Any] = None, model: str = "openai/gpt-oss-120b"):  # noqa: E501
+    def __init__(self, config: Optional[Any] = None, model: str = "openai/gpt-oss-120b"):
         import os
         if isinstance(config, dict):
             provider_config = ProviderConfig(

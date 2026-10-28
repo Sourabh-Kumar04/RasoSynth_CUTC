@@ -45,15 +45,15 @@ if NEW_PROVIDERS_AVAILABLE:
 
 # Import flat provider files — their @PluginRegistry.register() decorators
 # register each provider with the PluginRegistry at import time.
-import providers.google_gemini  # noqa: F401, E402
-import providers.anthropic_claude  # noqa: F401, E402
-import providers.openai_provider  # noqa: F401, E402
-import providers.nvidia_nim  # noqa: F401, E402
-import providers.huggingface_provider  # noqa: F401, E402
-import providers.ollama_provider  # noqa: F401, E402
-import providers.xai_provider  # noqa: F401, E402
-import providers.fireworks  # noqa: F401, E402
-import providers.featherless  # noqa: F401, E402
+import providers.google_gemini
+import providers.anthropic_claude
+import providers.openai_provider
+import providers.nvidia_nim
+import providers.huggingface_provider
+import providers.ollama_provider
+import providers.xai_provider
+import providers.fireworks
+import providers.featherless  # noqa: F401
 
 # Ensure canonical alias anthropic_claude is registered as well
 from providers.anthropic_claude import AnthropicClaudeProvider
