@@ -1,21 +1,52 @@
+# RasoSynthTune CI & Quality Gate
+#
+# What this gates on (all jobs must pass; no continue-on-error on any gate job):
+#   - lint: ruff --select RUF100 only.
+#   - backend-test: the FULL pytest suite (pytest -q over tests/).
+#   - frontend-build: tsc --noEmit (npm run type-check) + Next.js production build.
+#
+# What it deliberately does NOT gate on, and why:
+#   - Full `ruff check` (7,008 errors at last count on this branch): gating on it
+#     would red every run. Only RUF100 is currently clean repo-wide (0 errors);
+#     F401 is 647 errors and F541 is 1 error (a notebook cell). The backlog is a
+#     follow-up, not a gate. Do not widen the lint select without first landing
+#     the fixes that make the new rules clean.
+#   - `ruff format` check: the repo declares no formatter (no .pre-commit config,
+#     no [tool.ruff.format] in pyproject.toml), so there is nothing to check
+#     against. Do not invent a format gate.
+#   - mypy: currently blocked by environment/config issues (bcrypt used but not
+#     declared as a dependency, api.routes imported as untyped, duplicate-module
+#     complaints for scripts/). mypy is NOT gated until those are resolved; do
+#     not add a mypy step that is expected to fail.
+#   - No Postgres/Redis services are provisioned here, so the backend suite runs
+#     exactly as it does on a developer machine without those services: the app
+#     falls back to SQLite (outputs/rasosynthtune.db) and in-memory cache, and
+#     tests that need a live database are skipped. CI therefore does NOT prove
+#     Postgres/Redis behaviour; it proves the SQLite/memory fallback path only.
+#   - No dependency upgrades are made by this workflow. Dependabot, if enabled
+#     in repo settings, should stay security-fix-only; this workflow performs
+#     no bulk upgrades and pins only the runtimes below.
+#
+# Pinned runtimes (matching the repo's declared versions; do not upgrade here):
+#   - Python 3.12 (pyproject requires >=3.11; the repo venv and prior CI use 3.12)
+#   - Node.js 20 (frontend uses Next 14.2.5; @types/node 20.x)
 name: RasoSynthTune CI & Quality Gate
 
 on:
   push:
-    branches: [ master, main ]
+    branches: [ master, main, optimize/industry-standard ]
   pull_request:
-    branches: [ master, main ]
+    branches: [ master, main, optimize/industry-standard ]
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
   cancel-in-progress: true
 
 jobs:
-  backend-test:
-    name: Backend Regression & Verification Suite
+  lint:
+    name: Lint (ruff, clean rules only)
     runs-on: ubuntu-latest
-    timeout-minutes: 15
-
+    timeout-minutes: 10
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
@@ -31,53 +62,39 @@ jobs:
           python -m pip install --upgrade pip
           pip install -e ".[dev]"
 
-      - name: Execute CLI and Core Regression Tests
-        run: |
-          pytest tests/test_cli.py \
-                 tests/test_live_job_run.py \
-                 tests/test_regressive_e2e_workflows.py \
-                 tests/test_generation_modes.py \
-                 tests/test_validation.py \
-                 tests/test_quality_deterministic.py \
-                 -v --tb=short
+      # Gate: RUF100 only. See the header comment for why the full ruff
+      # backlog (7,008 errors) is not gated.
+      - name: Ruff check (RUF100 only)
+        run: ruff check --select RUF100 .
 
-      - name: Execute Cognitive Engine, Cloud GPU, and DBOM Suites
-        run: |
-          pytest tests/test_benchmark_pipeline.py \
-                 tests/test_health_check_cli.py \
-                 tests/test_resume_job.py \
-                 tests/test_websocket_stream.py \
-                 tests/test_cli_export.py \
-                 tests/test_e2e_pipeline_integration.py \
-                 tests/test_finetune_serverless.py \
-                 tests/test_hf_and_dbom_card.py \
-                 tests/test_ui_palette_and_audio.py \
-                 tests/test_dbom_and_planner.py \
-                 tests/test_synthesis_engines_and_judge.py \
-                 tests/test_archive_export.py \
-                 tests/test_finetune_telemetry.py \
-                 tests/test_hf_model_card.py \
-                 tests/test_contamination_cli.py \
-                 tests/test_seed_demo_data.py \
-                 -v --tb=short
+  backend-test:
+    name: Backend Full Test Suite
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
 
-      - name: Verify CLI Command Surface & Diagnostic Tools
+      - name: Set up Python 3.12
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+          cache: 'pip'
+
+      - name: Install dependencies
         run: |
-          python cli.py --help
-          python main.py --help
-          python scripts/health_check.py --json
-          python scripts/export_hf.py --help
-          python scripts/resume_job.py --help
-          python scripts/check_contamination.py --dry-run
-          python scripts/seed_demo_data.py --dry-run
-          python cli.py generate --domain "Indian Taxation & GST" --size 3 --output-dir outputs/ci_test
-          python cli.py generate --domain "Air-Gapped Sovereign AI" --size 2 --engine vllm --output-dir outputs/ci_test_vllm
-          python cli.py audit --dataset outputs/ci_test/dataset_distillation_3.jsonl
-          python cli.py recipe --framework axolotl --dataset outputs/ci_test/dataset_distillation_3.jsonl
-          python cli.py publish --dataset-dir outputs/ci_test --repo-id rasosynthtune/ci-test-v1 --dry-run
+          python -m pip install --upgrade pip
+          pip install -e ".[dev]"
+
+      # Full suite, not the old hand-picked subset. Any failure fails the job
+      # (no continue-on-error). Known caveat, documented in the header: no
+      # Postgres/Redis services run here, so this covers the SQLite/memory
+      # fallback path only.
+      - name: Full pytest suite
+        run: pytest -q
 
   frontend-build:
-    name: Next.js 14 Production Build
+    name: Next.js 14 Type Check & Production Build
     runs-on: ubuntu-latest
     timeout-minutes: 10
 
@@ -98,6 +115,11 @@ jobs:
 
       - name: Install dependencies
         run: npm ci
+
+      - name: Type check (tsc --noEmit)
+        env:
+          NEXT_TELEMETRY_DISABLED: 1
+        run: npm run type-check
 
       - name: Build Next.js application
         env:
