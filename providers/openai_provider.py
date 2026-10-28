@@ -221,18 +221,20 @@ class OpenAIProvider(BaseProvider):
         )
 
         async for chunk in stream:
-            if chunk.choices[0].delta.content:
-                full_content += chunk.choices[0].delta.content
-                chunks.append(StreamChunk(
+            delta = chunk.choices[0].delta.content or ""
+            if delta:
+                full_content += delta
+                yield StreamChunk(
                     content=full_content,
-                    delta=chunk.choices[0].delta.content,
+                    delta=delta,
                     is_complete=False
-                ))
+                )
 
-        if chunks:
-            chunks[-1].is_complete = True
-
-        return chunks
+        yield StreamChunk(
+            content=full_content,
+            delta="",
+            is_complete=True
+        )
 
     async def _execute_embed(self, text: str, model: str | None = None) -> EmbeddingResponse:
         """Internal: Generate embeddings using OpenAI."""

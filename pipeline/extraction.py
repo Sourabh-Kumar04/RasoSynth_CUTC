@@ -1142,6 +1142,7 @@ class ExtractionPipeline:
         """Extract dataset information from HuggingFace, preferring actual sample data."""
         try:
             meta = getattr(source, "metadata", None) or getattr(source, "metadata__", {}) or {}
+            target_lang = meta.get("language") or self.config.get("language") or "en"
             sample_content = None
             sample_rows = meta.get("sample_rows")
             if sample_rows and isinstance(sample_rows, list) and len(sample_rows) > 0:
@@ -1155,11 +1156,13 @@ class ExtractionPipeline:
                         sample_lines.append(str(row))
                 sample_content = "\n".join(sample_lines)
                 if sample_content:
+                    detected_lang = await self.analyzer._detect_language(sample_content)
+                    resolved_lang = detected_lang if (detected_lang and detected_lang != "unknown") else target_lang
                     content = f"Dataset: {source.title}\nDescription: {getattr(source, 'description', '') or ''}\n\nSample data ({len(rows_to_show)} rows):\n{sample_content}"
                     extracted = ExtractedContent(
                         content=content,
                         content_type="huggingface_dataset_sample",
-                        language="en",
+                        language=resolved_lang,
                         url=source.url,
                         confidence=0.95,
                         metadata={
@@ -1168,7 +1171,8 @@ class ExtractionPipeline:
                             "author": getattr(source, "author", "") or meta.get("author", ""),
                             "source_type": "huggingface_dataset",
                             "sample_rows_used": len(rows_to_show),
-                            "total_samples": len(sample_rows) if isinstance(sample_rows, list) else 0
+                            "total_samples": len(sample_rows) if isinstance(sample_rows, list) else 0,
+                            "language": resolved_lang,
                         }
                     )
                     yield extracted
@@ -1204,11 +1208,13 @@ class ExtractionPipeline:
                             sample_lines.append(str(row))
                     sample_content = "\n".join(sample_lines)
                     if sample_content:
+                        detected_lang = await self.analyzer._detect_language(sample_content)
+                        resolved_lang = detected_lang if (detected_lang and detected_lang != "unknown") else target_lang
                         content = f"Dataset: {source.title}\nDescription: {getattr(source, 'description', '') or ''}\n\nSample data ({len(head)} rows):\n{sample_content}"
                         extracted = ExtractedContent(
                             content=content,
                             content_type="huggingface_dataset_sample",
-                            language="en",
+                            language=resolved_lang,
                             url=source.url,
                             confidence=0.9,
                             metadata={
@@ -1217,7 +1223,8 @@ class ExtractionPipeline:
                                 "author": getattr(source, "author", "") or meta.get("author", ""),
                                 "source_type": "huggingface_dataset",
                                 "fetched_via_sdk": True,
-                                "sample_rows_used": len(head)
+                                "sample_rows_used": len(head),
+                                "language": resolved_lang,
                             }
                         )
                         yield extracted
@@ -1231,7 +1238,7 @@ class ExtractionPipeline:
             yield ExtractedContent(
                 content=fallback_text,
                 content_type="huggingface_dataset",
-                language="en",
+                language=target_lang,
                 url=source.url,
                 confidence=0.75,
                 metadata={
@@ -1239,6 +1246,7 @@ class ExtractionPipeline:
                     "tags": meta.get("tags", []),
                     "author": getattr(source, "author", "") or meta.get("author", ""),
                     "source_type": "huggingface_dataset",
+                    "language": target_lang,
                 }
             )
             return
@@ -1417,10 +1425,11 @@ class ExtractionPipeline:
             # Fallback to metadata / description if files could not be downloaded
             desc = getattr(source, "description", "") or ""
             fallback_text = f"Dataset: {source.title}\nDescription: {desc}\nURL: {getattr(source, 'url', '')}"
+            kaggle_lang = meta.get("language") or self.config.get("language") or "en"
             yield ExtractedContent(
                 content=fallback_text,
                 content_type="kaggle_dataset",
-                language="en",
+                language=kaggle_lang,
                 url=getattr(source, "url", ""),
                 confidence=0.75,
                 metadata={
@@ -1429,6 +1438,7 @@ class ExtractionPipeline:
                     "author": getattr(source, "author", "") or meta.get("author", ""),
                     "source_type": "kaggle_dataset",
                     "ref": dataset_ref,
+                    "language": kaggle_lang,
                 }
             )
             return

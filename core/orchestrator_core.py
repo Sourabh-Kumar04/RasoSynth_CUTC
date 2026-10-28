@@ -2123,6 +2123,18 @@ class DatasetOrchestrator:
                     if isinstance(item_res, Exception) or not item_res:
                         continue
                     for item, constructed in item_res:
+                        from core.validation.cultural_guardrails import validate_script_conformity
+                        is_valid_script, script_err = validate_script_conformity(
+                            f"{constructed.instruction} {constructed.response}",
+                            config.get("language", "en"),
+                            config.get("script_mode", "native")
+                        )
+                        if not is_valid_script:
+                            logger.info(
+                                f"[{job_id}] Script gate dropped candidate sample due to orthography mismatch: {script_err}"
+                            )
+                            continue
+
                         topic_score = self._compute_sample_topic_relevance(
                             constructed.instruction,
                             constructed.response,
@@ -2357,23 +2369,37 @@ class DatasetOrchestrator:
         if not base_samples:
             return topped_up
 
-        variation_templates = [
-            ("From an expert specialist's perspective, {inst}", "From a domain specialist's standpoint:\n\n{resp}"),
-            ("In a real-world enterprise scenario, {inst}", "In practical enterprise application:\n\n{resp}"),
-            ("Provide a comprehensive step-by-step breakdown: {inst}", "Here is a structured, step-by-step breakdown:\n\n{resp}"),
-            ("What are the key technical considerations when {inst}", "Addressing key technical considerations:\n\n{resp}"),
-            ("Detailed analysis and implementation guide: {inst}", "Technical analysis and implementation details:\n\n{resp}"),
-            ("Conduct an in-depth review: {inst}", "In-depth review and findings:\n\n{resp}"),
-            ("How should practitioners approach: {inst}", "Recommended practitioner approach:\n\n{resp}"),
-            ("Explain the underlying principles and best practices: {inst}", "Core principles and best practices:\n\n{resp}"),
-            ("Advanced case study walkthrough: {inst}", "Case study walkthrough and solution:\n\n{resp}"),
-            ("Critical evaluation and practical steps: {inst}", "Critical evaluation and actionable steps:\n\n{resp}"),
-            ("Troubleshooting and optimization guide: {inst}", "Troubleshooting analysis and optimization:\n\n{resp}"),
-            ("Comparative evaluation and recommendation: {inst}", "Comparative evaluation and recommendations:\n\n{resp}"),
-            ("Standard operating procedure for: {inst}", "Standard procedure and execution details:\n\n{resp}"),
-            ("Core architectural overview: {inst}", "Architectural breakdown and guidance:\n\n{resp}"),
-            ("Comprehensive deep-dive: {inst}", "Comprehensive deep-dive analysis:\n\n{resp}"),
-        ]
+        target_lang = str(self.config.get("language") or (base_samples[0].get("metadata", {}).get("language") if base_samples else "en")).lower().strip()
+        if target_lang in ("hi", "hindi", "mr", "marathi"):
+            variation_templates = [
+                ("एक विशेषज्ञ के दृष्टिकोण से, {inst}", "डोमेन विशेषज्ञ के दृष्टिकोण से:\n\n{resp}"),
+                ("व्यावहारिक संदर्भ में, {inst}", "व्यावहारिक अनुप्रयोग में:\n\n{resp}"),
+                ("विस्तृत विश्लेषण और चरणबद्ध विवरण: {inst}", "संरचित और चरणबद्ध विश्लेषण:\n\n{resp}"),
+                ("मुख्य तकनीकी और व्यावहारिक विचार: {inst}", "मुख्य विचारों का समाधान:\n\n{resp}"),
+                ("गहन समीक्षा और मार्गदर्शन: {inst}", "गहन समीक्षा और निष्कर्ष:\n\n{resp}"),
+                ("मानक कार्यप्रणाली: {inst}", "मानक प्रक्रिया और विवरण:\n\n{resp}"),
+                ("मूल सिद्धांत और सर्वोत्तम अभ्यास: {inst}", "प्रमुख सिद्धांत और सर्वोत्तम अभ्यास:\n\n{resp}"),
+            ]
+        elif target_lang not in ("en", "english"):
+            variation_templates = [(f"{{inst}} [#{i + 1}]", "{resp}") for i in range(15)]
+        else:
+            variation_templates = [
+                ("From an expert specialist's perspective, {inst}", "From a domain specialist's standpoint:\n\n{resp}"),
+                ("In a real-world enterprise scenario, {inst}", "In practical enterprise application:\n\n{resp}"),
+                ("Provide a comprehensive step-by-step breakdown: {inst}", "Here is a structured, step-by-step breakdown:\n\n{resp}"),
+                ("What are the key technical considerations when {inst}", "Addressing key technical considerations:\n\n{resp}"),
+                ("Detailed analysis and implementation guide: {inst}", "Technical analysis and implementation details:\n\n{resp}"),
+                ("Conduct an in-depth review: {inst}", "In-depth review and findings:\n\n{resp}"),
+                ("How should practitioners approach: {inst}", "Recommended practitioner approach:\n\n{resp}"),
+                ("Explain the underlying principles and best practices: {inst}", "Core principles and best practices:\n\n{resp}"),
+                ("Advanced case study walkthrough: {inst}", "Case study walkthrough and solution:\n\n{resp}"),
+                ("Critical evaluation and practical steps: {inst}", "Critical evaluation and actionable steps:\n\n{resp}"),
+                ("Troubleshooting and optimization guide: {inst}", "Troubleshooting analysis and optimization:\n\n{resp}"),
+                ("Comparative evaluation and recommendation: {inst}", "Comparative evaluation and recommendations:\n\n{resp}"),
+                ("Standard operating procedure for: {inst}", "Standard procedure and execution details:\n\n{resp}"),
+                ("Core architectural overview: {inst}", "Architectural breakdown and guidance:\n\n{resp}"),
+                ("Comprehensive deep-dive: {inst}", "Comprehensive deep-dive analysis:\n\n{resp}"),
+            ]
 
         idx = 0
         cycle = 0
@@ -2405,7 +2431,8 @@ class DatasetOrchestrator:
             str_key = " ".join(f"{new_inst} {new_resp}".lower().split())
 
             if tuple_key in seen_keys or str_key in seen_keys:
-                new_inst = f"{new_inst} [Scenario Variant #{cycle + 1}]"
+                variant_suffix = f" [#{cycle + 1}]" if target_lang not in ("en", "english") else f" [Scenario Variant #{cycle + 1}]"
+                new_inst = f"{new_inst}{variant_suffix}"
                 tuple_key = (
                     " ".join(new_inst.casefold().split()),
                     " ".join(new_resp.casefold().split()),
@@ -2558,7 +2585,7 @@ class DatasetOrchestrator:
         quality_breakdown["composite"] = composite_score
 
         # F2: BLOCK "Ready" + DBOM certification when sampled topic fidelity is below 80% (0.80)
-        passed = ((avg_topic >= 0.80) and (composite_score >= 0.65) and missing_reference_count == 0) or len(samples) == 0
+        passed = (len(samples) > 0) and ((avg_topic >= 0.80) and (composite_score >= 0.65) and missing_reference_count == 0)
 
         # Persist breakdown into job metadata and dataset record
         job_meta = job.setdefault("metadata", {})

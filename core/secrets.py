@@ -419,7 +419,8 @@ class AWSSecretsProvider(SecretsProvider):
 
         client.start_secret_rotation(SecretId=path)
         await self._cache.invalidate(f"aws:{path}")
-        return await self.get(path).metadata
+        secret = await self.get(path)
+        return secret.metadata
 
 
 class SecretsManager:

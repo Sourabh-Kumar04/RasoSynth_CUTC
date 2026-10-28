@@ -279,16 +279,17 @@ class GoogleGeminiProvider(BaseProvider):
             for chunk in stream:
                 delta = chunk.text or ""
                 full_content += delta
-                chunks.append(StreamChunk(
+                yield StreamChunk(
                     content=full_content,
                     delta=delta,
                     is_complete=False
-                ))
+                )
 
-            if chunks:
-                chunks[-1].is_complete = True
-
-            return chunks
+            yield StreamChunk(
+                content=full_content,
+                delta="",
+                is_complete=True
+            )
         except Exception as e:
             raise RuntimeError(f"Gemini streaming failed: {e}")
 

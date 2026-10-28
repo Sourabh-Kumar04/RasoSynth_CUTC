@@ -328,29 +328,13 @@ class HallucinationDetector:
         return citations
 
     def _longest_common_substring_ratio(self, s1: str, s2: str) -> float:
-        """Compute LCS ratio between two strings."""
+        """Compute LCS ratio between two strings using C-accelerated SequenceMatcher."""
         if not s1 or not s2:
             return 0.0
 
-        m, n = len(s1), len(s2)
-        if m * n > 1_000_000:  # Too expensive for very long strings
-            # Sample approach: check overlapping substrings
-            overlap = 0
-            for i in range(0, len(s1), 100):
-                chunk = s1[i : i + 100]
-                if chunk in s2:
-                    overlap += len(chunk)
-            return min(1.0, overlap / len(s1))
-
-        dp = [[0] * (n + 1) for _ in range(m + 1)]
-        max_len = 0
-        for i in range(1, m + 1):
-            for j in range(1, n + 1):
-                if s1[i - 1] == s2[j - 1]:
-                    dp[i][j] = dp[i - 1][j - 1] + 1
-                    max_len = max(max_len, dp[i][j])
-
-        return max_len / max(len(s1), 1)
+        import difflib
+        match = difflib.SequenceMatcher(None, s1, s2).find_longest_match(0, len(s1), 0, len(s2))
+        return match.size / max(len(s1), 1)
 
     async def evaluate_batch(
         self, samples: list[dict]

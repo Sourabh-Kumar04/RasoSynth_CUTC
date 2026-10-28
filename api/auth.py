@@ -330,7 +330,7 @@ async def get_current_user(
     if not credentials:
         raise HTTPException(status_code=401, detail="Authentication required")
 
-    token_data = auth.verify_token(credentials.credential)
+    token_data = auth.verify_token(credentials.credentials)
     user = auth.get_user(token_data.username)
 
     if not user:

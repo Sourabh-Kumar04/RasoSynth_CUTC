@@ -8,6 +8,9 @@ from typing import AsyncGenerator, Optional, Callable
 from collections import OrderedDict
 import re
 import asyncio
+import logging
+
+logger = logging.getLogger(__name__)
 
 from core.provider_router import TaskType
 from core.intent import UserIntent

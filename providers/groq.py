@@ -427,8 +427,10 @@ class GroqProvider(BaseProvider):
 
     async def generate_response(self, request: LLMRequest) -> LLMResponse:
         """Generate response for LLMRequest."""
+        prompt_val = getattr(request, "input", None) or getattr(request, "prompt", "")
+        prompt_str = prompt_val if isinstance(prompt_val, str) else str(prompt_val)
         response = await self.generate(
-            prompt=request.prompt,
+            prompt_or_request=prompt_str,
             system_prompt=request.system_prompt,
             temperature=request.temperature,
             max_tokens=request.max_tokens,
@@ -445,8 +447,10 @@ class GroqProvider(BaseProvider):
 
     async def stream_response(self, request: LLMRequest) -> AsyncIterator[StreamChunk]:
         """Stream response for LLMRequest."""
+        prompt_val = getattr(request, "input", None) or getattr(request, "prompt", "")
+        prompt_str = prompt_val if isinstance(prompt_val, str) else str(prompt_val)
         async for chunk in self.stream_generate(
-            prompt=request.prompt,
+            prompt=prompt_str,
             system_prompt=request.system_prompt,
             temperature=request.temperature,
             max_tokens=request.max_tokens,

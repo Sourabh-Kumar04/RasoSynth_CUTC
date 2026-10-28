@@ -59,12 +59,87 @@ def check_cultural_safety(text: str) -> Tuple[bool, Optional[str]]:
     return True, None
 
 
+# Script Unicode ranges for orthography verification
+_SCRIPT_SPECS: dict[tuple[str, ...], tuple[str, list[tuple[str, str]]]] = {
+    # Devanagari: Hindi, Marathi, Nepali, Sanskrit
+    ("hi", "hindi", "mr", "marathi", "ne", "nepali", "sa", "sanskrit"): (
+        "Devanagari",
+        [('\u0900', '\u097f')],
+    ),
+    # Bengali & Assamese
+    ("bn", "bengali", "as", "assamese"): (
+        "Bengali",
+        [('\u0980', '\u09ff')],
+    ),
+    # Gurmukhi / Punjabi
+    ("pa", "punjabi", "panjabi"): (
+        "Gurmukhi",
+        [('\u0a00', '\u0a7f')],
+    ),
+    # Gujarati
+    ("gu", "gujarati"): (
+        "Gujarati",
+        [('\u0a80', '\u0aff')],
+    ),
+    # Odia / Oriya
+    ("or", "odia", "oriya"): (
+        "Odia",
+        [('\u0b00', '\u0b7f')],
+    ),
+    # Tamil
+    ("ta", "tamil"): (
+        "Tamil",
+        [('\u0b80', '\u0bff')],
+    ),
+    # Telugu
+    ("te", "telugu"): (
+        "Telugu",
+        [('\u0c00', '\u0c7f')],
+    ),
+    # Kannada
+    ("kn", "kannada"): (
+        "Kannada",
+        [('\u0c80', '\u0cff')],
+    ),
+    # Malayalam
+    ("ml", "malayalam"): (
+        "Malayalam",
+        [('\u0d00', '\u0d7f')],
+    ),
+    # Arabic / Urdu
+    ("ar", "arabic", "ur", "urdu"): (
+        "Arabic",
+        [('\u0600', '\u06ff'), ('\u0750', '\u077f'), ('\u08a0', '\u08ff')],
+    ),
+    # Chinese (Hanzi)
+    ("zh", "chinese", "mandarin"): (
+        "Chinese",
+        [('\u4e00', '\u9fff')],
+    ),
+    # Japanese (Hiragana, Katakana, Kanji)
+    ("ja", "japanese"): (
+        "Japanese",
+        [('\u3040', '\u309f'), ('\u30a0', '\u30ff'), ('\u4e00', '\u9fff')],
+    ),
+    # Korean (Hangul)
+    ("ko", "korean"): (
+        "Hangul",
+        [('\uac00', '\ud7af'), ('\u1100', '\u11ff')],
+    ),
+    # Cyrillic: Russian, Ukrainian
+    ("ru", "russian", "uk", "ukrainian"): (
+        "Cyrillic",
+        [('\u0400', '\u04ff')],
+    ),
+}
+
+
 def validate_script_conformity(text: str, language: str, script_mode: str = "native") -> Tuple[bool, Optional[str]]:
     """Verify that generated text conforms to the requested script orthography.
 
     Args:
         text: Text to evaluate.
-        language: Language code (e.g. 'hi', 'hinglish', 'ta').
+        language: Language code (e.g. 'hi', 'hinglish', 'ta', 'te', 'bn').
         script_mode: 'native' | 'romanized' | 'dual'
 
     Returns:
@@ -76,16 +151,36 @@ def validate_script_conformity(text: str, language: str, script_mode: str = "nat
     lang = (language or "en").lower().strip()
     mode = (script_mode or "native").lower().strip()
 
-    # Hindi / Marathi in Native script -> Must contain Devanagari chars (\u0900-\u097F)
-    if lang in ("hi", "hindi", "mr", "marathi") and mode == "native":
-        devanagari_count = sum(1 for c in text if '\u0900' <= c <= '\u097f')
-        if devanagari_count == 0:
-            return False, f"Expected native Devanagari script for {lang}, but none was found."
+    # Look up script specification for target language
+    spec = None
+    for aliases, target_spec in _SCRIPT_SPECS.items():
+        if lang in aliases or any(lang.startswith(a) for a in aliases if len(a) > 2):
+            spec = target_spec
+            break
 
-    # Indic in Romanized script -> Must NOT be dominated by native Indic Unicode points
-    elif mode == "romanized" and lang in ("hi", "hindi", "mr", "ta", "te", "bn", "gu", "kn", "ml", "pa"):
-        indic_count = sum(1 for c in text if '\u0900' <= c <= '\u0d7f')
-        if indic_count > len(text) * 0.25:
-            return False, f"Expected Romanized (Latin) script for {lang}, but native Indic script characters dominated ({indic_count} chars)."
+    if spec:
+        script_name, ranges = spec
+        native_count = sum(1 for c in text if any(start <= c <= end for start, end in ranges))
+
+        if mode == "native":
+            if native_count == 0:
+                return False, f"Expected native {script_name} script for {lang}, but none was found."
+
+            non_ws = sum(1 for c in text if not c.isspace())
+            latin_count = sum(1 for c in text if ('a' <= c.lower() <= 'z'))
+
+            # If sample has enough characters, verify native script isn't drowned out by English
+            if non_ws >= 30 and (native_count / non_ws < 0.20 or native_count < latin_count * 0.25):
+                return False, (
+                    f"Expected native {script_name} script for {lang}, but text is dominated by Latin characters "
+                    f"({native_count} {script_name} vs {latin_count} Latin chars)."
+                )
+
+        elif mode == "romanized":
+            if native_count > len(text) * 0.25:
+                return False, (
+                    f"Expected Romanized (Latin) script for {lang}, but native {script_name} script "
+                    f"characters dominated ({native_count} chars)."
+                )
 
     return True, None

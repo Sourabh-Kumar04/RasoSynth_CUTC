@@ -1957,20 +1957,45 @@ class DiscoveryPipeline:
 
         return sources
 
+    def _get_target_language_code(self) -> str:
+        """Resolve target language to ISO 639-1 code for repository filtering."""
+        lang = str(self.config.get("language") or self.config.get("target_language") or "en").lower().strip()
+        lang_map = {
+            "hindi": "hi", "bengali": "bn", "tamil": "ta", "telugu": "te",
+            "marathi": "mr", "gujarati": "gu", "kannada": "kn", "malayalam": "ml",
+            "punjabi": "pa", "odia": "or", "urdu": "ur", "assamese": "as",
+            "french": "fr", "german": "de", "spanish": "es", "chinese": "zh",
+            "japanese": "ja", "korean": "ko", "russian": "ru", "arabic": "ar",
+            "english": "en",
+        }
+        return lang_map.get(lang, lang[:3] if len(lang) <= 3 else "en")
+
     async def _discover_huggingface(
         self,
         query: str,
         target_domain: str
     ) -> list[DiscoveredSource]:
-        """Search HuggingFace for datasets and models with rate limiting."""
+        """Search HuggingFace for datasets and models with rate limiting and language filtering."""
         sources = []
+        lang_code = self._get_target_language_code()
 
         try:
-            # Search datasets
+            # Search datasets with language filtering if target is non-English
+            params = {"search": query, "sort": "downloads", "direction": -1}
+            if lang_code != "en":
+                params["filter"] = f"languages:{lang_code}"
+
             response = await self._fetch(
                 "https://huggingface.co/api/datasets",
-                params={"search": query, "sort": "downloads", "direction": -1},
+                params=params,
             )
+
+            # Fallback to query with language keyword if strict tag filter returned empty
+            if response.status_code == 200 and not response.json() and lang_code != "en":
+                response = await self._fetch(
+                    "https://huggingface.co/api/datasets",
+                    params={"search": f"{query} {lang_code}", "sort": "downloads", "direction": -1},
+                )
 
             if response.status_code == 200:
                 data = response.json()
@@ -1986,6 +2011,7 @@ class DiscoveryPipeline:
                             "likes": item.get("likes", 0),
                             "tags": item.get("tags", []),
                             "id": item.get("id", ""),
+                            "language": lang_code,
                         },
                     ))
 
@@ -2029,22 +2055,34 @@ class DiscoveryPipeline:
         sources = []
 
         # ── Tier 1: Full API search ──────────────────────────────────
+        lang_code = self._get_target_language_code()
         try:
             hf_url = "https://huggingface.co/api/datasets"
             async with self._rate_limiter.acquire(hf_url):
                 async with httpx.AsyncClient(
                     timeout=httpx.Timeout(30.0),
                 ) as client:
-                    for q in [query, f"{query} {target_domain}"]:
+                    search_queries = [query, f"{query} {target_domain}"]
+                    if lang_code != "en":
+                        search_queries.insert(0, f"{query} {lang_code}")
+                    for q in search_queries:
+                        params = {
+                            "search": q,
+                            "sort": "downloads",
+                            "direction": -1,
+                            "limit": 20,
+                        }
+                        if lang_code != "en":
+                            params["filter"] = f"languages:{lang_code}"
                         response = await client.get(
                             hf_url,
-                            params={
-                                "search": q,
-                                "sort": "downloads",
-                                "direction": -1,
-                                "limit": 20,
-                            },
+                            params=params,
                         )
+                        if response.status_code != 200 or not response.json():
+                            # Fall back without strict language filter
+                            if lang_code != "en" and "filter" in params:
+                                params.pop("filter")
+                                response = await client.get(hf_url, params=params)
                         if response.status_code != 200:
                             continue
                         data = response.json()
@@ -2065,6 +2103,7 @@ class DiscoveryPipeline:
                                     "siblings": len(
                                         item.get("siblings", [])
                                     ),
+                                    "language": lang_code,
                                 },
                             )
                             sources.append(src)
@@ -2170,6 +2209,8 @@ class DiscoveryPipeline:
     ) -> list[DiscoveredSource]:
         """Search Kaggle for datasets using KaggleApi, kagglehub, or web discovery."""
         sources = []
+        lang_code = self._get_target_language_code()
+        search_query = f"{query} {lang_code}" if lang_code != "en" else query
 
         # ── Tier 1: Official Kaggle API (authenticated via KAGGLE_USERNAME / KAGGLE_KEY) ──
         try:
@@ -2192,7 +2233,9 @@ class DiscoveryPipeline:
                 from kaggle.api.kaggle_api_extended import KaggleApi
                 k_api = KaggleApi()
                 k_api.authenticate()
-                results = await asyncio.to_thread(k_api.dataset_list, search=query, sort_by="votes")
+                results = await asyncio.to_thread(k_api.dataset_list, search=search_query, sort_by="votes")
+                if not results and lang_code != "en":
+                    results = await asyncio.to_thread(k_api.dataset_list, search=query, sort_by="votes")
                 for item in results[:15]:
                     ref = getattr(item, "ref", "") or str(item)
                     if not ref:
@@ -2211,6 +2254,7 @@ class DiscoveryPipeline:
                             "kaggle_dataset_ref": ref,
                             "downloads": getattr(item, "downloadCount", 0),
                             "votes": getattr(item, "voteCount", 0),
+                            "language": lang_code,
                         },
                     ))
                 if sources:
@@ -2221,7 +2265,9 @@ class DiscoveryPipeline:
         # ── Tier 2: Official kagglehub SDK ────────────────────────────
         try:
             import kagglehub
-            results = await asyncio.to_thread(kagglehub.search_datasets, query)
+            results = await asyncio.to_thread(kagglehub.search_datasets, search_query)
+            if not results and lang_code != "en":
+                results = await asyncio.to_thread(kagglehub.search_datasets, query)
             for item in results[:15]:
                 ref = getattr(item, "ref", "") or item.get("ref", "")
                 title = getattr(item, "title", "") or item.get("title", "")

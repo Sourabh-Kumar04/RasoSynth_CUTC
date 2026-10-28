@@ -2,6 +2,7 @@
 from dataclasses import dataclass, field
 from typing import AsyncGenerator, Optional, Callable, Any
 from enum import Enum
+import asyncio
 import re
 import json
 from typing import Dict
@@ -258,7 +259,44 @@ class ConstructionPipeline:
         # Quality tracking
         self._difficulty_distribution: dict[int, int] = {1: 0, 2: 0, 3: 0, 4: 0, 5: 0}
 
+    def _get_language_instruction(self) -> str:
+        """Build explicit multilingual orthography and formatting instructions."""
+        from pipeline.synthetic_generator import _build_language_instruction
+        return _build_language_instruction(
+            language=self.config.get("language", "en"),
+            script_mode=self.config.get("script_mode", "native"),
+            formality_register=self.config.get("formality_register", "formal"),
+            code_switch_intensity=self.config.get("code_switch_intensity", "balanced"),
+            preserved_terms=self.config.get("preserved_terms", []),
+            parallel_bilingual=self.config.get("parallel_bilingual", False),
+            regional_dialect=self.config.get("regional_dialect", "standard"),
+            number_formatting=self.config.get("number_formatting", "indian_lakhs"),
+            generate_dpo_refusal_pairs=self.config.get("generate_dpo_refusal_pairs", False),
+            speech_normalization=self.config.get("speech_normalization", False),
+            turn_language_drift=self.config.get("turn_language_drift", False),
+        )
+
+    def _is_sample_script_conforming(self, item: ConstructedSample) -> bool:
+        """Verify constructed sample adheres to the target language script."""
+        from core.validation.cultural_guardrails import validate_script_conformity
+        lang = str(self.config.get("language", "en"))
+        mode = str(self.config.get("script_mode", "native"))
+        text = f"{item.instruction} {item.response}"
+        is_valid, _ = validate_script_conformity(text, lang, mode)
+        return is_valid
+
     async def construct(
+        self,
+        filtered_sample,
+        intent: UserIntent,
+        dataset_type: DatasetType | None = None
+    ) -> AsyncGenerator[ConstructedSample, None]:
+        """Construct training samples with dynamic schema adaptation and script validation."""
+        async for item in self._construct_generator(filtered_sample, intent, dataset_type):
+            if self._is_sample_script_conforming(item):
+                yield item
+
+    async def _construct_generator(
         self,
         filtered_sample,
         intent: UserIntent,
@@ -561,11 +599,13 @@ Output strictly in JSON format as a list of objects:
 
         chunks = self._adaptive_chunk(content, max_length=1200)
         rag_directive = build_rag_prompt_directive(include_hard_negatives=True)
+        lang_rules = self._get_language_instruction()
 
         if self.router and len(chunks) >= 1:
             for i, chunk in enumerate(chunks):
                 prompt = (
                     f"You are a Retrieval-Augmented Generation dataset generator for '{target_domain}'.\n"
+                    f"{lang_rules}\n"
                     f"{rag_directive}\n"
                     f"Reference Content:\n{chunk}\n\n"
                     "Output strictly a JSON list of objects containing 'instruction', 'positive_contexts', 'hard_negatives', 'response', 'citations'."
@@ -692,6 +732,7 @@ Output strictly in JSON format as a list of objects:
         chunks = self._adaptive_chunk(content, max_length=1500)
         language = str(self.config.get("language", "en"))
         cot_directive = build_cot_prompt_directive(language=language)
+        lang_rules = self._get_language_instruction()
 
         if self.router:
             for i, chunk in enumerate(chunks):
@@ -700,6 +741,7 @@ Output strictly in JSON format as a list of objects:
                 difficulty = self._assess_chunk_difficulty(chunk)
                 prompt = (
                     f"You are an expert reasoning dataset generator for the '{target_domain}' domain.\n"
+                    f"{lang_rules}\n"
                     f"{cot_directive}\n\n"
                     f"User Intent: {generation_brief.get('user_request', '') if generation_brief else ''}\n"
                     f"Reference Content:\n{chunk}\n\n"
@@ -787,6 +829,7 @@ Output strictly in JSON format as a list of objects:
 
         chunks = self._adaptive_chunk(content, max_length=1500)
         dialectic_directive = build_dialectic_prompt_directive(domain=target_domain, rounds=2)
+        lang_rules = self._get_language_instruction()
 
         if self.router:
             for i, chunk in enumerate(chunks):
@@ -794,6 +837,7 @@ Output strictly in JSON format as a list of objects:
                     continue
                 prompt = (
                     f"You are a legal and statutory dialectic dataset generator.\n"
+                    f"{lang_rules}\n"
                     f"{dialectic_directive}\n"
                     f"Ground the debate on this factual source context:\n{chunk}\n\n"
                     "Output strictly a JSON object with keys 'topic', 'personas', 'debate_rounds', and 'verdict'."
@@ -893,11 +937,13 @@ Output strictly in JSON format as a list of objects:
         chunks = self._adaptive_chunk(content, max_length=1500)
         mode = "kto" if self.synthesis_mode == "kto" else "simpo"
         pref_directive = build_preference_directive(mode)
+        lang_rules = self._get_language_instruction()
 
         if self.router:
             for i, chunk in enumerate(chunks):
                 prompt = (
                     f"You are an expert AI alignment dataset generator for '{target_domain}'.\n"
+                    f"{lang_rules}\n"
                     f"{pref_directive}\n"
                     f"Reference Content:\n{chunk}\n\n"
                     "Output strictly a JSON list of objects containing 'instruction', 'chosen', and 'rejected' (or 'completion' and 'is_desirable')."

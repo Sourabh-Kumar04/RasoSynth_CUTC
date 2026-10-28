@@ -153,10 +153,16 @@ class CoveragePlanner:
         import itertools
         import random
 
-        keys = list(dims.keys())
-        values = [dims[k] for k in keys]
+        keys = [k for k in dims.keys() if dims[k]]
+        if not keys:
+            keys = ["category"]
+            values = [["general_instruction"]]
+        else:
+            values = [dims[k] for k in keys]
 
         combinations = list(itertools.product(*values))
+        if not combinations:
+            combinations = [tuple("default" for _ in keys)]
 
         rng = random.Random(42)
         rng.shuffle(combinations)

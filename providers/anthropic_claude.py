@@ -212,17 +212,19 @@ class AnthropicClaudeProvider(BaseProvider):
         ) as stream:
             async for event in stream:
                 if hasattr(event, 'content_block') and hasattr(event.content_block, 'text'):
-                    full_content += event.content_block.text
-                    chunks.append(StreamChunk(
+                    delta = event.content_block.text or ""
+                    full_content += delta
+                    yield StreamChunk(
                         content=full_content,
-                        delta=event.content_block.text,
+                        delta=delta,
                         is_complete=False
-                    ))
+                    )
 
-        if chunks:
-            chunks[-1].is_complete = True
-
-        return chunks
+        yield StreamChunk(
+            content=full_content,
+            delta="",
+            is_complete=True
+        )
 
     async def _execute_embed(self, text: str, **kwargs) -> EmbeddingResponse:
         """Internal: Claude doesn't support embeddings - returns zero vector."""

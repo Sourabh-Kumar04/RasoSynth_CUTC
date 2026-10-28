@@ -217,16 +217,21 @@ class OllamaProvider(BaseProvider):
                     try:
                         data = json.loads(line)
                         if "message" in data and "content" in data["message"]:
-                            full_content += data["message"]["content"]
-                            chunks.append(StreamChunk(
+                            delta = data["message"]["content"]
+                            full_content += delta
+                            yield StreamChunk(
                                 content=full_content,
-                                delta=data["message"]["content"],
+                                delta=delta,
                                 is_complete=data.get("done", False)
-                            ))
+                            )
                     except json.JSONDecodeError:
                         continue
 
-        return chunks
+        yield StreamChunk(
+            content=full_content,
+            delta="",
+            is_complete=True
+        )
 
     async def _execute_embed(self, text: str, model: str | None = None) -> EmbeddingResponse:
         """Internal: Generate embeddings using Ollama."""

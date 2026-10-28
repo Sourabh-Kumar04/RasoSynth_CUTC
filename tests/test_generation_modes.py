@@ -332,6 +332,13 @@ async def test_multilingual_advanced_controls_and_cultural_guardrails():
     valid_rom, _ = validate_script_conformity("GST challan kaise bharein?", "hi", "romanized")
     assert valid_rom is True
 
+    valid_ta, _ = validate_script_conformity("ஜிஎஸ்டி சலான் எப்படி நிரப்புவது?", "ta", "native")
+    assert valid_ta is True
+
+    invalid_ta, reason_ta = validate_script_conformity("GST challan eppadi fill seivathu?", "ta", "native")
+    assert invalid_ta is False
+    assert "Tamil" in reason_ta
+
     # 7. Test MultiStageValidator with Cultural Guardrail
     validator = MultiStageValidator(AsyncMock(), {"validation_strictness": "standard"})
     bad_sample = ConstructedSample(
