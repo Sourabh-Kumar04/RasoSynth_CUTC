@@ -63,13 +63,20 @@ cd RasoSynth_CUTC
 cp .env.example .env   # fill in real values; never commit .env
 pip install -e ".[dev]"
 
+# Backend API server (from the repo root; serves the API on port 8000)
+python main.py --host 127.0.0.1 --port 8000
+# Verify it is up: curl http://127.0.0.1:8000/health
+# API docs: http://127.0.0.1:8000/docs
+
 # Backend tests (full collection; run the suite before a PR)
 pytest --collect-only -q
 pytest tests/ -q
 
 # Lint / type checks (dev extras)
-ruff check .
-mypy .
+# CI gates on RUF100 only; the full ruff rule set and mypy have known
+# backlogs and are not gates, so do not expect a bare ruff or mypy run
+# to pass until those backlogs are cleared.
+ruff check --select RUF100 .
 
 # Dashboard (from the repo root)
 npm run dev --prefix frontend   # or: cd frontend && npm run dev
@@ -80,11 +87,21 @@ npm run dev --prefix frontend   # or: cd frontend && npm run dev
 ```bash
 cp .env.example .env
 docker compose up --build -d
+# Celery worker monitor only: docker compose --profile monitoring up -d
 ```
 
-- Web dashboard: <http://localhost:3000>
+- Web dashboard: <http://localhost:3001> (override with FRONTEND_PORT)
 - API docs: <http://localhost:8000/docs>
-- Celery worker monitor: <http://localhost:5555>
+- Celery worker monitor: <http://localhost:5555> (monitoring profile only)
+- Reverse proxy: <http://localhost:80> (routes / to the dashboard, API paths to the backend)
+
+Note: the Compose files were path-checked against the current tree, but a
+full docker compose up --build was not run in the packaging pass (no
+Docker daemon was reachable from the environment used), so treat the first
+build on a Docker host as unverified until it succeeds there. The backend
+image build also requires uv.lock to be in sync with pyproject.toml
+(uv sync --frozen fails on a stale lockfile) — re-run uv lock before
+building if dependency metadata has changed since the last lock.
 
 ### Python SDK
 
@@ -131,11 +148,15 @@ providers/    Provider router and provider clients
 finetuning/   Local trainer, Colab bridge, simulated cloud stubs
 rasosynth/    Python SDK (also: rasosynthtune/ package)
 frontend/     Next.js 14 dashboard (app/, components/, lib/)
-cli.py        CLI entry point (console script: rasosynthtune, via main.py)
+main.py       Canonical entry point (console script: rasosynthtune;
+              serves the API by default; subcommands live in cli.py)
+workers/      Celery app (workers.celery_app.celery_app)
 tests/        Backend test suite (pytest)
 docs/         Documentation index: docs/README.md
 scripts/      Benchmark/demo/runner scripts (see note below)
-deploy/       Deployment configs (Docker, Compose, platform files)
+Dockerfile, docker-compose.yml
+              Backend image and full-stack Compose services (repo root)
+deploy/       Deployment extras (Helm, Hugging Face) — not the Docker files
 ```
 
 ## Current limitations / known gaps
