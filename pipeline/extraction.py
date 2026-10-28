@@ -1415,21 +1415,62 @@ class ExtractionPipeline:
 
                 if len(content_parts) > 2:
                     content = "\n".join(content_parts)
+
+                    # ── Review sample rows to verify language conforms to user request ──
+                    from core.validation.cultural_guardrails import validate_script_conformity
+                    requested_lang = str(self.config.get("language") or meta.get("language") or "en").lower().strip()
+                    script_mode = str(self.config.get("script_mode", "native")).lower().strip()
+
+                    # Extract sample text snippet from downloaded data
+                    sample_snippet = "\n".join(content_parts[2:])[:2500]
+                    is_conforming, reason = validate_script_conformity(sample_snippet, requested_lang, script_mode)
+
+                    if requested_lang not in ("en", "english"):
+                        if not is_conforming:
+                            logger.info(
+                                f"Kaggle dataset '{source.title}' dropped after sample review: "
+                                f"does not conform to requested language '{requested_lang}' ({reason})"
+                            )
+                            return
+                        verified_lang = requested_lang
+                    else:
+                        # User requested English — verify samples are not dominated by non-English
+                        detected = await self.analyzer._detect_language(sample_snippet)
+                        if detected and detected not in ("en", "unknown") and len(sample_snippet) > 100:
+                            logger.info(
+                                f"Kaggle dataset '{source.title}' dropped after sample review: "
+                                f"requested English, but samples detected as '{detected}'"
+                            )
+                            return
+                        verified_lang = "en"
+
                     extracted = await self._process_text(content, source.url, "utf-8")
+                    extracted.language = verified_lang
+                    extracted.metadata["language"] = verified_lang
+                    extracted.metadata["language_verified"] = True
+                    extracted.metadata["sample_review_status"] = "verified_match"
                     extracted.metadata["source_type"] = "kaggle_dataset"
                     extracted.metadata["local_path"] = path
-                    extracted.confidence = 0.9
+                    extracted.confidence = 0.95
                     yield extracted
                     return
 
             # Fallback to metadata / description if files could not be downloaded
             desc = getattr(source, "description", "") or ""
             fallback_text = f"Dataset: {source.title}\nDescription: {desc}\nURL: {getattr(source, 'url', '')}"
-            kaggle_lang = meta.get("language") or self.config.get("language") or "en"
+            requested_lang = str(self.config.get("language") or meta.get("language") or "en").lower().strip()
+            script_mode = str(self.config.get("script_mode", "native")).lower().strip()
+
+            from core.validation.cultural_guardrails import validate_script_conformity
+            is_conforming, _ = validate_script_conformity(fallback_text, requested_lang, script_mode)
+            if requested_lang not in ("en", "english") and not is_conforming:
+                logger.info(f"Kaggle metadata fallback dropped for '{source.title}': metadata does not match '{requested_lang}'")
+                return
+
             yield ExtractedContent(
                 content=fallback_text,
                 content_type="kaggle_dataset",
-                language=kaggle_lang,
+                language=requested_lang,
                 url=getattr(source, "url", ""),
                 confidence=0.75,
                 metadata={
@@ -1438,7 +1479,8 @@ class ExtractionPipeline:
                     "author": getattr(source, "author", "") or meta.get("author", ""),
                     "source_type": "kaggle_dataset",
                     "ref": dataset_ref,
-                    "language": kaggle_lang,
+                    "language": requested_lang,
+                    "language_verified": is_conforming,
                 }
             )
             return

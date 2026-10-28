@@ -221,6 +221,8 @@ function StudioContent() {
   )
   const [instructionFormat, setInstructionFormat] = useState('alpaca')
   const [language, setLanguage] = useState(searchParams.get('language') || 'en')
+  const [customLanguage, setCustomLanguage] = useState('')
+  const [isCustomLang, setIsCustomLang] = useState(false)
   const [scriptMode, setScriptMode] = useState<'native' | 'romanized' | 'dual'>('native')
   const [formalityRegister, setFormalityRegister] = useState<'formal' | 'neutral' | 'casual'>('formal')
   const [codeSwitchIntensity, setCodeSwitchIntensity] = useState<'light' | 'balanced' | 'heavy'>('balanced')
@@ -1121,19 +1123,73 @@ function StudioContent() {
                   Language
                 </label>
                 <select
-                  value={language}
-                  onChange={(e) => setLanguage(e.target.value)}
+                  value={isCustomLang ? 'custom' : language}
+                  onChange={(e) => {
+                    if (e.target.value === 'custom') {
+                      setIsCustomLang(true)
+                    } else {
+                      setIsCustomLang(false)
+                      setLanguage(e.target.value)
+                    }
+                  }}
                   className="w-full bg-[#0a0a0f] border border-[#272738] focus:border-[#f26625] rounded-md p-2 text-xs font-mono text-white focus:outline-none"
                 >
-                  <option value="en">English</option>
-                  <option value="hi">Hindi (हिन्दी)</option>
-                  <option value="hinglish">Hindi + English (Hinglish)</option>
-                  <option value="indic_multilingual">Indic Multilingual (Hindi, Tamil, Telugu)</option>
-                  <option value="ta">Tamil (தமிழ்)</option>
-                  <option value="te">Telugu (తెలుగు)</option>
-                  <option value="bn">Bengali (বাংলা)</option>
-                  <option value="mr">Marathi (मराठी)</option>
+                  <optgroup label="Common & Multilingual">
+                    <option value="en">English</option>
+                    <option value="hi">Hindi (हिन्दी)</option>
+                    <option value="hinglish">Hindi + English (Hinglish)</option>
+                    <option value="indic_multilingual">Indic Multilingual (22 Indic Languages)</option>
+                  </optgroup>
+                  <optgroup label="22 Official Indian Languages (8th Schedule)">
+                    <option value="as">Assamese (অসমীয়া)</option>
+                    <option value="bn">Bengali (বাংলা)</option>
+                    <option value="brx">Bodo (बड़ो)</option>
+                    <option value="doi">Dogri (डोगरी)</option>
+                    <option value="gu">Gujarati (ગુજરાતી)</option>
+                    <option value="kn">Kannada (ಕನ್ನಡ)</option>
+                    <option value="ks">Kashmiri (कॉशुर / کٲشُر)</option>
+                    <option value="kok">Konkani (कोंकणी)</option>
+                    <option value="mai">Maithili (मैथिली)</option>
+                    <option value="ml">Malayalam (മലയാളം)</option>
+                    <option value="mni">Manipuri / Meitei (মৈতৈলোন্)</option>
+                    <option value="mr">Marathi (मराठी)</option>
+                    <option value="ne">Nepali (नेपाली)</option>
+                    <option value="or">Odia (ଓଡ଼ିଆ)</option>
+                    <option value="pa">Punjabi (ਪੰਜਾਬੀ)</option>
+                    <option value="sa">Sanskrit (संस्कृतम्)</option>
+                    <option value="sat">Santali (संताली)</option>
+                    <option value="sd">Sindhi (سنڌي / सिन्धी)</option>
+                    <option value="ta">Tamil (தமிழ்)</option>
+                    <option value="te">Telugu (తెలుగు)</option>
+                    <option value="ur">Urdu (اردو)</option>
+                  </optgroup>
+                  <optgroup label="Major Global Languages">
+                    <option value="ar">Arabic (العربية)</option>
+                    <option value="zh">Chinese (中文)</option>
+                    <option value="fr">French (Français)</option>
+                    <option value="de">German (Deutsch)</option>
+                    <option value="ja">Japanese (日本語)</option>
+                    <option value="ko">Korean (한국어)</option>
+                    <option value="pt">Portuguese (Português)</option>
+                    <option value="ru">Russian (Русский)</option>
+                    <option value="es">Spanish (Español)</option>
+                  </optgroup>
+                  <optgroup label="Custom Specification">
+                    <option value="custom">Other / Custom Language (Type below)...</option>
+                  </optgroup>
                 </select>
+                {isCustomLang && (
+                  <input
+                    type="text"
+                    placeholder="Enter language code or name (e.g. sw, it, nl, Latin)..."
+                    value={customLanguage}
+                    onChange={(e) => {
+                      setCustomLanguage(e.target.value)
+                      setLanguage(e.target.value.trim().toLowerCase())
+                    }}
+                    className="mt-2 w-full bg-[#0a0a0f] border border-[#f26625] rounded-md p-2 text-xs font-mono text-white focus:outline-none placeholder-[#64748b]"
+                  />
+                )}
               </div>
 
               <div>
