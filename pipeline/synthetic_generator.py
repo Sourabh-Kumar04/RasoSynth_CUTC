@@ -320,14 +320,14 @@ class SeedlessGenerator:
         tier = _resolve_difficulty_tier(cell, cell_index, total_cells)
 
         if "conversational" in dataset_type:
-            return await self._generate_conversational(plan, cell, tier)
+            return await self._generate_conversational(plan, cell, tier, cell_index=cell_index, total_cells=total_cells)
         else:
-            return await self._generate_sft(plan, cell, tier)
+            return await self._generate_sft(plan, cell, tier, cell_index=cell_index, total_cells=total_cells)
 
     # ── SFT single-turn ───────────────────────────────────────────────────────
 
     async def _generate_sft(
-        self, plan: DatasetPlan, cell: dict, tier: int
+        self, plan: DatasetPlan, cell: dict, tier: int, cell_index: int = 0, total_cells: int = 1
     ) -> ConstructedSample:
         lang_rule = _build_language_instruction(
             language=self.config.get("language", "en"),
@@ -385,9 +385,13 @@ class SeedlessGenerator:
             f"{dialectic_prompt}"
         )
 
+        # Clean internal metadata markers from cell dict
+        clean_cell = {k: v for k, v in cell.items() if not str(k).startswith("_")}
+
         user_message = (
-            f"Generate a high-quality training sample targeting these attributes:\n"
-            f"{json.dumps(cell, indent=2)}\n\n"
+            f"Generate a high-quality training sample targeting these attributes (sample #{cell_index + 1} of {total_cells}):\n"
+            f"{json.dumps(clean_cell, indent=2)}\n\n"
+            "Make this instruction and response concrete, detailed, and distinct in subject matter.\n"
             "Output target JSON:"
         )
 
@@ -395,9 +399,13 @@ class SeedlessGenerator:
 
         for attempt in range(max_attempts):
             try:
+                curr_user_msg = user_message
+                if attempt > 0:
+                    curr_user_msg += f"\n(Attempt {attempt + 1}: Please explore a completely distinct angle, edge case, or niche scenario.)"
+
                 response = await self.router.route(
                     TaskType.TEXT_GENERATION,
-                    prompt=user_message,
+                    prompt=curr_user_msg,
                     system_prompt=system_prompt,
                     temperature=min(0.95, 0.7 + (attempt * 0.1)),
                     bypass_cache=True,
@@ -439,6 +447,9 @@ class SeedlessGenerator:
                         continue
 
                     self._seen_topics.add(topic_key)
+                    if len(self._seen_topics) > 1000:
+                        # Prevent topic starvation on massive datasets by keeping a sliding window of recent topics
+                        self._seen_topics = set(list(self._seen_topics)[200:])
 
                     # 1. Indian PII detection & masking
                     pii_found = {}
@@ -594,7 +605,7 @@ class SeedlessGenerator:
     # ── Conversational multi-turn ─────────────────────────────────────────────
 
     async def _generate_conversational(
-        self, plan: DatasetPlan, cell: dict, tier: int
+        self, plan: DatasetPlan, cell: dict, tier: int, cell_index: int = 0, total_cells: int = 1
     ) -> ConstructedSample:
         lang_rule = _build_language_instruction(
             language=self.config.get("language", "en"),

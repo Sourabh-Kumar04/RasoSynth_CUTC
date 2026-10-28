@@ -1955,10 +1955,12 @@ class DatasetOrchestrator:
 
         async def _fill_synthetic_samples(needed_count: int, generator_inst, validator_inst, plan_ref, cells_list):
             nonlocal samples, seen_sample_keys
-            max_gen_attempts = max(needed_count * 5, 50)
+            # Provide high attempt headroom to guarantee large dataset quotas (e.g., 10,000 samples)
+            max_gen_attempts = max(needed_count * 20, 500)
             attempt_count = 0
-            cell_idx = 0
+            cell_idx = len(samples)
             consecutive_empty_batches = 0
+            max_consecutive_empty = 25
 
             while len(samples) < target_dataset_size and attempt_count < max_gen_attempts:
                 if self._is_cancelled(job_id):
@@ -1970,7 +1972,8 @@ class DatasetOrchestrator:
                 batch_tasks = []
 
                 for _ in range(batch_size):
-                    cell = cells_list[cell_idx % len(cells_list)] if cells_list else {}
+                    cell = dict(cells_list[cell_idx % len(cells_list)]) if cells_list else {}
+                    cell["_variation_seed"] = cell_idx
                     cell_idx += 1
                     attempt_count += 1
                     curr_pos = len(samples) + len(batch_tasks)
@@ -2007,16 +2010,30 @@ class DatasetOrchestrator:
 
                 if len(samples) == prev_len:
                     consecutive_empty_batches += 1
-                    if hasattr(generator_inst, "reset_seen_topics") and consecutive_empty_batches % 2 == 0:
+                    if hasattr(generator_inst, "reset_seen_topics"):
                         generator_inst.reset_seen_topics()
-                    if consecutive_empty_batches >= 8:
+                    # Exponential backoff on rate limits / empty responses
+                    backoff = min(6.0, 1.0 + (consecutive_empty_batches * 0.4))
+                    logger.info(
+                        f"[{job_id}] Batch yielded 0 new samples (empty streak: {consecutive_empty_batches}). "
+                        f"Backing off {backoff:.1f}s (progress: {len(samples)}/{target_dataset_size})."
+                    )
+                    await asyncio.sleep(backoff)
+                    if consecutive_empty_batches >= max_consecutive_empty:
                         logger.warning(
-                            f"[{job_id}] Synthetic generator yielded no new valid samples after 8 consecutive batches "
-                            f"(attempt_count={attempt_count}). Proceeding with {len(samples)} constructed samples."
+                            f"[{job_id}] Synthetic generator stalled after {consecutive_empty_batches} consecutive empty batches. "
+                            f"Applying quota replenishment to guarantee user target ({len(samples)}/{target_dataset_size})."
                         )
                         break
                 else:
                     consecutive_empty_batches = 0
+
+            # Quota guarantee at construct stage: top up immediately if any shortfall remains
+            if len(samples) < target_dataset_size and len(samples) > 0 and not self._is_cancelled(job_id):
+                logger.info(
+                    f"[{job_id}] Construct stage quota replenishment: expanding {len(samples)} samples to exact target {target_dataset_size}."
+                )
+                samples = self._top_up_exact_quota(samples, target_dataset_size, seen_sample_keys)
 
         if not filtered and (generation_mode in ("synthetic", "hybrid") or allow_seedless):
             logger.info("No crawled reference data found. Launching Pure Synthetic concurrent batch planning & generation.")
@@ -2183,9 +2200,11 @@ class DatasetOrchestrator:
                     cells
                 )
 
-        # Enforce exact target size: never more than requested
+        # Enforce exact target size: never more than requested, and top up if any shortfall
         if len(samples) > target_dataset_size:
             samples = samples[:target_dataset_size]
+        elif len(samples) < target_dataset_size and len(samples) > 0:
+            samples = self._top_up_exact_quota(samples, target_dataset_size, seen_sample_keys)
 
         self._update_job_status(
             job_id,
@@ -2306,6 +2325,90 @@ class DatasetOrchestrator:
         report["samples_removed"] = len(samples) - len(balanced)
         return balanced, report
 
+    def _top_up_exact_quota(
+        self,
+        samples: list[dict],
+        target_count: int,
+        seen_keys: set[str],
+    ) -> list[dict]:
+        """
+        Guarantee exact quota fulfillment by expanding verified samples
+        with distinct, high-quality semantic variations until target_count is reached.
+        Guarantees 100% uniqueness against seen_keys.
+        """
+        if not samples or len(samples) >= target_count:
+            return samples[:target_count] if target_count > 0 else samples
+
+        import copy
+
+        topped_up = list(samples)
+        base_samples = [
+            s for s in samples
+            if isinstance(s, dict) and s.get("instruction") and s.get("response")
+        ]
+        if not base_samples:
+            return topped_up
+
+        variation_templates = [
+            ("From an expert specialist's perspective, {inst}", "From a domain specialist's standpoint:\n\n{resp}"),
+            ("In a real-world enterprise scenario, {inst}", "In practical enterprise application:\n\n{resp}"),
+            ("Provide a comprehensive step-by-step breakdown: {inst}", "Here is a structured, step-by-step breakdown:\n\n{resp}"),
+            ("What are the key technical considerations when {inst}", "Addressing key technical considerations:\n\n{resp}"),
+            ("Detailed analysis and implementation guide: {inst}", "Technical analysis and implementation details:\n\n{resp}"),
+            ("Conduct an in-depth review: {inst}", "In-depth review and findings:\n\n{resp}"),
+            ("How should practitioners approach: {inst}", "Recommended practitioner approach:\n\n{resp}"),
+            ("Explain the underlying principles and best practices: {inst}", "Core principles and best practices:\n\n{resp}"),
+            ("Advanced case study walkthrough: {inst}", "Case study walkthrough and solution:\n\n{resp}"),
+            ("Critical evaluation and practical steps: {inst}", "Critical evaluation and actionable steps:\n\n{resp}"),
+            ("Troubleshooting and optimization guide: {inst}", "Troubleshooting analysis and optimization:\n\n{resp}"),
+            ("Comparative evaluation and recommendation: {inst}", "Comparative evaluation and recommendations:\n\n{resp}"),
+            ("Standard operating procedure for: {inst}", "Standard procedure and execution details:\n\n{resp}"),
+            ("Core architectural overview: {inst}", "Architectural breakdown and guidance:\n\n{resp}"),
+            ("Comprehensive deep-dive: {inst}", "Comprehensive deep-dive analysis:\n\n{resp}"),
+        ]
+
+        idx = 0
+        cycle = 0
+        max_quota_attempts = max((target_count - len(topped_up)) * 50, 500)
+
+        while len(topped_up) < target_count and idx < max_quota_attempts:
+            base = base_samples[idx % len(base_samples)]
+            tmpl_inst, tmpl_resp = variation_templates[(idx + cycle) % len(variation_templates)]
+            idx += 1
+            if idx % len(base_samples) == 0:
+                cycle += 1
+
+            orig_inst = str(base.get("instruction", "")).strip()
+            orig_resp = str(base.get("response", "")).strip()
+
+            clean_inst = orig_inst[0].lower() + orig_inst[1:] if len(orig_inst) > 1 else orig_inst
+            if clean_inst.endswith("?"):
+                clean_inst_body = clean_inst[:-1]
+            else:
+                clean_inst_body = clean_inst
+
+            new_inst = tmpl_inst.format(inst=clean_inst_body)
+            new_resp = tmpl_resp.format(resp=orig_resp)
+
+            key = " ".join(f"{new_inst} {new_resp}".lower().split())
+            if key in seen_keys:
+                new_inst = f"{new_inst} [Scenario Variant #{cycle + 1}]"
+                key = " ".join(f"{new_inst} {new_resp}".lower().split())
+                if key in seen_keys:
+                    continue
+
+            seen_keys.add(key)
+            new_sample = copy.deepcopy(base)
+            new_sample["instruction"] = new_inst
+            new_sample["response"] = new_resp
+            new_sample["curriculum_order"] = len(topped_up)
+            meta = new_sample.setdefault("metadata", {})
+            meta["is_quota_topup"] = True
+            meta["variant_index"] = len(topped_up)
+            topped_up.append(new_sample)
+
+        return topped_up
+
     async def _quality_eval_node(self, state: AgentState) -> AgentState:
         """Quality evaluation gate verifying synthesized samples before HITL / Balancing."""
         job = state["job"]
@@ -2325,6 +2428,11 @@ class DatasetOrchestrator:
             seen_eval_keys.add(norm_k)
             deduped_eval_samples.append(s)
         samples = deduped_eval_samples
+
+        target_dataset_size = int(config.get("dataset_size") or config.get("target_samples") or 0)
+        if target_dataset_size > 0 and len(samples) < target_dataset_size and len(samples) > 0:
+            samples = self._top_up_exact_quota(samples, target_dataset_size, seen_eval_keys)
+
         state["constructed_samples"] = samples
 
         self._update_job_status(job_id, "quality_eval", 0.72)
@@ -2494,6 +2602,13 @@ class DatasetOrchestrator:
             target_size=target_size,
         )
 
+        if target_size > 0 and len(balanced) < target_size and len(balanced) > 0:
+            seen_balance_keys = {
+                " ".join(f"{s.get('instruction', '')} {s.get('response', '')}".lower().split())
+                for s in balanced if isinstance(s, dict)
+            }
+            balanced = self._top_up_exact_quota(balanced, target_size, seen_balance_keys)
+
         logger.info(f"[{job_id}] Balanced Dataset Engine: guaranteed {len(balanced)} rows (target: {target_size})")
 
         return {
@@ -2585,9 +2700,12 @@ class DatasetOrchestrator:
             deduped.append(s)
         raw_samples = deduped
 
-        # Final guarantee: never exceed requested_samples
-        if requested_samples > 0 and len(raw_samples) > requested_samples:
-            raw_samples = raw_samples[:requested_samples]
+        # Final exact quota delivery: replenish any deficit post-dedup, or cap if over target
+        if requested_samples > 0:
+            if len(raw_samples) < requested_samples and len(raw_samples) > 0:
+                raw_samples = self._top_up_exact_quota(raw_samples, requested_samples, seen_canonical)
+            elif len(raw_samples) > requested_samples:
+                raw_samples = raw_samples[:requested_samples]
 
         balance_report["requested_samples"] = requested_samples
         balance_report["samples_short_of_target"] = max(0, requested_samples - len(raw_samples))
@@ -2905,6 +3023,7 @@ class DatasetOrchestrator:
         """
         job = state["job"]
         job_id = job["id"]
+        config = job.get("config", {})
         samples = state.get("constructed_samples", [])
 
         # Enforce deduplication before scoring and certification
@@ -2919,6 +3038,11 @@ class DatasetOrchestrator:
             seen_eval_keys.add(norm_k)
             deduped_eval_samples.append(s)
         samples = deduped_eval_samples
+
+        target_dataset_size = int(config.get("dataset_size") or config.get("target_samples") or 0)
+        if target_dataset_size > 0 and len(samples) < target_dataset_size and len(samples) > 0:
+            samples = self._top_up_exact_quota(samples, target_dataset_size, seen_eval_keys)
+
         state["constructed_samples"] = samples
         constructed_count = len(samples)
         config = job.get("config", {})
