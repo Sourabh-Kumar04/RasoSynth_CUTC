@@ -28,6 +28,7 @@ class GPUSlot:
     node_id: str
     available_memory_gb: float
     utilization_percent: float
+    total_memory_gb: float = 0.0
     locked: bool = False
     locked_by_task: Optional[str] = None
     locked_until: Optional[datetime] = None
@@ -160,6 +161,7 @@ class GPUScheduler:
             gpu_id=gpu_id,
             node_id=node_id,
             available_memory_gb=memory_gb,
+            total_memory_gb=memory_gb,
             utilization_percent=0.0,
         )
 
@@ -208,8 +210,10 @@ class GPUScheduler:
 
         selected_gpu = candidates[0][0]
         self._task_gpu_assignment[task_id] = selected_gpu
-        self._gpu_slots[selected_gpu].locked = True
-        self._gpu_slots[selected_gpu].locked_by_task = task_id
+        slot = self._gpu_slots[selected_gpu]
+        slot.locked = True
+        slot.locked_by_task = task_id
+        slot.available_memory_gb = max(0.0, slot.available_memory_gb - required_memory_gb)
 
         return selected_gpu
 
@@ -220,7 +224,8 @@ class GPUScheduler:
 
             if gpu_id in self._gpu_slots:
                 slot = self._gpu_slots[gpu_id]
-                slot.available_memory_gb += memory_released_gb
+                max_mem = slot.total_memory_gb if slot.total_memory_gb > 0 else (slot.available_memory_gb + memory_released_gb)
+                slot.available_memory_gb = min(max_mem, slot.available_memory_gb + memory_released_gb)
                 slot.locked = False
                 slot.locked_by_task = None
 

@@ -93,7 +93,7 @@ export default function OrchestrationPage() {
     } finally {
       setLoading(false)
     }
-  }, [selectedJob])
+  }, [])
 
   const fetchAll = useCallback(async () => {
     fetchJobs()
