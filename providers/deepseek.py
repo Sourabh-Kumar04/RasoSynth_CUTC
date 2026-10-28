@@ -119,10 +119,20 @@ class DeepSeekProvider(AbstractProviderPlugin):
         ProviderCapability.FUNCTION_CALLING,
     ]
 
-    def __init__(self, config: DeepSeekConfig, model: str = "deepseek-chat"):
-        super().__init__(config, model)
-        self.deepseek_config = config
-        self.base_url = config.base_url or config.api_base
+    def __init__(self, config: Optional[Any] = None, model: str = "deepseek-chat"):
+        super().__init__()
+        if isinstance(config, dict):
+            self.config = DeepSeekConfig(**config)
+        elif isinstance(config, DeepSeekConfig):
+            self.config = config
+        else:
+            self.config = DeepSeekConfig(
+                api_key=os.environ.get("DEEPSEEK_API_KEY", ""),
+                base_url=os.environ.get("DEEPSEEK_BASE_URL", "https://api.deepseek.com"),
+            )
+        self.deepseek_config = self.config
+        self.model = model
+        self.base_url = self.config.base_url or self.config.api_base
         self._client = None
 
     async def initialize(self, config: Optional[dict] = None) -> None:
@@ -158,7 +168,7 @@ class DeepSeekProvider(AbstractProviderPlugin):
 
     async def generate(
         self,
-        prompt: str,
+        prompt: Any,
         system_prompt: Optional[str] = None,
         temperature: float = 0.7,
         max_tokens: Optional[int] = None,
@@ -171,10 +181,18 @@ class DeepSeekProvider(AbstractProviderPlugin):
         import time
         start_time = time.time()
 
+        if hasattr(prompt, "input"):
+            prompt_text = str(prompt.input or "")
+            system_prompt = getattr(prompt, "system_prompt", None) or system_prompt
+            temperature = getattr(prompt, "temperature", temperature)
+            max_tokens = getattr(prompt, "max_tokens", max_tokens)
+        else:
+            prompt_text = str(prompt or "")
+
         messages = []
         if system_prompt:
             messages.append({"role": "system", "content": system_prompt})
-        messages.append({"role": "user", "content": prompt})
+        messages.append({"role": "user", "content": prompt_text})
 
         payload = {
             "model": self.model,

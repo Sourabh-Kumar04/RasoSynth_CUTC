@@ -93,13 +93,13 @@ rasosynthtune generate --domain "Indian Taxation & GST Compliance" --size 10 --f
 rasosynthtune generate --domain "Clinical Emergency Triage" --size 20 --engine ollama
 
 # Cryptographic DBOM audit, PII scan, and benchmark contamination audit
-rasosynthtune audit --dataset outputs/flagship_indic_gst/flagship_indic_gst_sft.parquet
+rasosynthtune audit --dataset outputs/<dataset-id>/dataset.parquet
 
 # Generate fine-tuning recipes (Axolotl / Unsloth / Torchtune)
-rasosynthtune recipe --framework unsloth --model "sarvamai/sarvam-2b-v0.5" --dataset outputs/flagship_indic_gst/flagship_indic_gst_sft.jsonl
+rasosynthtune recipe --framework unsloth --model "sarvamai/sarvam-2b-v0.5" --dataset outputs/<dataset-id>/dataset.jsonl
 
 # Publish verified dataset directly to Hugging Face Hub
-rasosynthtune publish --dataset-dir outputs/flagship_indic_gst --repo-id your-org/indic-gst-instruct --dry-run
+rasosynthtune publish --dataset-dir outputs/<dataset-id> --repo-id your-org/custom-instruct --dry-run
 ```
 
 ### 3. Docker Compose Stack
@@ -211,16 +211,6 @@ Directly verified via `scripts/run_benchmarks.py` and `scripts/demo_refinery.py`
 4. **OpenAI** (`gpt-4o`, `gpt-4o-mini`) — Structured function schemas and JSON contracts.
 5. **Fireworks AI & Featherless AI** — Serverless open-source models with automatic fallback.
 6. **Local Ollama / vLLM** (`localhost:11434`) — Air-gapped on-premise execution with zero data egress.
-
----
-
-## Pre-Attested Flagship Datasets
-
-| Dataset | Domain | Samples | Merkle Root & Provenance |
-|:---|:---|:---:|:---|
-| [**Flagship Indic GST**](outputs/flagship_indic_gst/README.md) | Indian GST & Statutory Tax Law | 5,000 | `DBOM-FLAGSHIP-GST` · 0% PII · 99.8% Script Purity |
-| [**Flagship Clinical Reasoning**](outputs/flagship_clinical/README.md) | Emergency Medical Triage | 2,500 | `DBOM-FLAGSHIP-CLIN` · Bayesian differential diagnosis |
-| [**Flagship Corporate Law**](outputs/flagship_corporate_law/README.md) | MCA-21 & Companies Act 2013 | 3,000 | `DBOM-FLAGSHIP-CORP` · Statutory corporate governance |
 
 ---
 

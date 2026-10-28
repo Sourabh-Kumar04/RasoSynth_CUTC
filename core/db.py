@@ -240,14 +240,14 @@ class Sample(Base):
     __tablename__ = "samples"
 
     id = Column(PG_UUID(as_uuid=False), primary_key=True, default=lambda: str(uuid.uuid4()))
-    dataset_id = Column(PG_UUID(as_uuid=False), ForeignKey("datasets.id", ondelete="CASCADE"))
+    dataset_id = Column(PG_UUID(as_uuid=False), ForeignKey("datasets.id", ondelete="CASCADE"), index=True)
     instruction = Column(Text)
     response = Column(Text)
     input = Column(Text)
     metadata_ = Column("metadata", JSON)
-    quality_score = Column(Float)
+    quality_score = Column(Float, index=True)
     difficulty_tier = Column(Integer)
-    created_at = Column(DateTime, default=utc_now)
+    created_at = Column(DateTime, default=utc_now, index=True)
 
     dataset = relationship("Dataset", back_populates="samples")
     quality_scores = relationship("QualityScore", back_populates="sample", cascade="all, delete-orphan")
@@ -1299,10 +1299,10 @@ class AsyncDB:
                 sample_data = dict(raw_sample_data)
                 if "metadata" in sample_data and "metadata_" not in sample_data:
                     sample_data["metadata_"] = sample_data.pop("metadata")
+                if "id" not in sample_data:
+                    sample_data["id"] = str(uuid.uuid4())
                 sample = Sample(dataset_id=dataset_id, **sample_data)
                 session.add(sample)
                 samples.append(sample)
             await self.db._commit_with_retry(session)
-            for sample in samples:
-                await session.refresh(sample)
             return [{"id": s.id, "dataset_id": s.dataset_id} for s in samples]

@@ -32,12 +32,6 @@ data/*.sqlite3
 # =============================================================================
 outputs/*
 !outputs/.gitkeep
-!outputs/flagship_indic_gst/
-!outputs/flagship_indic_gst/**
-!outputs/flagship_clinical/
-!outputs/flagship_clinical/**
-!outputs/flagship_corporate_law/
-!outputs/flagship_corporate_law/**
 !outputs/evaluation/
 !outputs/evaluation/**
 scratch/

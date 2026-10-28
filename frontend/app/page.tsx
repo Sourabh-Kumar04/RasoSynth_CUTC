@@ -966,7 +966,7 @@ export default function ZenPortalPage() {
           <div className="lg:col-span-7">
             <MerkleTreeGraph
               rootHash="9b87df7a3982f6e9b418a096c429712a5542a1ef248f27af"
-              certificateId="DBOM-FLAGSHIP-GST"
+              certificateId="DBOM-VERIFIED-DATASET"
             />
           </div>
 
@@ -985,7 +985,7 @@ export default function ZenPortalPage() {
             <div className="space-y-2.5 text-xs font-mono">
               <div className="flex justify-between py-1 border-b border-[#1c1c28]/60 text-zinc-400">
                 <span>Dataset Certificate:</span>
-                <span className="text-white font-bold">DBOM-FLAGSHIP-GST</span>
+                <span className="text-white font-bold">DBOM-VERIFIED-DATASET</span>
               </div>
               <div className="flex justify-between py-1 border-b border-[#1c1c28]/60 text-zinc-400">
                 <span>Indic DPDP PII Exposure:</span>

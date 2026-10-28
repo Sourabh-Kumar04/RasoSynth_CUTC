@@ -91,6 +91,7 @@ class ProviderCapability(Enum):
     TEXT_GENERATION = "text_generation"
     VISION = "vision"
     EMBEDDINGS = "embeddings"
+    TEXT_EMBEDDING = "embeddings"
     TOOL_CALLING = "tool_calling"
     STRUCTURED_OUTPUT = "structured_output"
     STREAMING = "streaming"

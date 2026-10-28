@@ -273,7 +273,12 @@ class ResearchLoop:
         deployed = []
 
         for improvement in improvements:
-            if improvement.improvement_percent >= self._min_improvement_threshold:
+            imp_percent = (
+                improvement.benchmark_result.improvement_percent
+                if improvement.benchmark_result is not None
+                else float(improvement.metadata.get("improvement_percent", 0.0))
+            )
+            if imp_percent >= self._min_improvement_threshold:
                 if improvement.risk_level in ["low", "medium"]:
                     improvement.deployed = True
                     improvement.deployment_date = datetime.now(timezone.utc)

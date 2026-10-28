@@ -582,39 +582,39 @@ class TestWorkflow6FastAPIEndpointsRegression:
         assert data["tuned_model"]["mean_token_f1"] > data["base_model"]["mean_token_f1"]
         assert data["tuned_model"]["citation_accuracy_pct"] == 100.0
 
-    def test_get_dataset_dbom_flagship(self, client):
-        # 1. Indic GST
-        res = client.get("/datasets/flagship_indic_gst/dbom")
+    def test_get_dataset_dbom_user_datasets(self, client):
+        # 1. Custom Tax Dataset chosen by user
+        res = client.get("/datasets/user_tax_dataset/dbom")
         assert res.status_code == 200
         data = res.json()
-        assert data["job_id"] == "flagship_indic_gst"
+        assert data["job_id"] == "user_tax_dataset"
         assert "dbom" in data
         assert "nutrition_label_md" in data
         assert data["dbom"]["certificate_id"].startswith("DBOM-")
         assert len(data["dbom"]["merkle_root_hash"]) == 64
         assert "Data Nutrition & Provenance Label" in data["nutrition_label_md"]
 
-        # 2. Clinical Reasoning
-        res_clin = client.get("/datasets/flagship_clinical/dbom")
+        # 2. Clinical Reasoning Dataset chosen by user
+        res_clin = client.get("/datasets/user_clinical_dataset/dbom")
         assert res_clin.status_code == 200
         data_clin = res_clin.json()
-        assert data_clin["job_id"] == "flagship_clinical"
+        assert data_clin["job_id"] == "user_clinical_dataset"
         assert len(data_clin["dbom"]["merkle_root_hash"]) == 64
 
-        # 3. Corporate Law
-        res_corp = client.get("/datasets/flagship_corporate_law/dbom")
+        # 3. Corporate Law Dataset chosen by user
+        res_corp = client.get("/datasets/user_corporate_law_dataset/dbom")
         assert res_corp.status_code == 200
         data_corp = res_corp.json()
-        assert data_corp["job_id"] == "flagship_corporate_law"
+        assert data_corp["job_id"] == "user_corporate_law_dataset"
         assert len(data_corp["dbom"]["merkle_root_hash"]) == 64
 
-        # 4. Hugging Face Card for flagship
-        res_card = client.get("/datasets/flagship_indic_gst/huggingface-card")
+        # 4. Hugging Face Card for user dataset
+        res_card = client.get("/datasets/user_tax_dataset/huggingface-card")
         assert res_card.status_code == 200
-        assert "Indic GST" in res_card.json()["content"]
+        assert "user_tax" in res_card.json()["content"].lower() or "dataset user_tax" in res_card.json()["content"].lower()
 
     def test_get_dbom_badge_svg(self, client):
-        res = client.get("/badges/dbom/flagship_indic_gst.svg")
+        res = client.get("/badges/dbom/user_tax_dataset.svg")
         assert res.status_code == 200
         assert res.headers["content-type"] == "image/svg+xml"
         svg_text = res.text

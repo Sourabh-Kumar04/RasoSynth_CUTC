@@ -329,8 +329,9 @@ class SeedlessGenerator:
     async def _generate_sft(
         self, plan: DatasetPlan, cell: dict, tier: int, cell_index: int = 0, total_cells: int = 1
     ) -> ConstructedSample:
+        lang = str(self.config.get("language", "en"))
         lang_rule = _build_language_instruction(
-            language=self.config.get("language", "en"),
+            language=lang,
             script_mode=self.config.get("script_mode", "native"),
             formality_register=self.config.get("formality_register", "formal"),
             code_switch_intensity=self.config.get("code_switch_intensity", "balanced"),
@@ -607,8 +608,9 @@ class SeedlessGenerator:
     async def _generate_conversational(
         self, plan: DatasetPlan, cell: dict, tier: int, cell_index: int = 0, total_cells: int = 1
     ) -> ConstructedSample:
+        lang = str(self.config.get("language", "en"))
         lang_rule = _build_language_instruction(
-            language=self.config.get("language", "en"),
+            language=lang,
             script_mode=self.config.get("script_mode", "native"),
             formality_register=self.config.get("formality_register", "formal"),
             code_switch_intensity=self.config.get("code_switch_intensity", "balanced"),

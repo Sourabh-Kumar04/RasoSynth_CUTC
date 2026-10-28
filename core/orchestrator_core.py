@@ -589,16 +589,24 @@ class DatasetOrchestrator:
         return {
             **state,
             "constraint_analysis": job["constraint_analysis"],
-            "warnings": state.get("warnings", []) + analysis.warnings,
-            "messages": state["messages"] + [f"Constraint analysis: {analysis.feasibility_score:.0%} feasible"],
+            "warnings": analysis.warnings,
+            "messages": [f"Constraint analysis: {analysis.feasibility_score:.0%} feasible"],
         }
 
     def _feasibility_check(self, state: AgentState) -> str:
         """Check if constraints are feasible."""
         resume_routes = {
+            "discovery": "resume_extract",
+            "discover": "resume_extract",
             "extraction": "resume_filter",
+            "extract": "resume_filter",
             "filtering": "resume_construct",
+            "filter": "resume_construct",
             "construction": "resume_review",
+            "construct": "resume_review",
+            "human_review": "resume_balance",
+            "review": "resume_balance",
+            "balance": "resume_export",
             "export": "resume_export",
         }
         resume_stage = state.get("resume_from_stage")
@@ -696,7 +704,7 @@ class DatasetOrchestrator:
             "current_stage": "query_optimizer",
             "progress": 0.08,
             "agent_artifacts": agent_artifacts,
-            "messages": state["messages"] + [f"Query optimized: {len(intent.specialized_queries)} specialized queries for {intent.domain}"],
+            "messages": [f"Query optimized: {len(intent.specialized_queries)} specialized queries for {intent.domain}"],
         }
 
     async def _early_preview_node(self, state: AgentState) -> AgentState:
@@ -896,7 +904,7 @@ class DatasetOrchestrator:
             "preview_decision": preview_decision,
             "current_stage": "preview_acceptance",
             "progress": 0.15,
-            "messages": state["messages"] + [f"Early preview synthesized ({len(preview_samples)} samples)"],
+            "messages": [f"Early preview synthesized ({len(preview_samples)} samples)"],
         }
 
     def _preview_decision_check(self, state: AgentState) -> str:
@@ -988,7 +996,7 @@ class DatasetOrchestrator:
             "coverage_matrix": coverage.model_dump(),
             "current_stage": "plan",
             "progress": 0.4,
-            "messages": state["messages"] + [f"Generated dataset plan with {len(coverage.cells)} planned coverage cells (Multi-agent strategy + research attached)"],
+            "messages": [f"Generated dataset plan with {len(coverage.cells)} planned coverage cells (Multi-agent strategy + research attached)"],
         }
 
     async def _discover_node(self, state: AgentState) -> AgentState:
@@ -1188,7 +1196,7 @@ class DatasetOrchestrator:
             "multilingual_mode": multilingual,
             "low_resource_mode": low_resource,
             "agent_artifacts": agent_artifacts,
-            "messages": state["messages"] + [
+            "messages": [
                 f"Discovered {len(sources)} sources",
                 f"Multilingual: {multilingual}",
                 f"Low-resource: {low_resource}"
@@ -1557,7 +1565,7 @@ class DatasetOrchestrator:
             "current_stage": "extract",
             "progress": 0.3,
             "agent_artifacts": agent_artifacts,
-            "messages": state["messages"] + [f"Extracted {len(extracted)} content items"],
+            "messages": [f"Extracted {len(extracted)} content items"],
         }
 
     async def _filter_node(self, state: AgentState) -> AgentState:
@@ -1751,7 +1759,7 @@ class DatasetOrchestrator:
             "filtered_samples": filtered,
             "current_stage": "filter",
             "progress": 0.5,
-            "messages": state["messages"] + [f"Filtered to {len(filtered)} quality samples"],
+            "messages": [f"Filtered to {len(filtered)} quality samples"],
         }
 
     def _compute_sample_topic_relevance(self, instruction: str, response: str, user_prompt: str, target_domain: str) -> float:
@@ -2218,7 +2226,7 @@ class DatasetOrchestrator:
             "constructed_samples": samples,
             "current_stage": "construct",
             "progress": 0.7,
-            "messages": state["messages"] + [f"Constructed {len(samples)} training samples"],
+            "messages": [f"Constructed {len(samples)} training samples"],
         }
 
     def _balance_samples(
@@ -2390,14 +2398,24 @@ class DatasetOrchestrator:
             new_inst = tmpl_inst.format(inst=clean_inst_body)
             new_resp = tmpl_resp.format(resp=orig_resp)
 
-            key = " ".join(f"{new_inst} {new_resp}".lower().split())
-            if key in seen_keys:
+            tuple_key = (
+                " ".join(new_inst.casefold().split()),
+                " ".join(new_resp.casefold().split()),
+            )
+            str_key = " ".join(f"{new_inst} {new_resp}".lower().split())
+
+            if tuple_key in seen_keys or str_key in seen_keys:
                 new_inst = f"{new_inst} [Scenario Variant #{cycle + 1}]"
-                key = " ".join(f"{new_inst} {new_resp}".lower().split())
-                if key in seen_keys:
+                tuple_key = (
+                    " ".join(new_inst.casefold().split()),
+                    " ".join(new_resp.casefold().split()),
+                )
+                str_key = " ".join(f"{new_inst} {new_resp}".lower().split())
+                if tuple_key in seen_keys or str_key in seen_keys:
                     continue
 
-            seen_keys.add(key)
+            seen_keys.add(tuple_key)
+            seen_keys.add(str_key)
             new_sample = copy.deepcopy(base)
             new_sample["instruction"] = new_inst
             new_sample["response"] = new_resp
@@ -2570,7 +2588,7 @@ class DatasetOrchestrator:
             "evidence_context": evidence_context,
             "current_stage": "quality_eval",
             "progress": 0.75,
-            "messages": state["messages"] + [
+            "messages": [
                 f"Quality eval (topic_fidelity={avg_topic:.2f}, composite={composite_score:.2f}, "
                 f"ensemble_reviewed={ensemble_reviewed}, missing_references={missing_reference_count}, pass={passed})"
             ],
@@ -2617,7 +2635,7 @@ class DatasetOrchestrator:
             "balance_report": report,
             "current_stage": "balance",
             "progress": 0.90,
-            "messages": state["messages"] + [f"Balanced Dataset Engine guaranteed exact {len(balanced)} rows across curriculum tiers"],
+            "messages": [f"Balanced Dataset Engine guaranteed exact {len(balanced)} rows across curriculum tiers"],
         }
 
     async def _export_node(self, state: AgentState) -> AgentState:
@@ -2999,7 +3017,7 @@ class DatasetOrchestrator:
             "balance_report": balance_report,
             "current_stage": "export",
             "progress": 1.0,
-            "messages": state["messages"] + [
+            "messages": [
                 f"Balanced and exported {len(samples)} samples; removed {balance_report['samples_removed']} over-represented samples"
             ],
         }
@@ -3337,7 +3355,7 @@ class DatasetOrchestrator:
             "constructed_samples": samples,
             "human_approval_needed": hitl_enabled and bool(review_samples),
             "human_approved": approved,
-            "messages": state.get("messages", []) + [
+            "messages": [
                 f"HITL audit: {submitted}/{constructed_count} samples submitted "
                 f"({review_percentage:.1f}% requested), "
                 f"mode={hitl_mode}, approved={approved}"
@@ -3349,9 +3367,9 @@ class DatasetOrchestrator:
         errors = state.get("errors", [])
         return {
             **state,
-            "errors": errors + ["Pipeline error occurred"],
+            "errors": ["Pipeline error occurred"],
             "should_retry": len(errors) < 3,
-            "adaptation_notes": state.get("adaptation_notes", []) + ["Consider relaxing constraints"]
+            "adaptation_notes": ["Consider relaxing constraints"]
         }
 
     async def _adapt_strategy_node(self, state: AgentState) -> AgentState:
@@ -3359,20 +3377,20 @@ class DatasetOrchestrator:
         analysis = state.get("constraint_analysis", {})
         retry_count = state.get("filter_retry_count", 0) + 1
 
-        messages = list(state.get("messages", []))
-        notes    = list(state.get("adaptation_notes", []))
+        new_messages = []
+        new_notes    = []
 
         if "quality_budget_conflict" in analysis.get("conflicts", []):
-            messages.append("Adapting: reducing quality threshold due to budget constraint")
-            notes.append("quality_threshold_lowered")
+            new_messages.append("Adapting: reducing quality threshold due to budget constraint")
+            new_notes.append("quality_threshold_lowered")
 
-        messages.append(f"Strategy adaptation #{retry_count} applied")
+        new_messages.append(f"Strategy adaptation #{retry_count} applied")
 
         return {
             **state,
             "filter_retry_count": retry_count,
-            "messages": messages,
-            "adaptation_notes": notes,
+            "messages": new_messages,
+            "adaptation_notes": new_notes,
             "should_retry": True,
         }
 

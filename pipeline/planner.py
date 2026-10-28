@@ -174,15 +174,17 @@ class CoveragePlanner:
                 lang = combo[lang_idx]
                 if lang in buckets:
                     buckets[lang].append(combo)
-            # Interleave round-robin
-            interleaved: list = []
-            iters = [iter(buckets[lv]) for lv in lang_values]
-            while len(interleaved) < target_size * n_langs:  # overgenerate then slice
-                for it in iters:
-                    val = next(it, None)
-                    if val is not None:
-                        interleaved.append(val)
-            combinations = interleaved
+            # Interleave round-robin across languages safely without infinite loops
+            active_langs = [lv for lv in lang_values if buckets.get(lv)]
+            if active_langs:
+                cycle_iters = [itertools.cycle(buckets[lv]) for lv in active_langs]
+                interleaved: list = []
+                while len(interleaved) < target_size:
+                    for it in cycle_iters:
+                        interleaved.append(next(it))
+                        if len(interleaved) >= target_size:
+                            break
+                combinations = interleaved
 
         # Fix #1: build exactly target_size cells — no more, no less
         cells = []

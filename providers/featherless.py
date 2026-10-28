@@ -216,14 +216,14 @@ class FeatherlessProvider(BaseProvider):
     async def health_check(self) -> ProviderHealth:
         try:
             if not self.client:
-                return ProviderHealth(is_healthy=False, latency_ms=0, last_error="Not initialized")
+                return ProviderHealth(provider=self.name, is_healthy=False, last_error="Not initialized")
             import time
             start = time.time()
             models = await self.client.models.list()
             latency = (time.time() - start) * 1000
-            return ProviderHealth(is_healthy=True, latency_ms=latency, active_models=len(models.data) if hasattr(models, "data") else 1)
+            return ProviderHealth(provider=self.name, is_healthy=True, avg_latency_ms=latency)
         except Exception as e:
-            return ProviderHealth(is_healthy=False, latency_ms=0, last_error=str(e))
+            return ProviderHealth(provider=self.name, is_healthy=False, last_error=str(e))
 
     def _estimate_cost(self, tokens: int) -> float:
         return (tokens / 1000) * 0.0002

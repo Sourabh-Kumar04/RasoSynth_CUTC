@@ -87,7 +87,7 @@ RasoSynthTune provides a developer-first interface accessible via CLI, REST API,
 rasosynthtune generate --domain "Indian Taxation & GST Compliance" --size 1000 --format jsonl
 
 # Audit dataset for PII leakage, contamination, and Merkle root integrity
-rasosynthtune audit --dataset outputs/flagship_indic_gst/flagship_indic_gst_sft.jsonl
+rasosynthtune audit --dataset outputs/<dataset-id>/dataset_sft.jsonl
 
 # Run live latency, quality, and ROI benchmark suite
 rasosynthtune benchmark

@@ -508,10 +508,14 @@ Output strictly in JSON format as a list of objects:
                                 curriculum_order=i
                             )
                             self._difficulty_distribution[s.difficulty_tier] += 1
+                            has_generated = True
                             yield s
                         continue  # Successfully generated via LLM
                 except Exception as e:
                     logger.warning(f"LLM sample generation failed for chunk {i}: {e}.")
+
+        if locals().get("has_generated"):
+            return
 
         # Fallback Heuristics - ONLY run if chunk is clean and domain-relevant
         for i, chunk in enumerate(chunks):
@@ -603,10 +607,14 @@ Output strictly in JSON format as a list of objects:
                                     curriculum_order=i,
                                 )
                                 self._difficulty_distribution[s.difficulty_tier] += 1
+                                has_generated_rag = True
                                 yield s
                         continue
                 except Exception as e:
                     logger.debug(f"RAG LLM generation fallback: {e}")
+
+        if locals().get("has_generated_rag"):
+            return
 
         # Fallback RAG generator
         for i, chunk in enumerate(chunks):
@@ -727,10 +735,14 @@ Output strictly in JSON format as a list of objects:
                                     curriculum_order=i,
                                 )
                                 self._difficulty_distribution[s.difficulty_tier] += 1
+                                has_generated_cot = True
                                 yield s
                         continue
                 except Exception as e:
                     logger.debug(f"CoT LLM generation fallback: {e}")
+
+        if locals().get("has_generated_cot"):
+            return
 
         # Fallback using cot_synthesizer helper functions
         for i, chunk in enumerate(chunks):
@@ -827,10 +839,14 @@ Output strictly in JSON format as a list of objects:
                                 format="sharegpt",
                             )
                             self._difficulty_distribution[s.difficulty_tier] += 1
+                            has_generated_socratic = True
                             yield s
                             continue
                 except Exception as e:
                     logger.debug(f"Socratic LLM generation fallback: {e}")
+
+        if locals().get("has_generated_socratic"):
+            return
 
         # Fallback dialectic generator
         for i, chunk in enumerate(chunks):
@@ -919,10 +935,14 @@ Output strictly in JSON format as a list of objects:
                                         curriculum_order=i,
                                     )
                                 self._difficulty_distribution[s.difficulty_tier] += 1
+                                has_generated_pref = True
                                 yield s
                         continue
                 except Exception as e:
                     logger.debug(f"Preference LLM generation fallback: {e}")
+
+        if locals().get("has_generated_pref"):
+            return
 
         # Fallback preference builder
         for i, chunk in enumerate(chunks):
@@ -994,10 +1014,14 @@ Output strictly in JSON format as a list of objects:
                                 format="sharegpt",
                             )
                             self._difficulty_distribution[s.difficulty_tier] += 1
+                            has_generated_mt = True
                             yield s
                             continue
                 except Exception as e:
                     logger.debug(f"Multi-turn LLM generation fallback: {e}")
+
+        if locals().get("has_generated_mt"):
+            return
 
         # Fallback multi-turn builder
         for i, chunk in enumerate(chunks):
@@ -1074,10 +1098,14 @@ Output strictly in JSON format as a list of objects:
                                     format="openai_tool_calls",
                                 )
                                 self._difficulty_distribution[s.difficulty_tier] += 1
+                                has_generated_tc = True
                                 yield s
                         continue
                 except Exception as e:
                     logger.debug(f"Tool calling LLM generation fallback: {e}")
+
+        if locals().get("has_generated_tc"):
+            return
 
         # Fallback tool calling constructor
         for i, chunk in enumerate(chunks):

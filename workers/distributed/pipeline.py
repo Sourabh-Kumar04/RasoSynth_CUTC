@@ -234,6 +234,8 @@ class PipelineExecutor:
 
             except Exception as e:
                 # Handle failure with retry
+                stage_succeeded = False
+                last_error = e
                 for retry in range(stage.retry_count):
                     try:
                         await asyncio.sleep(stage.retry_delay * (retry + 1))
@@ -243,12 +245,15 @@ class PipelineExecutor:
                             context
                         )
                         results[stage_name] = result
+                        stage_succeeded = True
                         break
-                    except Exception:
+                    except Exception as retry_err:
+                        last_error = retry_err
                         continue
 
-                results[stage_name] = {"error": str(e)}
-                failed_stages.append(stage_name)
+                if not stage_succeeded:
+                    results[stage_name] = {"error": str(last_error)}
+                    failed_stages.append(stage_name)
 
         return {
             "pipeline_id": pipeline.pipeline_id,

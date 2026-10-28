@@ -3067,22 +3067,29 @@ async def get_job_report(job_id: str):
 
 
 def _resolve_dynamic_disk_dataset(identifier: str) -> Optional[dict]:
-    """Dynamically scan configured output directories without hardcoding paths."""
+    """Dynamically scan configured output directories without path traversal."""
     from pathlib import Path
-    p = Path(identifier.strip())
-    if p.exists() and p.is_file():
-        ext = p.suffix.lstrip(".").lower()
-        return {
-            "id": p.stem,
-            "name": p.stem,
-            "type": ext,
-            "output_path": str(p),
-            "dir": p.parent,
-        }
+    raw_ident = identifier.strip()
+    candidate_roots = [Path("outputs").resolve(), Path("data").resolve()]
 
-    target = identifier.strip().lower()
-    clean_target = p.stem.lower()
-    candidate_roots = [Path("outputs"), Path("data")]
+    # If identifier is a path, ensure it is strictly contained within allowed roots
+    try:
+        p = Path(raw_ident).resolve()
+        is_safe = any(p == root or root in p.parents for root in candidate_roots)
+        if is_safe and p.exists() and p.is_file():
+            ext = p.suffix.lstrip(".").lower()
+            return {
+                "id": p.stem,
+                "name": p.stem,
+                "type": ext,
+                "output_path": str(p),
+                "dir": p.parent,
+            }
+    except Exception:
+        pass
+
+    target = Path(raw_ident).name.lower()
+    clean_target = Path(raw_ident).stem.lower()
 
     for root in candidate_roots:
         if not root.exists():
@@ -3090,7 +3097,7 @@ def _resolve_dynamic_disk_dataset(identifier: str) -> Optional[dict]:
         # Direct folder or file match
         for item in root.glob("*"):
             norm_name = item.name.lower()
-            if target in norm_name or clean_target in norm_name:
+            if target == norm_name or clean_target == norm_name or (len(target) > 3 and target in norm_name):
                 if item.is_dir():
                     # Look for data files inside
                     for ext in ("jsonl", "parquet", "csv", "xml", "json"):

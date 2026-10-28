@@ -381,10 +381,28 @@ class DatasetPackager:
         loop = asyncio.get_event_loop()
 
         def create():
-            mode = 'w:gz' if compression == CompressionType.TAR_GZ else 'w:zstd'
-            with tarfile.open(output, mode) as tf:
-                for f in files:
-                    tf.add(f, arcname=os.path.basename(f))
+            if compression == CompressionType.TAR_GZ:
+                with tarfile.open(output, 'w:gz') as tf:
+                    for f in files:
+                        tf.add(f, arcname=os.path.basename(f))
+            elif compression == CompressionType.TAR_ZST:
+                try:
+                    import zstandard
+                    cctx = zstandard.ZstdCompressor(level=3)
+                    with open(output, 'wb') as f_out:
+                        with cctx.stream_writer(f_out) as compressor:
+                            with tarfile.open(fileobj=compressor, mode='w|') as tf:
+                                for f in files:
+                                    tf.add(f, arcname=os.path.basename(f))
+                except ImportError:
+                    logger.warning("zstandard not installed, falling back to gzip")
+                    with tarfile.open(output, 'w:gz') as tf:
+                        for f in files:
+                            tf.add(f, arcname=os.path.basename(f))
+            else:
+                with tarfile.open(output, 'w') as tf:
+                    for f in files:
+                        tf.add(f, arcname=os.path.basename(f))
 
         await loop.run_in_executor(None, create)
 
@@ -392,14 +410,14 @@ class DatasetPackager:
         """Calculate SHA256 checksum of archive."""
         loop = asyncio.get_event_loop()
 
-        async def calc():
+        def calc():
             sha256 = hashlib.sha256()
             with open(archive_path, 'rb') as f:
                 while chunk := f.read(8192):
                     sha256.update(chunk)
             return sha256.hexdigest()
 
-        return await loop.run_in_executor(None, lambda: asyncio.run(calc()))
+        return await loop.run_in_executor(None, calc)
 
     async def _generate_file_manifest(self, chunks: list[list[dict]], archive_path: str) -> list[dict]:
         """Generate file manifest for the package."""
@@ -440,5 +458,5 @@ class ZstdCompressor:
         """Finalize compression."""
         if self._compressor:
             loop = asyncio.get_event_loop()
-            return await loop.run_in_executor(None, self._compressor.flush())
+            return await loop.run_in_executor(None, lambda: self._compressor.flush())
         return b""

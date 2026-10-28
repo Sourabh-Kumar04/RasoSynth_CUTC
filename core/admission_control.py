@@ -172,12 +172,16 @@ class AdmissionController:
             return False
         except asyncio.TimeoutError:
             # Timeout waiting in queue — remove from queue and reject
-            async with self._queue_lock:
-                self._queue = [
-                    q for q in self._queue
-                    if q[2].job_id != job_id
-                ]
-            self._reject_job(job_id, "queue_timeout")
+            if job_id in self._active_jobs:
+                # Slot was admitted right at timeout boundary: release immediately to prevent semaphore leak
+                self.release(job_id)
+            else:
+                async with self._queue_lock:
+                    self._queue = [
+                        q for q in self._queue
+                        if q[2].job_id != job_id
+                    ]
+                self._reject_job(job_id, "queue_timeout")
             return False
 
     def release(self, job_id: str) -> None:

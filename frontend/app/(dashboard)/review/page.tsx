@@ -455,7 +455,7 @@ export default function ReviewPage() {
         <div className="rounded-xl border border-purple-500/30 bg-[#0c0c14] p-4 shadow-xl">
           <MerkleTreeGraph
             rootHash={jobFilter ? `${jobFilter.replace(/-/g, '').slice(0, 32)}9b87df7a` : "9b87df7a3982f6e9b418a096c429712a5542a1ef248f27af"}
-            certificateId={jobFilter ? `DBOM-${jobFilter.slice(0, 8).toUpperCase()}` : "DBOM-FLAGSHIP-GST"}
+            certificateId={jobFilter ? `DBOM-${jobFilter.slice(0, 8).toUpperCase()}` : "DBOM-VERIFIED"}
           />
         </div>
       )}

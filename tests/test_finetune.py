@@ -233,24 +233,24 @@ async def test_finetune_string_dataset_id_and_listing():
         "status": "pending",
         "base_model": "sarvamai/sarvam-2b-v0.5",
         "output_model_name": "test1",
-        "dataset_id": "flagship_indic_gst",
+        "dataset_id": "user_selected_dataset",
         "config": {"epochs": 3},
     })
     assert fj.id == job_id
-    assert fj.dataset_id == "flagship_indic_gst"
+    assert fj.dataset_id == "user_selected_dataset"
 
     # 2. list_jobs should retrieve it smoothly without ValueError
     jobs = await manager.list_jobs(limit=10)
     found = [j for j in jobs if j["id"] == job_id]
     assert len(found) == 1
-    assert found[0]["dataset_id"] == "flagship_indic_gst"
+    assert found[0]["dataset_id"] == "user_selected_dataset"
     assert found[0]["output_model_name"] == "test1"
 
     # 3. get_job should retrieve it smoothly
     fetched = await manager.get_job(job_id)
     assert fetched is not None
     assert fetched["id"] == job_id
-    assert fetched["dataset_id"] == "flagship_indic_gst"
+    assert fetched["dataset_id"] == "user_selected_dataset"
 
     await db.close()
 

@@ -157,10 +157,20 @@ class OpenRouterProvider(AbstractProviderPlugin):
         ProviderCapability.VISION,
     ]
 
-    def __init__(self, config: OpenRouterConfig, model: str = "anthropic/claude-3.5-sonnet"):
-        super().__init__(config, model)
-        self.openrouter_config = config
-        self.base_url = config.base_url or config.api_base
+    def __init__(self, config: Optional[Any] = None, model: str = "anthropic/claude-3.5-sonnet"):
+        super().__init__()
+        if isinstance(config, dict):
+            self.config = OpenRouterConfig(**config)
+        elif isinstance(config, OpenRouterConfig):
+            self.config = config
+        else:
+            self.config = OpenRouterConfig(
+                api_key=os.environ.get("OPENROUTER_API_KEY", ""),
+                base_url=os.environ.get("OPENROUTER_BASE_URL", "https://openrouter.ai/api/v1"),
+            )
+        self.openrouter_config = self.config
+        self.model = model
+        self.base_url = self.config.base_url or self.config.api_base
         self._client = None
 
     async def initialize(self, config: Optional[dict] = None) -> None:
@@ -203,7 +213,7 @@ class OpenRouterProvider(AbstractProviderPlugin):
 
     async def generate(
         self,
-        prompt: str,
+        prompt: Any,
         system_prompt: Optional[str] = None,
         temperature: float = 0.7,
         max_tokens: Optional[int] = None,
@@ -216,10 +226,18 @@ class OpenRouterProvider(AbstractProviderPlugin):
         import time
         start_time = time.time()
 
+        if hasattr(prompt, "input"):
+            prompt_text = str(prompt.input or "")
+            system_prompt = getattr(prompt, "system_prompt", None) or system_prompt
+            temperature = getattr(prompt, "temperature", temperature)
+            max_tokens = getattr(prompt, "max_tokens", max_tokens)
+        else:
+            prompt_text = str(prompt or "")
+
         messages = []
         if system_prompt:
             messages.append({"role": "system", "content": system_prompt})
-        messages.append({"role": "user", "content": prompt})
+        messages.append({"role": "user", "content": prompt_text})
 
         payload = {
             "model": self.model,

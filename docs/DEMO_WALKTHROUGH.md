@@ -77,6 +77,6 @@ python scripts/demo_finetune_eval.py
 # Run live latency & throughput benchmark suite
 python scripts/run_benchmarks.py
 
-# Inspect packaged Flagship Open-Access Community Release
-ls -lh outputs/flagship_indic_gst/
+# Inspect user-generated output directory
+ls -lh outputs/<dataset-id>/
 ```

@@ -155,10 +155,20 @@ class TogetherProvider(AbstractProviderPlugin):
         ProviderCapability.LONG_CONTEXT,
     ]
 
-    def __init__(self, config: TogetherConfig, model: str = "Meta-Llama-3.3-70B-Instruct"):
-        super().__init__(config, model)
-        self.together_config = config
-        self.base_url = config.base_url or config.api_base
+    def __init__(self, config: Optional[Any] = None, model: str = "Meta-Llama-3.3-70B-Instruct"):
+        super().__init__()
+        if isinstance(config, dict):
+            self.config = TogetherConfig(**config)
+        elif isinstance(config, TogetherConfig):
+            self.config = config
+        else:
+            self.config = TogetherConfig(
+                api_key=os.environ.get("TOGETHER_API_KEY", ""),
+                base_url=os.environ.get("TOGETHER_BASE_URL", "https://api.together.xyz/v1"),
+            )
+        self.together_config = self.config
+        self.model = model
+        self.base_url = self.config.base_url or self.config.api_base
         self._client = None
 
     async def initialize(self, config: Optional[dict] = None) -> None:
@@ -194,7 +204,7 @@ class TogetherProvider(AbstractProviderPlugin):
 
     async def generate(
         self,
-        prompt: str,
+        prompt: Any,
         system_prompt: Optional[str] = None,
         temperature: float = 0.7,
         max_tokens: Optional[int] = None,
@@ -207,10 +217,18 @@ class TogetherProvider(AbstractProviderPlugin):
         import time
         start_time = time.time()
 
+        if hasattr(prompt, "input"):
+            prompt_text = str(prompt.input or "")
+            system_prompt = getattr(prompt, "system_prompt", None) or system_prompt
+            temperature = getattr(prompt, "temperature", temperature)
+            max_tokens = getattr(prompt, "max_tokens", max_tokens)
+        else:
+            prompt_text = str(prompt or "")
+
         messages = []
         if system_prompt:
             messages.append({"role": "system", "content": system_prompt})
-        messages.append({"role": "user", "content": prompt})
+        messages.append({"role": "user", "content": prompt_text})
 
         # Together AI uses different format
         payload = {

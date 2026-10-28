@@ -24,20 +24,14 @@ test.describe('RasoSynthTune 2.0.0 Enterprise E2E Workflows', () => {
     }
   });
 
-  test('Fine-Tune Studio loads with 1-Click Flagship Indic GST Preset', async ({ page }) => {
+  test('Fine-Tune Studio loads with User Dataset selection', async ({ page }) => {
     await page.goto('/finetune');
 
     // Verify Fine-Tune Studio UI renders
     await expect(page.locator('text=Fine-Tune Studio').first()).toBeVisible();
 
-    // Check for Flagship Indic GST Fine-Tuning button
-    const flagshipBtn = page.getByRole('button', { name: /Flagship Indic GST/i });
-    if (await flagshipBtn.count() > 0) {
-      await expect(flagshipBtn.first()).toBeVisible();
-      // Click preset and verify form inputs populate
-      await flagshipBtn.first().click();
-      await expect(page.locator('input[value*="sarvamai/sarvam-2b-v0.5"]').or(page.locator('text=sarvamai/sarvam-2b-v0.5'))).toBeVisible();
-    }
+    // Verify model and dataset configuration options render
+    await expect(page.locator('text=Base Model').or(page.locator('text=Model Architecture'))).toBeVisible();
   });
 
   test('Research page renders empirical benchmark comparisons and ROI scorecard', async ({ page }) => {

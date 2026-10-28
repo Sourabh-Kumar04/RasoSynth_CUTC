@@ -55,8 +55,11 @@ def run_dry_run():
         check("Model catalogue population", len(models_data) > 0, f"{len(models_data)} models registered")
 
         # 3. Fine-Tuning Job Creation with Colab Default
+        ds_res = client.get("/datasets")
+        ds_list = (ds_res.json().get("data", []) if isinstance(ds_res.json(), dict) else ds_res.json()) if ds_res.status_code == 200 else []
+        chosen_id = ds_list[0]["id"] if ds_list else "user-selected-dataset"
         ft_payload = {
-            "dataset_path": "outputs/flagship_indic_gst/flagship_indic_gst_sft.jsonl",
+            "dataset_id": chosen_id,
             "base_model": "sarvamai/sarvam-2b-v0.5",
             "output_model_name": "dryrun-test-model",
             "execution_target": "colab",

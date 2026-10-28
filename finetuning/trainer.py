@@ -627,14 +627,20 @@ class _ProgressCallback:
     def on_log(self, args, state, control, logs=None, **_):
         if not logs or "loss" not in logs:
             return
-        total = state.max_steps or 1
         step = state.global_step or 0
+        if state.max_steps and state.max_steps > 0:
+            pct = min(step / state.max_steps, 1.0) * 100
+        elif self._total_epochs and self._total_epochs > 0 and state.epoch is not None:
+            pct = min(float(state.epoch) / self._total_epochs, 1.0) * 100
+        else:
+            pct = 0.0
+        pct = max(0.0, pct)
         self._put({
             "type": "progress",
             "epoch": round(float(state.epoch or 0), 2),
             "step": step,
             "loss": round(logs["loss"], 4),
-            "progress": round(min(step / total, 1.0) * 100, 1),
+            "progress": round(pct, 1),
             "lr": logs.get("learning_rate"),
         })
 

@@ -79,11 +79,10 @@ def test_backend_contracts():
                 asyncio.run(db_instance.create_job({"id": job_uuid, "status": "completed"}))
                 asyncio.run(db_instance.create_dataset(
                     job_id=job_uuid,
-                    name="Smoke Test Indic Dataset",
+                    name="User Selected Dataset",
                     type="alpaca",
                     size=25,
                     metadata={"domain": "Indic Instruction"},
-                    output_path="outputs/flagship_indic_gst",
                 ))
             ds_res = client.get("/datasets")
             ds_body = ds_res.json()
@@ -93,8 +92,9 @@ def test_backend_contracts():
 
         # 3. Model Training Run with Webhook & Colab Target
         print("\n* 2. Launch Model Training Run with Colab Target & Webhook")
+        chosen_ds_id = datasets[0].get("id") if datasets else "user-selected-dataset"
         ft_payload = {
-            "dataset_path": "outputs/flagship_indic_gst/flagship_indic_gst_sft.jsonl",
+            "dataset_id": chosen_ds_id,
             "base_model": "sarvamai/sarvam-2b-v0.5",
             "output_model_name": "smoke-test-colab-lora",
             "execution_target": "colab",

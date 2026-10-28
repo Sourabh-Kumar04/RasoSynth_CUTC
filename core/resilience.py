@@ -481,6 +481,7 @@ class ConnectionPool(Generic[T]):
                     self._in_use += 1
                     return conn
                 self._total_failed += 1
+                self._total_created = max(0, self._total_created - 1)
 
             # Create new if under limit
             if self._total_created < self.config.max_size:
@@ -508,6 +509,7 @@ class ConnectionPool(Generic[T]):
                 self._pool.append(conn)
             else:
                 self._total_failed += 1
+                self._total_created = max(0, self._total_created - 1)
 
     async def _remove_connection(self, conn: PooledConnection) -> None:
         """Remove connection from pool."""
@@ -515,6 +517,7 @@ class ConnectionPool(Generic[T]):
             if conn in self._pool:
                 self._pool.remove(conn)
             self._in_use = max(0, self._in_use - 1)
+            self._total_created = max(0, self._total_created - 1)
 
     def get_metrics(self) -> Dict[str, Any]:
         """Get pool metrics."""
