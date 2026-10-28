@@ -2,6 +2,7 @@ import type { Metadata } from 'next'
 import './globals.css'
 import { Providers } from '@/components/providers'
 import { Toaster } from '@/components/ui/toaster'
+import { MockModeBanner } from '@/components/mock-mode-banner'
 
 export const metadata: Metadata = {
   title: 'RasoSynthTune | Autonomous Dataset Synthesis & Fine-Tuning Studio',
@@ -25,6 +26,7 @@ export default function RootLayout({
     <html lang="en" className="dark">
       <body className="font-sans antialiased bg-[#0a0a0f] text-[#f8fafc]">
         <Providers>
+          <MockModeBanner />
           {children}
           <Toaster />
         </Providers>

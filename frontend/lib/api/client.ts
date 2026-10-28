@@ -1733,7 +1733,7 @@ dataset_samples_generated_total 4520`
       return parse({
         jobs: [
           {
-            id: 'ft-job-demo-1',
+            id: 'demo-finetune-job-1',
             status: 'running',
             base_model: 'HuggingFaceTB/SmolLM2-1.7B-Instruct',
             output_model_name: 'SmolLM2-RasoSynth-Medical-SFT',
@@ -1754,7 +1754,7 @@ dataset_samples_generated_total 4520`
             }
           },
           {
-            id: 'ft-job-demo-2',
+            id: 'demo-finetune-job-2',
             status: 'completed',
             base_model: 'meta-llama/Meta-Llama-3-8B-Instruct',
             output_model_name: 'Llama3-RasoSynth-Reasoning-v2',

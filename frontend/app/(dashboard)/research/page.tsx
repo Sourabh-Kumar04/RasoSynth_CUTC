@@ -131,19 +131,15 @@ export default function ResearchPage() {
   const [benchmarking, setBenchmarking] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [toast, setToast] = useState<{ msg: string; ok: boolean } | null>(null)
+  // No last run is claimed until the API reports one: a fixed past date,
+  // model, and duration must never stand in for a real run.
   const [lastRunMeta, setLastRunMeta] = useState<{
     timestamp: string
     model: string
     benchmark: string
     duration: string
     status: string
-  } | null>({
-    timestamp: '26 Oct 2026, 17:42 UTC',
-    model: 'DeepSeek-R1 / Gemini 1.5 Flash Consensus',
-    benchmark: 'Auto-Curriculum Empirical Sweep (5-Tier)',
-    duration: '43.2s',
-    status: 'Verified & Active',
-  })
+  } | null>(null)
 
   // Technique active toggles state
   const [enabledToggles, setEnabledToggles] = useState<Record<string, boolean>>(() => {
@@ -212,14 +208,9 @@ export default function ResearchPage() {
     setTriggering(true)
     try {
       await api.triggerResearch({})
-      setLastRunMeta({
-        timestamp: 'Just now (26 Oct 2026)',
-        model: 'DeepSeek-R1 / Gemini 1.5 Flash Consensus',
-        benchmark: 'Auto-Curriculum Empirical Sweep (5-Tier)',
-        duration: '44.8s',
-        status: 'Convergence Verified',
-      })
-      showToast('Empirical research cycle completed successfully')
+      // Triggering is not completion: no duration, model, or verdict is
+      // claimed here. Results appear only when a run reports back.
+      showToast('Research cycle triggered — results appear when the cycle reports back')
       await fetchAll()
     } catch (e: any) {
       showToast(e?.message ?? 'Failed to execute research cycle', false)
@@ -343,10 +334,10 @@ export default function ResearchPage() {
               <div>
                 <p className="text-[10px] text-[#94a3b8] font-mono uppercase tracking-wider">Last Run Cycle</p>
                 <p className="text-base font-bold font-mono text-cyan-400 mt-1">
-                  {lastRunMeta?.timestamp ?? '26 Oct 2026, 17:42 UTC'}
+                  {lastRunMeta?.timestamp ?? 'No run recorded yet'}
                 </p>
                 <p className="text-[10px] text-[#64748b] font-mono mt-0.5">
-                  {lastRunMeta?.duration} · {lastRunMeta?.status}
+                  {lastRunMeta ? `${lastRunMeta.duration} · ${lastRunMeta.status}` : 'No run recorded yet'}
                 </p>
               </div>
               <div className="h-9 w-9 rounded-md bg-cyan-500/10 border border-cyan-500/30 flex items-center justify-center transition-transform group-hover:scale-110">
@@ -487,7 +478,7 @@ export default function ResearchPage() {
                   <div>
                     <p className="text-[10px] text-[#94a3b8] font-mono uppercase">Schema Accuracy</p>
                     <p className="text-xl font-bold font-mono text-cyan-400 mt-0.5">
-                      {benchmarks?.results?.benchmark_provider_quality?.schema_parsing_success_rate_pct ?? '100.0'}%
+                      {benchmarks?.results?.benchmark_provider_quality?.schema_parsing_success_rate_pct != null ? `${benchmarks.results.benchmark_provider_quality.schema_parsing_success_rate_pct}%` : '—'}
                     </p>
                     <span className="text-[10px] text-[#64748b] font-mono">Zero formatting collapse</span>
                   </div>

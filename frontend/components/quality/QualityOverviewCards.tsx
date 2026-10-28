@@ -14,25 +14,22 @@ interface QualityOverview {
 export default function QualityOverviewCards() {
   const [data, setData] = useState<QualityOverview | null>(null);
   const [loading, setLoading] = useState(true);
+  const [loadError, setLoadError] = useState(false);
 
   useEffect(() => {
     api.getQualityOverview()
       .then((res: any) => {
+        // Mock-mode responses must never render as live.
+        const mockMode = typeof window !== 'undefined' && localStorage.getItem('mockMode') === 'true';
         setData({
           ...res,
-          is_live: true,
+          is_live: !mockMode,
         });
       })
       .catch(() => {
-        // Honest fallback to calibrated system benchmark values
-        setData({
-          average_quality: 0.842,
-          total_jobs: 6,
-          total_samples_reviewed: 138,
-          approval_rate: 0.89,
-          rejection_rate: 0.11,
-          is_live: false,
-        });
+        // No fallback numbers: an unavailable metric shows as unavailable.
+        setData(null);
+        setLoadError(true);
       })
       .finally(() => setLoading(false));
   }, []);
@@ -45,36 +42,44 @@ export default function QualityOverviewCards() {
     );
   }
 
+  if (loadError) {
+    return (
+      <div className="p-4 text-[#94a3b8] font-mono text-xs border border-[#272738] rounded-md bg-[#12121a]">
+        Quality overview unavailable — live metrics could not be loaded.
+      </div>
+    );
+  }
+
   const formatRate = (rate: number | undefined) => {
-    if (rate === undefined || rate === null) return "0%";
+    if (rate === undefined || rate === null) return "—";
     if (rate <= 1) return `${Math.round(rate * 100)}%`;
     return `${Math.round(rate)}%`;
   };
 
-  const avgScore = data?.average_quality ?? 0.842;
-  const avgPct = avgScore <= 1 ? (avgScore * 100).toFixed(1) : Number(avgScore).toFixed(1);
+  const avgScore = data?.average_quality ?? null;
+  const avgPct = avgScore == null ? null : avgScore <= 1 ? (avgScore * 100).toFixed(1) : Number(avgScore).toFixed(1);
 
   const cards = [
     {
       label: "Average Quality",
       sub: "5D Rubric Mean",
-      value: `${avgPct}%`,
+      value: avgPct == null ? '—' : `${avgPct}%`,
       icon: Award,
-      color: Number(avgPct) > 75 ? "text-[#10b981]" : Number(avgPct) > 50 ? "text-amber-400" : "text-rose-400",
+      color: avgPct == null ? "text-zinc-400" : Number(avgPct) > 75 ? "text-[#10b981]" : Number(avgPct) > 50 ? "text-amber-400" : "text-rose-400",
       badge: "MT-Bench / Jury",
     },
     {
       label: "Certified Datasets",
       sub: "Active Repositories",
-      value: (data?.total_jobs ?? 6).toString(),
+      value: (data?.total_jobs ?? '—').toString(),
       icon: Database,
       color: "text-white",
-      badge: "6 Catalogued",
+      badge: "Catalogued",
     },
     {
       label: "Samples Reviewed",
       sub: "Automated & HITL",
-      value: (data?.total_samples_reviewed ?? 138).toLocaleString(),
+      value: data?.total_samples_reviewed != null ? data.total_samples_reviewed.toLocaleString() : '—',
       icon: ShieldCheck,
       color: "text-[#f26625]",
       badge: "Stratified Split",

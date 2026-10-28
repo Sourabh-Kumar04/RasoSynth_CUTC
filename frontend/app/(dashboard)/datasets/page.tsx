@@ -154,7 +154,7 @@ function jobToDataset(job: any): any {
       : null,
     status,
     current_stage: job.current_stage || 'pending',
-    created: job.created_at ? new Date(job.created_at).toISOString().split('T')[0] : '2026-10-25',
+    created: job.created_at ? new Date(job.created_at).toISOString().split('T')[0] : '—',
     tags: [job.dataset_type || 'reasoning', job.current_stage, synthesisMode !== 'standard' ? synthesisMode : null].filter(Boolean),
     validated: job.status === 'completed',
     certificate_id: `DBOM-${job.id.slice(0, 8).toUpperCase()}`,

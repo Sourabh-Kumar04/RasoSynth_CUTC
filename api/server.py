@@ -3977,8 +3977,12 @@ async def get_orchestration_dag(job_id: Optional[str] = Query(default=None)):
     job_status = (target_job.get("status") if isinstance(target_job, dict) else getattr(target_job, "status", None)) if target_job else None
     normalized_active = stage_map.get(active_stage) if active_stage else None
 
-    # Calculate real elapsed duration from job timestamps
+    # Total elapsed duration from job timestamps. Node durations below are
+    # apportioned from this total using fixed stage weights, NOT measured
+    # per-stage timings: per-stage instrumentation does not exist yet
+    # (TODO: record stage start/end timestamps in the orchestrator).
     elapsed_ms = 0
+    elapsed_basis = "no_job"
     if target_job:
         c_at = target_job.get("created_at") if isinstance(target_job, dict) else getattr(target_job, "created_at", None)
         u_at = target_job.get("updated_at") if isinstance(target_job, dict) else getattr(target_job, "updated_at", None)
@@ -3999,8 +4003,12 @@ async def get_orchestration_dag(job_id: Optional[str] = Query(default=None)):
             if end_t.tzinfo is None:
                 end_t = end_t.replace(tzinfo=timezone.utc)
             elapsed_ms = max(100, int((end_t - c_at).total_seconds() * 1000))
+            elapsed_basis = "measured_from_timestamps"
         else:
+            # Fallback total, not a measurement; node durations derived
+            # from it are labelled apportioned via duration_basis below.
             elapsed_ms = 12500
+            elapsed_basis = "fallback_12500ms_not_measured"
 
     sources_count = int((target_job.get("sources_discovered") if isinstance(target_job, dict) else getattr(target_job, "sources_discovered", 0)) or 0) if target_job else 0
     stage_weights = {
@@ -4054,7 +4062,8 @@ async def get_orchestration_dag(job_id: Optional[str] = Query(default=None)):
             "id": step_id,
             "label": labels[step_id],
             "status": status,
-            "duration_ms": duration
+            "duration_ms": duration,
+            "duration_basis": "apportioned_from_total_elapsed" if duration else "not_applicable",
         })
 
     edges = [
@@ -4078,6 +4087,9 @@ async def get_orchestration_dag(job_id: Optional[str] = Query(default=None)):
         "edges": edges,
         "job_id": job_id or (target_job.get("id") if isinstance(target_job, dict) else getattr(target_job, "id", None)),
         "status": job_status or "completed",
+        "elapsed_ms": elapsed_ms,
+        "elapsed_basis": elapsed_basis,
+        "duration_basis_note": "Node duration_ms values are apportioned from total elapsed time using fixed stage weights, not measured per-stage timings.",
     }
 
 
@@ -4102,9 +4114,10 @@ async def get_metrics_history(time_range: str = Query(default="1h", alias="range
 
     recent_traces = observability.get_traces(limit=100) if observability else []
     durations = [t["duration_ms"] for t in recent_traces if "duration_ms" in t]
-    avg_lat = round(sum(durations) / len(durations), 1) if durations else 115.0
+    # No traces -> no averages: null, never an invented 115.0 ms / 0.01 rate.
+    avg_lat = round(sum(durations) / len(durations), 1) if durations else None
     errors = sum(1 for t in recent_traces if t.get("status") == "error")
-    err_rate = round(errors / len(recent_traces), 3) if recent_traces else 0.01
+    err_rate = round(errors / len(recent_traces), 3) if recent_traces else None
 
     total_cost = 0.0
     if router:
@@ -4114,20 +4127,32 @@ async def get_metrics_history(time_range: str = Query(default="1h", alias="range
         except Exception:
             pass
 
-    base_lat = int(avg_lat) if avg_lat else 115
-    base_tp = max(len(recent_traces), 15)
-    latency_series = [max(10, int(base_lat * factor)) for factor in [1.05, 1.0, 1.08, 0.95, 0.91, 1.02, 1.0]]
-    throughput_series = [max(5, int(base_tp * factor)) for factor in [0.65, 0.75, 0.85, 0.82, 0.92, 0.98, 1.0]]
-    error_series = [round(err_rate * factor, 3) for factor in [1.0, 1.2, 0.8, 0.5, 0.9, 1.1, 1.0]]
-    cost_base = total_cost if total_cost > 0 else 0.85
-    cost_series = [round(cost_base * (i + 1) / 7, 3) for i in range(7)]
+    if recent_traces and avg_lat is not None and err_rate is not None:
+        base_lat = int(avg_lat)
+        base_tp = max(len(recent_traces), 15)
+        # Smoothed from the real average, NOT per-bucket measurements.
+        latency_series = [max(10, int(base_lat * factor)) for factor in [1.05, 1.0, 1.08, 0.95, 0.91, 1.02, 1.0]]
+        throughput_series = [max(5, int(base_tp * factor)) for factor in [0.65, 0.75, 0.85, 0.82, 0.92, 0.98, 1.0]]
+        error_series = [round(err_rate * factor, 3) for factor in [1.0, 1.2, 0.8, 0.5, 0.9, 1.1, 1.0]]
+        series_basis = "smoothed_from_average_not_per_bucket"
+    else:
+        latency_series = [None] * 7
+        throughput_series = [None] * 7
+        error_series = [None] * 7
+        series_basis = "no_data"
+    # Never invent a cost baseline: with no metered spend the series is empty.
+    cost_series = [round(total_cost * (i + 1) / 7, 3) for i in range(7)] if total_cost > 0 else [None] * 7
 
     return {
         "timestamps": timestamps,
         "latency": latency_series,
         "throughput": throughput_series,
         "error_rate": error_series,
-        "cost": cost_series
+        "cost": cost_series,
+        "has_data": bool(recent_traces),
+        "series_basis": series_basis,
+        "avg_latency_ms": avg_lat,
+        "error_rate_value": err_rate,
     }
 
 
@@ -4217,7 +4242,7 @@ async def get_dataset_huggingface_card(job_id: str):
     job = await db.get_job(job_id) if db else None
     domain = (job.target_domain if job else None) or f"Dataset {job_id[:8]}"
     dataset_type = (job.dataset_type if job else None) or "sft"
-    sample_count = (job.samples_generated if job else 0) or 1000
+    sample_count = job.samples_generated if job else None
 
     config = (job.config or {}) if job and hasattr(job, "config") else {}
     lang = config.get("language", "en")
@@ -4267,7 +4292,7 @@ async def publish_dataset_to_huggingface_hub(job_id: str, request: dict = Body(.
     job = await db.get_job(job_id) if db else None
     domain = (job.target_domain if job else None) or f"Dataset {job_id[:8]}"
     dataset_type = (job.dataset_type if job else None) or "sft"
-    sample_count = (job.samples_generated if job else 0) or 1000
+    sample_count = job.samples_generated if job else None
 
     config = (job.config or {}) if job and hasattr(job, "config") else {}
     lang = config.get("language", "en")

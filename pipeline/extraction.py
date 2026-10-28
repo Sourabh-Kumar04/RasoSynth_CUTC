@@ -1089,13 +1089,16 @@ class ExtractionPipeline:
                     }
                     language = lang_map.get(ext, "unknown")
 
+                    # Score code with the same scorer as other content
+                    # instead of a flat 0.95/0.9 for every code file.
+                    code_quality = self._calculate_quality_score({}, content)
                     extracted = ExtractedContent(
                         content=content,
                         content_type="code",
                         language=language,
                         url=url,
-                        confidence=0.95,
-                        quality_score=0.9,
+                        confidence=code_quality,
+                        quality_score=code_quality,
                         metadata={
                             "file_type": ext,
                             "lines": len(content.split('\n')),

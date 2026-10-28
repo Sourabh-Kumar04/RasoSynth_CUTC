@@ -473,6 +473,7 @@ export default function QualityDashboardPage() {
             {densityLoading ? "Projecting..." : "Recompute 2D Clusters"}
           </Button>
         </div>
+        <p className="text-[11px] font-mono text-amber-300 mb-3">Demo data: the initial plot and the recompute run use fixed example samples, not the selected dataset&apos;s records.</p>
 
         <Card className="border-[#272738] bg-[#12121a] rounded-md card-shadow overflow-hidden">
           <CardHeader className="pb-3 border-b border-[#272738] bg-[#0e0e14]">
@@ -745,10 +746,10 @@ export default function QualityDashboardPage() {
             <div className="p-3 rounded-md bg-[#0a0a0f] border border-[#1f1f2e] flex flex-col sm:flex-row sm:items-center justify-between gap-2 text-[11px] font-mono text-[#94a3b8]">
               <span className="flex items-center gap-2">
                 <CheckCircle2 className="w-4 h-4 text-emerald-400" />
-                Curriculum Stratification Invariant: Entropy score 0.942 (Optimal balanced spread)
+                Curriculum Stratification Invariant: Entropy score 0.942 (reference value — not computed from the active catalog)
               </span>
               <span className="text-white font-semibold">
-                Target Benchmark Specification: 5,000 Balanced Samples (Active Catalog: 138 Validated Records)
+                Target Benchmark Specification: 5,000 Balanced Samples (target, not a measurement) (Active Catalog: 138 Validated Records)
               </span>
             </div>
           </CardContent>

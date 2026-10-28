@@ -305,7 +305,7 @@ export default function OrchestrationPage() {
               </div>
 
               <div className="flex items-center space-x-3 text-[11px] font-mono">
-                <span className="text-[#94a3b8]">DAG LATENCY: <strong className="text-white">38ms</strong></span>
+                <span className="text-[#94a3b8]">DAG LATENCY: <strong className="text-white">—</strong></span>
                 <span className="text-[#94a3b8]">CHECKPOINT: <strong className="text-[#10b981]">ckpt-latest</strong></span>
                 <span className="text-[#10b981] flex items-center gap-1">
                   <span className="w-1.5 h-1.5 rounded-full bg-[#10b981] animate-pulse" />
@@ -426,7 +426,7 @@ export default function OrchestrationPage() {
                   <div className="p-2.5 rounded bg-[#07060d] border border-cyan-950 space-y-1">
                     <span className="text-zinc-500 text-[10px] uppercase block">Stage Telemetry</span>
                     <p className="text-zinc-300">
-                      Est. Latency: <strong className="text-white">~140ms</strong><br />
+                      Est. Latency: <strong className="text-white">— (per-stage timing not yet measured)</strong><br />
                       Checkpoint: <span className="text-[#f26625]">ckpt-{selectedStageNode.id}</span>
                     </p>
                   </div>
@@ -452,7 +452,7 @@ export default function OrchestrationPage() {
                   </div>
                   <div className="p-2 rounded bg-[#0a0a0f] border border-[#272738]">
                     <span className="text-[#94a3b8] text-[10px] block">Pipeline Progress</span>
-                    <span className="text-white font-bold">{Math.round((selectedJob.progress || 0.7) * 100)}%</span>
+                    <span className="text-white font-bold">{selectedJob.progress != null ? `${Math.round(selectedJob.progress * 100)}%` : '—'}</span>
                   </div>
                   <div className="p-2 rounded bg-[#0a0a0f] border border-[#272738]">
                     <div className="flex items-center justify-between text-[10px] text-[#94a3b8]">

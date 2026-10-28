@@ -167,7 +167,7 @@ export default function ObservabilityPage() {
       <div className="flex flex-wrap items-center justify-between gap-3 p-3 rounded-md bg-[#12121a] border border-[#272738] font-mono text-xs">
         <div className="flex items-center gap-2 text-zinc-300">
           <Clock className="w-3.5 h-3.5 text-[#f26625]" />
-          <span className="text-[10px] uppercase text-[#94a3b8]">Time Window ({timeRange}):</span>
+          <span className="text-[10px] uppercase text-[#94a3b8]">Time Window ({timeRange}) — reference values, not live telemetry:</span>
           <span className="text-white font-bold">{TIME_RANGE_TRENDS[timeRange]?.throughput}</span>
         </div>
         <div className="flex items-center gap-4 text-xs">
@@ -375,7 +375,7 @@ export default function ObservabilityPage() {
               {/* Worker Process Detail Table */}
               <div className="space-y-2 pt-2">
                 <span className="text-[10px] font-mono text-zinc-400 uppercase tracking-wider block">
-                  Worker Thread Pool Topology (8 Process Pool Threads):
+                  Worker Thread Pool Topology (8 Process Pool Threads) — illustrative reference, not live worker telemetry:
                 </span>
                 <div className="rounded-lg border border-[#272738] overflow-x-auto bg-[#0a0a0f]">
                   <table className="w-full text-left font-mono text-xs">

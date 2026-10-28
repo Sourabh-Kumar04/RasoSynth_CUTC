@@ -18,26 +18,17 @@ export default function QualityScoreChart() {
   useEffect(() => {
     api.getQualityDistributions()
       .then((res: any) => {
+        // Empty/error -> no data, never a reference distribution. Mock-mode
+        // responses are flagged reference so they never badge as live.
+        const mockMode = typeof window !== 'undefined' && localStorage.getItem('mockMode') === 'true';
         if (!res || res.total_scores === 0) {
-          setData({
-            total_scores: 138,
-            mean: 0.842,
-            distribution: { excellent: 84, good: 39, fair: 12, poor: 3 },
-            histogram: [0, 1, 2, 4, 8, 14, 22, 38, 32, 17],
-            is_reference: true,
-          });
+          setData(null);
         } else {
-          setData(res);
+          setData({ ...res, is_reference: mockMode ? true : (res.is_reference ?? false) });
         }
       })
       .catch(() => {
-        setData({
-          total_scores: 138,
-          mean: 0.842,
-          distribution: { excellent: 84, good: 39, fair: 12, poor: 3 },
-          histogram: [0, 1, 2, 4, 8, 14, 22, 38, 32, 17],
-          is_reference: true,
-        });
+        setData(null);
       })
       .finally(() => setLoading(false));
   }, []);
@@ -50,13 +41,15 @@ export default function QualityScoreChart() {
     );
   }
 
-  const chartData = data || {
-    total_scores: 138,
-    mean: 0.842,
-    distribution: { excellent: 84, good: 39, fair: 12, poor: 3 },
-    histogram: [0, 1, 2, 4, 8, 14, 22, 38, 32, 17],
-    is_reference: true,
-  };
+  if (!data) {
+    return (
+      <div className="bg-[#12121a] rounded-md border border-[#272738] p-6 text-[#94a3b8] font-mono text-xs card-shadow">
+        No verified quality distribution available — live metrics could not be loaded.
+      </div>
+    );
+  }
+
+  const chartData = data;
 
   const { distribution, mean, histogram, is_reference } = chartData;
   const maxBucket = Math.max(...histogram, 1);

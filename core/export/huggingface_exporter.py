@@ -11,7 +11,7 @@ import json
 def generate_hf_dataset_card(
     dataset_name: str,
     domain: str,
-    sample_count: int,
+    sample_count: Optional[int] = None,
     language: str = "en",
     script_mode: str = "native",
     dataset_type: str = "sft",
@@ -25,6 +25,7 @@ def generate_hf_dataset_card(
     certificate_id: Optional[str] = None,
 ) -> str:
     """Generate a fully compliant Hugging Face Dataset Card (README.md) with YAML frontmatter."""
+    sample_display = f"{sample_count:,}" if sample_count is not None else "not recorded"
     langs = ["en"]
     if language in ("hi", "hindi"):
         langs = ["hi", "en"]
@@ -71,9 +72,9 @@ size_categories:
 | **Certificate ID** | `{certificate_id or ('DBOM-' + merkle_root[:8])}` |
 | **Merkle Root Hash (SHA-256)** | `{merkle_root}` |
 | **Synthesis Cognitive Engine** | `{synthesis_mode.upper()}` |
-| **Indian DPDP Act PII Exposure** | `0.00% (Zero Leakage Certified)` |
-| **Script Native Fidelity** | `99.8%` |
-| **Quality Gate** | `>0.85 Neural Cosine Gate Passed` |
+| **Indian DPDP Act PII Exposure** | `Not recorded for this dataset` |
+| **Script Native Fidelity** | `Not recorded for this dataset` |
+| **Quality Gate** | `Not recorded for this dataset` |
 """
 
     content = f"""{yaml_block}
@@ -84,7 +85,7 @@ Generated with **[RasoSynthTune](https://github.com/Sourabh-Kumar04/RasoSynth_CU
 
 ## Dataset Summary
 - **Target Domain**: {domain}
-- **Sample Count**: {sample_count:,}
+- **Sample Count**: {sample_display}
 - **Language & Script**: {language.upper()} ({script_mode})
 - **Dataset Paradigm**: {dataset_type.upper()}
 - **Synthesis Engine**: {synthesis_mode.upper()}
