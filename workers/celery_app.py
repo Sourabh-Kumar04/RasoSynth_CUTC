@@ -2,14 +2,21 @@
 import os
 from celery import Celery, chain, group, chord
 from celery.signals import worker_ready, worker_shutdown
+from kombu import Queue, Exchange
 import asyncio
+import logging
+
+logger = logging.getLogger(__name__)
 
 from core.provider_router import ProviderRouter
 
+default_exchange = Exchange("default", type="direct")
+dlx_exchange = Exchange("dlx", type="direct")
+
 celery_app = Celery(
     "dataset_engine",
-    broker=os.getenv("REDIS_URL", "redis://localhost:6379/0"),
-    backend=os.getenv("REDIS_URL", "redis://localhost:6379/0")
+    broker=os.getenv("CELERY_BROKER_URL", os.getenv("REDIS_URL", "redis://localhost:6379/0")),
+    backend=os.getenv("CELERY_RESULT_BACKEND", os.getenv("REDIS_URL", "redis://localhost:6379/0"))
 )
 
 celery_app.conf.update(
@@ -25,12 +32,20 @@ celery_app.conf.update(
     worker_max_tasks_per_child=100,
     task_acks_late=True,
     task_reject_on_worker_lost=True,
+    task_queues=(
+        Queue("high", default_exchange, routing_key="high"),
+        Queue("medium", default_exchange, routing_key="medium"),
+        Queue("low", default_exchange, routing_key="low"),
+        Queue("dead_letter", dlx_exchange, routing_key="dead_letter"),
+    ),
+    task_default_queue="medium",
     task_routes={
         "workers.tasks.discovery": {"queue": "high"},
         "workers.tasks.extraction": {"queue": "high"},
         "workers.tasks.filtering": {"queue": "medium"},
         "workers.tasks.construction": {"queue": "medium"},
         "workers.tasks.export": {"queue": "low"},
+        "workers.tasks.dead_letter": {"queue": "dead_letter"},
     },
     task_annotations={
         "workers.tasks.discovery": {"rate_limit": "10/m"},
@@ -408,6 +423,13 @@ def on_worker_ready(**kwargs):
 def on_worker_shutdown(**kwargs):
     """Handle worker shutdown signal."""
     print("Celery worker is shutting down")
+
+
+@celery_app.task(name="workers.tasks.dead_letter")
+def dead_letter_task(task_id: str, exc: str, args: list = None, kwargs: dict = None):
+    """Dead letter queue receiver for failed tasks."""
+    logger.error("DLQ: Task %s permanently failed: %s | args=%s kwargs=%s", task_id, exc, args, kwargs)
+    return {"dlq_task_id": task_id, "error": exc, "status": "dead_lettered"}
 
 
 if __name__ == "__main__":

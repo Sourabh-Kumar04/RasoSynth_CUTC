@@ -123,7 +123,7 @@ class DeduplicationEngine:
         if self._qdrant_url:
             try:
                 from qdrant_client import QdrantClient
-                self._qdrant_client = QdrantClient(url=self._qdrant_url)
+                self._qdrant_client = QdrantClient(url=self._qdrant_url, check_compatibility=False)
                 logger.info("Connected to remote Qdrant cluster for deduplication at %s", self._qdrant_url)
             except Exception as q_err:
                 logger.warning("Could not connect to Qdrant (%s); using in-memory vector buffer", q_err)

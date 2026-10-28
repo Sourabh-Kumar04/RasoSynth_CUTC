@@ -1,6 +1,7 @@
 """Ray-based distributed pipeline for GPU-accelerated processing."""
 from typing import List, Dict, Any, Optional
 import asyncio
+import os
 
 try:
     import ray
@@ -8,7 +9,11 @@ try:
     RAY_AVAILABLE = True
     if not ray.is_initialized():
         try:
-            ray.init(ignore_reinit_error=True)
+            ray_address = os.getenv("RAY_ADDRESS")
+            if ray_address:
+                ray.init(address=ray_address, ignore_reinit_error=True)
+            else:
+                ray.init(ignore_reinit_error=True)
         except Exception:
             pass
 except (ImportError, Exception):
@@ -234,8 +239,8 @@ class RayPipeline:
     def run_discovery(self, queries: List[str], domain: str, source_types: List[str]) -> List[Dict]:
         """Run distributed discovery across workers."""
         futures = [
-            worker.discover.remote(query, domain, source_types)
-            for worker, query in zip(self.discovery_workers, queries)
+            self.discovery_workers[i % len(self.discovery_workers)].discover.remote(query, domain, source_types)
+            for i, query in enumerate(queries)
         ]
 
         results = ray.get(futures)
@@ -255,7 +260,8 @@ class RayPipeline:
         ]
 
         futures = []
-        for worker, batch in zip(self.extraction_workers[:len(batches)], batches):
+        for i, batch in enumerate(batches):
+            worker = self.extraction_workers[i % len(self.extraction_workers)]
             futures.append(worker.extract_batch.remote(batch))
 
         results = ray.get(futures)
@@ -275,7 +281,8 @@ class RayPipeline:
         ]
 
         futures = []
-        for worker, batch in zip(self.quality_workers[:len(batches)], batches):
+        for i, batch in enumerate(batches):
+            worker = self.quality_workers[i % len(self.quality_workers)]
             futures.append(worker.score_batch.remote(batch))
 
         results = ray.get(futures)
@@ -295,7 +302,8 @@ class RayPipeline:
         ]
 
         futures = []
-        for worker, batch in zip(self.construction_workers[:len(batches)], batches):
+        for i, batch in enumerate(batches):
+            worker = self.construction_workers[i % len(self.construction_workers)]
             futures.append(worker.construct_batch.remote(batch))
 
         results = ray.get(futures)
