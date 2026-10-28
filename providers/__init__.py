@@ -53,7 +53,7 @@ import providers.huggingface_provider
 import providers.ollama_provider
 import providers.xai_provider
 import providers.fireworks
-import providers.featherless  # noqa: F401
+import providers.featherless
 
 # Ensure canonical alias anthropic_claude is registered as well
 from providers.anthropic_claude import AnthropicClaudeProvider

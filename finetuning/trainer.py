@@ -338,7 +338,7 @@ class Trainer:
             return
 
         try:
-            import transformers  # noqa
+            import transformers
         except ImportError:
             put({"type": "error", "message": "transformers not installed. Run: pip install transformers peft datasets trl"})
             return
@@ -373,7 +373,7 @@ class Trainer:
             ),
         })
         try:
-            from finetuning.modal_trainer import train_remote  # noqa: F401 — reserved for future wiring
+            from finetuning.modal_trainer import train_remote
             put({"type": "info", "is_simulated": True, "message": "Modal SDK import ok; remote train_remote is not executed in this stub."})
             put({"type": "progress", "is_simulated": True, "epoch": 1, "step": 10, "loss": 1.78, "progress": 0.33})
             put({"type": "progress", "is_simulated": True, "epoch": 2, "step": 20, "loss": 1.09, "progress": 0.66})
@@ -496,7 +496,7 @@ class Trainer:
 
             bnb_config = None
             try:
-                import bitsandbytes  # noqa
+                import bitsandbytes
                 if cfg.load_in_4bit and torch.cuda.is_available():
                     bnb_config = BitsAndBytesConfig(
                         load_in_4bit=True,

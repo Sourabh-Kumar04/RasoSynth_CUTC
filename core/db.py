@@ -861,7 +861,7 @@ class DatabaseManager:
 
     async def create_finetune_job(self, data: dict) -> "FineTuneJob":
         """Persist a new FineTuneJob row."""
-        from sqlalchemy import text as _text  # noqa – already imported above but safe
+        from sqlalchemy import text as _text
         async with self.session_maker() as session:
             fj = FineTuneJob(**data)
             session.add(fj)
