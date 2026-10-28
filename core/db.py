@@ -53,16 +53,24 @@ class Job(Base):
     sources_discovered = Column(Integer, default=0)
     sources_extracted = Column(Integer, default=0)
     samples_filtered = Column(Integer, default=0)
+    quality_score = Column(Float, nullable=True)
+    merkle_root = Column(String, nullable=True)
 
-    datasets = relationship("Dataset", back_populates="job", cascade="all, delete-orphan")
+    datasets = relationship("Dataset", back_populates="job", cascade="all, delete-orphan", lazy="selectin")
 
     def to_dict(self) -> dict:
+        q = self.quality_score
+        if q is None and self.datasets:
+            meta = self.datasets[0].metadata_ or {}
+            q = meta.get("quality_score") or (meta.get("quality_breakdown") or {}).get("composite")
         return {
             "id": str(self.id),
             "status": self.status,
             "config": self.config or {},
             "progress": self.progress,
             "current_stage": self.current_stage,
+            "quality_score": q,
+            "merkle_root": self.merkle_root or (self.datasets[0].metadata_.get("merkle_root_hash") if self.datasets and self.datasets[0].metadata_ else None),
             "created_at": self.created_at.isoformat() if self.created_at else None,
             "updated_at": self.updated_at.isoformat() if self.updated_at else None,
         }
@@ -1090,6 +1098,15 @@ class AsyncDB:
         job = await self.db.get_job(job_id)
         if not job:
             return None
+        q = getattr(job, "quality_score", None)
+        root = getattr(job, "merkle_root", None)
+        meta = {}
+        if job.datasets:
+            meta = job.datasets[0].metadata_ or {}
+            if q is None:
+                q = meta.get("quality_score") or (meta.get("quality_breakdown") or {}).get("composite")
+            if not root:
+                root = meta.get("merkle_root_hash")
         return {
             "id": job.id,
             "status": job.status,
@@ -1100,6 +1117,9 @@ class AsyncDB:
             "sources_discovered": getattr(job, "sources_discovered", 0),
             "sources_extracted": getattr(job, "sources_extracted", 0),
             "samples_filtered": getattr(job, "samples_filtered", 0),
+            "quality_score": q,
+            "merkle_root": root,
+            "metadata": meta,
             "cost_usd": job.cost_usd,
             "error": job.error,
             "created_at": job.created_at.isoformat(),
@@ -1127,6 +1147,15 @@ class AsyncDB:
                     config = json.loads(config)
                 except Exception:
                     config = {}
+            q = getattr(job, "quality_score", None)
+            root = getattr(job, "merkle_root", None)
+            meta = {}
+            if job.datasets:
+                meta = job.datasets[0].metadata_ or {}
+                if q is None:
+                    q = meta.get("quality_score") or (meta.get("quality_breakdown") or {}).get("composite")
+                if not root:
+                    root = meta.get("merkle_root_hash")
             job_dict = {
                 "id": job.id,
                 "status": job.status,
@@ -1134,6 +1163,9 @@ class AsyncDB:
                 "cost_usd": job.cost_usd,
                 "samples_generated": job.samples_generated,
                 "current_stage": job.current_stage,
+                "quality_score": q,
+                "merkle_root": root,
+                "metadata": meta,
                 "created_at": job.created_at,
                 "updated_at": getattr(job, 'updated_at', job.created_at),
                 "config": config,

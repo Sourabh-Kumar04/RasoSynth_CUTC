@@ -259,8 +259,19 @@ class ReviewService:
 
     async def resume_job(self, job_id: str) -> bool:
         event = self._resume_events.pop(job_id, None)
+        resumed = False
         if event is not None:
             event.set()
+            resumed = True
+        if self.db:
+            try:
+                job = await self.db.get_job(job_id)
+                if job and job.status == "awaiting_review":
+                    await self.db.update_job(job_id, status="running")
+                    resumed = True
+            except Exception:
+                pass
+        if resumed:
             logger.info("Job %s resumed", job_id)
             return True
         logger.warning("resume_job: job %s was not paused", job_id)

@@ -470,7 +470,7 @@ class APIClient {
 
   // Basic liveness check
   async getHealth() {
-    return this.request<{ status: string; service: string }>('/health')
+    return this.request<{ status: string; service: string; version?: string; commit_hash?: string; deployment_mode?: string }>('/health')
   }
 
   // Detailed readiness with provider status and circuit breakers

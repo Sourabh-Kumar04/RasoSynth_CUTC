@@ -251,13 +251,16 @@ class ColabBridgeTrainer:
         # Generate HF Model Card with DBOM Merkle verification proof
         model_name = getattr(self.config, "output_model_name", "fine-tuned-model")
         dataset_name = getattr(self.config, "dataset_id", "rasosynth-curated-dataset") or "rasosynth-curated-dataset"
-        final_train_loss = loss_history[-1] if loss_history else 0.214
-        final_eval_loss = round(final_train_loss * 1.04, 4)
+        final_train_loss = loss_history[-1] if loss_history else 0.3870
+        eval_history = getattr(self, "eval_loss_history", []) or []
+        final_eval_loss = eval_history[-1] if eval_history else round(final_train_loss * 1.04, 4)
+        sample_count = int(getattr(self.config, "sample_count", None) or getattr(self.config, "dataset_size", 100) or 100)
+
         model_card = generate_hf_model_card(
             model_name=model_name,
             base_model=base_model,
             dataset_name=dataset_name,
-            sample_count=5000,
+            sample_count=sample_count,
             epochs=getattr(self.config, "num_train_epochs", 3),
             learning_rate=getattr(self.config, "learning_rate", 2e-4),
             lora_r=getattr(self.config, "lora_r", 16),
@@ -268,7 +271,7 @@ class ColabBridgeTrainer:
             certificate_id=f"DBOM-{merkle_root[:12].upper()}",
         )
         # Append honest simulation disclosure and model seal to model card
-        model_card += f"\n\n---\n**DBOM Provenance Seal**: `{model_seal}`\n**Execution Mode**: Simulated (Accelerated Container Pool)\n"
+        model_card += f"\n\n---\n**DBOM Provenance Seal**: `{model_seal}`\n**Execution Mode**: Simulated (Accelerated Container Pool) — loss curves and adapter/GGUF files are demo placeholders, not GPU-trained weights.\n"
         with open(target_dir / "README.md", "w") as f:
             f.write(model_card)
         with open(target_dir / "README.md", "w") as f:

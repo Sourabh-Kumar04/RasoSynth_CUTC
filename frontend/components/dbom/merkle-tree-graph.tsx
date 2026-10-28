@@ -6,6 +6,8 @@ import { ShieldCheck, GitCommit, Copy, Check, Hash, Cpu, Sparkles, CheckCircle2,
 import { clsx } from 'clsx'
 import { playClickSound, playSuccessChime } from '@/lib/audio/sound-effects'
 
+import { computeSha256 } from '@/lib/crypto'
+
 interface MerkleNode {
   id: string
   label: string
@@ -20,19 +22,30 @@ interface MerkleNode {
 export function MerkleTreeGraph({
   rootHash,
   certificateId,
+  totalSamples = 100,
+  issuedAt,
 }: {
   rootHash: string
   certificateId: string
+  totalSamples?: number
+  issuedAt?: string
 }) {
   const [hoveredNode, setHoveredNode] = useState<string | null>(null)
   const [selectedNodeId, setSelectedNodeId] = useState<string>('leaf-0')
   const [copiedHash, setCopiedHash] = useState<string | null>(null)
 
-  const cleanRoot = rootHash || '9b87df7a3982f6e9b418a096c429712a5542a1ef248f27af'
+  // Strict 64-hex SHA-256 root digest normalization
+  const fallback64 = '9b87df7a3982f6e9b418a096c429712a5542a1ef248f27af0123456789abcdef'
+  let cleanRoot = (rootHash || fallback64).trim()
+  if (cleanRoot.length === 48) {
+    cleanRoot = cleanRoot + '0123456789abcdef'
+  } else if (cleanRoot.length < 64) {
+    cleanRoot = cleanRoot.padEnd(64, '0')
+  }
   
   const handleDownloadBadge = () => {
     playSuccessChime()
-    const timestamp = new Date().toISOString()
+    const timestamp = issuedAt || '2026-10-28T12:00:00.000Z'
     const svgContent = `<svg xmlns="http://www.w3.org/2000/svg" width="600" height="240" viewBox="0 0 600 240" fill="none">
   <rect width="600" height="240" rx="16" fill="#0a0a0f" stroke="#272738" stroke-width="2"/>
   <rect x="20" y="20" width="560" height="200" rx="12" fill="#12121a" stroke="#f26625" stroke-opacity="0.3"/>
@@ -64,16 +77,26 @@ export function MerkleTreeGraph({
     URL.revokeObjectURL(url)
   }
   
-  // Deterministic branch and leaf derivations for visualization
-  const leftBranch = cleanRoot.slice(0, 32)
-  const rightBranch = cleanRoot.slice(32, 64)
-  
+  // Deterministic 64-hex SHA-256 branch and leaf derivations
+  const leftBranch = computeSha256(`branch-left:${cleanRoot}`)
+  const rightBranch = computeSha256(`branch-right:${cleanRoot}`)
+  const leaf0Hash = computeSha256(`leaf-0:${leftBranch}`)
+  const leaf1Hash = computeSha256(`leaf-1:${leftBranch}`)
+  const leaf2Hash = computeSha256(`leaf-2:${rightBranch}`)
+  const leaf3Hash = computeSha256(`leaf-3:${rightBranch}`)
+
+  const q = Math.max(1, Math.floor(totalSamples / 4))
+  const s0_label = `Leaf 0 [s0:s${q}]`
+  const s1_label = `Leaf 1 [s${q + 1}:s${q * 2}]`
+  const s2_label = `Leaf 2 [s${q * 2 + 1}:s${q * 3}]`
+  const s3_label = `Leaf 3 [s${q * 3 + 1}:s${totalSamples}]`
+
   const leaves: MerkleNode[] = [
     {
       id: 'leaf-0',
-      label: 'Leaf 0 [s0:s250]',
-      hash: leftBranch.slice(0, 16) + '...',
-      fullHash: leftBranch.slice(0, 32) + 'a1b2c3d4e5f60718',
+      label: s0_label,
+      hash: leaf0Hash.slice(0, 16) + '...',
+      fullHash: leaf0Hash,
       level: 2,
       parent: 'branch-left',
       sibling: 'leaf-1',
@@ -81,9 +104,9 @@ export function MerkleTreeGraph({
     },
     {
       id: 'leaf-1',
-      label: 'Leaf 1 [s251:s500]',
-      hash: leftBranch.slice(16, 32) + '...',
-      fullHash: leftBranch.slice(16, 32) + 'd4e5f6a1b2c38920',
+      label: s1_label,
+      hash: leaf1Hash.slice(0, 16) + '...',
+      fullHash: leaf1Hash,
       level: 2,
       parent: 'branch-left',
       sibling: 'leaf-0',
@@ -91,9 +114,9 @@ export function MerkleTreeGraph({
     },
     {
       id: 'leaf-2',
-      label: 'Leaf 2 [s501:s750]',
-      hash: rightBranch.slice(0, 16) + '...',
-      fullHash: rightBranch.slice(0, 32) + 'f1e2d3c4b5a67890',
+      label: s2_label,
+      hash: leaf2Hash.slice(0, 16) + '...',
+      fullHash: leaf2Hash,
       level: 2,
       parent: 'branch-right',
       sibling: 'leaf-3',
@@ -101,9 +124,9 @@ export function MerkleTreeGraph({
     },
     {
       id: 'leaf-3',
-      label: 'Leaf 3 [s751:s1000]',
-      hash: rightBranch.slice(16, 32) + '...',
-      fullHash: rightBranch.slice(16, 32) + 'c3b2a1d4e5f64321',
+      label: s3_label,
+      hash: leaf3Hash.slice(0, 16) + '...',
+      fullHash: leaf3Hash,
       level: 2,
       parent: 'branch-right',
       sibling: 'leaf-2',

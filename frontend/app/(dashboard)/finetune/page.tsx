@@ -36,6 +36,7 @@ interface FTJob {
   status: 'pending' | 'running' | 'completed' | 'failed' | 'cancelled'
   is_simulated?: boolean
   weights_are_placeholders?: boolean
+  execution_mode?: string
   base_model: string; output_model_name: string; progress: number
   current_epoch: number; total_epochs: number; train_loss: number | null
   eval_loss: number | null; error: string | null; output_path: string | null
@@ -382,17 +383,17 @@ function DetailPane({ job, logs, lossHistory, onCancel, onCopy, onReconnect, log
                 Fine-Tuned Model Deliverables
               </CardTitle>
               <span className={`text-[10px] font-mono font-bold px-2 py-0.5 rounded border ${
-                job.is_simulated || job.weights_are_placeholders
+                job.is_simulated || job.weights_are_placeholders || job.execution_mode === 'simulated'
                   ? 'text-amber-400 bg-amber-950/40 border-amber-500/30'
                   : 'text-emerald-400 bg-emerald-950/40 border-emerald-500/30'
               }`}>
-                {job.is_simulated || job.weights_are_placeholders ? 'Simulated / Placeholder Weights' : 'Ready for Production'}
+                {job.is_simulated || job.weights_are_placeholders || job.execution_mode === 'simulated' ? 'Simulated / Placeholder Weights' : 'Ready for Production'}
               </span>
             </div>
           </CardHeader>
           <CardContent className="p-4 space-y-3">
             <p className="text-xs text-[#94a3b8]">
-              {job.is_simulated || job.weights_are_placeholders
+              {job.is_simulated || job.weights_are_placeholders || job.execution_mode === 'simulated'
                 ? 'This run used a simulated execution path. Packaged adapter/GGUF files are demo placeholders, not GPU-trained model weights.'
                 : 'Training converged successfully. Weights, adapter parameters, and cryptographic DBOM verification seals have been compiled into self-contained deployable artifacts.'}
             </p>
@@ -1013,7 +1014,7 @@ function FineTuneContent() {
             )
           }
           if (ev.type === 'completed') {
-            const simulated = Boolean(ev.is_simulated || ev.weights_are_placeholders)
+            const simulated = Boolean(ev.is_simulated || ev.weights_are_placeholders || ev.execution_mode === 'simulated' || ev.mode === 'simulated')
             setSelectedJob(p => p ? {
               ...p,
               status: 'completed',

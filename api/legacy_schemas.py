@@ -57,6 +57,8 @@ class JobStatus(str, Enum):
     FAILED = "failed"
     CANCELLED = "cancelled"
     NEGOTIATING = "negotiating"
+    AWAITING_REVIEW = "awaiting_review"
+    PAUSED = "paused"
 
 
 class ConstraintAnalysis(BaseModel):
@@ -230,6 +232,8 @@ class JobResponse(BaseModel):
     samples_generated: int
     current_stage: Optional[str] = None
     constraint_analysis: Optional[ConstraintAnalysis] = None
+    quality_score: Optional[float] = None
+    metadata: Optional[dict] = None
 
 
 class JobDetailResponse(JobResponse):
@@ -241,6 +245,8 @@ class JobDetailResponse(JobResponse):
     samples_filtered: int = 0
     warnings: list[str] = []
     adaptation_notes: list[str] = []
+    is_simulated: Optional[bool] = None
+    execution_mode: Optional[str] = None
 
 
 class ProviderStatus(BaseModel):
@@ -281,6 +287,8 @@ class ErrorResponse(BaseModel):
 class HealthResponse(BaseModel):
     status: str
     version: str
+    commit_hash: Optional[str] = None
+    deployment_mode: Optional[str] = "standalone"
     providers: dict[str, str]
     database: bool
     database_engine: Optional[str] = "postgresql"

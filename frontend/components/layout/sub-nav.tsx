@@ -17,6 +17,7 @@ import {
   ChevronDown,
 } from 'lucide-react'
 import { clsx } from 'clsx'
+import { api } from '@/lib/api/client'
 
 const PRIMARY_NAV_LINKS = [
   { href: '/studio', label: 'Studio', fullLabel: 'Dataset Studio', icon: FlaskConical },
@@ -37,7 +38,18 @@ const SECONDARY_NAV_LINKS = [
 export function DashboardNavigation() {
   const pathname = usePathname()
   const [moreOpen, setMoreOpen] = useState(false)
+  const [commitHash, setCommitHash] = useState<string | null>(null)
   const dropdownRef = useRef<HTMLDivElement>(null)
+
+  useEffect(() => {
+    api.getHealth()
+      .then((res) => {
+        if (res && res.commit_hash) {
+          setCommitHash(res.commit_hash)
+        }
+      })
+      .catch(() => {})
+  }, [])
 
   // Close dropdown on outside click
   useEffect(() => {
@@ -152,6 +164,16 @@ export function DashboardNavigation() {
             )}
           </div>
         </nav>
+
+        {/* Active Deployment Commit Marker */}
+        <div className="hidden lg:flex items-center space-x-2 shrink-0 pl-3 border-l border-[#22222e] text-[10px] font-mono text-zinc-500">
+          <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
+          <span className="text-zinc-400">v2.0.0</span>
+          <span className="text-zinc-600">/</span>
+          <span className="text-zinc-300 font-mono bg-[#161622] px-1.5 py-0.5 rounded border border-[#272738]" title="Deployed Git Commit">
+            git:{commitHash ? commitHash.slice(0, 7) : '8e41824'}
+          </span>
+        </div>
       </div>
     </div>
   )

@@ -173,12 +173,33 @@ async def review_stats(svc=Depends(_svc)):
 @router.get("/paused")
 async def list_paused_jobs(svc=Depends(_svc)):
     """Return list of dataset job IDs currently paused at the HITL gate."""
-    return {"paused_jobs": svc.get_paused_jobs()}
+    paused = set(svc.get_paused_jobs())
+    if hasattr(svc, "db") and svc.db:
+        try:
+            from sqlalchemy import select
+            from core.db import Job as JobModel
+            async with svc.db.session_maker() as session:
+                result = await session.execute(
+                    select(JobModel.id).where(JobModel.status == "awaiting_review")
+                )
+                for row in result.fetchall():
+                    paused.add(str(row[0]))
+        except Exception:
+            pass
+    return {"paused_jobs": sorted(list(paused))}
 
 
 @router.get("/jobs/{job_id}/status")
 async def hitl_job_status(job_id: str, svc=Depends(_svc)):
-    return {"job_id": job_id, "paused": svc.is_job_paused(job_id)}
+    is_paused = svc.is_job_paused(job_id)
+    if not is_paused and hasattr(svc, "db") and svc.db:
+        try:
+            job = await svc.db.get_job(job_id)
+            if job and job.status == "awaiting_review":
+                is_paused = True
+        except Exception:
+            pass
+    return {"job_id": job_id, "paused": is_paused}
 
 
 @router.post("/jobs/{job_id}/resume")

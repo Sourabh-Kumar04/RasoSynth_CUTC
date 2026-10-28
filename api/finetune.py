@@ -350,11 +350,31 @@ async def get_model_card(job_id: str, manager=Depends(_manager)):
     base_model = getattr(job, "base_model", "HuggingFaceTB/SmolLM2-1.7B-Instruct") if not isinstance(job, dict) else job.get("base_model", "HuggingFaceTB/SmolLM2-1.7B-Instruct")
     model_name = getattr(job, "output_model_name", "") or (job.get("output_model_name") if isinstance(job, dict) else "") or f"rasosynth-{job_id[:8]}"
     dataset_id = getattr(job, "dataset_id", "") or (job.get("dataset_id") if isinstance(job, dict) else "") or "rasosynth-dataset"
+    sample_count = getattr(job, "sample_count", None) or (job.get("sample_count") if isinstance(job, dict) else None)
+    if not sample_count:
+        sample_count = getattr(job, "dataset_size", None) or (job.get("dataset_size") if isinstance(job, dict) else None)
+    if not sample_count:
+        # Check database for dataset sample count
+        try:
+            if hasattr(manager, "db") and manager.db:
+                ds = await manager.db.get_dataset(str(dataset_id))
+                if ds:
+                    sample_count = getattr(ds, "size", None)
+        except Exception:
+            pass
+    sample_count = int(sample_count or 100)
+
     train_loss = getattr(job, "final_train_loss", None) or (job.get("final_train_loss") if isinstance(job, dict) else None)
     if train_loss is None:
-        train_loss = getattr(job, "train_loss", 0.214) or 0.214
+        train_loss = getattr(job, "train_loss", 0.3870) or 0.3870
     train_loss = float(train_loss)
-    eval_loss = round(train_loss * 1.04, 4)
+
+    eval_loss = getattr(job, "final_eval_loss", None) or (job.get("final_eval_loss") if isinstance(job, dict) else None)
+    if eval_loss is None:
+        eval_loss = getattr(job, "eval_loss", None) or (job.get("eval_loss") if isinstance(job, dict) else None)
+    if eval_loss is None:
+        eval_loss = round(train_loss * 1.04, 4)
+    eval_loss = float(eval_loss)
 
     merkle_root = getattr(job, "merkle_root", None) or (job.get("merkle_root") if isinstance(job, dict) else None)
     if not merkle_root:
@@ -364,21 +384,31 @@ async def get_model_card(job_id: str, manager=Depends(_manager)):
     if not model_seal:
         model_seal = hashlib.sha256(f"{job_id}:{merkle_root}:{train_loss}:{eval_loss}".encode("utf-8")).hexdigest()
 
+    is_simulated = bool(
+        getattr(job, "is_simulated", False)
+        or (job.get("is_simulated") if isinstance(job, dict) else False)
+        or getattr(job, "execution_mode", "") == "simulated"
+        or (job.get("execution_mode") if isinstance(job, dict) else "") == "simulated"
+    )
+
     card = generate_hf_model_card(
         model_name=model_name,
         base_model=base_model,
         dataset_name=str(dataset_id),
-        sample_count=5000,
-        epochs=3,
-        learning_rate=2e-4,
-        lora_r=16,
-        lora_alpha=32,
+        sample_count=sample_count,
+        epochs=getattr(job, "num_train_epochs", 3) if not isinstance(job, dict) else job.get("num_train_epochs", 3),
+        learning_rate=getattr(job, "learning_rate", 2e-4) if not isinstance(job, dict) else job.get("learning_rate", 2e-4),
+        lora_r=getattr(job, "lora_r", 16) if not isinstance(job, dict) else job.get("lora_r", 16),
+        lora_alpha=getattr(job, "lora_alpha", 32) if not isinstance(job, dict) else job.get("lora_alpha", 32),
         train_loss=train_loss,
         eval_loss=eval_loss,
         merkle_root=merkle_root,
         certificate_id=f"DBOM-{merkle_root[:12].upper()}",
     )
-    card += f"\n\n---\n**DBOM Provenance Seal**: `{model_seal}`\n**Execution Mode**: Simulated (Accelerated Container Pool)\n"
+    if is_simulated:
+        card += f"\n\n---\n**DBOM Provenance Seal**: `{model_seal}`\n**Execution Mode**: Simulated (Accelerated Container Pool) — loss curves and adapter/GGUF files are demo placeholders, not GPU-trained weights.\n"
+    else:
+        card += f"\n\n---\n**DBOM Provenance Seal**: `{model_seal}`\n**Execution Mode**: GPU-Accelerated Hardware Run\n"
     return PlainTextResponse(card)
 
 

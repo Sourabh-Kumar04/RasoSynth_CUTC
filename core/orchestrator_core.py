@@ -1935,12 +1935,15 @@ class DatasetOrchestrator:
             async with synth_sem:
                 for attempt in range(max_attempts):
                     try:
-                        sample = await generator_inst.generate_sample(
-                            plan_ref, cell_ref,
-                            cell_index=target_idx,
-                            total_cells=target_dataset_size,
+                        sample = await asyncio.wait_for(
+                            generator_inst.generate_sample(
+                                plan_ref, cell_ref,
+                                cell_index=target_idx,
+                                total_cells=target_dataset_size,
+                            ),
+                            timeout=45.0
                         )
-                        val_res = await validator_inst.validate(sample)
+                        val_res = await asyncio.wait_for(validator_inst.validate(sample), timeout=30.0)
                         if val_res.is_valid:
                             return sample
                         elif attempt == max_attempts - 1:
@@ -1957,6 +1960,8 @@ class DatasetOrchestrator:
                                 f"Sample validation failed (attempt {attempt+1}/{max_attempts}): "
                                 f"{', '.join(val_res.reasons)}"
                             )
+                    except asyncio.TimeoutError:
+                        logger.warning(f"[{job_id}] LLM generation/validation timed out (>45s) on attempt {attempt+1}")
                     except Exception as gen_err:
                         logger.debug(f"Error during sample synthesis attempt {attempt+1}: {gen_err}")
                 return None
@@ -1968,7 +1973,7 @@ class DatasetOrchestrator:
             attempt_count = 0
             cell_idx = len(samples)
             consecutive_empty_batches = 0
-            max_consecutive_empty = 25
+            max_consecutive_empty = 8
 
             while len(samples) < target_dataset_size and attempt_count < max_gen_attempts:
                 if self._is_cancelled(job_id):
@@ -2752,6 +2757,23 @@ class DatasetOrchestrator:
             elif len(raw_samples) > requested_samples:
                 raw_samples = raw_samples[:requested_samples]
 
+        # F2 Enforced Dedup Gate: Never certify a dataset with exact duplicates inside
+        final_seen = set()
+        strictly_unique = []
+        for s in raw_samples:
+            inst = getattr(s, "instruction", "") if not isinstance(s, dict) else s.get("instruction", "")
+            resp = getattr(s, "response", "") if not isinstance(s, dict) else s.get("response", "")
+            key = " ".join(f"{inst} {resp}".lower().split())
+            if key in final_seen:
+                continue
+            final_seen.add(key)
+            strictly_unique.append(s)
+        if len(strictly_unique) < len(raw_samples):
+            logger.warning(
+                f"[{job_id}] Dropped {len(raw_samples) - len(strictly_unique)} duplicate samples before DBOM certification."
+            )
+        raw_samples = strictly_unique
+
         balance_report["requested_samples"] = requested_samples
         balance_report["samples_short_of_target"] = max(0, requested_samples - len(raw_samples))
         # Convert the final balanced dictionaries for exporter and ORM access.
@@ -3176,6 +3198,10 @@ class DatasetOrchestrator:
                     if q_score < 0.70 or h_risk > 0.40 or s.get("needs_human_review", False):
                         review_samples.append(s)
                         seen_sample_ids.add(id(s))
+
+        # Cap review_samples to strictly respect the configured HITL sampling ratio
+        max_review_quota = min(len(samples), max(1, round(len(samples) * review_percentage / 100)))
+        review_samples = review_samples[:max_review_quota]
 
         submitted = 0
         review_service = None

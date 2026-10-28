@@ -448,7 +448,7 @@ export default function OrchestrationPage() {
                   </div>
                   <div className="p-2 rounded bg-[#0a0a0f] border border-[#272738]">
                     <span className="text-[#94a3b8] text-[10px] block">Total Cost Accrued</span>
-                    <span className="text-[#f26625] font-bold">${(selectedJob.cost_usd || 0.041).toFixed(3)}</span>
+                    <span className="text-[#f26625] font-bold">${(typeof selectedJob.cost_usd === 'number' ? selectedJob.cost_usd : 0.0).toFixed(3)}</span>
                   </div>
                   <div className="p-2 rounded bg-[#0a0a0f] border border-[#272738]">
                     <span className="text-[#94a3b8] text-[10px] block">Pipeline Progress</span>
