@@ -48,7 +48,7 @@ def generate_hf_dataset_card(
         tags.append("hinglish")
         tags.append("code-switched")
 
-    size_cat = "1K<n<10K" if sample_count < 10000 else "10K<n<100K" if sample_count < 100000 else "100K<n<1M"
+    size_cat = "unknown" if sample_count is None else "1K<n<10K" if sample_count < 10000 else "10K<n<100K" if sample_count < 100000 else "100K<n<1M"
 
     yaml_block = f"""---
 license: {license_type}
