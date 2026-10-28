@@ -34,14 +34,11 @@ export function MerkleTreeGraph({
   const [selectedNodeId, setSelectedNodeId] = useState<string>('leaf-0')
   const [copiedHash, setCopiedHash] = useState<string | null>(null)
 
-  // Strict 64-hex SHA-256 root digest normalization
-  const fallback64 = '9b87df7a3982f6e9b418a096c429712a5542a1ef248f27af0123456789abcdef'
-  let cleanRoot = (rootHash || fallback64).trim()
-  if (cleanRoot.length === 48) {
-    cleanRoot = cleanRoot + '0123456789abcdef'
-  } else if (cleanRoot.length < 64) {
-    cleanRoot = cleanRoot.padEnd(64, '0')
-  }
+  // A Merkle root must be a genuine 64-hex SHA-256 digest. A malformed or
+  // missing root is never padded, completed, or forged into a valid-looking
+  // one: the graph renders an error instead (see the guard before return).
+  const cleanRoot = (rootHash || '').trim()
+  const isValidRoot = /^[0-9a-fA-F]{64}$/.test(cleanRoot)
   
   const handleDownloadBadge = () => {
     playSuccessChime()
@@ -52,7 +49,7 @@ export function MerkleTreeGraph({
   <circle cx="55" cy="55" r="20" fill="#f26625" fill-opacity="0.15"/>
   <path d="M55 42L65 47V56C65 62 61 68 55 70C49 68 45 62 45 56V47L55 42Z" stroke="#f26625" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
   <text x="88" y="48" fill="#ffffff" font-family="system-ui, -apple-system, sans-serif" font-weight="bold" font-size="16">CRYPTOGRAPHIC DBOM ATTESTATION CERTIFICATE</text>
-  <text x="88" y="66" fill="#10b981" font-family="monospace" font-weight="600" font-size="11">✓ VERIFIED COMPLIANCE · DETERMINISTIC MERKLE PROOF</text>
+  <text x="88" y="66" fill="#10b981" font-family="monospace" font-weight="600" font-size="11">✓ ROOT AS STORED - VERIFY AGAINST EXPORTED SAMPLES · DETERMINISTIC MERKLE PROOF</text>
   <line x1="40" y1="85" x2="560" y2="85" stroke="#272738"/>
   <text x="40" y="112" fill="#94a3b8" font-family="monospace" font-size="11">CERTIFICATE ID:</text>
   <text x="160" y="112" fill="#ffffff" font-family="monospace" font-weight="bold" font-size="12">${certificateId}</text>
@@ -63,7 +60,7 @@ export function MerkleTreeGraph({
   <text x="40" y="190" fill="#94a3b8" font-family="monospace" font-size="11">STANDARD:</text>
   <text x="160" y="190" fill="#f26625" font-family="monospace" font-weight="bold" font-size="11">RFC 6962 / NIST SP 800-106 &bull; SHA-256 TREE HASH</text>
   <rect x="440" y="152" width="120" height="32" rx="6" fill="#10b981" fill-opacity="0.1" stroke="#10b981" stroke-width="1"/>
-  <text x="500" y="172" fill="#10b981" font-family="monospace" font-weight="bold" font-size="10" text-anchor="middle">TAMPER-SEALED</text>
+  <text x="500" y="172" fill="#10b981" font-family="monospace" font-weight="bold" font-size="10" text-anchor="middle">ATTESTATION RECORD</text>
 </svg>`
 
     const blob = new Blob([svgContent], { type: 'image/svg+xml;charset=utf-8' })
@@ -202,6 +199,15 @@ export function MerkleTreeGraph({
     playSuccessChime()
   }
 
+  if (!isValidRoot) {
+    return (
+      <div className="p-4 rounded-xl bg-[#09090e] border border-red-800 space-y-2 font-mono text-xs text-red-300">
+        <p className="font-bold text-white">Invalid Merkle root - no certificate shown</p>
+        <p>Expected a 64-hex SHA-256 digest. The stored root was malformed or missing, so it is not padded, completed, or displayed as valid.</p>
+      </div>
+    )
+  }
+
   return (
     <div className="p-4 rounded-xl bg-[#09090e] border border-[#272738] space-y-3 font-mono text-xs">
       <div className="flex items-center justify-between pb-2 border-b border-[#1c1c28]">
@@ -217,6 +223,9 @@ export function MerkleTreeGraph({
           </span>
           <span className="px-2 py-0.5 rounded bg-purple-950/60 border border-purple-800/40 text-[9px] text-purple-300">
             SHA-256 Fold
+          </span>
+          <span className="px-2 py-0.5 rounded bg-amber-950/60 border border-amber-800/40 text-[9px] text-amber-300">
+            Schematic - 4 leaves shown, not to scale
           </span>
         </div>
       </div>

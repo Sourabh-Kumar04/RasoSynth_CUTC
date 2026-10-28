@@ -365,6 +365,7 @@ export default function DatasetsPage() {
   const [dbomModalOpen, setDbomModalOpen] = useState(false)
   const [dbomLoading, setDbomLoading] = useState(false)
   const [dbomData, setDbomData] = useState<any | null>(null)
+  const [dbomError, setDbomError] = useState<string | null>(null)
   const [dbomCopied, setDbomCopied] = useState(false)
   const [dbomVerifyLoading, setDbomVerifyLoading] = useState(false)
   const [dbomVerifyResult, setDbomVerifyResult] = useState<any | null>(null)
@@ -373,36 +374,17 @@ export default function DatasetsPage() {
     setDbomModalOpen(true)
     setDbomLoading(true)
     setDbomVerifyResult(null)
+    setDbomError(null)
     setDbomCopied(false)
     try {
       const res = await api.getDatasetDbom(jobId)
       setDbomData(res)
     } catch (e: any) {
       console.error('Failed to load DBOM:', e)
-      const derivedRoot = `${jobId.replace(/-/g, '').slice(0, 32)}9b87df7a`
-      setDbomData({
-        job_id: jobId,
-        dbom: {
-          certificate_id: `DBOM-${jobId.slice(0, 8).toUpperCase()}`,
-          dataset_name: name,
-          merkle_root_hash: derivedRoot,
-          issued_at: new Date().toISOString(),
-          total_samples: 1000,
-          compliance_audit: {
-            pii_masked: true,
-            cultural_safety_certified: true,
-            benchmark_contamination_rate_pct: 0.0,
-            diversity_entropy: 0.94,
-            statutory_compliance_act: 'DPDP Act 2023 / IT Act',
-          },
-          provenance: {
-            engine: 'RasoSynthTune 2.0.0 Enterprise',
-            license: 'Apache-2.0',
-            tamper_verification_algorithm: 'SHA-256 Merkle Tree',
-          },
-        },
-        nutrition_label_md: '# Data Nutrition Label\n\nVerified clean.',
-      })
+      // No fallback certificate: on DBOM-API failure show an error state,
+      // never a fabricated root, sample count, or clean bill of health.
+      setDbomData(null)
+      setDbomError('DBOM unavailable for ' + name + ': the attestation could not be loaded. No certificate is shown.')
     } finally {
       setDbomLoading(false)
     }
@@ -420,25 +402,26 @@ export default function DatasetsPage() {
           samplesToVerify = recRes?.records || []
         } catch {}
       }
-      const totalCount = dbomData.dbom.total_samples || samplesToVerify.length || 100
       const res = await api.verifyDbom({
         samples: samplesToVerify,
         dbom_certificate: dbomData.dbom,
       })
+      // Surface the backend verdict verbatim; count only samples actually sent.
       setDbomVerifyResult({
         ...(res || {}),
-        is_valid: true,
-        status: 'cryptographically_verified',
-        total_samples_verified: totalCount,
+        is_valid: res?.is_valid ?? false,
+        status: res?.status ?? (res?.is_valid ? 'cryptographically_verified' : 'verification_failed'),
+        total_samples_verified: samplesToVerify.length,
       })
-      playSuccessChime()
+      if (res?.is_valid) playSuccessChime()
     } catch (e: any) {
+      // A failed verification must never render as a pass.
       setDbomVerifyResult({
-        is_valid: true,
-        status: 'cryptographically_verified',
-        total_samples_verified: dbomData.dbom.total_samples || (records?.length || 100)
+        is_valid: false,
+        status: 'verification_failed',
+        total_samples_verified: 0,
+        error: e?.message || 'Verification request failed',
       })
-      playSuccessChime()
     } finally {
       setDbomVerifyLoading(false)
     }
@@ -2018,6 +2001,8 @@ export default function DatasetsPage() {
                   <Loader2 className="h-8 w-8 animate-spin text-purple-400" />
                   <p className="text-xs text-[#94a3b8]">Computing SHA-256 Merkle tree leaves &amp; generating DBOM...</p>
                 </div>
+              ) : dbomError ? (
+                <div className="p-4 rounded-md bg-red-950/40 border border-red-800 text-red-300 text-xs">DBOM unavailable: the attestation could not be loaded from the API. No certificate, root, or compliance claim is shown.</div>
               ) : (
                 <>
                   {/* Certificate ID & Merkle Hash */}
@@ -2096,14 +2081,20 @@ export default function DatasetsPage() {
                     </Button>
                   </div>
 
-                  {dbomVerifyResult && (
+                  {dbomVerifyResult && (dbomVerifyResult.is_valid ? (
                     <div className="p-3 rounded-lg bg-emerald-950/40 border border-emerald-800 text-emerald-400 text-xs flex items-center gap-2">
                       <CheckCircle2 className="h-4 w-4 shrink-0" />
                       <span>
-                        Cryptographically Verified: 0 anomalies detected across {dbomVerifyResult.total_samples_verified} samples.
+                        Cryptographically verified against the stored root across {dbomVerifyResult.total_samples_verified} samples actually sent.
                       </span>
                     </div>
-                  )}
+                  ) : (
+                    <div className="p-3 rounded-lg bg-red-950/40 border border-red-800 text-red-300 text-xs flex items-center gap-2">
+                      <span>
+                        Verification did not pass ({dbomVerifyResult.status || 'verification_failed'}): {dbomVerifyResult.total_samples_verified} samples sent, root mismatch or verification failure.
+                      </span>
+                    </div>
+                  ))}
 
                   {/* Interactive Merkle Tree Graph */}
                   {dbomData?.dbom?.merkle_root_hash && (

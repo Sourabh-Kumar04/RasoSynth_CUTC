@@ -43,7 +43,7 @@ import { computeSampleHash, computeMerkleRoot } from '@/lib/crypto'
 import { BrandLogo } from '@/components/ui/brand-logo'
 import { SynthesisFlowDiagram } from '@/components/ui/synthesis-flow-diagram'
 
-// 7 Synthesis Engines Definition with Live Preview Data
+// 7 Synthesis Engines Definition with example preview data (illustrative, not live output)
 const ENGINES = [
   {
     id: 'cot',
@@ -132,7 +132,7 @@ const ENGINES = [
         'No medical glutathione terminology',
         'No hallucinated circular numbers not in CBIC gazette',
       ],
-      immunity_score: '99.94% anti-domain rejection threshold',
+      immunity_score: '99.94% anti-domain rejection threshold (example value)',
     },
   },
   {
@@ -795,7 +795,7 @@ export default function ZenPortalPage() {
               <div className="flex items-center gap-2">
                 <FileCode className="w-4 h-4 text-[#f26625]" />
                 <span className="text-xs font-mono font-bold text-white uppercase tracking-wider">
-                  Live Synthetic Sample Output ({currentEngineObj.name})
+                  Example output (illustrative) ({currentEngineObj.name})
                 </span>
               </div>
               <button
@@ -816,7 +816,7 @@ export default function ZenPortalPage() {
 
             <div className="pt-2 border-t border-[#1c1c28] flex items-center justify-between text-[10px] font-mono text-zinc-500">
               <span>Grounding Invariant: Strict DPDP Act &amp; Citation Rules</span>
-              <span className="text-[#f26625]">Quality Score: 0.94 / 1.00</span>
+              <span className="text-[#f26625]">Example quality score: 0.94 / 1.00 (illustrative, not a live result)</span>
             </div>
           </div>
         </div>
@@ -969,7 +969,7 @@ export default function ZenPortalPage() {
                 <div className="p-3 rounded-lg bg-[#07060d] border border-purple-900/30 space-y-1.5">
                   <span className="text-[10px] text-emerald-400 font-bold">STEP 3: Fold Merkle Parent</span>
                   <p className="text-[11px] text-zinc-400 font-sans">
-                    Pairwise hash siblings: H(Leaf0 || Leaf1). Matches 64-hex root:
+                    Pairwise hash siblings: H(Leaf0 || Leaf1). Example 64-hex root (illustrative):
                   </p>
                   <code className="text-[10px] text-emerald-300 block bg-[#12101e] p-1.5 rounded overflow-x-auto truncate">
                     9b87df7a3982f6e9b418a096c429712a5542a1ef248f27af3b028da3d91cf972
@@ -982,10 +982,10 @@ export default function ZenPortalPage() {
                 <div className="space-y-0.5">
                   <div className="flex items-center space-x-1.5 text-white font-bold text-[11px]">
                     <CheckCircle2 className="w-3.5 h-3.5 text-emerald-400" />
-                    <span>In-Browser Live Verifier Tool</span>
+                    <span>In-Browser Demo Verifier (2 example samples)</span>
                   </div>
                   <p className="text-[10px] text-zinc-400 font-sans">
-                    Runs client-side SHA-256 canonical hashing across active dataset records in real time.
+                    Demo only: hashes 2 fixed example samples in-browser. It does not hash or verify any active dataset.
                   </p>
                 </div>
 
@@ -1000,7 +1000,7 @@ export default function ZenPortalPage() {
                   ) : (
                     <Zap className="w-3 h-3 text-purple-300" />
                   )}
-                  <span>{recomputedRoot ? 'Re-verify Hash' : 'Verify Test Batch Now'}</span>
+                  <span>{recomputedRoot ? 'Re-run Demo' : 'Run 2-Sample Demo'}</span>
                 </button>
               </div>
 
@@ -1008,7 +1008,7 @@ export default function ZenPortalPage() {
                 <div className="p-2.5 rounded bg-[#0e1612] border border-emerald-500/40 text-emerald-300 text-[11px] space-y-1">
                   <div className="flex items-center space-x-2 font-bold">
                     <Check className="w-3.5 h-3.5 text-emerald-400" />
-                    <span>100% Cryptographic Match — 0 Anomalies Detected (64-Hex Standard)</span>
+                    <span>Demo recomputation complete: root of the 2 example samples (not compared to any stored dataset root)</span>
                   </div>
                   <div className="font-mono text-[10px] break-all text-zinc-300 bg-[#070b09] p-1.5 rounded">
                     Root: {recomputedRoot}
@@ -1022,6 +1022,7 @@ export default function ZenPortalPage() {
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
           {/* Left Column: Interactive Merkle Tree Graph */}
           <div className="lg:col-span-7">
+            <p className="text-[11px] font-mono text-amber-300 mb-3">Example attestation - the root, certificate ID, sample count, and date below are illustrative, not fetched from a live dataset.</p>
             <MerkleTreeGraph
               rootHash="9b87df7a3982f6e9b418a096c429712a5542a1ef248f27af3b028da3d91cf972"
               certificateId="DBOM-VERIFIED-DATASET"
@@ -1036,10 +1037,10 @@ export default function ZenPortalPage() {
               <div className="flex items-center gap-2">
                 <FileText className="w-4 h-4 text-purple-400" />
                 <span className="text-xs font-mono font-bold text-white uppercase tracking-wider">
-                  Data Nutrition Facts
+                  Data Nutrition Facts (Reference Example)
                 </span>
               </div>
-              <span className="text-[10px] font-mono text-emerald-400 font-semibold">100% Certified</span>
+              <span className="text-[10px] font-mono text-emerald-400 font-semibold">Reference Example</span>
             </div>
 
             <div className="space-y-2.5 text-xs font-mono">
@@ -1099,7 +1100,7 @@ export default function ZenPortalPage() {
             Rigorous Neural Quality Metrics
           </h2>
           <p className="text-xs text-zinc-400 mt-2">
-            Every sample is filtered against neural cosine embeddings and graded by our pure LLM Judge rubric before admission into the dataset.
+            Every sample is filtered against neural cosine embeddings and graded by our pure LLM Judge rubric before admission into the dataset. The figures in this section are reference values, not measured per-dataset results.
           </p>
         </div>
 
