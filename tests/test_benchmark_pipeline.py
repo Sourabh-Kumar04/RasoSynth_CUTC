@@ -1,6 +1,4 @@
 import time
-import hashlib
-import pytest
 from core.export.dbom_attestor import compute_sample_hash, compute_merkle_root
 
 

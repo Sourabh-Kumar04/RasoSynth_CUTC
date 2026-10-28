@@ -1,7 +1,6 @@
 """Tests for tax collision, foreign jurisdiction, and homonym filtering."""
 import pytest
-from unittest.mock import MagicMock
-from core.orchestrator_core import ConstraintAnalyzer, DatasetOrchestrator
+from core.orchestrator_core import ConstraintAnalyzer
 from core.intent import UserIntent
 from pipeline.filtering import FilteringPipeline
 from pipeline.construction import _is_chunk_domain_relevant

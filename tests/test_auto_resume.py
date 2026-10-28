@@ -4,10 +4,10 @@ Uses mock objects to avoid requiring a real database.
 Covers: recovery detection, checkpoint restore, stale job handling, edge cases.
 """
 import pytest
-from unittest.mock import AsyncMock, MagicMock, patch
+from unittest.mock import AsyncMock, MagicMock
 from datetime import datetime, timedelta, timezone
 
-from core.auto_resume import AutoResumeManager, JobRecoveryState
+from core.auto_resume import AutoResumeManager
 
 
 @pytest.fixture

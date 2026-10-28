@@ -5,7 +5,6 @@ Uses asyncio-based testing with mock observability.
 """
 import asyncio
 import pytest
-from unittest.mock import AsyncMock, MagicMock
 
 from core.admission_control import AdmissionController, BackpressureSettings
 

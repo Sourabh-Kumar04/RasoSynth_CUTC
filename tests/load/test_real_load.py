@@ -13,7 +13,6 @@ import os
 import sys
 from datetime import datetime, timezone
 from dataclasses import dataclass, field
-from typing import Optional
 
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), "../.."))
 

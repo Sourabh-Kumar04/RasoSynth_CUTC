@@ -1,4 +1,3 @@
-import pytest
 from rasosynth import RasoSynthClient, JobResult, DBOMAttestation
 
 

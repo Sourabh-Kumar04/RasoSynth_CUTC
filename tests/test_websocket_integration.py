@@ -4,14 +4,14 @@
 import asyncio
 import os
 import sys
-from unittest.mock import Mock, AsyncMock, patch, MagicMock
+from unittest.mock import Mock, AsyncMock, MagicMock
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 
 from core.config import Settings
 from core.db import AsyncDB
 from core.orchestrator_core import DatasetOrchestrator, Job, JobStatus
-from api.websocket_manager import ConnectionManager, MessageType, WebSocketMessage
+from api.websocket_manager import MessageType
 
 
 class MockSample:

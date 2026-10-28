@@ -1,4 +1,3 @@
-import pytest
 from pathlib import Path
 from scripts.seed_demo_data import seed_demo_artifacts
 

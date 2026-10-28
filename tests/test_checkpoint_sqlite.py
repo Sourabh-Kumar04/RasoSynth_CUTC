@@ -1,6 +1,5 @@
 """Test checkpoint endpoints and fallback with SQLite/PostgreSQL database."""
 import uuid
-import pytest
 from fastapi.testclient import TestClient
 from api.server import app
 

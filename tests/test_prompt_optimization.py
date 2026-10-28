@@ -1,6 +1,6 @@
 import pytest
 from pipeline.prompt_breeder import PromptBreeder
-from pipeline.dspy_optimizer import DSPySignature, SignatureField, DSPyTeleprompter
+from pipeline.dspy_optimizer import DSPySignature, SignatureField
 
 @pytest.mark.asyncio
 async def test_prompt_breeder_evolution():

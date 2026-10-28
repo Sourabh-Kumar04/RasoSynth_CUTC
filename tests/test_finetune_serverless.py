@@ -1,4 +1,3 @@
-import pytest
 from api.finetune import CreateFineTuneJobRequest
 from finetuning.trainer import FineTuneConfig, Trainer
 

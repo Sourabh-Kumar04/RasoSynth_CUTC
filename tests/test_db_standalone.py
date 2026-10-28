@@ -6,14 +6,14 @@ import os
 import sys
 import uuid
 from datetime import datetime, timezone
-from typing import Optional, List
+from typing import Optional
 
 # Add the project root to Python path
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 
 from sqlalchemy.ext.asyncio import create_async_engine, AsyncSession, async_sessionmaker
-from sqlalchemy.orm import declarative_base, relationship
-from sqlalchemy import Column, String, Integer, Float, DateTime, JSON, Text, ForeignKey, delete, select
+from sqlalchemy.orm import declarative_base
+from sqlalchemy import Column, String, Integer, Float, DateTime, JSON, Text, ForeignKey, select
 
 # Define models
 Base = declarative_base()

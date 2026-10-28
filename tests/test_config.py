@@ -1,6 +1,5 @@
 """Tests for configuration module."""
 import os
-import pytest
 # Undo .env override so we test actual defaults
 _original_env = os.environ.get("redis_url") or os.environ.get("REDIS_URL")
 if "REDIS_URL" in os.environ:

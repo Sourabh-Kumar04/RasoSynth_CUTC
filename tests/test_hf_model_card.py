@@ -1,4 +1,3 @@
-import pytest
 from core.export.huggingface_exporter import generate_hf_model_card
 
 

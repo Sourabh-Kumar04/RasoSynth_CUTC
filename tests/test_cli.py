@@ -1,13 +1,11 @@
 """Tests for RasoSynthTune Unified Developer CLI (cli.py & main.py)."""
 
 import json
-import os
 import subprocess
 import sys
 import tempfile
 from pathlib import Path
 
-import pytest
 
 CLI_SCRIPT = str(Path(__file__).parent.parent / "cli.py")
 MAIN_SCRIPT = str(Path(__file__).parent.parent / "main.py")

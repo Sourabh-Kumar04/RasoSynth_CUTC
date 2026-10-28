@@ -1,4 +1,3 @@
-import pytest
 from scripts.resume_job import resume_pipeline_job
 
 

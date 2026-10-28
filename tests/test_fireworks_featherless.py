@@ -1,9 +1,7 @@
 """Test Fireworks and Featherless OpenAI-compatible providers."""
-import pytest
 from providers.core_lib.plugin import PluginRegistry
 from providers.fireworks import FireworksProvider
 from providers.featherless import FeatherlessProvider
-from providers.base_provider import ProviderConfig
 from core.provider_router import ProviderRouter
 
 

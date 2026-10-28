@@ -9,7 +9,6 @@ Tests complete end-to-end dataset generation jobs:
 
 import json
 import os
-import random
 import shutil
 import tempfile
 import uuid
@@ -22,7 +21,7 @@ from unittest.mock import AsyncMock, Mock
 from core.db import AsyncDB
 from core.export.dbom_attestor import verify_dataset_dbom
 from core.orchestrator_core import DatasetOrchestrator, Job, JobStatus
-from providers.core_lib.base import LLMResponse, TaskType
+from providers.core_lib.base import LLMResponse
 
 
 class MockJobRequest(BaseModel):

@@ -1,8 +1,5 @@
 import pytest
-from unittest.mock import AsyncMock, patch
-from pathlib import Path
-import shutil
-import tempfile
+from unittest.mock import AsyncMock
 from starlette.testclient import TestClient
 from api.server import app
 import api.server as server_mod

@@ -1,4 +1,3 @@
-import pytest
 from core.langsmith_tracer import LangSmithTracer
 
 def test_langsmith_tracer_initialization():

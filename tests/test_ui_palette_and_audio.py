@@ -1,6 +1,5 @@
 """Tests for Frontend Zen Spatial UI, Color Palette definitions, and Audio Engine."""
 
-import pytest
 from core.export.dbom_attestor import compute_sample_hash, compute_merkle_root
 
 

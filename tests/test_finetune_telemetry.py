@@ -1,4 +1,3 @@
-import pytest
 from core.export.dbom_attestor import compute_merkle_root, compute_sample_hash
 
 

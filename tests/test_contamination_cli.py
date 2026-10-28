@@ -1,6 +1,4 @@
-import pytest
 import json
-from pathlib import Path
 from scripts.check_contamination import load_dataset_samples, run_audit
 
 
