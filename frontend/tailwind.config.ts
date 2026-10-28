@@ -27,11 +27,12 @@ const config: Config = {
           DEFAULT: '#161622',
           foreground: '#94a3b8',
         },
+        // Obsidian proof ledger: ONE action colour (YC orange). Indigo retired.
         primary: {
-          DEFAULT: '#6366f1',
-          hover: '#818cf8',
-          muted: '#4f46e5',
-          glow: 'rgba(99, 102, 241, 0.35)',
+          DEFAULT: '#f26625',
+          hover: '#de581a',
+          muted: '#c94b11',
+          glow: 'rgba(242, 102, 37, 0.35)',
         },
         emerald: {
           DEFAULT: '#10b981',
@@ -40,9 +41,18 @@ const config: Config = {
           glow: 'rgba(16, 185, 129, 0.35)',
         },
         accent: {
-          DEFAULT: '#6366f1',
-          hover: '#818cf8',
-          muted: '#4f46e5',
+          DEFAULT: '#f26625',
+          hover: '#de581a',
+          muted: '#c94b11',
+        },
+        // Alias for the single action colour; use `action` for new code.
+        action: {
+          DEFAULT: '#f26625',
+          hover: '#de581a',
+          active: '#c94b11',
+          light: '#ff7836',
+          tint: 'rgba(242, 102, 37, 0.12)',
+          border: 'rgba(242, 102, 37, 0.35)',
         },
         yc: {
           DEFAULT: '#f26625',

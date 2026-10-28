@@ -939,7 +939,7 @@ function StudioContent() {
                                       st.includes('github') ? 'Repo' : null
                     const typeColor = st === 'wikipedia' ? 'bg-sky-950/60 border-sky-800/60 text-sky-400' :
                                       st === 'books' ? 'bg-amber-950/60 border-amber-800/60 text-amber-400' :
-                                      st === 'blog' ? 'bg-indigo-950/60 border-indigo-800/60 text-indigo-400' :
+                                      st === 'blog' ? 'bg-[#161622] border-[#272738] text-[#f8fafc]' :
                                       st.includes('dataset') ? 'bg-emerald-950/60 border-emerald-800/60 text-emerald-400' :
                                       'bg-[#161622] border-[#272738] text-zinc-400'
 

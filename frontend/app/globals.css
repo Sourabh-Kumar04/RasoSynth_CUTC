@@ -78,11 +78,6 @@
     background-size: 24px 24px;
   }
 
-  /* Cybernetic Glows & Atmospheric Lighting */
-  .glow-indigo {
-    box-shadow: 0 0 20px -3px rgba(99, 102, 241, 0.35);
-  }
-
   .glow-emerald {
     box-shadow: 0 0 20px -3px rgba(16, 185, 129, 0.35);
   }
@@ -225,9 +220,6 @@
   }
 
   /* Hairline accent traces */
-  .border-gradient-indigo {
-    border-image: linear-gradient(90deg, transparent, #6366f1, transparent) 1;
-  }
 
   .border-gradient-emerald {
     border-image: linear-gradient(90deg, transparent, #10b981, transparent) 1;

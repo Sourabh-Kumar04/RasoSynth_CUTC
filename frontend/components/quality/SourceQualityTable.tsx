@@ -62,7 +62,7 @@ export default function SourceQualityTable() {
               const pct = (item.avg_quality * 100).toFixed(1);
               const tier =
                 item.avg_quality >= 0.8 ? { label: "Excellent", cls: "bg-emerald-950/40 text-emerald-400 border-emerald-500/30" }
-              : item.avg_quality >= 0.6 ? { label: "Good",      cls: "bg-indigo-950/40 text-[#f26625] border-indigo-500/30" }
+              : item.avg_quality >= 0.6 ? { label: "Good",      cls: "bg-emerald-950/40 text-emerald-400 border-emerald-500/30" }
               :                           { label: "Needs Review", cls: "bg-rose-950/40 text-rose-400 border-rose-500/30" };
 
               return (

@@ -245,13 +245,13 @@ export function CommandPalette({
                         <span className="text-xs font-bold truncate">{item.title}</span>
                         <span
                           className={`text-[9px] font-mono px-1.5 py-0.5 rounded-full ${
-                            isSelected ? 'bg-indigo-950 text-indigo-200' : 'bg-[#161622] text-[#94a3b8]'
+                            isSelected ? 'bg-[#f26625]/15 text-white' : 'bg-[#161622] text-[#94a3b8]'
                           }`}
                         >
                           {item.category}
                         </span>
                       </div>
-                      <p className={`text-[11px] truncate mt-0.5 ${isSelected ? 'text-indigo-100' : 'text-[#94a3b8]'}`}>
+                      <p className={`text-[11px] truncate mt-0.5 ${isSelected ? 'text-white' : 'text-[#94a3b8]'}`}>
                         {item.subtitle}
                       </p>
                     </div>

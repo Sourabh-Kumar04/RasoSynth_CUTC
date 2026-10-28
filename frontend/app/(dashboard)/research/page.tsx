@@ -99,7 +99,7 @@ const DEFAULT_HEURISTICS: HeuristicDef[] = [
     desc: 'Staged difficulty sequencing (Tier 1-2 Foundations -> Tier 3-4 -> Tier 5) with anti-forgetting replay buffer.',
     impact: '+24.1% Convergence Rate',
     params: { mode: 'staged_curriculum', replay_ratio: 0.15 },
-    color: 'text-indigo-400'
+    color: 'text-[#f26625]'
   },
   {
     key: 'benchmark_contamination_guard',
