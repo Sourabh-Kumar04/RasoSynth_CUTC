@@ -189,40 +189,6 @@ const QUICK_SEEDS = [
 ]
 
 // 4-Stage Pipeline Architecture Stages
-const PIPELINE_DAG_STAGES = [
-  {
-    step: '01',
-    title: 'Corpus Discovery & Invariant Guardrails',
-    desc: 'Crawls authority repositories (AI Kosh, Bhashini, domain registries). Automatically extracts syntactic invariants, PII masking rules, and anti-domain boundaries.',
-    icon: Network,
-    badge: 'Layer 1 Gate',
-    latency: '~45ms / query (benchmark)',
-  },
-  {
-    step: '02',
-    title: '7-Engine Parallel Synthesis',
-    desc: 'Distributes synthesis across Celery / Ray multi-worker nodes. Executes cognitive prompt loops (CoT, Socratic, DPO, Tool Calling) with deduplication.',
-    icon: Cpu,
-    badge: 'Distributed Ray / Celery',
-    latency: '~280ms / batch (benchmark)',
-  },
-  {
-    step: '03',
-    title: 'Dual-Layer Quality & Neural Judge',
-    desc: 'Combines semantic cosine deduplication (>0.92) and domain threshold (>0.40) with multi-criteria LLM Judge evaluation. Rejects hallucinations and script drift.',
-    icon: Scale,
-    badge: 'Neural Judge',
-    latency: '~120ms / sample (benchmark)',
-  },
-  {
-    step: '04',
-    title: 'DBOM Attestation & Packaging',
-    desc: 'Hashes every sample with SHA-256 into a cryptographic Merkle root. Emits Data Nutrition Labels and packages into HF, Parquet, or DPO format.',
-    icon: ShieldCheck,
-    badge: 'Cryptographic DBOM',
-    latency: '~15ms / artifact',
-  },
-]
 
 // Code Quickstart Snippets
 const CODE_SNIPPETS = {
@@ -754,7 +720,7 @@ export default function ZenPortalPage() {
         {/* 2-Column Sandbox Layout */}
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
           {/* Engine Selector Column */}
-          <div className="lg:col-span-5 space-y-2.5">
+          <div className="lg:col-span-5 divide-y divide-[#272738] rounded-md border border-[#272738] bg-[#0e0e15] overflow-hidden">
             {ENGINES.map((eng) => {
               const isCurrent = selectedEngine === eng.id
               return (
@@ -765,10 +731,10 @@ export default function ZenPortalPage() {
                     setSelectedEngine(eng.id)
                   }}
                   className={clsx(
-                    'p-3.5 rounded-xl border transition-all cursor-pointer relative',
+                    'px-3 py-2.5 transition-colors cursor-pointer relative',
                     isCurrent
-                      ? 'bg-[#14141e] border-[#f26625]/80 shadow-md glow-yc'
-                      : 'bg-[#0e0e15] border-[#222230] hover:border-[#333348]'
+                      ? 'bg-[#14141e] border-l-2 border-l-[#f26625]'
+                      : 'hover:bg-[#161622]'
                   )}
                 >
                   <div className="flex items-center justify-between mb-1">
@@ -844,38 +810,6 @@ export default function ZenPortalPage() {
 
         {/* Dynamic Vector Architecture Stream */}
         <SynthesisFlowDiagram />
-
-        {/* 4 Pipeline Stages Cards */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-          {PIPELINE_DAG_STAGES.map((stg) => {
-            const Icon = stg.icon
-            return (
-              <div
-                key={stg.step}
-                className="p-5 rounded-xl border border-[#272738] bg-[#0c0c14] flex flex-col justify-between space-y-4 hover:border-[#f26625]/50 transition-colors relative"
-              >
-                <div>
-                  <div className="flex items-center justify-between mb-3">
-                    <span className="text-xs font-mono font-black text-[#f26625]">{stg.step}</span>
-                    <span className="px-2 py-0.5 rounded text-[9px] font-mono bg-[#161624] text-zinc-300 border border-[#272738]">
-                      {stg.badge}
-                    </span>
-                  </div>
-                  <div className="w-8 h-8 rounded-lg bg-[#f26625]/10 border border-[#f26625]/30 flex items-center justify-center text-[#f26625] mb-3">
-                    <Icon className="w-4 h-4" />
-                  </div>
-                  <h3 className="text-xs font-bold text-white mb-1.5">{stg.title}</h3>
-                  <p className="text-[11px] text-zinc-400 leading-relaxed">{stg.desc}</p>
-                </div>
-
-                <div className="pt-3 border-t border-[#1c1c28] flex items-center justify-between text-[10px] font-mono text-zinc-500">
-                  <span>Stage Latency:</span>
-                  <span className="text-zinc-300 font-semibold">{stg.latency}</span>
-                </div>
-              </div>
-            )
-          })}
-        </div>
 
         <div className="mt-4 p-3 rounded-lg bg-[#0e0e16] border border-[#1f1f2e] text-[10px] font-mono text-zinc-400 text-center">
           * Latency benchmarked on local multi-worker container setup (45ms corpus discovery, 280ms synthesis, 120ms neural evaluation, 15ms Merkle packaging). Real LLM provider API latency varies from 1.2s to 4.5s depending on model and context window size.

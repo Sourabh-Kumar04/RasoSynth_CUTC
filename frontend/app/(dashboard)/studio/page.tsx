@@ -518,7 +518,7 @@ function StudioContent() {
             ))}
           </div>
 
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 xl:grid-cols-7 gap-3">
+          <div className="divide-y divide-[#272738] rounded-md border border-[#272738] bg-[#12121a] overflow-hidden">
             {INDUSTRY_PRESETS.filter(p => selectedCategory === 'all' || (p as any).category === selectedCategory).map((preset) => {
               const isSelected = activePreset === preset.id
               return (
@@ -551,27 +551,27 @@ function StudioContent() {
                     setPrioritizeAiKosh(hasAiKosh)
                   }}
                   className={clsx(
-                    'p-3.5 rounded-md border text-left transition-all space-y-2 relative overflow-hidden',
+                    'w-full px-3 py-2.5 text-left transition-colors relative flex items-center gap-4',
                     isSelected
-                      ? 'bg-[#161622] border-[#f26625] shadow-sm glow-yc'
-                      : 'bg-[#12121a] border-[#272738] hover:border-[#f26625]/40 hover:bg-[#161622]/60'
+                      ? 'bg-[#161622] border-l-2 border-l-[#f26625]'
+                      : 'hover:bg-[#161622]/60'
                   )}
                 >
-                  <div className="flex justify-between items-start">
-                    <span className="text-[10px] font-mono font-bold uppercase text-[#f26625] truncate">
+                  <div className="flex flex-col gap-0.5 shrink-0 w-32">
+                    <span className="text-xs font-mono font-bold uppercase text-[#f26625] truncate">
                       {preset.source}
                     </span>
-                    <span className="text-[10px] font-mono text-[#10b981] font-semibold">
+                    <span className="text-xs font-mono text-[#10b981] font-semibold">
                       {preset.size.toLocaleString()}
                     </span>
                   </div>
                   <h4
-                    className="text-xs font-semibold text-white line-clamp-2 leading-tight min-h-[2rem]"
+                    className="text-sm font-semibold text-white leading-snug flex-1 min-w-0"
                     title={preset.title}
                   >
                     {preset.title}
                   </h4>
-                  <div className="flex items-center gap-1 text-[10px] font-mono text-[#94a3b8]">
+                  <div className="flex items-center gap-1 text-xs font-mono text-[#94a3b8] shrink-0">
                     <span className="px-1.5 py-0.5 rounded-sm bg-[#0a0a0f] border border-[#272738] uppercase">
                       {preset.type}
                     </span>

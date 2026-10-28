@@ -104,9 +104,9 @@ export default function QualityOverviewCards() {
 
   return (
     <div className="space-y-2">
-      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3">
+      <div className="flex flex-col sm:flex-row sm:divide-x divide-[#272738] rounded-md border border-[#272738] bg-[#12121a]">
         {cards.map(({ label, sub, value, color, icon: Icon, badge }) => (
-          <div key={label} className="bg-[#12121a] rounded-md border border-[#272738] p-3.5 card-shadow flex flex-col justify-between">
+          <div key={label} className="flex-1 px-4 py-3 flex flex-col justify-between">
             <div className="flex items-center justify-between mb-1.5">
               <span className="text-[10px] font-mono text-[#94a3b8] uppercase tracking-wider font-bold truncate">{label}</span>
               <Icon className="h-3.5 w-3.5 text-[#64748b] shrink-0" />

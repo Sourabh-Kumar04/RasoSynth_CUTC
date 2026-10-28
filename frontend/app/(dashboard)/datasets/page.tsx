@@ -818,13 +818,8 @@ export default function DatasetsPage() {
                             <p className="font-semibold text-xs text-white truncate hover:text-[#f26625] transition-colors" title={dataset.name}>
                               {dataset.name}
                             </p>
-                            {dataset.description && (
-                              <p className="text-[10px] text-[#94a3b8] truncate font-mono mt-0.5" title={dataset.description}>
-                                {dataset.description}
-                              </p>
-                            )}
-                            <p className="text-[9px] text-[#64748b] font-mono mt-0.5">
-                              ID: {dataset.id.slice(0, 12)}...
+                            <p className="text-xs text-[#94a3b8] font-mono mt-0.5">
+                              {dataset.created} · {dataset.records.toLocaleString()} records
                             </p>
                           </div>
                         </div>
@@ -1065,8 +1060,8 @@ export default function DatasetsPage() {
                     <h3 className="text-sm font-bold text-white group-hover:text-[#f26625] transition-colors leading-snug line-clamp-1" title={dataset.name}>
                       {dataset.name}
                     </h3>
-                    <p className="text-xs text-[#94a3b8] mt-1 line-clamp-2 leading-relaxed" title={dataset.description || dataset.name}>
-                      {dataset.description || dataset.name}
+                    <p className="text-xs text-[#94a3b8] font-mono mt-1">
+                      {dataset.created} · {dataset.records.toLocaleString()} records
                     </p>
                   </div>
                 </CardHeader>
@@ -1215,6 +1210,11 @@ export default function DatasetsPage() {
             </div>
           </CardHeader>
           <CardContent className="p-6 space-y-5">
+            {/* Full specification prompt — moved out of list rows, shown here on row click. */}
+            <div className="rounded-md border border-[#272738] bg-[#0a0a0f] p-3">
+              <p className="text-xs font-mono font-bold uppercase tracking-wider text-[#94a3b8]">Specification prompt</p>
+              <p className="mt-1 text-sm text-zinc-200 leading-relaxed">{selected.description || 'Not recorded'}</p>
+            </div>
             {/* Pipeline Stage Breadcrumbs */}
             <div className="space-y-2">
               <p className="text-[10px] font-mono text-[#94a3b8] uppercase tracking-wider">Pipeline Lifecycle Stage</p>

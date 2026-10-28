@@ -271,7 +271,7 @@ export default function QualityDashboardPage() {
             </div>
           </CardHeader>
           <CardContent className="p-4">
-            <div className="grid grid-cols-2 sm:grid-cols-5 gap-3">
+            <div className="divide-y divide-[#272738] rounded-md border border-[#272738] bg-[#0a0a0f]">
               {[
                 { label: "Topic Fidelity", val: topicFidelityPct, threshold: "80% min", desc: "Adherence to user prompt & domain bounds" },
                 { label: "Source Grounding", val: groundingPct, threshold: "75% min", desc: "Factually grounded in domain sources" },
@@ -279,7 +279,7 @@ export default function QualityDashboardPage() {
                 { label: "Response Completeness", val: completenessPct, threshold: "80% min", desc: "Comprehensive statutory/technical depth" },
                 { label: "Domain Correctness", val: domainPct, threshold: "85% min", desc: "Jurisdiction & safety terminology adherence" },
               ].map((dim, i) => (
-                <div key={i} className="p-3 rounded-lg bg-[#0a0a0f] border border-[#272738] space-y-1.5">
+                <div key={i} className="px-3 py-2.5 space-y-1">
                   <div className="flex items-center justify-between">
                     <span className="text-[10px] text-[#94a3b8] uppercase font-mono font-bold truncate">{dim.label}</span>
                     <span className="text-[9px] text-zinc-500 font-mono">{dim.threshold}</span>
@@ -424,7 +424,7 @@ export default function QualityDashboardPage() {
                   </div>
                 </div>
 
-                <div className="grid grid-cols-2 sm:grid-cols-5 gap-2.5">
+                <div className="divide-y divide-[#272738] rounded-md border border-[#272738] bg-[#12121a]">
                   {[
                     { label: "Groundedness", val: judgeResult.groundedness },
                     { label: "Authenticity", val: judgeResult.authenticity },
@@ -432,7 +432,7 @@ export default function QualityDashboardPage() {
                     { label: "Safety & Tone", val: judgeResult.safety_tone },
                     { label: "Conciseness", val: judgeResult.conciseness },
                   ].map((dim, i) => (
-                    <div key={i} className="p-2.5 rounded-lg bg-[#12121a] border border-[#272738] space-y-1">
+                    <div key={i} className="px-3 py-2.5 space-y-1">
                       <span className="text-[10px] text-[#94a3b8] uppercase block truncate">{dim.label}</span>
                       <p className="text-sm font-bold text-white">
                         {Math.round(dim.val * 100)}%
@@ -478,30 +478,30 @@ export default function QualityDashboardPage() {
 
         <Card className="border-[#272738] bg-[#12121a] rounded-md card-shadow overflow-hidden">
           <CardHeader className="pb-3 border-b border-[#272738] bg-[#0e0e14]">
-            <div className="grid grid-cols-2 sm:grid-cols-5 gap-3 text-center sm:text-left">
-              <div className="p-2 rounded-lg bg-[#161622] border border-[#272738]">
+            <div className="flex flex-col sm:flex-row sm:divide-x divide-[#272738] rounded-md border border-[#272738] bg-[#161622] text-center sm:text-left">
+              <div className="flex-1 px-3 py-2">
                 <span className="text-[10px] text-[#94a3b8] uppercase font-mono block">Audited Points</span>
                 <span className="text-sm font-bold text-white font-mono">{densityResult?.total_samples || 0} records</span>
               </div>
-              <div className="p-2 rounded-lg bg-[#161622] border border-[#272738]">
+              <div className="flex-1 px-3 py-2">
                 <span className="text-[10px] text-[#94a3b8] uppercase font-mono block">Topic Entropy</span>
                 <span className="text-sm font-bold text-emerald-400 font-mono">
                   {Math.round((densityResult?.diversity_entropy || 0) * 100)}%
                 </span>
               </div>
-              <div className="p-2 rounded-lg bg-[#161622] border border-[#272738]">
+              <div className="flex-1 px-3 py-2">
                 <span className="text-[10px] text-[#94a3b8] uppercase font-mono block">Semantic Coverage</span>
                 <span className="text-sm font-bold text-cyan-400 font-mono">
                   {densityResult?.semantic_coverage_pct || 0}%
                 </span>
               </div>
-              <div className="p-2 rounded-lg bg-[#161622] border border-[#272738]">
+              <div className="flex-1 px-3 py-2">
                 <span className="text-[10px] text-[#94a3b8] uppercase font-mono block">Isolated Outliers</span>
                 <span className="text-sm font-bold text-rose-400 font-mono">
                   {densityResult?.outlier_count || 0} edge case(s)
                 </span>
               </div>
-              <div className="p-2 rounded-lg bg-[#161622] border border-[#272738]">
+              <div className="flex-1 px-3 py-2">
                 <span className="text-[10px] text-[#94a3b8] uppercase font-mono block">Dense Redundancies</span>
                 <span className="text-sm font-bold text-sky-400 font-mono">
                   {densityResult?.redundancy_count || 0} core duplicates
@@ -718,7 +718,7 @@ export default function QualityDashboardPage() {
 
         <Card className="bg-[#12121a] border-[#272738] rounded-md card-shadow">
           <CardContent className="p-5">
-            <div className="grid grid-cols-1 md:grid-cols-5 gap-3 mb-6">
+            <div className="divide-y divide-[#272738] rounded-md border border-[#272738] bg-[#0a0a0f] mb-6">
               {[
                 { tier: 'Tier 1', label: 'Foundational Recall', pct: 20, count: '1,000', color: 'bg-emerald-500', text: 'text-emerald-400', tokens: '142 avg', pass: '99.4%' },
                 { tier: 'Tier 2', label: 'Structured Logic', pct: 30, count: '1,500', color: 'bg-cyan-500', text: 'text-cyan-400', tokens: '286 avg', pass: '98.1%' },
@@ -726,7 +726,7 @@ export default function QualityDashboardPage() {
                 { tier: 'Tier 4', label: 'Tool Calling & Schema', pct: 15, count: '750', color: 'bg-purple-500', text: 'text-purple-400', tokens: '420 avg', pass: '93.2%' },
                 { tier: 'Tier 5', label: 'Frontier Deduction', pct: 10, count: '500', color: 'bg-amber-500', text: 'text-amber-400', tokens: '890 avg', pass: '91.8%' },
               ].map((item) => (
-                <div key={item.tier} className="p-3 rounded-lg bg-[#0a0a0f] border border-[#272738] space-y-2">
+                <div key={item.tier} className="px-3 py-2.5 space-y-1">
                   <div className="flex items-center justify-between">
                     <span className={clsx('text-[10px] font-mono font-bold', item.text)}>{item.tier}</span>
                     <span className="text-xs font-bold text-white font-mono">{item.pct}%</span>
@@ -772,7 +772,7 @@ export default function QualityDashboardPage() {
 
         <Card className="bg-[#12121a] border-[#272738] rounded-md card-shadow">
           <CardContent className="p-5 space-y-4">
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-3">
+            <div className="divide-y divide-[#272738] rounded-md border border-[#272738] bg-[#0a0a0f]">
               {[
                 { benchmark: 'MMLU / Hindi', purity: '100.0%', overlap: '0.00%', samples: '14,042 tests', status: 'Clean' },
                 { benchmark: 'GSM8K (Math)', purity: '100.0%', overlap: '0.00%', samples: '1,319 tests', status: 'Clean' },
@@ -780,7 +780,7 @@ export default function QualityDashboardPage() {
                 { benchmark: 'ARC Challenge', purity: '100.0%', overlap: '0.00%', samples: '1,172 tests', status: 'Clean' },
                 { benchmark: 'IN22-Gen (MT)', purity: '100.0%', overlap: '0.00%', samples: '2,048 tests', status: 'Clean' },
               ].map((b) => (
-                <div key={b.benchmark} className="p-3 rounded-lg bg-[#0a0a0f] border border-[#272738] space-y-1.5">
+                <div key={b.benchmark} className="px-3 py-2.5 space-y-1">
                   <div className="flex items-center justify-between text-xs">
                     <span className="font-semibold text-white font-mono text-[11px] truncate">{b.benchmark}</span>
                     <span className="text-[10px] font-mono text-emerald-400 font-bold">{b.status}</span>
