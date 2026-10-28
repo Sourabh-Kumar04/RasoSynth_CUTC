@@ -448,10 +448,21 @@ class DatabaseManager:
             from sqlalchemy import text
 
             if "sqlite" in database_url:
-                for col in ("sources_discovered", "sources_extracted", "samples_filtered"):
+                for col, coltype in (
+                    ("sources_discovered", "INTEGER DEFAULT 0"),
+                    ("sources_extracted", "INTEGER DEFAULT 0"),
+                    ("samples_filtered", "INTEGER DEFAULT 0"),
+                    # Job.quality_score / Job.merkle_root exist in the model
+                    # (core/db.py Job) but pre-date the persistent SQLite
+                    # fallback DB (outputs/rasosynthtune.db); without these
+                    # the SELECT of all Job columns fails with
+                    # "no such column: jobs.quality_score".
+                    ("quality_score", "FLOAT"),
+                    ("merkle_root", "VARCHAR"),
+                ):
                     try:
                         await conn.execute(
-                            text(f"ALTER TABLE jobs ADD COLUMN {col} INTEGER DEFAULT 0")
+                            text(f"ALTER TABLE jobs ADD COLUMN {col} {coltype}")
                         )
                     except Exception:
                         pass  # Column already exists
@@ -464,6 +475,12 @@ class DatabaseManager:
                 )
                 await conn.execute(
                     text("ALTER TABLE jobs ADD COLUMN IF NOT EXISTS samples_filtered INTEGER DEFAULT 0")
+                )
+                await conn.execute(
+                    text("ALTER TABLE jobs ADD COLUMN IF NOT EXISTS quality_score FLOAT")
+                )
+                await conn.execute(
+                    text("ALTER TABLE jobs ADD COLUMN IF NOT EXISTS merkle_root VARCHAR")
                 )
                 try:
                     await conn.execute(
