@@ -789,11 +789,14 @@ export default function ZenPortalPage() {
             })}
           </div>
 
-          {/* Live Engine Output Inspector Sandbox */}
+          {/* Engine Output Inspector Sandbox — demo samples, not live output */}
           <div className="lg:col-span-7 rounded-xl border border-[#272738] bg-[#09090e] p-5 flex flex-col justify-between space-y-4">
             <div className="flex items-center justify-between pb-3 border-b border-[#1c1c28]">
               <div className="flex items-center gap-2">
                 <FileCode className="w-4 h-4 text-[#f26625]" />
+                <span className="inline-flex items-center rounded-sm border border-amber-500/30 bg-amber-500/10 px-2 py-0.5 font-mono text-xs font-bold text-amber-400">
+                  DEMO
+                </span>
                 <span className="text-xs font-mono font-bold text-white uppercase tracking-wider">
                   Example output (illustrative) ({currentEngineObj.name})
                 </span>
@@ -982,6 +985,9 @@ export default function ZenPortalPage() {
                 <div className="space-y-0.5">
                   <div className="flex items-center space-x-1.5 text-white font-bold text-[11px]">
                     <CheckCircle2 className="w-3.5 h-3.5 text-emerald-400" />
+                    <span className="inline-flex items-center rounded-sm border border-amber-500/30 bg-amber-500/10 px-1.5 py-0.5 font-mono text-xs font-bold text-amber-400">
+                      DEMO
+                    </span>
                     <span>In-Browser Demo Verifier (2 example samples)</span>
                   </div>
                   <p className="text-[10px] text-zinc-400 font-sans">

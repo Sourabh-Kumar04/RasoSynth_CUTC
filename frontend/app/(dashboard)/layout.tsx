@@ -2,6 +2,7 @@ import Link from 'next/link'
 import { TopNav } from '@/components/layout/top-nav'
 import { DashboardNavigation } from '@/components/layout/sub-nav'
 import { BrandLogo } from '@/components/ui/brand-logo'
+import { FooterStatus } from '@/components/layout/footer-status'
 import { ShieldCheck, Terminal, Github, ExternalLink, Activity, Info } from 'lucide-react'
 
 export default function DashboardLayout({
@@ -34,10 +35,7 @@ export default function DashboardLayout({
                 <span className="font-bold tracking-tight">RasoSynthTune</span>
               </Link>
               <span className="text-[#334155] hidden sm:inline">|</span>
-              <span className="flex items-center gap-1.5 px-2 py-0.5 rounded bg-[#12121a] border border-[#272738] text-[11px] text-zinc-300">
-                <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
-                <span>Active: Hybrid Standalone · Real Supabase PostgreSQL</span>
-              </span>
+              <FooterStatus />
               <span className="text-[11px] text-amber-400/90 hidden lg:inline">
                 (Demo Guard: $50 Cap · In-Memory Ring Logging)
               </span>

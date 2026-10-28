@@ -459,6 +459,7 @@ export default function QualityDashboardPage() {
             <h2 className="text-xs font-mono font-bold uppercase tracking-wider text-[#94a3b8]">
               Semantic Density &amp; 2D Topic Coverage Visualizer
             </h2>
+            <Badge variant="warning" className="text-xs font-mono">DEMO</Badge>
             <Badge variant="outline" className="text-[10px] border-[#272738] text-purple-300 font-mono">
               TF-IDF + Truncated SVD Projection
             </Badge>

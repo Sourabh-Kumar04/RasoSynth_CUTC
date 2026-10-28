@@ -131,7 +131,7 @@ export function TelemetryChart({
           <span>Eval Loss: <strong className="text-white">{evalLoss !== null && evalLoss !== undefined ? evalLoss.toFixed(4) : (latestLoss * 1.15).toFixed(4)}</strong></span>
         </div>
         <div className="flex items-center gap-2">
-          <span>Est. Cost (Simulated, assumed rate): <strong className="text-emerald-400 font-bold">${estCost}</strong> <span className="text-[10px] text-zinc-500">({estGpuHours} GPU-hrs @ assumed $0.35/hr)</span></span>
+          <span>Est. Cost (Simulated, assumed rate): <strong className="text-zinc-200 font-bold">${estCost}</strong> <span className="text-[10px] text-zinc-500">({estGpuHours} GPU-hrs @ assumed $0.35/hr)</span></span>
           <span className="text-zinc-700">·</span>
           <span className="text-emerald-400 font-bold">Optimal Convergence</span>
         </div>

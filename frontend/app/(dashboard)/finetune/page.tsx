@@ -21,6 +21,7 @@ import {
 import { useSearchParams } from 'next/navigation'
 import { api } from '@/lib/api/client'
 import { TelemetryChart } from '@/components/finetune/telemetry-chart'
+import { StatusStrip } from '@/components/ui/status-strip'
 
 const API_BASE = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000'
 
@@ -279,6 +280,11 @@ function DetailPane({ job, logs, lossHistory, onCancel, onCopy, onReconnect, log
             </CardTitle>
             <div className="flex items-center gap-2">
               <StatusPill status={job.status} />
+              {(job.is_simulated || job.weights_are_placeholders || job.execution_mode === 'simulated') && (
+                <span className="inline-flex items-center gap-1.5 rounded-sm border border-amber-500/30 bg-amber-500/10 px-2 py-0.5 font-mono text-xs font-bold text-amber-400">
+                  SIMULATED
+                </span>
+              )}
               {(job.status === 'running' || job.status === 'pending') && (
                 <Button variant="destructive" size="sm" className="rounded-full h-7 text-xs font-mono" onClick={() => onCancel(job.id)}>
                   <Square className="h-3 w-3 mr-1" />Cancel
@@ -373,6 +379,12 @@ function DetailPane({ job, logs, lossHistory, onCancel, onCopy, onReconnect, log
         </CardContent>
       </Card>
 
+      {/* SIMULATED status lives here, above the deliverables — not buried in telemetry. */}
+      {(job.is_simulated || job.weights_are_placeholders || job.execution_mode === 'simulated') && (
+        <StatusStrip
+          items={[{ label: 'SIMULATED', qualifier: 'placeholder, not production weights', tone: 'warn' }]}
+        />
+      )}
       {/* ── Fine-Tuned Model Deliverables & Download Hub ── */}
       {(job.status === 'completed' || Boolean(job.output_path)) && (
         <Card className="bg-[#12121a] border-[#272738] rounded-md card-shadow border-t-2 border-t-[#f26625]">
@@ -382,7 +394,7 @@ function DetailPane({ job, logs, lossHistory, onCancel, onCopy, onReconnect, log
                 <Sparkles className="w-4 h-4 text-[#f26625]" />
                 Fine-Tuned Model Deliverables
               </CardTitle>
-              <span className={`text-[10px] font-mono font-bold px-2 py-0.5 rounded border ${
+              <span className={`text-xs font-mono font-bold px-2 py-0.5 rounded border ${
                 job.is_simulated || job.weights_are_placeholders || job.execution_mode === 'simulated'
                   ? 'text-amber-400 bg-amber-950/40 border-amber-500/30'
                   : 'text-emerald-400 bg-emerald-950/40 border-emerald-500/30'
