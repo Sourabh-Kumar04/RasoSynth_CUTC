@@ -258,7 +258,7 @@ function StudioContent() {
   const [showAnchors, setShowAnchors] = useState(false)
 
   // Live Tokenizer Fertility Estimation
-  const isIndicOrHinglish = ['hi', 'hinglish', 'indic_multilingual', 'ta', 'te', 'bn', 'mr', 'gu', 'kn', 'ml', 'pa'].includes(language)
+  const isIndicOrHinglish = ['hi', 'hinglish', 'indic_multilingual', 'ta', 'te', 'bn', 'mr', 'gu', 'kn', 'ml', 'pa', 'as', 'or', 'ur', 'sa', 'ne', 'mai', 'sat', 'ks', 'kok', 'sd', 'doi', 'mni', 'brx', 'ar', 'zh', 'ja', 'ko', 'ru'].includes(language)
   const estLlama3Fertility = isIndicOrHinglish ? (scriptMode === 'romanized' || language === 'hinglish' ? 1.55 : 3.65) : 1.25
   const estSarvamFertility = isIndicOrHinglish ? (scriptMode === 'romanized' || language === 'hinglish' ? 1.32 : 1.28) : 1.24
   const estSavings = Math.round((1 - estSarvamFertility / estLlama3Fertility) * 100)
