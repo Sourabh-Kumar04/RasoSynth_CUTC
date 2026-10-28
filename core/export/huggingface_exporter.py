@@ -138,7 +138,7 @@ def generate_hf_model_card(
     model_name: str,
     base_model: str,
     dataset_name: str,
-    sample_count: int,
+    sample_count: Optional[int] = None,
     epochs: int = 3,
     learning_rate: float = 2e-4,
     lora_r: int = 16,
@@ -153,6 +153,7 @@ def generate_hf_model_card(
     """Generate a standard Hugging Face Model Card (README.md) for fine-tuned LoRA adapters."""
     tags = ["rasosynthtune", "peft", "lora", "fine-tuned", "text-generation"]
     clean_domain = domain.lower().replace(" ", "-").replace("&", "and")
+    corpus_display = f"{sample_count:,}" if sample_count is not None else "not recorded"
     if clean_domain:
         tags.append(clean_domain)
 
@@ -184,7 +185,7 @@ This adapter was trained exclusively on a verifiable dataset attested by RasoSyn
 ## Convergence Metrics
 - **Final Train Loss**: `{train_loss:.4f}`
 {f"- **Final Eval Loss**: `{eval_loss:.4f}`" if eval_loss is not None else ""}
-- **Optimizer**: `AdamW (bf16, ZeRO-2)`
+- **Optimizer**: `AdamW (bf16, ZeRO-2)` (template default — verify against the run config)
 """
 
     content = f"""{yaml_block}
@@ -197,7 +198,7 @@ This model is a parameter-efficient fine-tuned (PEFT LoRA) adapter trained on **
 - **Base Architecture**: `{base_model}`
 - **Adapter Type**: LoRA (Low-Rank Adaptation)
 - **Target Domain**: {domain}
-- **Training Corpus Size**: {sample_count:,} synthetic instruction samples
+- **Training Corpus Size**: {corpus_display} synthetic instruction samples
 - **License**: {license_type}
 
 ## Hyperparameters
@@ -209,7 +210,7 @@ This model is a parameter-efficient fine-tuned (PEFT LoRA) adapter trained on **
 | **LoRA Rank (r)** | `{lora_r}` |
 | **LoRA Alpha (α)** | `{lora_alpha}` |
 | **Target Modules** | `q_proj, v_proj, k_proj, o_proj, gate_proj, up_proj, down_proj` |
-| **Precision** | `bfloat16` with FlashAttention-2 |
+| **Precision** | `bfloat16` with FlashAttention-2 (template default — verify against the run config) |
 {loss_block}
 {dbom_block}
 ## Quickstart Inference

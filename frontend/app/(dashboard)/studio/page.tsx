@@ -1209,7 +1209,7 @@ function StudioContent() {
                   className="w-full accent-[#f26625] bg-[#0a0a0f] cursor-pointer"
                 />
                 <div className="flex items-center justify-between text-[10px] font-mono text-[#94a3b8] mt-2 p-2 rounded bg-[#0a0a0f] border border-[#1f1f2e]">
-                  <span>Est. Cloud API: <strong className="text-zinc-200 font-bold">${((datasetSize / 1000) * 0.06).toFixed(2)}</strong> <span className="text-emerald-400">($0.00 Local)</span></span>
+                  <span>Est. Cloud API (planning estimate: $0.06/1000 rows, not metered spend): <strong className="text-zinc-200 font-bold">${((datasetSize / 1000) * 0.06).toFixed(2)}</strong> <span className="text-emerald-400">($0.00 Local)</span></span>
                   <span>Est. Time: <strong className="text-zinc-200 font-bold">{datasetSize <= 100 ? '~15s' : datasetSize <= 1000 ? '~1.8m' : datasetSize <= 5000 ? '~8.5m' : `~${Math.round(datasetSize / 650)}m`}</strong></span>
                 </div>
               </div>

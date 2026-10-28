@@ -341,6 +341,7 @@ class ConstraintAnalyzer:
 
     def _estimate_cost(self, config: dict, sample_count: int) -> float:
         """Estimate cost for dataset generation."""
+        # Planning estimate only (flat $0.001/sample); not metered spend.
         base_cost = sample_count * 0.001  # $0.001 per sample base
 
         # Add for quality requirements

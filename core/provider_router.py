@@ -47,6 +47,8 @@ class RouterStats:
     avg_latency_ms: float = 0.0
     cache_hits: int = 0
     cache_misses: int = 0
+    # Routing prior only (1.0 until the first recorded outcome). The API
+    # layer must not surface it when requests == 0 (see api/server.py).
     success_rate: float = 1.0
 
 

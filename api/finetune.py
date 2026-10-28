@@ -362,27 +362,36 @@ async def get_model_card(job_id: str, manager=Depends(_manager)):
                     sample_count = getattr(ds, "size", None)
         except Exception:
             pass
-    sample_count = int(sample_count or 100)
+    # None = not recorded. Never invent a 100-sample corpus for the card.
+    sample_count = int(sample_count) if sample_count else None
 
     train_loss = getattr(job, "final_train_loss", None) or (job.get("final_train_loss") if isinstance(job, dict) else None)
     if train_loss is None:
-        train_loss = getattr(job, "train_loss", 0.3870) or 0.3870
-    train_loss = float(train_loss)
+        # No measured loss: omit the loss lines from the card (the exporter
+        # skips them when train_loss is None) instead of defaulting to 0.3870.
+        train_loss = getattr(job, "train_loss", None) or (job.get("train_loss") if isinstance(job, dict) else None)
+    train_loss = float(train_loss) if train_loss is not None else None
 
     eval_loss = getattr(job, "final_eval_loss", None) or (job.get("final_eval_loss") if isinstance(job, dict) else None)
     if eval_loss is None:
         eval_loss = getattr(job, "eval_loss", None) or (job.get("eval_loss") if isinstance(job, dict) else None)
-    if eval_loss is None:
-        eval_loss = round(train_loss * 1.04, 4)
-    eval_loss = float(eval_loss)
+    # No measured eval loss: omit it. Never derive eval = train * 1.04.
+    eval_loss = float(eval_loss) if eval_loss is not None else None
 
     merkle_root = getattr(job, "merkle_root", None) or (job.get("merkle_root") if isinstance(job, dict) else None)
+    # A missing root must not become sha256("dataset:{id}"): a hash of the
+    # ID string is not a Merkle root over samples. Leave it absent and the
+    # exporter omits the DBOM block.
     if not merkle_root:
-        merkle_root = hashlib.sha256(f"dataset:{dataset_id}".encode("utf-8")).hexdigest()
+        merkle_root = None
 
     model_seal = getattr(job, "model_seal", None) or (job.get("model_seal") if isinstance(job, dict) else None)
     if not model_seal:
-        model_seal = hashlib.sha256(f"{job_id}:{merkle_root}:{train_loss}:{eval_loss}".encode("utf-8")).hexdigest()
+        # Build a seal only from recorded values; omit it otherwise.
+        if merkle_root and train_loss is not None and eval_loss is not None:
+            model_seal = hashlib.sha256(f"{job_id}:{merkle_root}:{train_loss}:{eval_loss}".encode("utf-8")).hexdigest()
+        else:
+            model_seal = None
 
     is_simulated = bool(
         getattr(job, "is_simulated", False)
@@ -403,12 +412,17 @@ async def get_model_card(job_id: str, manager=Depends(_manager)):
         train_loss=train_loss,
         eval_loss=eval_loss,
         merkle_root=merkle_root,
-        certificate_id=f"DBOM-{merkle_root[:12].upper()}",
+        certificate_id=f"DBOM-{merkle_root[:12].upper()}" if merkle_root else None,
     )
+    execution_mode = getattr(job, "execution_mode", None) or (job.get("execution_mode") if isinstance(job, dict) else None)
+    seal_line = f"**DBOM Provenance Seal**: `{model_seal}`\n" if model_seal else ""
     if is_simulated:
-        card += f"\n\n---\n**DBOM Provenance Seal**: `{model_seal}`\n**Execution Mode**: Simulated (Accelerated Container Pool) — loss curves and adapter/GGUF files are demo placeholders, not GPU-trained weights.\n"
+        card += f"\n\n---\n{seal_line}**Execution Mode**: Simulated (Accelerated Container Pool) — loss curves and adapter/GGUF files are demo placeholders, not GPU-trained weights.\n"
+    elif execution_mode:
+        card += f"\n\n---\n{seal_line}**Execution Mode**: {execution_mode}\n"
     else:
-        card += f"\n\n---\n**DBOM Provenance Seal**: `{model_seal}`\n**Execution Mode**: GPU-Accelerated Hardware Run\n"
+        # Never stamp an unverified run as a hardware run.
+        card += f"\n\n---\n{seal_line}**Execution Mode**: Unknown (not recorded — not verified as a hardware run)\n"
     return PlainTextResponse(card)
 
 

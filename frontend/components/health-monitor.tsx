@@ -164,9 +164,13 @@ export function HealthMonitor({ className }: ProviderHealthProps) {
                 <div key={provider} className="p-3 border rounded-lg">
                   <div className="flex items-center justify-between mb-2">
                     <span className="font-medium">{provider}</span>
-                    <Badge variant={data.success_rate > 0.9 ? 'default' : 'destructive'}>
-                      {Math.round(data.success_rate * 100)}% success
-                    </Badge>
+                    {data.total_requests > 0 && data.success_rate != null ? (
+                      <Badge variant={data.success_rate > 0.9 ? 'default' : 'destructive'}>
+                        {Math.round(data.success_rate * 100)}% success
+                      </Badge>
+                    ) : (
+                      <Badge variant="secondary">Not tested</Badge>
+                    )}
                   </div>
                   <div className="grid grid-cols-3 gap-2 text-sm">
                     <div>
@@ -175,7 +179,7 @@ export function HealthMonitor({ className }: ProviderHealthProps) {
                     </div>
                     <div>
                       <span className="text-muted-foreground">Avg Latency</span>
-                      <p className="font-medium">{data.avg_latency_ms.toFixed(0)}ms</p>
+                      <p className="font-medium">{data.avg_latency_ms != null ? `${data.avg_latency_ms.toFixed(0)}ms` : '—'}</p>
                     </div>
                     <div>
                       <span className="text-muted-foreground">Fallbacks</span>

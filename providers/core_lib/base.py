@@ -268,6 +268,8 @@ class ProviderHealth:
     """Health status of a provider."""
     provider: str
     is_healthy: bool
+    # Binary health signal (1.0 healthy / 0.0 unhealthy) for routing
+    # thresholds, NOT a measured success rate; never display it as one.
     success_rate: float = 1.0
     avg_latency_ms: float = 0.0
     rate_limit_remaining: int = 0

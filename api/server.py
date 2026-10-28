@@ -1012,7 +1012,8 @@ async def list_providers():
                 requests_today=reqs,
                 tokens_today=int(data.get("total_tokens", 0)),
                 cost_today_usd=float(data.get("total_cost_usd", 0.0)),
-                success_rate=float(data.get("success_rate", 1.0)) if reqs > 0 else 0.0,
+                # One rule everywhere: no requests -> no rate (null = not tested).
+                success_rate=(float(data["success_rate"]) if reqs > 0 and data.get("success_rate") is not None else None),
             ))
 
         return providers
@@ -1066,7 +1067,8 @@ async def get_provider(provider_name: str):
         requests_today=data.get("requests", 0),
         tokens_today=data.get("total_tokens", 0),
         cost_today_usd=data.get("total_cost_usd", 0.0),
-        success_rate=data.get("success_rate", 1.0)
+        # One rule everywhere: no requests -> no rate (null = not tested).
+        success_rate=(data.get("success_rate") if data.get("requests", 0) > 0 else None)
     )
 
 
@@ -1633,25 +1635,19 @@ async def get_provider_health_metrics():
             total = getattr(stat, "requests", getattr(stat, "total_requests", 0))
             failed = getattr(stat, "failures", getattr(stat, "failed_requests", 0))
             succ = getattr(stat, "successful_requests", max(0, total - failed))
-            rate = getattr(stat, "success_rate", (succ / total) if total > 0 else 1.0)
-            avg_lat = getattr(stat, "avg_latency_ms", (getattr(stat, "total_latency_ms", 0) / total if total > 0 else 115.0))
+            # No requests -> no rate and no latency: null, never 1.0 / 115 ms.
+            # (Stored success_rate is real only after recorded outcomes.)
+            rate = getattr(stat, "success_rate", None) if total > 0 else None
+            avg_lat = getattr(stat, "avg_latency_ms", None) if total > 0 else None
             metrics_map[provider_id] = {
                 "provider": provider_id,
                 "total_requests": total,
-                "success_rate": round(rate, 4),
-                "avg_latency_ms": round(avg_lat, 2),
+                "success_rate": round(rate, 4) if rate is not None else None,
+                "avg_latency_ms": round(avg_lat, 2) if avg_lat is not None else None,
                 "fallback_count": failed,
             }
 
-    if not metrics_map:
-        for p in ["google_gemini", "nvidia_nim", "huggingface", "anthropic", "openai"]:
-            metrics_map[p] = {
-                "provider": p,
-                "total_requests": 0,
-                "success_rate": 1.0,
-                "avg_latency_ms": 120.0,
-                "fallback_count": 0,
-            }
+    # No metrics -> empty map. Never invent providers at 0 requests / 1.0 / 120 ms.
 
     return {"metrics": metrics_map}
 

@@ -257,7 +257,8 @@ class ProviderStatus(BaseModel):
     requests_today: int
     tokens_today: int
     cost_today_usd: float
-    success_rate: float = 1.0
+    # None = not tested (no requests yet). Never default to 1.0.
+    success_rate: Optional[float] = None
 
 
 class ProviderTestRequest(BaseModel):
