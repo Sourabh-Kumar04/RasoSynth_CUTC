@@ -26,7 +26,7 @@ export default function RootError({
         An unexpected error occurred while rendering this view. Your persisted data in PostgreSQL and active synthesis jobs remain unaffected.
       </p>
       {error.message && (
-        <div className="max-w-md p-3 mb-6 bg-[#12121a] border border-[#272738] rounded-md text-[11px] text-rose-300 text-left overflow-x-auto">
+        <div className="max-w-md p-3 mb-6 bg-[#12121a] border border-[#272738] rounded-md text-xs text-rose-300 text-left overflow-x-auto">
           <code>{error.message}</code>
         </div>
       )}

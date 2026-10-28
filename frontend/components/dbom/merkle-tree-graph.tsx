@@ -213,18 +213,18 @@ export function MerkleTreeGraph({
       <div className="flex items-center justify-between pb-2 border-b border-[#1c1c28]">
         <div className="flex items-center gap-2">
           <ShieldCheck className="w-4 h-4 text-[#f26625]" />
-          <span className="text-[11px] font-bold text-white uppercase tracking-wider">
+          <span className="text-xs font-bold text-white uppercase tracking-wider">
             Interactive Merkle Provenance Graph
           </span>
         </div>
         <div className="flex items-center gap-2">
-          <span className="px-2 py-0.5 rounded bg-[#f26625]/10 border border-[#f26625]/30 text-[9px] text-[#f26625] font-semibold">
+          <span className="px-2 py-0.5 rounded bg-[#f26625]/10 border border-[#f26625]/30 text-xs text-[#f26625] font-semibold">
             Click Node to Audit Proof
           </span>
-          <span className="px-2 py-0.5 rounded bg-purple-950/60 border border-purple-800/40 text-[9px] text-purple-300">
+          <span className="px-2 py-0.5 rounded bg-purple-950/60 border border-purple-800/40 text-xs text-purple-300">
             SHA-256 Fold
           </span>
-          <span className="px-2 py-0.5 rounded bg-amber-950/60 border border-amber-800/40 text-[9px] text-amber-300">
+          <span className="px-2 py-0.5 rounded bg-amber-950/60 border border-amber-800/40 text-xs text-amber-300">
             Schematic - 4 leaves shown, not to scale
           </span>
         </div>
@@ -249,8 +249,8 @@ export function MerkleTreeGraph({
           title="Click to audit Merkle Root proof"
         >
           <span className="w-2 h-2 rounded-full bg-[#f26625] animate-pulse" />
-          <span className="text-[10px] uppercase font-bold text-white">Root:</span>
-          <code className="text-[11px] font-bold text-purple-200">{cleanRoot.slice(0, 16)}...</code>
+          <span className="text-xs uppercase font-bold text-white">Root:</span>
+          <code className="text-xs font-bold text-purple-200">{cleanRoot.slice(0, 16)}...</code>
           <button
             onClick={(e) => {
               e.stopPropagation()
@@ -291,7 +291,7 @@ export function MerkleTreeGraph({
                 onMouseLeave={() => setHoveredNode(null)}
                 onClick={() => handleSelectNode(bId)}
                 className={clsx(
-                  'flex items-center justify-between p-2 rounded-md border text-[10px] cursor-pointer transition-all',
+                  'flex items-center justify-between p-2 rounded-md border text-xs cursor-pointer transition-all',
                   isSelected
                     ? 'bg-[#18120e] border-[#f26625] text-white shadow-[0_0_12px_rgba(242,102,37,0.3)]'
                     : isInPath
@@ -334,7 +334,7 @@ export function MerkleTreeGraph({
                 onMouseLeave={() => setHoveredNode(null)}
                 onClick={() => handleSelectNode(leaf.id)}
                 className={clsx(
-                  'p-2 rounded-md border text-[9px] space-y-1 cursor-pointer transition-all',
+                  'p-2 rounded-md border text-xs space-y-1 cursor-pointer transition-all',
                   isSelected
                     ? 'bg-[#18120e] border-[#f26625] shadow-[0_0_12px_rgba(242,102,37,0.3)]'
                     : isSibling
@@ -362,24 +362,24 @@ export function MerkleTreeGraph({
 
       {/* Selected Node Cryptographic Inspector */}
       <div className="p-3 rounded-lg bg-[#0e0e16] border border-[#272738] space-y-2">
-        <div className="flex items-center justify-between text-[11px]">
+        <div className="flex items-center justify-between text-xs">
           <div className="flex items-center gap-2">
             <Activity className="w-3.5 h-3.5 text-[#f26625]" />
             <span className="font-bold text-white uppercase tracking-wider">
               Cryptographic Proof Inspector: {selectedNode.label}
             </span>
           </div>
-          <span className="text-emerald-400 font-bold flex items-center gap-1 text-[10px]">
+          <span className="text-emerald-400 font-bold flex items-center gap-1 text-xs">
             <CheckCircle2 className="w-3 h-3" />
             Verified SHA-256 Node
           </span>
         </div>
 
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-[10px]">
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-xs">
           <div className="p-2 rounded bg-[#08080c] border border-[#1f1f2e] space-y-1">
             <span className="text-[#64748b] block">Full SHA-256 Digest:</span>
             <div className="flex items-center justify-between gap-1">
-              <code className="text-purple-300 font-mono text-[9px] break-all">{selectedNode.fullHash}</code>
+              <code className="text-purple-300 font-mono text-xs break-all">{selectedNode.fullHash}</code>
               <button
                 onClick={() => handleCopy(selectedNode.fullHash)}
                 className="text-zinc-500 hover:text-white shrink-0 p-1"
@@ -396,17 +396,17 @@ export function MerkleTreeGraph({
 
           <div className="p-2 rounded bg-[#08080c] border border-[#1f1f2e] space-y-1">
             <span className="text-[#64748b] block">Merkle Proof Folding Formula:</span>
-            <code className="text-[#f26625] font-mono text-[10px] block font-bold">
+            <code className="text-[#f26625] font-mono text-xs block font-bold">
               {selectedNode.formula}
             </code>
-            <span className="text-[9px] text-[#94a3b8] block">
+            <span className="text-xs text-[#94a3b8] block">
               Proof Depth: Level {selectedNode.level} &bull; Sibling Hash Sealed
             </span>
           </div>
         </div>
       </div>
 
-      <div className="pt-2 border-t border-[#1c1c28] flex flex-wrap items-center justify-between gap-2 text-[9px] text-[#64748b]">
+      <div className="pt-2 border-t border-[#1c1c28] flex flex-wrap items-center justify-between gap-2 text-xs text-[#64748b]">
         <div className="flex items-center gap-3">
           <span>Tamper Detection: Merkle Multi-Level Fold</span>
           <span className="text-emerald-400 font-bold">100% Deterministic Guarantee</span>
@@ -414,7 +414,7 @@ export function MerkleTreeGraph({
         <button
           type="button"
           onClick={handleDownloadBadge}
-          className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded bg-[#161622] hover:bg-[#1f1f2e] border border-[#272738] hover:border-purple-500/40 text-purple-300 font-mono text-[10px] transition-colors cursor-pointer"
+          className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded bg-[#161622] hover:bg-[#1f1f2e] border border-[#272738] hover:border-purple-500/40 text-purple-300 font-mono text-xs transition-colors cursor-pointer"
         >
           <Download className="w-3 h-3 text-purple-400" />
           <span>Export Verifiable Certificate (SVG)</span>

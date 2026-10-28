@@ -140,7 +140,7 @@ export function OnboardingModal({ open, onOpenChange }: { open?: boolean; onOpen
               <Icon className="h-5 w-5 text-[#f26625]" />
             </div>
             <div>
-              <span className="text-[10px] font-mono uppercase tracking-wider text-[#10b981] font-bold">
+              <span className="text-xs font-mono uppercase tracking-wider text-[#10b981] font-bold">
                 Platform Guide ({currentStep + 1} of {TOUR_STEPS.length})
               </span>
               <h2 className="text-xl font-bold text-white tracking-tight">{step.title}</h2>
@@ -155,7 +155,7 @@ export function OnboardingModal({ open, onOpenChange }: { open?: boolean; onOpen
 
           {/* Key Capabilities Bullet Points */}
           <div className="p-4 rounded-2xl bg-[#0a0a0f] border border-[#272738] space-y-2.5">
-            <p className="text-[11px] font-mono font-bold uppercase tracking-wider text-[#f26625]">
+            <p className="text-xs font-mono font-bold uppercase tracking-wider text-[#f26625]">
               Key Highlights &amp; Capabilities
             </p>
             <div className="grid grid-cols-1 gap-2">

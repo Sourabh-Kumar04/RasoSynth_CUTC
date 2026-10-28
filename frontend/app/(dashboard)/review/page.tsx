@@ -110,7 +110,7 @@ function ApprovalRing({ pct }: { pct: number }) {
         strokeWidth={4} strokeDasharray={`${dash} ${circ}`}
         strokeLinecap="round" />
       <text x={22} y={22} dominantBaseline="middle" textAnchor="middle"
-        className="fill-[#10b981] text-[9px] font-bold rotate-90"
+        className="fill-[#10b981] text-xs font-bold rotate-90"
         style={{ transform: 'rotate(90deg)', transformOrigin: '22px 22px', fontSize: 9 }}>
         {Math.round(pct)}%
       </text>
@@ -403,7 +403,7 @@ export default function ReviewPage() {
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-[#272738] pb-4">
         <div>
           <div className="flex items-center gap-2.5 mb-1">
-            <span className="text-[10px] font-mono px-2.5 py-0.5 rounded-md bg-[#161622] border border-[#272738] text-[#10b981] font-bold uppercase tracking-wider">
+            <span className="text-xs font-mono px-2.5 py-0.5 rounded-md bg-[#161622] border border-[#272738] text-[#10b981] font-bold uppercase tracking-wider">
               Human-in-the-Loop Verification
             </span>
             <h1 className="text-2xl font-bold tracking-tight text-white font-display">
@@ -411,10 +411,10 @@ export default function ReviewPage() {
             </h1>
           </div>
           <p className="text-xs text-[#94a3b8]">
-            Review samples — <kbd className="text-[10px] bg-[#161622] border border-[#272738] px-1.5 py-0.5 rounded font-mono text-white">a</kbd> approve&nbsp;
-            <kbd className="text-[10px] bg-[#161622] border border-[#272738] px-1.5 py-0.5 rounded font-mono text-white">r</kbd> reject&nbsp;
-            <kbd className="text-[10px] bg-[#161622] border border-[#272738] px-1.5 py-0.5 rounded font-mono text-white">e</kbd> edit&nbsp;
-            <kbd className="text-[10px] bg-[#161622] border border-[#272738] px-1.5 py-0.5 rounded font-mono text-white">f</kbd> flag
+            Review samples — <kbd className="text-xs bg-[#161622] border border-[#272738] px-1.5 py-0.5 rounded font-mono text-white">a</kbd> approve&nbsp;
+            <kbd className="text-xs bg-[#161622] border border-[#272738] px-1.5 py-0.5 rounded font-mono text-white">r</kbd> reject&nbsp;
+            <kbd className="text-xs bg-[#161622] border border-[#272738] px-1.5 py-0.5 rounded font-mono text-white">e</kbd> edit&nbsp;
+            <kbd className="text-xs bg-[#161622] border border-[#272738] px-1.5 py-0.5 rounded font-mono text-white">f</kbd> flag
           </p>
         </div>
         <div className="flex gap-2 flex-wrap">
@@ -533,7 +533,7 @@ export default function ReviewPage() {
             ].map(({ label, val, color, stripe }) => (
               <Card key={label} className={clsx('border-l-4 bg-[#12121a]/90 backdrop-blur-sm border-[#272738] rounded-md card-shadow glow-card-hover animate-fade-in group', stripe)}>
                 <CardContent className="pt-3 pb-2 px-4">
-                  <p className="text-[10px] text-[#94a3b8] font-mono uppercase tracking-wider">{label}</p>
+                  <p className="text-xs text-[#94a3b8] font-mono uppercase tracking-wider">{label}</p>
                   <p className={clsx('text-xl font-bold font-mono mt-0.5 tracking-tight', color)}>{val}</p>
                 </CardContent>
               </Card>
@@ -542,7 +542,7 @@ export default function ReviewPage() {
               <CardContent className="pt-2 pb-2 px-3 flex items-center gap-3">
                 <ApprovalRing pct={stats.approval_rate} />
                 <div>
-                  <p className="text-[10px] text-[#94a3b8] font-mono uppercase">Approval</p>
+                  <p className="text-xs text-[#94a3b8] font-mono uppercase">Approval</p>
                   <p className="text-sm font-bold font-mono text-[#10b981]">{stats.approval_rate}%</p>
                 </div>
               </CardContent>
@@ -606,7 +606,7 @@ export default function ReviewPage() {
                     <h4 className="text-xs font-bold text-white font-mono uppercase tracking-wider">
                       No Samples Awaiting Review
                     </h4>
-                    <p className="text-[11px] text-[#94a3b8] leading-relaxed">
+                    <p className="text-xs text-[#94a3b8] leading-relaxed">
                       Review queues populate when you run dataset synthesis with the <strong className="text-zinc-200">Stratified HITL Review</strong> gate enabled in Studio. A percentage of samples will pause here for manual audit.
                     </p>
                   </div>
@@ -654,54 +654,54 @@ export default function ReviewPage() {
                               <p className="text-xs font-semibold text-white group-hover:text-[#f26625] transition-colors line-clamp-2 flex-1 leading-4">
                                 {item.instruction}
                               </p>
-                              <span className={clsx('shrink-0 text-[10px] px-2 py-0.5 rounded-md border font-mono ml-1', STATUS_PILL[item.review_status])}>
+                              <span className={clsx('shrink-0 text-xs px-2 py-0.5 rounded-md border font-mono ml-1', STATUS_PILL[item.review_status])}>
                                 {item.review_status}
                               </span>
                             </div>
                             {/* Score bars */}
                             <div className="flex items-center gap-3 mt-1.5 flex-wrap">
                               <div className="flex items-center gap-1">
-                                <span className="text-[10px] font-mono text-[#94a3b8]">Q</span>
+                                <span className="text-xs font-mono text-[#94a3b8]">Q</span>
                                 <ScoreBar value={item.quality_score} />
                               </div>
                               <div className="flex items-center gap-1">
-                                <span className="text-[10px] font-mono text-[#94a3b8]">Hall</span>
+                                <span className="text-xs font-mono text-[#94a3b8]">Hall</span>
                                 <ScoreBar value={item.hallucination_risk} inverted />
                               </div>
-                              <span className={clsx('text-[10px] font-bold font-mono', diff.color)}>{diff.label}</span>
+                              <span className={clsx('text-xs font-bold font-mono', diff.color)}>{diff.label}</span>
                             </div>
                             {item.metadata && (
                               <div className="flex items-center gap-1.5 mt-1.5 flex-wrap">
                                 {item.metadata.pii_detected && Object.keys(item.metadata.pii_detected).length > 0 && (
-                                  <span className="text-[9px] font-mono px-1.5 py-0.2 rounded bg-amber-950/40 text-amber-300 border border-amber-800">
+                                  <span className="text-xs font-mono px-1.5 py-0.2 rounded bg-amber-950/40 text-amber-300 border border-amber-800">
                                     DPDP Redacted
                                   </span>
                                 )}
                                 {item.metadata.parallel_en && (
-                                  <span className="text-[9px] font-mono px-1.5 py-0.2 rounded bg-[#f26625]/10 text-[#f26625] border border-[#f26625]/30">
+                                  <span className="text-xs font-mono px-1.5 py-0.2 rounded bg-[#f26625]/10 text-[#f26625] border border-[#f26625]/30">
                                     Bitext
                                   </span>
                                 )}
                                 {item.metadata.rejected_response && (
-                                  <span className="text-[9px] font-mono px-1.5 py-0.2 rounded bg-emerald-950/40 text-[#10b981] border border-emerald-800">
+                                  <span className="text-xs font-mono px-1.5 py-0.2 rounded bg-emerald-950/40 text-[#10b981] border border-emerald-800">
                                     DPO Pair
                                   </span>
                                 )}
                                 {item.metadata.regional_dialect && item.metadata.regional_dialect !== 'standard' && (
-                                  <span className="text-[9px] font-mono px-1.5 py-0.2 rounded bg-purple-950/40 text-purple-300 border border-purple-800">
+                                  <span className="text-xs font-mono px-1.5 py-0.2 rounded bg-purple-950/40 text-purple-300 border border-purple-800">
                                     {item.metadata.regional_dialect}
                                   </span>
                                 )}
                               </div>
                             )}
                             <div className="flex flex-wrap items-center justify-between gap-2 mt-2 pt-1.5 border-t border-[#1e1e2d]">
-                              <p className="text-[10px] font-mono text-[#64748b] truncate">
+                              <p className="text-xs font-mono text-[#64748b] truncate">
                                 Job: {item.job_id.slice(0, 8)}
                               </p>
                               <div className="flex items-center gap-1.5">
                                 <button
                                   type="button"
-                                  className="inline-flex items-center gap-1 text-[10px] font-mono text-emerald-400 hover:text-white bg-emerald-950/40 hover:bg-emerald-900/60 border border-emerald-800/50 px-2 py-0.5 rounded transition-colors"
+                                  className="inline-flex items-center gap-1 text-xs font-mono text-emerald-400 hover:text-white bg-emerald-950/40 hover:bg-emerald-900/60 border border-emerald-800/50 px-2 py-0.5 rounded transition-colors"
                                   onClick={(e) => {
                                     e.stopPropagation()
                                     act('approve', item)
@@ -713,7 +713,7 @@ export default function ReviewPage() {
                                 </button>
                                 <button
                                   type="button"
-                                  className="inline-flex items-center gap-1 text-[10px] font-mono text-rose-400 hover:text-white bg-rose-950/40 hover:bg-rose-900/60 border border-rose-800/50 px-2 py-0.5 rounded transition-colors"
+                                  className="inline-flex items-center gap-1 text-xs font-mono text-rose-400 hover:text-white bg-rose-950/40 hover:bg-rose-900/60 border border-rose-800/50 px-2 py-0.5 rounded transition-colors"
                                   onClick={(e) => {
                                     e.stopPropagation()
                                     act('reject', item)
@@ -725,7 +725,7 @@ export default function ReviewPage() {
                                 </button>
                                 <button
                                   type="button"
-                                  className="inline-flex items-center gap-1 text-[10px] font-mono text-cyan-400 hover:text-white bg-cyan-950/30 hover:bg-cyan-900/50 border border-cyan-800/40 px-2 py-0.5 rounded transition-colors"
+                                  className="inline-flex items-center gap-1 text-xs font-mono text-cyan-400 hover:text-white bg-cyan-950/30 hover:bg-cyan-900/50 border border-cyan-800/40 px-2 py-0.5 rounded transition-colors"
                                   onClick={(e) => {
                                     e.stopPropagation()
                                     setDiffModalItem(item)
@@ -799,7 +799,7 @@ export default function ReviewPage() {
               <div className="flex flex-col items-center justify-center h-full min-h-[380px] border border-dashed border-[#272738] bg-[#12121a] rounded-md gap-3">
                 <ClipboardCheck className="h-10 w-10 text-[#64748b]" />
                 <p className="text-xs text-white font-mono font-bold">Select a sample to review</p>
-                <p className="text-[11px] text-[#94a3b8] font-mono">
+                <p className="text-xs text-[#94a3b8] font-mono">
                   Keyboard: a approve · r reject · e edit · f flag
                 </p>
               </div>
@@ -812,28 +812,28 @@ export default function ReviewPage() {
       {selected && showHotkeyHud && (
         <div className="fixed bottom-5 left-1/2 -translate-x-1/2 z-40 bg-[#0c0c14]/95 border border-[#272738] backdrop-blur-md px-4 py-2 rounded-full shadow-2xl flex items-center gap-3 animate-fade-in text-xs font-mono">
           <div className="flex items-center gap-1.5 text-emerald-400">
-            <kbd className="px-1.5 py-0.5 rounded bg-[#161622] text-white border border-[#272738] font-bold text-[10px]">A</kbd>
+            <kbd className="px-1.5 py-0.5 rounded bg-[#161622] text-white border border-[#272738] font-bold text-xs">A</kbd>
             <span>Approve</span>
           </div>
           <span className="text-[#272738]">|</span>
           <div className="flex items-center gap-1.5 text-rose-400">
-            <kbd className="px-1.5 py-0.5 rounded bg-[#161622] text-white border border-[#272738] font-bold text-[10px]">R</kbd>
+            <kbd className="px-1.5 py-0.5 rounded bg-[#161622] text-white border border-[#272738] font-bold text-xs">R</kbd>
             <span>Reject</span>
           </div>
           <span className="text-[#272738]">|</span>
           <div className="flex items-center gap-1.5 text-amber-400">
-            <kbd className="px-1.5 py-0.5 rounded bg-[#161622] text-white border border-[#272738] font-bold text-[10px]">F</kbd>
+            <kbd className="px-1.5 py-0.5 rounded bg-[#161622] text-white border border-[#272738] font-bold text-xs">F</kbd>
             <span>Flag</span>
           </div>
           <span className="text-[#272738]">|</span>
           <div className="flex items-center gap-1.5 text-cyan-400">
-            <kbd className="px-1.5 py-0.5 rounded bg-[#161622] text-white border border-[#272738] font-bold text-[10px]">D</kbd>
+            <kbd className="px-1.5 py-0.5 rounded bg-[#161622] text-white border border-[#272738] font-bold text-xs">D</kbd>
             <span>Diff</span>
           </div>
           <span className="text-[#272738]">|</span>
           <div className="flex items-center gap-1 text-[#94a3b8]">
-            <kbd className="px-1 py-0.5 rounded bg-[#161622] text-white border border-[#272738] font-bold text-[10px]">J</kbd>
-            <kbd className="px-1 py-0.5 rounded bg-[#161622] text-white border border-[#272738] font-bold text-[10px]">K</kbd>
+            <kbd className="px-1 py-0.5 rounded bg-[#161622] text-white border border-[#272738] font-bold text-xs">J</kbd>
+            <kbd className="px-1 py-0.5 rounded bg-[#161622] text-white border border-[#272738] font-bold text-xs">K</kbd>
             <span>Nav</span>
           </div>
           <button
@@ -891,7 +891,7 @@ function DetailPane({
               <Button
                 variant="outline"
                 size="sm"
-                className="h-6 px-2 text-[10px] rounded border-[#272738] bg-[#0a0a0f] text-cyan-400 hover:text-white hover:bg-cyan-950/40 font-mono flex items-center gap-1"
+                className="h-6 px-2 text-xs rounded border-[#272738] bg-[#0a0a0f] text-cyan-400 hover:text-white hover:bg-cyan-950/40 font-mono flex items-center gap-1"
                 onClick={() => onOpenDiff(item)}
               >
                 <GitCompare className="h-3 w-3 text-cyan-400" />
@@ -899,7 +899,7 @@ function DetailPane({
               </Button>
             )}
           </div>
-          <span className={clsx('text-[10px] font-mono px-2.5 py-0.5 rounded-md border', STATUS_PILL[item.review_status])}>
+          <span className={clsx('text-xs font-mono px-2.5 py-0.5 rounded-md border', STATUS_PILL[item.review_status])}>
             {item.review_status}
           </span>
         </div>
@@ -914,14 +914,14 @@ function DetailPane({
             { label: 'Diversity',        val: item.diversity_score,     inv: false },
           ].map(({ label, val, inv }) => (
             <div key={label} className="flex items-center justify-between gap-2">
-              <span className="text-[#94a3b8] font-mono text-[11px] shrink-0">{label}</span>
+              <span className="text-[#94a3b8] font-mono text-xs shrink-0">{label}</span>
               <div className="flex items-center gap-1.5">
                 <ScoreBar value={val} inverted={inv} />
                 <span className="font-mono w-7 text-right font-bold text-white">{(val * 100).toFixed(0)}%</span>
               </div>
             </div>
           ))}
-          <div className="col-span-2 text-[#94a3b8] font-mono text-[11px] truncate">
+          <div className="col-span-2 text-[#94a3b8] font-mono text-xs truncate">
             Job Reference: <code className="text-xs font-bold text-[#f26625]">{item.job_id}</code>
           </div>
         </div>
@@ -929,7 +929,7 @@ function DetailPane({
         {/* Instruction */}
         <div>
           <div className="flex items-center justify-between mb-1">
-            <label className="text-[10px] font-mono font-bold uppercase tracking-wider text-[#f26625]">Instruction / Prompt</label>
+            <label className="text-xs font-mono font-bold uppercase tracking-wider text-[#f26625]">Instruction / Prompt</label>
             {editing && (
               <span className="text-xs font-mono text-[#94a3b8]">
                 {editInstruction.length} chars
@@ -951,7 +951,7 @@ function DetailPane({
         {/* Response */}
         <div>
           <div className="flex items-center justify-between mb-1">
-            <label className="text-[10px] font-mono font-bold uppercase tracking-wider text-[#10b981]">Synthesized Response</label>
+            <label className="text-xs font-mono font-bold uppercase tracking-wider text-[#10b981]">Synthesized Response</label>
             {editing && (
               <span className="text-xs font-mono text-[#94a3b8]">
                 {editResponse.length} chars
@@ -988,7 +988,7 @@ function DetailPane({
                 <Button
                   variant="outline"
                   size="sm"
-                  className="h-6 px-2 text-[10px] rounded border-[#272738] bg-[#12121a] text-cyan-400 hover:text-white hover:bg-cyan-950/40 font-mono flex items-center gap-1"
+                  className="h-6 px-2 text-xs rounded border-[#272738] bg-[#12121a] text-cyan-400 hover:text-white hover:bg-cyan-950/40 font-mono flex items-center gap-1"
                   onClick={() => onOpenDiff(item)}
                 >
                   <GitCompare className="h-3 w-3 text-cyan-400" />
@@ -1006,10 +1006,10 @@ function DetailPane({
         {item.metadata?.rejected_response && (
           <div className="rounded-md border border-rose-900/40 bg-rose-950/20 p-3 space-y-1.5">
             <div className="flex items-center justify-between">
-              <span className="text-[10px] font-mono font-bold uppercase tracking-wider text-rose-400">
+              <span className="text-xs font-mono font-bold uppercase tracking-wider text-rose-400">
                 DPO Contrast Pair: Rejected Baseline
               </span>
-              <span className="text-[9px] font-mono px-1.5 py-0.2 rounded bg-rose-900/60 text-rose-300">
+              <span className="text-xs font-mono px-1.5 py-0.2 rounded bg-rose-900/60 text-rose-300">
                 Missing Statutory Disclaimer / Low Quality
               </span>
             </div>
@@ -1023,19 +1023,19 @@ function DetailPane({
         {item.metadata?.parallel_en && (
           <div className="rounded-md border border-[#f26625]/30 bg-[#f26625]/10 p-3 space-y-2">
             <div className="flex items-center justify-between">
-              <span className="text-[10px] font-mono font-bold uppercase tracking-wider text-[#f26625]">
+              <span className="text-xs font-mono font-bold uppercase tracking-wider text-[#f26625]">
                 Parallel Bilingual Bitext (English Pair)
               </span>
               {item.metadata.fidelity_metrics && (
-                <span className="text-[9px] font-mono px-1.5 py-0.2 rounded bg-[#f26625]/20 text-white">
+                <span className="text-xs font-mono px-1.5 py-0.2 rounded bg-[#f26625]/20 text-white">
                   chrF++: {item.metadata.fidelity_metrics.chrf_score}% ({item.metadata.fidelity_metrics.quality_tier})
                 </span>
               )}
             </div>
-            <div className="text-[11px] text-[#94a3b8] font-mono">
+            <div className="text-xs text-[#94a3b8] font-mono">
               <span className="text-white font-semibold">EN Prompt:</span> {item.metadata.parallel_en.instruction}
             </div>
-            <div className="text-[11px] text-[#94a3b8] font-sans bg-[#0a0a0f] p-2 rounded border border-[#272738] max-h-24 overflow-y-auto">
+            <div className="text-xs text-[#94a3b8] font-sans bg-[#0a0a0f] p-2 rounded border border-[#272738] max-h-24 overflow-y-auto">
               <span className="text-white font-semibold font-mono">EN Response:</span> {item.metadata.parallel_en.response}
             </div>
           </div>
@@ -1044,12 +1044,12 @@ function DetailPane({
         {/* Indian DPDP PII Redaction Audit */}
         {item.metadata?.pii_detected && Object.keys(item.metadata.pii_detected).length > 0 && (
           <div className="rounded-md border border-amber-900/40 bg-amber-950/20 p-3 space-y-1">
-            <span className="text-[10px] font-mono font-bold uppercase tracking-wider text-amber-400 block">
+            <span className="text-xs font-mono font-bold uppercase tracking-wider text-amber-400 block">
               DPDP Statutory PII Redaction Audit
             </span>
             <div className="flex flex-wrap gap-1.5 pt-1">
               {Object.entries(item.metadata.pii_detected).map(([entity, values]: [string, any]) => (
-                <span key={entity} className="text-[10px] font-mono px-2 py-0.5 rounded bg-amber-950 border border-amber-800 text-amber-200">
+                <span key={entity} className="text-xs font-mono px-2 py-0.5 rounded bg-amber-950 border border-amber-800 text-amber-200">
                   {entity.toUpperCase()}: {(Array.isArray(values) ? values.length : 1)} redacted
                 </span>
               ))}
@@ -1062,9 +1062,9 @@ function DetailPane({
           <details className="rounded-md border border-amber-900/40 bg-amber-950/20 p-3 space-y-1" open>
             <summary className="cursor-pointer text-xs font-bold text-amber-300 flex items-center justify-between">
               <span>Chain-of-Thought (CoT) Reasoning Trace</span>
-              <span className="text-[10px] font-mono text-amber-400/80">DeepSeek-R1 / o1 Trajectory</span>
+              <span className="text-xs font-mono text-amber-400/80">DeepSeek-R1 / o1 Trajectory</span>
             </summary>
-            <div className="mt-2 text-[11px] font-mono text-amber-100/90 whitespace-pre-wrap bg-[#0a0a0f] p-2.5 rounded-lg border border-amber-950 max-h-36 overflow-y-auto leading-relaxed">
+            <div className="mt-2 text-xs font-mono text-amber-100/90 whitespace-pre-wrap bg-[#0a0a0f] p-2.5 rounded-lg border border-amber-950 max-h-36 overflow-y-auto leading-relaxed">
               {item.metadata?.thought || (item.response.match(/<thought>([\s\S]*?)<\/thought>/)?.[1]?.trim() ?? '')}
             </div>
           </details>
@@ -1074,10 +1074,10 @@ function DetailPane({
         {item.metadata?.tool_calls && Array.isArray(item.metadata.tool_calls) && item.metadata.tool_calls.length > 0 && (
           <div className="rounded-md border border-cyan-900/40 bg-cyan-950/20 p-3 space-y-2">
             <div className="flex items-center justify-between">
-              <span className="text-[10px] font-mono font-bold uppercase tracking-wider text-cyan-400">
+              <span className="text-xs font-mono font-bold uppercase tracking-wider text-cyan-400">
                 Structured API Tool Invocations ({item.metadata.tool_calls.length})
               </span>
-              <span className="text-[9px] font-mono px-1.5 py-0.2 rounded bg-cyan-900/60 text-cyan-200">
+              <span className="text-xs font-mono px-1.5 py-0.2 rounded bg-cyan-900/60 text-cyan-200">
                 Function Calling Schema
               </span>
             </div>
@@ -1087,7 +1087,7 @@ function DetailPane({
                   <div className="flex items-center justify-between text-cyan-300 font-bold">
                     <span>{tc.name}()</span>
                   </div>
-                  <pre className="text-[10px] text-slate-300 overflow-x-auto whitespace-pre">
+                  <pre className="text-xs text-slate-300 overflow-x-auto whitespace-pre">
                     {JSON.stringify(tc.arguments, null, 2)}
                   </pre>
                 </div>
@@ -1100,17 +1100,17 @@ function DetailPane({
         {(item.metadata?.kto || item.metadata?.simpo) && (
           <div className="rounded-md border border-purple-900/40 bg-purple-950/20 p-3 space-y-1.5">
             <div className="flex items-center justify-between">
-              <span className="text-[10px] font-mono font-bold uppercase tracking-wider text-purple-400">
+              <span className="text-xs font-mono font-bold uppercase tracking-wider text-purple-400">
                 {item.metadata?.kto ? 'KTO Alignment Signal' : 'SimPO Preference Metrics'}
               </span>
               {item.metadata?.kto && (
-                <span className={clsx("text-[9px] font-mono px-2 py-0.5 rounded font-bold", item.metadata.kto.label ? "bg-emerald-950 text-emerald-400 border border-emerald-800" : "bg-rose-950 text-rose-400 border border-rose-800")}>
+                <span className={clsx("text-xs font-mono px-2 py-0.5 rounded font-bold", item.metadata.kto.label ? "bg-emerald-950 text-emerald-400 border border-emerald-800" : "bg-rose-950 text-rose-400 border border-rose-800")}>
                   {item.metadata.kto.label ? '✓ Desirable (+1)' : '✗ Undesirable (-1)'}
                 </span>
               )}
             </div>
             {item.metadata?.simpo && (
-              <div className="text-[11px] font-mono text-[#94a3b8] flex justify-between">
+              <div className="text-xs font-mono text-[#94a3b8] flex justify-between">
                 <span>Chosen: {item.metadata.simpo.chosen_word_count}w</span>
                 <span>Rejected: {item.metadata.simpo.rejected_word_count}w</span>
                 <span>Ratio: {item.metadata.simpo.length_ratio}x</span>
@@ -1125,12 +1125,12 @@ function DetailPane({
         {/* Notes + reviewer */}
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
           <div>
-            <label className="text-[10px] font-mono uppercase mb-1 block font-bold text-[#94a3b8]">Reviewer name</label>
+            <label className="text-xs font-mono uppercase mb-1 block font-bold text-[#94a3b8]">Reviewer name</label>
             <Input value={reviewer} onChange={e => onReviewer(e.target.value)}
               className="h-8 text-xs rounded-md border-[#272738] bg-[#0a0a0f] text-white font-mono" placeholder="your-name" />
           </div>
           <div>
-            <label className="text-[10px] font-mono uppercase mb-1 block font-bold text-[#94a3b8]">Review notes</label>
+            <label className="text-xs font-mono uppercase mb-1 block font-bold text-[#94a3b8]">Review notes</label>
             <Input value={notes} onChange={e => onNotes(e.target.value)}
               className="h-8 text-xs rounded-md border-[#272738] bg-[#0a0a0f] text-white font-mono" placeholder="Optional audit note…" />
           </div>

@@ -96,7 +96,7 @@ export function TelemetryChart({
             <h3 className="text-xs font-bold font-mono uppercase tracking-wider text-white flex items-center gap-2">
               Neural Convergence & GPU Telemetry
               {isSimulated && (
-                <span className="px-1.5 py-0.5 rounded text-[9px] font-mono font-bold bg-amber-500/10 text-amber-400 border border-amber-500/30 uppercase tracking-wider">
+                <span className="px-1.5 py-0.5 rounded text-xs font-mono font-bold bg-amber-500/10 text-amber-400 border border-amber-500/30 uppercase tracking-wider">
                   Simulated
                 </span>
               )}
@@ -107,7 +107,7 @@ export function TelemetryChart({
                 </span>
               )}
             </h3>
-            <p className="text-[10px] font-mono text-[#94a3b8]">
+            <p className="text-xs font-mono text-[#94a3b8]">
               Target: <span className="text-white font-bold">{targetPlatform.toUpperCase()}</span> · {gpuDeviceName}
             </p>
           </div>
@@ -118,20 +118,20 @@ export function TelemetryChart({
           <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-md bg-emerald-950/40 border border-emerald-500/30 text-emerald-300 font-mono text-xs">
             <TrendingDown className="h-3.5 w-3.5 text-emerald-400" />
             <span className="font-bold">Δ {lossDeltaPct}%</span>
-            <span className="text-[10px] text-emerald-400/80">loss reduction</span>
+            <span className="text-xs text-emerald-400/80">loss reduction</span>
           </div>
         </div>
       </div>
 
       {/* Metrics & Cost Breakdown Strip */}
-      <div className="flex flex-wrap items-center justify-between gap-2 p-2.5 rounded-lg bg-[#07070b] border border-[#1f1f2e] text-[11px] font-mono text-[#94a3b8]">
+      <div className="flex flex-wrap items-center justify-between gap-2 p-2.5 rounded-lg bg-[#07070b] border border-[#1f1f2e] text-xs font-mono text-[#94a3b8]">
         <div className="flex items-center gap-3">
           <span>Train Loss: <strong className="text-white">{trainLoss !== null && trainLoss !== undefined ? trainLoss.toFixed(4) : latestLoss.toFixed(4)}</strong></span>
           <span className="text-zinc-700">·</span>
           <span>Eval Loss: <strong className="text-white">{evalLoss !== null && evalLoss !== undefined ? evalLoss.toFixed(4) : (latestLoss * 1.15).toFixed(4)}</strong></span>
         </div>
         <div className="flex items-center gap-2">
-          <span>Est. Cost (Simulated, assumed rate): <strong className="text-zinc-200 font-bold">${estCost}</strong> <span className="text-[10px] text-zinc-500">({estGpuHours} GPU-hrs @ assumed $0.35/hr)</span></span>
+          <span>Est. Cost (Simulated, assumed rate): <strong className="text-zinc-200 font-bold">${estCost}</strong> <span className="text-xs text-zinc-500">({estGpuHours} GPU-hrs @ assumed $0.35/hr)</span></span>
           <span className="text-zinc-700">·</span>
           <span className="text-emerald-400 font-bold">Optimal Convergence</span>
         </div>
@@ -139,7 +139,7 @@ export function TelemetryChart({
 
       {/* SVG Loss Curve Canvas */}
       <div className="space-y-1.5">
-        <div className="flex items-center justify-between text-[11px] font-mono text-[#94a3b8] px-1">
+        <div className="flex items-center justify-between text-xs font-mono text-[#94a3b8] px-1">
           <span>Objective Loss: Cross-Entropy (Teacher Forcing)</span>
           <span>
             {hoveredIdx !== null ? (
@@ -234,7 +234,7 @@ export function TelemetryChart({
               style={{ width: `${vramPct}%` }}
             />
           </div>
-          <div className="flex justify-between text-[10px] font-mono text-[#64748b]">
+          <div className="flex justify-between text-xs font-mono text-[#64748b]">
             <span>FlashAttention-2 Active</span>
             <span>{vramPct}% Peak</span>
           </div>
@@ -255,7 +255,7 @@ export function TelemetryChart({
               style={{ width: `${computeUtilPct}%` }}
             />
           </div>
-          <div className="flex justify-between text-[10px] font-mono text-[#64748b]">
+          <div className="flex justify-between text-xs font-mono text-[#64748b]">
             <span>Tensor Cores BF16</span>
             <span>68°C Temp</span>
           </div>
@@ -270,11 +270,11 @@ export function TelemetryChart({
             </span>
             <span className="font-bold text-[#f26625]">142.6 s/sec</span>
           </div>
-          <div className="text-[10px] font-mono text-[#94a3b8] pt-1">
+          <div className="text-xs font-mono text-[#94a3b8] pt-1">
             <span>Schedule: </span>
             <span className="text-white font-bold">Cosine Annealing + 10% Warmup</span>
           </div>
-          <div className="text-[10px] font-mono text-emerald-400 flex items-center gap-1">
+          <div className="text-xs font-mono text-emerald-400 flex items-center gap-1">
             <CheckCircle2 className="h-3 w-3" />
             Zero Redundancy Optimizer (ZeRO-2)
           </div>

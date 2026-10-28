@@ -49,7 +49,7 @@ export default function SourceQualityTable() {
       </div>
       <div className="overflow-x-auto">
         <table className="w-full text-xs font-mono text-left">
-          <thead className="text-[10px] uppercase text-[#94a3b8] border-b border-[#272738] bg-[#0a0a0f]">
+          <thead className="text-xs uppercase text-[#94a3b8] border-b border-[#272738] bg-[#0a0a0f]">
             <tr>
               <th className="px-4 py-3 font-medium">Source Domain / Category</th>
               <th className="px-4 py-3 font-medium">Avg Quality</th>
@@ -71,7 +71,7 @@ export default function SourceQualityTable() {
                   <td className="px-4 py-3 text-[#10b981] font-bold">{pct}%</td>
                   <td className="px-4 py-3 text-[#94a3b8]">{item.samples_count.toLocaleString()}</td>
                   <td className="px-4 py-3">
-                    <span className={`px-2 py-0.5 rounded-full text-[10px] border font-bold uppercase ${tier.cls}`}>
+                    <span className={`px-2 py-0.5 rounded-full text-xs border font-bold uppercase ${tier.cls}`}>
                       {tier.label}
                     </span>
                   </td>

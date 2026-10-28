@@ -150,7 +150,7 @@ export function InteractiveProductTour() {
           </div>
           <div>
             <div className="flex items-center gap-2">
-              <span className="text-[10px] font-mono uppercase tracking-wider text-[#10b981] font-bold">
+              <span className="text-xs font-mono uppercase tracking-wider text-[#10b981] font-bold">
                 Interactive Tour ({currentStepIndex + 1} of {TOUR_STEPS.length})
               </span>
             </div>
@@ -177,7 +177,7 @@ export function InteractiveProductTour() {
 
       {/* Tour Content */}
       <div className="p-4 space-y-3.5 bg-[#12121a]">
-        <Badge variant="outline" className="text-[10px] font-mono rounded-full border-[#3b3b52] bg-[#0a0a0f] text-[#f26625]">
+        <Badge variant="outline" className="text-xs font-mono rounded-full border-[#3b3b52] bg-[#0a0a0f] text-[#f26625]">
           {step.badgeText}
         </Badge>
         <p className="text-xs text-[#94a3b8] leading-relaxed">{step.description}</p>
@@ -213,7 +213,7 @@ export function InteractiveProductTour() {
             size="sm"
             disabled={currentStepIndex === 0}
             onClick={() => setCurrentStepIndex((c) => c - 1)}
-            className="h-7 px-2 text-[11px] border-[#3b3b52] text-[#f26625] rounded-full disabled:opacity-40"
+            className="h-7 px-2 text-xs border-[#3b3b52] text-[#f26625] rounded-full disabled:opacity-40"
           >
             <ChevronLeft className="h-3 w-3" />
             <span>Prev</span>
@@ -223,7 +223,7 @@ export function InteractiveProductTour() {
             <Button
               size="sm"
               onClick={() => setCurrentStepIndex((c) => c + 1)}
-              className="h-7 px-3 text-[11px] bg-[#f26625] hover:bg-[#de581a] text-white rounded-full font-medium"
+              className="h-7 px-3 text-xs bg-[#f26625] hover:bg-[#de581a] text-white rounded-full font-medium"
             >
               <span>Next</span>
               <ChevronRight className="h-3 w-3" />
@@ -232,7 +232,7 @@ export function InteractiveProductTour() {
             <Button
               size="sm"
               onClick={handleDismiss}
-              className="h-7 px-3 text-[11px] bg-emerald-700 hover:bg-emerald-800 text-white rounded-full font-medium"
+              className="h-7 px-3 text-xs bg-emerald-700 hover:bg-emerald-800 text-white rounded-full font-medium"
             >
               <span>Complete</span>
               <CheckCircle2 className="h-3 w-3 ml-1" />

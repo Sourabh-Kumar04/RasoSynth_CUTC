@@ -69,17 +69,17 @@ export default function QualityScoreChart() {
             </h3>
           </div>
           {is_reference ? (
-            <span className="text-[10px] font-mono text-amber-400 bg-amber-950/30 border border-amber-600/40 px-2 py-0.5 rounded">
+            <span className="text-xs font-mono text-amber-400 bg-amber-950/30 border border-amber-600/40 px-2 py-0.5 rounded">
               Reference Benchmark Profile
             </span>
           ) : (
-            <span className="text-[10px] font-mono text-emerald-400 bg-emerald-950/30 border border-emerald-600/40 px-2 py-0.5 rounded">
+            <span className="text-xs font-mono text-emerald-400 bg-emerald-950/30 border border-emerald-600/40 px-2 py-0.5 rounded">
               Live Verified Split
             </span>
           )}
         </div>
 
-        <p className="text-[11px] text-[#94a3b8] font-mono mb-4">
+        <p className="text-xs text-[#94a3b8] font-mono mb-4">
           Decile frequency histogram across instruction adherence and MT-bench rubric scores.
         </p>
 
@@ -95,7 +95,7 @@ export default function QualityScoreChart() {
                   className="flex-1 h-full flex flex-col justify-end items-center group relative cursor-pointer"
                 >
                   {/* Tooltip on hover */}
-                  <div className="absolute -top-9 bg-[#1a1a24] text-white text-[10px] font-mono py-1 px-1.5 rounded border border-[#3b3b52] opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none whitespace-nowrap z-20 shadow-lg">
+                  <div className="absolute -top-9 bg-[#1a1a24] text-white text-xs font-mono py-1 px-1.5 rounded border border-[#3b3b52] opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none whitespace-nowrap z-20 shadow-lg">
                     {bucketLabels[i]}: <span className="font-bold text-[#f26625]">{val}</span> samples
                   </div>
                   <div
@@ -110,7 +110,7 @@ export default function QualityScoreChart() {
           </div>
 
           {/* X-axis labels */}
-          <div className="flex justify-between items-center text-[9px] font-mono text-[#64748b] px-1 pt-1.5">
+          <div className="flex justify-between items-center text-xs font-mono text-[#64748b] px-1 pt-1.5">
             <span>0% (Poor)</span>
             <span>50% (Acceptable)</span>
             <span>100% (Gold Standard)</span>
@@ -137,7 +137,7 @@ export default function QualityScoreChart() {
         ].map(({ label, value, color }) => (
           <div key={label} className="bg-[#0a0a0f] rounded p-2 border border-[#272738]">
             <p className={`text-sm font-bold ${color}`}>{value}</p>
-            <p className="text-[#94a3b8] text-[9px] uppercase mt-0.5 truncate">{label}</p>
+            <p className="text-[#94a3b8] text-xs uppercase mt-0.5 truncate">{label}</p>
           </div>
         ))}
       </div>

@@ -146,10 +146,10 @@ export default function SettingsPage() {
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-[#272738] pb-4">
         <div>
           <div className="flex items-center gap-2.5 mb-1">
-            <span className="text-[10px] font-mono px-2 py-0.5 rounded-sm bg-[#f26625]/10 border border-[#f26625]/30 text-[#f26625] font-bold uppercase tracking-wider">
+            <span className="text-xs font-mono px-2 py-0.5 rounded-sm bg-[#f26625]/10 border border-[#f26625]/30 text-[#f26625] font-bold uppercase tracking-wider">
               System Control
             </span>
-            <span className="text-[10px] font-mono px-2 py-0.5 rounded-sm bg-emerald-950/40 border border-emerald-500/30 text-emerald-400 font-bold">
+            <span className="text-xs font-mono px-2 py-0.5 rounded-sm bg-emerald-950/40 border border-emerald-500/30 text-emerald-400 font-bold">
               Standalone Local Container Active
             </span>
             <h1 className="text-2xl font-bold tracking-tight text-white font-display">
@@ -161,7 +161,7 @@ export default function SettingsPage() {
           </p>
         </div>
         <div className="flex items-center gap-2">
-          <span className="hidden sm:inline-flex items-center gap-1.5 px-2.5 py-1 rounded bg-[#161622] border border-[#272738] text-[11px] font-mono text-[#94a3b8]">
+          <span className="hidden sm:inline-flex items-center gap-1.5 px-2.5 py-1 rounded bg-[#161622] border border-[#272738] text-xs font-mono text-[#94a3b8]">
             <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
             Supabase Cloud Pooler (AWS SG)
           </span>
@@ -191,13 +191,13 @@ export default function SettingsPage() {
               <p className="text-xs font-bold text-white flex items-center gap-2">
                 <span>Platform Status: {loading ? 'Checking runtime...' : health?.status?.toUpperCase() ?? 'ONLINE'}</span>
                 {!loading && infraStatus && (
-                  <span className="text-[10px] font-mono px-2 py-0.2 rounded-md bg-emerald-500/10 text-emerald-400 border border-emerald-500/30">
+                  <span className="text-xs font-mono px-2 py-0.2 rounded-md bg-emerald-500/10 text-emerald-400 border border-emerald-500/30">
                     Live Verified
                   </span>
                 )}
               </p>
               {!loading && (
-                <p className="text-[11px] text-[#94a3b8] font-mono mt-1 flex flex-wrap items-center gap-3">
+                <p className="text-xs text-[#94a3b8] font-mono mt-1 flex flex-wrap items-center gap-3">
                   <span className="flex items-center gap-1.5"><StatusDot ok={dbOk !== false} />Database Engine</span>
                   <span className="flex items-center gap-1.5"><StatusDot ok={redisOk !== false} />Distributed Broker &amp; Cache</span>
                   <span className="flex items-center gap-1.5"><StatusDot ok={true} />Provider Hot-Switcher (ADR-001)</span>
@@ -269,10 +269,10 @@ export default function SettingsPage() {
                         {label}
                         <CheckCircle2 className="h-3.5 w-3.5 text-[#10b981]" />
                       </p>
-                      <p className="text-[11px] text-[#94a3b8] font-mono mt-0.5">{desc}</p>
+                      <p className="text-xs text-[#94a3b8] font-mono mt-0.5">{desc}</p>
                     </div>
                   </div>
-                  <span className="text-[10px] font-mono font-bold px-2.5 py-0.5 rounded-md bg-emerald-950/40 text-[#10b981] border border-emerald-500/30">
+                  <span className="text-xs font-mono font-bold px-2.5 py-0.5 rounded-md bg-emerald-950/40 text-[#10b981] border border-emerald-500/30">
                     {status}
                   </span>
                 </div>
@@ -311,7 +311,7 @@ export default function SettingsPage() {
                 <div key={label} className="flex items-center justify-between px-5 py-3.5">
                   <div>
                     <p className="text-xs font-bold text-white">{label}</p>
-                    <p className="text-[11px] text-[#94a3b8] font-mono mt-0.5">{desc}</p>
+                    <p className="text-xs text-[#94a3b8] font-mono mt-0.5">{desc}</p>
                   </div>
                   <code className="text-xs font-mono bg-[#0a0a0f] px-2.5 py-0.5 rounded-md border border-[#272738] text-[#f26625] shrink-0 ml-4">
                     {val}
@@ -328,7 +328,7 @@ export default function SettingsPage() {
                 <Shield className="h-4 w-4 text-[#f26625]" />
                 Seedless Generation Guard Explainer
               </span>
-              <span className="text-[10px] font-mono px-2 py-0.5 rounded bg-emerald-950/60 border border-emerald-500/40 text-emerald-400 font-bold">
+              <span className="text-xs font-mono px-2 py-0.5 rounded bg-emerald-950/60 border border-emerald-500/40 text-emerald-400 font-bold">
                 ENFORCED (RFC-GROUNDING-01)
               </span>
             </div>
@@ -336,7 +336,7 @@ export default function SettingsPage() {
               <p className="text-white font-medium leading-relaxed font-sans text-xs">
                 <strong>Why does this guard exist?</strong> Pure synthetic text generated without reference seed documents frequently invents fictitious legal sections, fabricated statutory penalties, and hallucinated medical dosages.
               </p>
-              <p className="text-[#94a3b8] text-[11px] leading-relaxed">
+              <p className="text-[#94a3b8] text-xs leading-relaxed">
                 When enabled (<code>ALLOW_SEEDLESS_GENERATION=false</code>), the pipeline strictly requires an authoritative reference corpus (e.g., CGST Act PDFs, medical case studies, or validated codebases) before initiating LLM teacher-forcing. If seed retrieval fails or yields zero matches, generation is automatically halted rather than allowing the model to hallucinate unverified statutory claims from vacuum.
               </p>
             </CardContent>
@@ -366,13 +366,13 @@ export default function SettingsPage() {
                       Modal Serverless GPU Fabric (NVIDIA A10G / H100)
                       {computeConfig?.modal_configured && <CheckCircle2 className="h-3.5 w-3.5 text-[#10b981]" />}
                     </p>
-                    <p className="text-[11px] text-[#94a3b8] font-mono mt-0.5">
+                    <p className="text-xs text-[#94a3b8] font-mono mt-0.5">
                       MODAL_TOKEN_ID &amp; MODAL_TOKEN_SECRET — Serverless containerized training
                     </p>
                   </div>
                 </div>
                 <span className={clsx(
-                  'text-[10px] font-mono font-bold px-2.5 py-0.5 rounded-md border',
+                  'text-xs font-mono font-bold px-2.5 py-0.5 rounded-md border',
                   computeConfig?.modal_configured
                     ? 'bg-emerald-950/40 text-[#10b981] border-emerald-500/30'
                     : 'bg-zinc-900 text-zinc-400 border-zinc-800'
@@ -391,13 +391,13 @@ export default function SettingsPage() {
                       RunPod Cloud GPU Endpoints
                       {computeConfig?.runpod_configured && <CheckCircle2 className="h-3.5 w-3.5 text-[#10b981]" />}
                     </p>
-                    <p className="text-[11px] text-[#94a3b8] font-mono mt-0.5">
+                    <p className="text-xs text-[#94a3b8] font-mono mt-0.5">
                       RUNPOD_API_KEY — On-demand remote worker pods for high-throughput fine-tuning
                     </p>
                   </div>
                 </div>
                 <span className={clsx(
-                  'text-[10px] font-mono font-bold px-2.5 py-0.5 rounded-md border',
+                  'text-xs font-mono font-bold px-2.5 py-0.5 rounded-md border',
                   computeConfig?.runpod_configured
                     ? 'bg-emerald-950/40 text-[#10b981] border-emerald-500/30'
                     : 'bg-zinc-900 text-zinc-400 border-zinc-800'
@@ -416,13 +416,13 @@ export default function SettingsPage() {
                       Hugging Face Hub Token (Write / Model Upload)
                       {computeConfig?.hf_configured && <CheckCircle2 className="h-3.5 w-3.5 text-[#10b981]" />}
                     </p>
-                    <p className="text-[11px] text-[#94a3b8] font-mono mt-0.5">
+                    <p className="text-xs text-[#94a3b8] font-mono mt-0.5">
                       HF_TOKEN — Required for pushing trained LoRA weights &amp; dataset cards
                     </p>
                   </div>
                 </div>
                 <span className={clsx(
-                  'text-[10px] font-mono font-bold px-2.5 py-0.5 rounded-md border',
+                  'text-xs font-mono font-bold px-2.5 py-0.5 rounded-md border',
                   computeConfig?.hf_configured
                     ? 'bg-emerald-950/40 text-[#10b981] border-emerald-500/30'
                     : 'bg-zinc-900 text-zinc-400 border-zinc-800'
@@ -541,7 +541,7 @@ export default function SettingsPage() {
                   <CardTitle className="text-sm font-bold text-white">Provider API Keys &amp; Gateway Integrations</CardTitle>
                   <CardDescription className="text-xs text-[#94a3b8]">Live environment key detection and failover routing readiness</CardDescription>
                 </div>
-                <Badge variant="outline" className="text-[10px] font-mono border-emerald-500/40 text-emerald-400 bg-emerald-950/20">
+                <Badge variant="outline" className="text-xs font-mono border-emerald-500/40 text-emerald-400 bg-emerald-950/20">
                   {PROVIDERS_CONFIG.filter(p => p.configured).length} / {PROVIDERS_CONFIG.length} Configured
                 </Badge>
               </div>
@@ -562,11 +562,11 @@ export default function SettingsPage() {
                           <span className="w-1.5 h-1.5 rounded-full bg-slate-600 inline-block" />
                         )}
                       </p>
-                      <p className="text-[11px] text-[#94a3b8] font-mono">{env}</p>
+                      <p className="text-xs text-[#94a3b8] font-mono">{env}</p>
                     </div>
                   </div>
                   <span className={clsx(
-                    'text-[10px] font-mono font-bold px-2.5 py-0.5 rounded-md border',
+                    'text-xs font-mono font-bold px-2.5 py-0.5 rounded-md border',
                     configured
                       ? 'bg-emerald-950/40 text-[#10b981] border-emerald-500/30'
                       : 'bg-zinc-900 text-zinc-500 border-zinc-800'
@@ -600,7 +600,7 @@ export default function SettingsPage() {
                     </div>
                     <div>
                       <p className="text-xs font-bold text-white">{label}</p>
-                      <p className="text-[11px] text-[#94a3b8]">{desc}</p>
+                      <p className="text-xs text-[#94a3b8]">{desc}</p>
                     </div>
                   </div>
                   <code className="text-xs font-mono bg-[#0a0a0f] px-2.5 py-0.5 rounded-md border border-[#272738] text-[#f26625]">{env}</code>
@@ -627,7 +627,7 @@ export default function SettingsPage() {
                 <div key={label} className="flex items-center justify-between px-5 py-3.5">
                   <div>
                     <p className="text-xs font-bold text-white">{label}</p>
-                    <p className="text-[11px] text-[#94a3b8] font-mono mt-0.5">{desc}</p>
+                    <p className="text-xs text-[#94a3b8] font-mono mt-0.5">{desc}</p>
                   </div>
                   <code className="text-xs font-mono bg-[#0a0a0f] px-2.5 py-0.5 rounded-md border border-[#272738] text-[#f26625] shrink-0 ml-4">{env}</code>
                 </div>
@@ -656,7 +656,7 @@ export default function SettingsPage() {
                     </div>
                     <div>
                       <p className="text-xs font-bold text-white">{label}</p>
-                      <p className="text-[11px] text-[#94a3b8]">{desc}</p>
+                      <p className="text-xs text-[#94a3b8]">{desc}</p>
                     </div>
                   </div>
                   <code className="text-xs font-mono bg-[#0a0a0f] px-2.5 py-0.5 rounded-md border border-[#272738] text-[#f26625]">{env}</code>
@@ -678,7 +678,7 @@ export default function SettingsPage() {
                 <div key={env} className="flex items-center justify-between px-5 py-3.5">
                   <div>
                     <p className="text-xs font-bold text-white">{label}</p>
-                    <p className="text-[11px] text-[#94a3b8]">{desc}</p>
+                    <p className="text-xs text-[#94a3b8]">{desc}</p>
                   </div>
                   <code className="text-xs font-mono bg-[#0a0a0f] px-2.5 py-0.5 rounded-md border border-[#272738] text-[#f26625] shrink-0 ml-4">{env}</code>
                 </div>
@@ -704,7 +704,7 @@ export default function SettingsPage() {
                 <div key={env} className="flex items-center justify-between px-5 py-3.5">
                   <div>
                     <p className="text-xs font-bold text-white">{label}</p>
-                    <p className="text-[11px] text-[#94a3b8]">{desc}</p>
+                    <p className="text-xs text-[#94a3b8]">{desc}</p>
                   </div>
                   <code className="text-xs font-mono bg-[#0a0a0f] px-2.5 py-0.5 rounded-md border border-[#272738] text-[#f26625] shrink-0 ml-4">{env}</code>
                 </div>

@@ -244,14 +244,14 @@ export function CommandPalette({
                       <div className="flex items-center gap-2">
                         <span className="text-xs font-bold truncate">{item.title}</span>
                         <span
-                          className={`text-[9px] font-mono px-1.5 py-0.5 rounded-full ${
+                          className={`text-xs font-mono px-1.5 py-0.5 rounded-full ${
                             isSelected ? 'bg-[#f26625]/15 text-white' : 'bg-[#161622] text-[#94a3b8]'
                           }`}
                         >
                           {item.category}
                         </span>
                       </div>
-                      <p className={`text-[11px] truncate mt-0.5 ${isSelected ? 'text-white' : 'text-[#94a3b8]'}`}>
+                      <p className={`text-xs truncate mt-0.5 ${isSelected ? 'text-white' : 'text-[#94a3b8]'}`}>
                         {item.subtitle}
                       </p>
                     </div>
@@ -264,7 +264,7 @@ export function CommandPalette({
         </div>
 
         {/* Footer shortcuts hint */}
-        <div className="p-3 bg-[#0a0a0f] border-t border-[#272738] flex items-center justify-between text-[10px] font-mono text-[#94a3b8]">
+        <div className="p-3 bg-[#0a0a0f] border-t border-[#272738] flex items-center justify-between text-xs font-mono text-[#94a3b8]">
           <div className="flex items-center gap-3">
             <span><kbd className="px-1 py-0.5 bg-[#161622] text-[#94a3b8] rounded border border-[#3b3b52]">↑↓</kbd> Navigate</span>
             <span><kbd className="px-1 py-0.5 bg-[#161622] text-[#94a3b8] rounded border border-[#3b3b52]">↵</kbd> Select</span>

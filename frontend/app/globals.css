@@ -254,3 +254,16 @@
     scroll-behavior: auto !important;
   }
 }
+
+/* Page-level controls: orange focus-visible ring, matching the shared
+   primitives. Components that already set focus-visible:outline-none
+   keep their own ring (utilities layer wins over this base rule). */
+@layer base {
+  a:focus-visible,
+  button:focus-visible,
+  summary:focus-visible,
+  [tabindex]:focus-visible {
+    outline: 2px solid #f26625;
+    outline-offset: 2px;
+  }
+}

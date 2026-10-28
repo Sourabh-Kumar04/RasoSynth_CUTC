@@ -318,7 +318,7 @@ export function SpotlightProductTour() {
               <StepIcon className="h-4 w-4 text-[#f26625]" />
             </div>
             <div>
-              <span className="text-[10px] font-mono uppercase tracking-wider text-[#10b981] font-bold">
+              <span className="text-xs font-mono uppercase tracking-wider text-[#10b981] font-bold">
                 Product Tour ({currentStepIndex + 1} of {SPOTLIGHT_STEPS.length})
               </span>
               <h3 className="text-xs font-bold text-white tracking-tight">{step.title}</h3>
@@ -329,7 +329,7 @@ export function SpotlightProductTour() {
             {/* Monochromatic Header Styled Don't Show Again Button */}
             <button
               onClick={handleNeverShowAgain}
-              className="text-[10px] font-mono text-[#94a3b8] hover:text-white flex items-center gap-1 bg-[#12121a] px-2.5 py-1 rounded-full border border-[#3b3b52] transition-colors"
+              className="text-xs font-mono text-[#94a3b8] hover:text-white flex items-center gap-1 bg-[#12121a] px-2.5 py-1 rounded-full border border-[#3b3b52] transition-colors"
               title="Don't show interactive tour automatically on reload"
             >
               <EyeOff className="h-3 w-3 text-[#94a3b8]" />
@@ -348,10 +348,10 @@ export function SpotlightProductTour() {
         {/* Step Body */}
         <div className="p-4 space-y-3 bg-[#12121a]">
           <div className="flex items-center justify-between">
-            <Badge variant="outline" className="text-[10px] font-mono rounded-full border-[#3b3b52] bg-[#0a0a0f] text-[#f26625]">
+            <Badge variant="outline" className="text-xs font-mono rounded-full border-[#3b3b52] bg-[#0a0a0f] text-[#f26625]">
               {step.badgeText}
             </Badge>
-            <span className="text-[10px] font-mono text-[#94a3b8] truncate max-w-[200px]">{step.subtitle}</span>
+            <span className="text-xs font-mono text-[#94a3b8] truncate max-w-[200px]">{step.subtitle}</span>
           </div>
 
           <p className="text-xs text-[#94a3b8] leading-relaxed">{step.description}</p>

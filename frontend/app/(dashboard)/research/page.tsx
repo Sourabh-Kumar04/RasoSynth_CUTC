@@ -262,7 +262,7 @@ export default function ResearchPage() {
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-[#272738] pb-4">
         <div>
           <div className="flex items-center gap-2.5 mb-1">
-            <span className="text-[10px] font-mono px-2 py-0.5 rounded-sm bg-[#f26625]/10 border border-[#f26625]/30 text-[#f26625] font-bold uppercase tracking-wider">
+            <span className="text-xs font-mono px-2 py-0.5 rounded-sm bg-[#f26625]/10 border border-[#f26625]/30 text-[#f26625] font-bold uppercase tracking-wider">
               Empirical Optimization
             </span>
             <h1 className="text-2xl font-bold tracking-tight text-white font-display">
@@ -275,8 +275,8 @@ export default function ResearchPage() {
         </div>
         <div className="flex flex-col sm:flex-row items-end sm:items-center gap-2">
           <div className="text-right hidden sm:block">
-            <p className="text-[10px] font-mono text-[#64748b]">Auto-Curriculum Evaluation</p>
-            <p className="text-[10px] font-mono text-cyan-400">DeepSeek-R1 / Gemini 1.5 · ~45s</p>
+            <p className="text-xs font-mono text-[#64748b]">Auto-Curriculum Evaluation</p>
+            <p className="text-xs font-mono text-cyan-400">DeepSeek-R1 / Gemini 1.5 · ~45s</p>
           </div>
           <div className="flex gap-2">
             <Button
@@ -314,7 +314,7 @@ export default function ResearchPage() {
           <Card className="bg-[#12121a]/90 backdrop-blur-sm border-[#272738] rounded-md card-shadow glow-card-hover group">
             <CardContent className="pt-4 pb-4 px-4 flex items-center justify-between">
               <div>
-                <p className="text-[10px] text-[#94a3b8] font-mono uppercase tracking-wider">Engine Status</p>
+                <p className="text-xs text-[#94a3b8] font-mono uppercase tracking-wider">Engine Status</p>
                 <div className="flex items-center gap-1.5 mt-1">
                   <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse shadow-[0_0_8px_rgba(16,185,129,0.8)]" />
                   <p className="text-xl font-bold font-mono capitalize text-white">
@@ -332,11 +332,11 @@ export default function ResearchPage() {
           <Card className="bg-[#12121a]/90 backdrop-blur-sm border-[#272738] rounded-md card-shadow glow-card-hover group">
             <CardContent className="pt-4 pb-4 px-4 flex items-center justify-between">
               <div>
-                <p className="text-[10px] text-[#94a3b8] font-mono uppercase tracking-wider">Last Run Cycle</p>
+                <p className="text-xs text-[#94a3b8] font-mono uppercase tracking-wider">Last Run Cycle</p>
                 <p className="text-base font-bold font-mono text-cyan-400 mt-1">
                   {lastRunMeta?.timestamp ?? 'No run recorded yet'}
                 </p>
-                <p className="text-[10px] text-[#64748b] font-mono mt-0.5">
+                <p className="text-xs text-[#64748b] font-mono mt-0.5">
                   {lastRunMeta ? `${lastRunMeta.duration} · ${lastRunMeta.status}` : 'No run recorded yet'}
                 </p>
               </div>
@@ -348,11 +348,11 @@ export default function ResearchPage() {
           <Card className="bg-[#12121a]/90 backdrop-blur-sm border-[#272738] rounded-md card-shadow glow-card-hover group">
             <CardContent className="pt-4 pb-4 px-4 flex items-center justify-between">
               <div>
-                <p className="text-[10px] text-[#94a3b8] font-mono uppercase tracking-wider">Active Techniques</p>
+                <p className="text-xs text-[#94a3b8] font-mono uppercase tracking-wider">Active Techniques</p>
                 <p className="text-xl font-bold font-mono text-[#10b981] mt-1">
                   {activeTechniquesCount} / {DEFAULT_HEURISTICS.length} Active
                 </p>
-                <p className="text-[10px] text-[#64748b] font-mono mt-0.5">
+                <p className="text-xs text-[#64748b] font-mono mt-0.5">
                   4 Core Synthesis Strategies
                 </p>
               </div>
@@ -372,7 +372,7 @@ export default function ResearchPage() {
             <span className="text-[#94a3b8]">Last Sweep Result:</span>
             <span className="text-white font-bold">{lastRunMeta.benchmark}</span>
           </div>
-          <div className="flex items-center gap-3 text-[11px]">
+          <div className="flex items-center gap-3 text-xs">
             <span className="text-cyan-400 font-semibold">{lastRunMeta.model}</span>
             <span className="text-[#64748b]">|</span>
             <span className="text-emerald-400 font-bold">{lastRunMeta.status} ({lastRunMeta.duration})</span>
@@ -442,11 +442,11 @@ export default function ResearchPage() {
               <Card className="bg-[#12121a] border-[#272738] rounded-md">
                 <CardContent className="pt-4 pb-4 px-4 flex items-center justify-between">
                   <div>
-                    <p className="text-[10px] text-[#94a3b8] font-mono uppercase">Lexical Diversity (D-2)</p>
+                    <p className="text-xs text-[#94a3b8] font-mono uppercase">Lexical Diversity (D-2)</p>
                     <p className="text-xl font-bold font-mono text-emerald-400 mt-0.5">
                       {benchmarks?.results?.benchmark_generation_quality?.lexical_diversity_distinct_2 ?? '0.9831'}
                     </p>
-                    <span className="text-[10px] text-[#64748b] font-mono">+15.6% vs raw crawls</span>
+                    <span className="text-xs text-[#64748b] font-mono">+15.6% vs raw crawls</span>
                   </div>
                   <div className="h-9 w-9 rounded-xl bg-[#161622] border border-[#3b3b52] flex items-center justify-center">
                     <Sparkles className="h-4.5 w-4.5 text-emerald-400" />
@@ -457,13 +457,13 @@ export default function ResearchPage() {
               <Card className="bg-[#12121a] border-[#272738] rounded-md">
                 <CardContent className="pt-4 pb-4 px-4 flex items-center justify-between">
                   <div>
-                    <p className="text-[10px] text-[#94a3b8] font-mono uppercase">Processing Throughput</p>
+                    <p className="text-xs text-[#94a3b8] font-mono uppercase">Processing Throughput</p>
                     <p className="text-xl font-bold font-mono text-[#f26625] mt-0.5">
                       {benchmarks?.results?.benchmark_latency?.throughput_samples_per_sec
                         ? `${Math.round(benchmarks.results.benchmark_latency.throughput_samples_per_sec).toLocaleString()} /s`
                         : '302,570 /s'}
                     </p>
-                    <span className="text-[10px] text-[#64748b] font-mono">
+                    <span className="text-xs text-[#64748b] font-mono">
                       p50: {benchmarks?.results?.benchmark_latency?.p50_latency_per_sample_us ?? '3.3'} μs/rec
                     </span>
                   </div>
@@ -476,11 +476,11 @@ export default function ResearchPage() {
               <Card className="bg-[#12121a] border-[#272738] rounded-md">
                 <CardContent className="pt-4 pb-4 px-4 flex items-center justify-between">
                   <div>
-                    <p className="text-[10px] text-[#94a3b8] font-mono uppercase">Schema Accuracy</p>
+                    <p className="text-xs text-[#94a3b8] font-mono uppercase">Schema Accuracy</p>
                     <p className="text-xl font-bold font-mono text-cyan-400 mt-0.5">
                       {benchmarks?.results?.benchmark_provider_quality?.schema_parsing_success_rate_pct != null ? `${benchmarks.results.benchmark_provider_quality.schema_parsing_success_rate_pct}%` : '—'}
                     </p>
-                    <span className="text-[10px] text-[#64748b] font-mono">Zero formatting collapse</span>
+                    <span className="text-xs text-[#64748b] font-mono">Zero formatting collapse</span>
                   </div>
                   <div className="h-9 w-9 rounded-xl bg-[#161622] border border-[#3b3b52] flex items-center justify-center">
                     <ShieldCheck className="h-4.5 w-4.5 text-cyan-400" />
@@ -491,11 +491,11 @@ export default function ResearchPage() {
               <Card className="bg-[#12121a] border-[#272738] rounded-md">
                 <CardContent className="pt-4 pb-4 px-4 flex items-center justify-between">
                   <div>
-                    <p className="text-[10px] text-[#94a3b8] font-mono uppercase">Cost Reduction vs Human</p>
+                    <p className="text-xs text-[#94a3b8] font-mono uppercase">Cost Reduction vs Human</p>
                     <p className="text-xl font-bold font-mono text-amber-400 mt-0.5">
                       {benchmarks?.results?.benchmark_cost_efficiency?.cost_reduction_pct ?? '99.95'}%
                     </p>
-                    <span className="text-[10px] text-[#64748b] font-mono">
+                    <span className="text-xs text-[#64748b] font-mono">
                       {benchmarks?.results?.benchmark_cost_efficiency?.roi_cost_efficiency_multiple ?? '1904x cheaper'}
                     </span>
                   </div>
@@ -579,35 +579,35 @@ export default function ResearchPage() {
                     <TrendingUp className="h-4 w-4 text-[#f26625]" />
                     Empirical Fine-Tuning Accuracy Delta (Sarvam-2B Indic GST QA)
                   </CardTitle>
-                  <Badge variant="outline" className="text-[10px] font-mono border-emerald-500/40 text-emerald-400 bg-emerald-950/20">
+                  <Badge variant="outline" className="text-xs font-mono border-emerald-500/40 text-emerald-400 bg-emerald-950/20">
                     +537% chrF Gain
                   </Badge>
                 </CardHeader>
                 <CardContent className="p-4 space-y-4">
                   <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 text-center">
                     <div className="p-3 bg-[#0d0d14] rounded-xl border border-[#272738]">
-                      <p className="text-[10px] font-mono text-[#94a3b8] uppercase">chrF Score</p>
+                      <p className="text-xs font-mono text-[#94a3b8] uppercase">chrF Score</p>
                       <p className="text-xs font-mono text-[#64748b] mt-0.5 line-through">14.80</p>
                       <p className="text-lg font-bold font-mono text-emerald-400">94.33</p>
-                      <span className="text-[9px] font-mono text-emerald-400/90 font-bold">+537.4% Relative</span>
+                      <span className="text-xs font-mono text-emerald-400/90 font-bold">+537.4% Relative</span>
                     </div>
                     <div className="p-3 bg-[#0d0d14] rounded-xl border border-[#272738]">
-                      <p className="text-[10px] font-mono text-[#94a3b8] uppercase">Token F1</p>
+                      <p className="text-xs font-mono text-[#94a3b8] uppercase">Token F1</p>
                       <p className="text-xs font-mono text-[#64748b] mt-0.5 line-through">0.191</p>
                       <p className="text-lg font-bold font-mono text-cyan-400">0.739</p>
-                      <span className="text-[9px] font-mono text-cyan-400/90 font-bold">+286.9% Relative</span>
+                      <span className="text-xs font-mono text-cyan-400/90 font-bold">+286.9% Relative</span>
                     </div>
                     <div className="p-3 bg-[#0d0d14] rounded-xl border border-[#272738]">
-                      <p className="text-[10px] font-mono text-[#94a3b8] uppercase">Exact Match</p>
+                      <p className="text-xs font-mono text-[#94a3b8] uppercase">Exact Match</p>
                       <p className="text-xs font-mono text-[#64748b] mt-0.5 line-through">0.0%</p>
                       <p className="text-lg font-bold font-mono text-[#f26625]">40.0%</p>
-                      <span className="text-[9px] font-mono text-[#f26625]/90 font-bold">+40.0% Absolute</span>
+                      <span className="text-xs font-mono text-[#f26625]/90 font-bold">+40.0% Absolute</span>
                     </div>
                     <div className="p-3 bg-[#0d0d14] rounded-xl border border-[#272738]">
-                      <p className="text-[10px] font-mono text-[#94a3b8] uppercase">Citation Fidelity</p>
+                      <p className="text-xs font-mono text-[#94a3b8] uppercase">Citation Fidelity</p>
                       <p className="text-xs font-mono text-[#64748b] mt-0.5">Grounded</p>
                       <p className="text-lg font-bold font-mono text-emerald-400">100.0%</p>
-                      <span className="text-[9px] font-mono text-emerald-400/90 font-bold">CGST Act Grounded</span>
+                      <span className="text-xs font-mono text-emerald-400/90 font-bold">CGST Act Grounded</span>
                     </div>
                   </div>
 
@@ -655,12 +655,12 @@ export default function ResearchPage() {
                   >
                     <CardContent className="p-4 space-y-3">
                       <div className="flex items-center justify-between">
-                        <span className="text-[10px] font-mono text-[#94a3b8] uppercase">{h.key}</span>
+                        <span className="text-xs font-mono text-[#94a3b8] uppercase">{h.key}</span>
                         <div className="flex items-center gap-2">
                           <button
                             type="button"
                             onClick={() => toggleTechnique(h.key)}
-                            className="flex items-center gap-1 text-[11px] font-mono focus:outline-none transition-colors"
+                            className="flex items-center gap-1 text-xs font-mono focus:outline-none transition-colors"
                           >
                             {isEnabled ? (
                               <span className="flex items-center gap-1 text-emerald-400 font-bold">
@@ -683,15 +683,15 @@ export default function ResearchPage() {
                         </h4>
                         {/* Plain Language Explanation */}
                         <div className="my-1.5 p-2 rounded bg-[#0a0a0f] border border-[#1c1c28]">
-                          <p className="text-[11px] text-amber-200/90 leading-relaxed font-sans">
+                          <p className="text-xs text-amber-200/90 leading-relaxed font-sans">
                             {h.plain}
                           </p>
                         </div>
-                        <p className="text-[10px] text-[#94a3b8] mt-1 leading-relaxed font-mono">{h.desc}</p>
+                        <p className="text-xs text-[#94a3b8] mt-1 leading-relaxed font-mono">{h.desc}</p>
                       </div>
 
                       {/* Benchmark Impact Indicator */}
-                      <div className="pt-2 border-t border-[#1c1c28] flex items-center justify-between text-[10px] font-mono">
+                      <div className="pt-2 border-t border-[#1c1c28] flex items-center justify-between text-xs font-mono">
                         <span className="text-[#64748b] uppercase">Benchmark Impact:</span>
                         <span className={clsx('font-bold px-1.5 py-0.5 rounded', isEnabled ? 'bg-emerald-950/60 text-emerald-400 border border-emerald-800/40' : 'bg-slate-900 text-[#64748b]')}>
                           {isEnabled ? h.impact : 'Inactive'}
@@ -699,8 +699,8 @@ export default function ResearchPage() {
                       </div>
 
                       <div className="pt-2 border-t border-[#1c1c28]">
-                        <p className="text-[10px] font-mono text-[#64748b] uppercase mb-1">Parameters</p>
-                        <div className="bg-[#0a0a0f] p-2 rounded-lg border border-[#272738] font-mono text-[10px] text-white">
+                        <p className="text-xs font-mono text-[#64748b] uppercase mb-1">Parameters</p>
+                        <div className="bg-[#0a0a0f] p-2 rounded-lg border border-[#272738] font-mono text-xs text-white">
                           {Object.entries(h.params).map(([pk, pv]) => (
                             <div key={pk} className="flex justify-between">
                               <span className="text-[#94a3b8]">{pk}:</span>
@@ -754,11 +754,11 @@ export default function ResearchPage() {
                       </div>
                       <div>
                         <p className="text-xs font-bold text-white">{label}</p>
-                        <p className="text-[11px] text-[#94a3b8] mt-0.5">{desc}</p>
+                        <p className="text-xs text-[#94a3b8] mt-0.5">{desc}</p>
                       </div>
                     </div>
                     <span className={clsx(
-                      'text-[10px] font-mono px-2.5 py-0.5 rounded-md border font-bold',
+                      'text-xs font-mono px-2.5 py-0.5 rounded-md border font-bold',
                       ok ? 'bg-emerald-950/40 text-emerald-400 border-emerald-500/30'
                          : 'bg-[#161622] text-[#94a3b8] border-[#3b3b52]',
                     )}>{badge}</span>

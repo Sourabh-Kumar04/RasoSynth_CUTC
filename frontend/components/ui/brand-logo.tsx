@@ -147,7 +147,7 @@ export function BrandLogo({
             Raso<span className="bg-gradient-to-r from-[#f26625] via-[#ff8238] to-[#f59e0b] bg-clip-text text-transparent">Synth</span><span className="text-[#94a3b8] font-semibold">Tune</span>
           </span>
           {showBadge && (
-            <span className="px-1.5 py-0.5 text-[9px] font-mono font-bold tracking-wider text-[#f26625] bg-[#f26625]/10 border border-[#f26625]/25 rounded">
+            <span className="px-1.5 py-0.5 text-xs font-mono font-bold tracking-wider text-[#f26625] bg-[#f26625]/10 border border-[#f26625]/25 rounded">
               2.0
             </span>
           )}

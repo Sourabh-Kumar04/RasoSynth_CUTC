@@ -34,6 +34,9 @@ import {
   LayoutGrid,
   List,
   Cpu,
+  Globe,
+  Puzzle,
+  Upload
 } from 'lucide-react'
 import { clsx } from 'clsx'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
@@ -81,13 +84,13 @@ interface DatasetJob {
 
 // Pipeline stages in order
 const PIPELINE_STAGES = [
-  { id: 'analyzing_constraints', label: 'Analyzing', icon: '🔍' },
-  { id: 'discovering_sources', label: 'Discovering', icon: '🌐' },
-  { id: 'extracting_content', label: 'Extracting', icon: '📄' },
-  { id: 'filtering_quality', label: 'Filtering', icon: '✨' },
-  { id: 'constructing_dataset', label: 'Constructing', icon: '🧩' },
-  { id: 'exporting', label: 'Exporting', icon: '📤' },
-  { id: 'completed', label: 'Complete', icon: '✓' },
+  { id: 'analyzing_constraints', label: 'Analyzing', icon: Search },
+  { id: 'discovering_sources', label: 'Discovering', icon: Globe },
+  { id: 'extracting_content', label: 'Extracting', icon: FileText },
+  { id: 'filtering_quality', label: 'Filtering', icon: Sparkles },
+  { id: 'constructing_dataset', label: 'Constructing', icon: Puzzle },
+  { id: 'exporting', label: 'Exporting', icon: Upload },
+  { id: 'completed', label: 'Complete', icon: Check },
 ]
 
 const modalityIcons = {
@@ -543,7 +546,7 @@ export default function DatasetsPage() {
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-[#272738] pb-5">
         <div>
           <div className="flex items-center gap-2.5 mb-1">
-            <span className="text-[10px] font-mono px-2.5 py-0.5 rounded-md bg-[#161622] border border-[#272738] text-[#10b981] font-bold uppercase tracking-wider">
+            <span className="text-xs font-mono px-2.5 py-0.5 rounded-md bg-[#161622] border border-[#272738] text-[#10b981] font-bold uppercase tracking-wider">
               Verified Data Repositories
             </span>
             <h1 className="text-2xl font-bold tracking-tight text-white font-display">Data Library &amp; Exports</h1>
@@ -608,7 +611,7 @@ export default function DatasetsPage() {
                 <Database className="h-5 w-5 text-[#f26625]" />
               </div>
               <div>
-                <p className="text-[10px] text-[#94a3b8] font-mono uppercase tracking-wider">Total Datasets</p>
+                <p className="text-xs text-[#94a3b8] font-mono uppercase tracking-wider">Total Datasets</p>
                 <p className="text-2xl font-bold font-mono text-white mt-0.5">{datasets.length}</p>
               </div>
             </CardContent>
@@ -619,7 +622,7 @@ export default function DatasetsPage() {
                 <CheckCircle2 className="h-5 w-5 text-[#10b981]" />
               </div>
               <div>
-                <p className="text-[10px] text-[#94a3b8] font-mono uppercase tracking-wider">Validated &amp; Ready</p>
+                <p className="text-xs text-[#94a3b8] font-mono uppercase tracking-wider">Validated &amp; Ready</p>
                 <p className="text-2xl font-bold font-mono text-[#10b981] mt-0.5">
                   {datasets.filter((ds) => ds.validated).length}
                 </p>
@@ -632,7 +635,7 @@ export default function DatasetsPage() {
                 <Layers className="h-5 w-5 text-[#f26625]" />
               </div>
               <div>
-                <p className="text-[10px] text-[#94a3b8] font-mono uppercase tracking-wider">Total Records</p>
+                <p className="text-xs text-[#94a3b8] font-mono uppercase tracking-wider">Total Records</p>
                 <p className="text-2xl font-bold font-mono text-white mt-0.5">
                   {datasets.reduce((acc, ds) => acc + ds.records, 0).toLocaleString()}
                 </p>
@@ -645,7 +648,7 @@ export default function DatasetsPage() {
                 <AlertCircle className="h-5 w-5 text-amber-400" />
               </div>
               <div>
-                <p className="text-[10px] text-[#94a3b8] font-mono uppercase tracking-wider">Active In-Flight</p>
+                <p className="text-xs text-[#94a3b8] font-mono uppercase tracking-wider">Active In-Flight</p>
                 <p className="text-2xl font-bold font-mono text-amber-400 mt-0.5">
                   {datasets.filter((ds) => ds.status === 'processing').length}
                 </p>
@@ -715,7 +718,7 @@ export default function DatasetsPage() {
             title="Dense Table View"
           >
             <List className="h-3.5 w-3.5" />
-            <span className="hidden sm:inline text-[11px]">Table</span>
+            <span className="hidden sm:inline text-xs">Table</span>
           </button>
           <button
             type="button"
@@ -727,7 +730,7 @@ export default function DatasetsPage() {
             title="Repository Grid View"
           >
             <LayoutGrid className="h-3.5 w-3.5" />
-            <span className="hidden sm:inline text-[11px]">Grid</span>
+            <span className="hidden sm:inline text-xs">Grid</span>
           </button>
         </div>
       </div>
@@ -770,15 +773,15 @@ export default function DatasetsPage() {
                       )}
                     </button>
                   </TableHead>
-                  <TableHead className="w-[320px] text-[#94a3b8] font-mono uppercase text-[10px]">Dataset Repository</TableHead>
-                  <TableHead className="w-[105px] text-[#94a3b8] font-mono uppercase text-[10px]">Modality</TableHead>
-                  <TableHead className="w-[95px] text-[#94a3b8] font-mono uppercase text-[10px]">Format</TableHead>
-                  <TableHead className="w-[85px] text-right text-[#94a3b8] font-mono uppercase text-[10px]">Est. Size</TableHead>
-                  <TableHead className="w-[85px] text-right text-[#94a3b8] font-mono uppercase text-[10px]">Samples</TableHead>
-                  <TableHead className="w-[110px] text-[#94a3b8] font-mono uppercase text-[10px]">Quality</TableHead>
-                  <TableHead className="w-[110px] text-[#94a3b8] font-mono uppercase text-[10px]">Status</TableHead>
-                  <TableHead className="w-[75px] text-center text-[#94a3b8] font-mono uppercase text-[10px]">Audit</TableHead>
-                  <TableHead className="w-[230px] text-right text-[#94a3b8] font-mono uppercase text-[10px]">Actions</TableHead>
+                  <TableHead className="w-[320px] text-[#94a3b8] font-mono uppercase text-xs">Dataset Repository</TableHead>
+                  <TableHead className="w-[105px] text-[#94a3b8] font-mono uppercase text-xs">Modality</TableHead>
+                  <TableHead className="w-[95px] text-[#94a3b8] font-mono uppercase text-xs">Format</TableHead>
+                  <TableHead className="w-[85px] text-right text-[#94a3b8] font-mono uppercase text-xs">Est. Size</TableHead>
+                  <TableHead className="w-[85px] text-right text-[#94a3b8] font-mono uppercase text-xs">Samples</TableHead>
+                  <TableHead className="w-[110px] text-[#94a3b8] font-mono uppercase text-xs">Quality</TableHead>
+                  <TableHead className="w-[110px] text-[#94a3b8] font-mono uppercase text-xs">Status</TableHead>
+                  <TableHead className="w-[75px] text-center text-[#94a3b8] font-mono uppercase text-xs">Audit</TableHead>
+                  <TableHead className="w-[230px] text-right text-[#94a3b8] font-mono uppercase text-xs">Actions</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody className="divide-y divide-[#272738]">
@@ -834,11 +837,11 @@ export default function DatasetsPage() {
 
                       <TableCell className="w-[95px]">
                         <div className="flex flex-col gap-1 items-start">
-                          <Badge variant="outline" className="font-mono text-[10px] bg-[#0a0a0f] border-[#272738] text-[#f26625] rounded-md uppercase">
+                          <Badge variant="outline" className="font-mono text-xs bg-[#0a0a0f] border-[#272738] text-[#f26625] rounded-md uppercase">
                             .{dataset.format}
                           </Badge>
                           {dataset.synthesis_mode && dataset.synthesis_mode !== 'standard' && (
-                            <Badge variant="secondary" className="font-mono text-[9px] bg-purple-950/50 text-purple-300 border border-purple-500/30 rounded px-1 py-0 uppercase">
+                            <Badge variant="secondary" className="font-mono text-xs bg-purple-950/50 text-purple-300 border border-purple-500/30 rounded px-1 py-0 uppercase">
                               {dataset.synthesis_mode}
                             </Badge>
                           )}
@@ -867,7 +870,7 @@ export default function DatasetsPage() {
                       <TableCell className="w-[110px]">
                         <Badge
                           className={clsx(
-                            'capitalize text-[10px] rounded-md font-mono flex items-center gap-1 w-fit border',
+                            'capitalize text-xs rounded-md font-mono flex items-center gap-1 w-fit border',
                             dataset.status === 'ready'
                               ? 'bg-emerald-950/40 text-[#10b981] border-emerald-500/30'
                               : dataset.status === 'failed'
@@ -1009,10 +1012,10 @@ export default function DatasetsPage() {
                         <Database className="h-4 w-4 text-[#f26625]" />
                       </div>
                       <div>
-                        <span className="text-[10px] font-mono px-1.5 py-0.5 rounded bg-[#0a0a0f] border border-[#272738] text-[#94a3b8] uppercase font-bold">
+                        <span className="text-xs font-mono px-1.5 py-0.5 rounded bg-[#0a0a0f] border border-[#272738] text-[#94a3b8] uppercase font-bold">
                           {dataset.modality}
                         </span>
-                        <span className="text-[10px] font-mono text-[#64748b] ml-1.5 uppercase">
+                        <span className="text-xs font-mono text-[#64748b] ml-1.5 uppercase">
                           .{dataset.format}
                         </span>
                       </div>
@@ -1020,7 +1023,7 @@ export default function DatasetsPage() {
 
                     <Badge
                       className={clsx(
-                        'capitalize text-[10px] rounded-md font-mono flex items-center gap-1 border',
+                        'capitalize text-xs rounded-md font-mono flex items-center gap-1 border',
                         dataset.status === 'ready'
                           ? 'bg-emerald-950/40 text-[#10b981] border-emerald-500/30'
                           : dataset.status === 'failed'
@@ -1069,20 +1072,20 @@ export default function DatasetsPage() {
                 <CardContent className="p-4 pt-1 space-y-3">
                   <div className="grid grid-cols-3 gap-2 p-2 rounded-md bg-[#0a0a0f] border border-[#272738] text-center font-mono">
                     <div>
-                      <p className="text-[9px] text-[#64748b] uppercase">Samples</p>
+                      <p className="text-xs text-[#64748b] uppercase">Samples</p>
                       <p className="text-xs font-bold text-white mt-0.5">{dataset.records.toLocaleString()}</p>
                     </div>
                     <div>
-                      <p className="text-[9px] text-[#64748b] uppercase">Size</p>
+                      <p className="text-xs text-[#64748b] uppercase">Size</p>
                       <p className="text-xs font-bold text-[#94a3b8] mt-0.5">{dataset.size}</p>
                     </div>
                     <div>
-                      <p className="text-[9px] text-[#64748b] uppercase">Quality</p>
+                      <p className="text-xs text-[#64748b] uppercase">Quality</p>
                       <p className="text-xs font-bold text-[#10b981] mt-0.5">{dataset.quality}%</p>
                     </div>
                   </div>
 
-                  <div className="flex items-center justify-between text-[10px] font-mono text-[#64748b] pt-0.5">
+                  <div className="flex items-center justify-between text-xs font-mono text-[#64748b] pt-0.5">
                     <span className="flex items-center gap-1 text-purple-300">
                       <ShieldCheck className="h-3 w-3 text-purple-400" />
                       {dataset.certificate_id || `DBOM-${dataset.id.slice(0, 8).toUpperCase()}`}
@@ -1200,7 +1203,7 @@ export default function DatasetsPage() {
               <div className="flex items-center gap-2">
                 <Database className="h-4 w-4 text-[#f26625]" />
                 <CardTitle className="text-base font-bold text-white">{selected.name}</CardTitle>
-                <span className="text-[10px] font-mono px-2 py-0.5 rounded-md bg-[#0a0a0f] border border-[#272738] text-[#94a3b8]">
+                <span className="text-xs font-mono px-2 py-0.5 rounded-md bg-[#0a0a0f] border border-[#272738] text-[#94a3b8]">
                   ID: {selected.id}
                 </span>
               </div>
@@ -1217,7 +1220,7 @@ export default function DatasetsPage() {
             </div>
             {/* Pipeline Stage Breadcrumbs */}
             <div className="space-y-2">
-              <p className="text-[10px] font-mono text-[#94a3b8] uppercase tracking-wider">Pipeline Lifecycle Stage</p>
+              <p className="text-xs font-mono text-[#94a3b8] uppercase tracking-wider">Pipeline Lifecycle Stage</p>
               <div className="flex items-center gap-1 overflow-x-auto pb-1">
                 {PIPELINE_STAGES.map((stage, index) => {
                   const currentStageIndex = PIPELINE_STAGES.findIndex(
@@ -1225,6 +1228,7 @@ export default function DatasetsPage() {
                   )
                   const isCompleted = index < currentStageIndex
                   const isCurrent = index === currentStageIndex || (selected.status === 'processing' && stage.id === selected.current_stage)
+                  const StageIcon = stage.icon
 
                   return (
                     <div key={stage.id} className="flex items-center shrink-0">
@@ -1236,7 +1240,7 @@ export default function DatasetsPage() {
                           !isCompleted && !isCurrent && 'bg-[#0a0a0f] text-[#64748b] border border-[#272738]'
                         )}
                       >
-                        {isCompleted ? '✓' : stage.icon}
+                        {isCompleted ? <Check className="h-3.5 w-3.5" /> : <StageIcon className="h-3.5 w-3.5" />}
                       </div>
                       {index < PIPELINE_STAGES.length - 1 && (
                         <div
@@ -1255,19 +1259,19 @@ export default function DatasetsPage() {
             {/* Quick Metrics Grid */}
             <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 p-3 bg-[#0a0a0f] rounded-md border border-[#272738]">
               <div>
-                <p className="text-[10px] text-[#94a3b8] font-mono uppercase">Quality Score</p>
+                <p className="text-xs text-[#94a3b8] font-mono uppercase">Quality Score</p>
                 <p className="text-base font-mono font-bold text-[#10b981] mt-0.5">{Math.round(selected.quality)}%</p>
               </div>
               <div>
-                <p className="text-[10px] text-[#94a3b8] font-mono uppercase">Samples</p>
+                <p className="text-xs text-[#94a3b8] font-mono uppercase">Samples</p>
                 <p className="text-base font-mono font-bold text-white mt-0.5">{selected.records.toLocaleString()}</p>
               </div>
               <div>
-                <p className="text-[10px] text-[#94a3b8] font-mono uppercase">Created Date</p>
+                <p className="text-xs text-[#94a3b8] font-mono uppercase">Created Date</p>
                 <p className="text-xs font-mono text-[#94a3b8] mt-1">{selected.created}</p>
               </div>
               <div>
-                <p className="text-[10px] text-[#94a3b8] font-mono uppercase">Delivery Spec</p>
+                <p className="text-xs text-[#94a3b8] font-mono uppercase">Delivery Spec</p>
                 <p className="text-xs font-mono text-[#f26625] mt-1">ADR-002 Compliant</p>
               </div>
             </div>
@@ -1285,26 +1289,26 @@ export default function DatasetsPage() {
                 <>
                   <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
                     <div className="rounded-md border border-[#272738] bg-[#0a0a0f] p-3">
-                      <p className="text-[10px] uppercase font-mono text-[#94a3b8]">Final Samples</p>
+                      <p className="text-xs uppercase font-mono text-[#94a3b8]">Final Samples</p>
                       <p className="text-lg font-bold font-mono text-white mt-0.5">{datasetSummary.sample_count ?? 0}</p>
                     </div>
                     <div className="rounded-md border border-[#272738] bg-[#0a0a0f] p-3">
-                      <p className="text-[10px] uppercase font-mono text-[#94a3b8]">Mean Quality</p>
+                      <p className="text-xs uppercase font-mono text-[#94a3b8]">Mean Quality</p>
                       <p className="text-lg font-bold font-mono text-[#10b981] mt-0.5">
                         {datasetSummary.quality?.mean == null ? '—' : `${Math.round(datasetSummary.quality.mean * 100)}%`}
                       </p>
                     </div>
                     <div className="rounded-md border border-[#272738] bg-[#0a0a0f] p-3">
-                      <p className="text-[10px] uppercase font-mono text-[#94a3b8]">HITL Review Coverage</p>
+                      <p className="text-xs uppercase font-mono text-[#94a3b8]">HITL Review Coverage</p>
                       <p className="text-lg font-bold font-mono text-[#f26625] mt-0.5">
                         {datasetSummary.human_review?.enabled ? `${datasetSummary.human_review.total} items` : 'Stratified Auto'}
                       </p>
                       {datasetSummary.human_review?.enabled && (
-                        <p className="mt-1 text-[10px] text-[#94a3b8] font-mono">{datasetSummary.human_review.requested_percentage}% requested</p>
+                        <p className="mt-1 text-xs text-[#94a3b8] font-mono">{datasetSummary.human_review.requested_percentage}% requested</p>
                       )}
                     </div>
                     <div className="rounded-md border border-[#272738] bg-[#0a0a0f] p-3">
-                      <p className="text-[10px] uppercase font-mono text-[#94a3b8]">Balance Removals</p>
+                      <p className="text-xs uppercase font-mono text-[#94a3b8]">Balance Removals</p>
                       <p className="text-lg font-bold font-mono text-white mt-0.5">{datasetSummary.balance_report?.samples_removed ?? 0}</p>
                     </div>
                   </div>
@@ -1333,7 +1337,7 @@ export default function DatasetsPage() {
                         {!!datasetSummary.provenance.used_sources?.length && (
                           <ul className="space-y-1 mt-1 pl-2">
                             {datasetSummary.provenance.used_sources.map((source: any, index: number) => (
-                              <li key={`${source.url}-${index}`} className="flex flex-wrap gap-x-2 text-[11px]">
+                              <li key={`${source.url}-${index}`} className="flex flex-wrap gap-x-2 text-xs">
                                 <span className="text-white font-medium">{source.title || source.source_type || 'Source'}</span>
                                 {/^https?:\/\//i.test(String(source.url || '')) && (
                                   <a href={source.url} target="_blank" rel="noreferrer" className="break-all text-[#10b981] hover:underline">
@@ -1358,7 +1362,7 @@ export default function DatasetsPage() {
                   <p className="text-xs font-bold font-mono uppercase tracking-wider text-white">
                     Post-Training Safeguards &amp; Contamination Audit
                   </p>
-                  <p className="text-[10px] text-[#94a3b8]">
+                  <p className="text-xs text-[#94a3b8]">
                     Verify zero test-set leakage against IndicGLUE/MMLU and evaluate statutory adversarial resilience
                   </p>
                 </div>
@@ -1366,7 +1370,7 @@ export default function DatasetsPage() {
                   <Button
                     variant="outline"
                     size="sm"
-                    className="h-7 text-[11px] font-mono border-[#272738] text-emerald-400 hover:text-white hover:bg-[#161622] rounded-md px-3"
+                    className="h-7 text-xs font-mono border-[#272738] text-emerald-400 hover:text-white hover:bg-[#161622] rounded-md px-3"
                     onClick={handleAuditContamination}
                     disabled={contaminationLoading || records.length === 0}
                   >
@@ -1380,7 +1384,7 @@ export default function DatasetsPage() {
                   <Button
                     variant="outline"
                     size="sm"
-                    className="h-7 text-[11px] font-mono border-[#272738] text-amber-400 hover:text-white hover:bg-[#161622] rounded-md px-3"
+                    className="h-7 text-xs font-mono border-[#272738] text-amber-400 hover:text-white hover:bg-[#161622] rounded-md px-3"
                     onClick={() => handleGenerateAdversarial(selected.name)}
                     disabled={adversarialLoading}
                   >
@@ -1401,11 +1405,11 @@ export default function DatasetsPage() {
                     <span className="text-white font-bold">
                       {contaminationReport.status === 'clean' ? '0% Benchmark Leakage' : `${contaminationReport.contamination_rate_pct}% Leakage Flagged`}
                     </span>
-                    <span className="text-[10px] text-[#94a3b8]">
+                    <span className="text-xs text-[#94a3b8]">
                       ({contaminationReport.total_samples_audited} samples audited against IndicGLUE, MMLU, GSM8K)
                     </span>
                   </div>
-                  <Badge variant="outline" className="text-[10px] border-[#272738] text-emerald-400">
+                  <Badge variant="outline" className="text-xs border-[#272738] text-emerald-400">
                     Cert: {contaminationReport.audit_certificate_id}
                   </Badge>
                 </div>
@@ -1414,18 +1418,18 @@ export default function DatasetsPage() {
               {adversarialProbes && (
                 <div className="p-3 bg-[#0a0a0f] border border-[#272738] rounded-md space-y-2 font-mono text-xs">
                   <div className="flex items-center justify-between pb-1 border-b border-[#1c1c28]">
-                    <span className="text-[#94a3b8] text-[10px] uppercase font-bold">Generated Adversarial Safety Probes</span>
-                    <span className="text-amber-400 text-[10px]">{adversarialProbes.length} stress tests synthesized</span>
+                    <span className="text-[#94a3b8] text-xs uppercase font-bold">Generated Adversarial Safety Probes</span>
+                    <span className="text-amber-400 text-xs">{adversarialProbes.length} stress tests synthesized</span>
                   </div>
                   <div className="space-y-1.5 max-h-36 overflow-y-auto">
                     {adversarialProbes.map((probe: any, idx: number) => (
-                      <div key={idx} className="p-2 rounded bg-[#12121a] border border-[#1c1c28] text-[11px] space-y-1">
-                        <div className="flex items-center justify-between text-[10px]">
+                      <div key={idx} className="p-2 rounded bg-[#12121a] border border-[#1c1c28] text-xs space-y-1">
+                        <div className="flex items-center justify-between text-xs">
                           <span className="text-amber-300 font-bold uppercase">{probe.category}</span>
                           <span className="text-[#94a3b8]">{probe.probe_id}</span>
                         </div>
                         <p className="text-slate-200">{probe.instruction}</p>
-                        <p className="text-[10px] text-emerald-400">Expected: {probe.expected_behavior}</p>
+                        <p className="text-xs text-emerald-400">Expected: {probe.expected_behavior}</p>
                       </div>
                     ))}
                   </div>
@@ -1474,31 +1478,31 @@ export default function DatasetsPage() {
                 <div className="max-h-[360px] overflow-y-auto space-y-3 rounded-md border border-[#272738] bg-[#0a0a0f] p-3">
                   {records.map((rec, i) => (
                     <div key={i} className="p-3.5 bg-[#12121a] rounded-md border border-[#272738] text-xs space-y-2">
-                      <div className="flex items-center justify-between text-[10px] text-[#94a3b8] font-mono">
+                      <div className="flex items-center justify-between text-xs text-[#94a3b8] font-mono">
                         <span className="text-[#10b981] font-semibold">Record #{i + 1}</span>
                         <div className="flex items-center gap-1.5 flex-wrap">
                           {rec.metadata?.language && (
-                            <Badge variant="outline" className="text-[9px] px-1.5 py-0 font-mono rounded-md border-[#272738] text-purple-300">
+                            <Badge variant="outline" className="text-xs px-1.5 py-0 font-mono rounded-md border-[#272738] text-purple-300">
                               {rec.metadata.language}
                             </Badge>
                           )}
                           {rec.metadata?.regional_dialect && rec.metadata.regional_dialect !== 'standard' && (
-                            <Badge variant="outline" className="text-[9px] px-1.5 py-0 font-mono rounded-md border-[#272738] text-[#f26625]">
+                            <Badge variant="outline" className="text-xs px-1.5 py-0 font-mono rounded-md border-[#272738] text-[#f26625]">
                               {rec.metadata.regional_dialect}
                             </Badge>
                           )}
                           {rec.metadata?.parallel_en && (
-                            <Badge variant="outline" className="text-[9px] px-1.5 py-0 font-mono rounded-md border-[#f26625]/40 text-[#f26625] bg-[#f26625]/10">
+                            <Badge variant="outline" className="text-xs px-1.5 py-0 font-mono rounded-md border-[#f26625]/40 text-[#f26625] bg-[#f26625]/10">
                               Bitext
                             </Badge>
                           )}
                           {rec.metadata?.rejected_response && (
-                            <Badge variant="outline" className="text-[9px] px-1.5 py-0 font-mono rounded-md border-rose-900/40 text-rose-300 bg-rose-950/20">
+                            <Badge variant="outline" className="text-xs px-1.5 py-0 font-mono rounded-md border-rose-900/40 text-rose-300 bg-rose-950/20">
                               DPO Pair
                             </Badge>
                           )}
                           {rec.difficulty_tier !== undefined && (
-                            <Badge variant="outline" className="text-[9px] px-1.5 py-0 font-mono rounded-md border-[#272738] text-[#f26625]">
+                            <Badge variant="outline" className="text-xs px-1.5 py-0 font-mono rounded-md border-[#272738] text-[#f26625]">
                               Tier {rec.difficulty_tier}
                             </Badge>
                           )}
@@ -1506,7 +1510,7 @@ export default function DatasetsPage() {
                       </div>
                       {rec.instruction || rec.prompt ? (
                         <div className="space-y-1">
-                          <p className="text-[10px] font-mono font-bold uppercase tracking-wider text-[#f26625]">Prompt / Instruction:</p>
+                          <p className="text-xs font-mono font-bold uppercase tracking-wider text-[#f26625]">Prompt / Instruction:</p>
                           <p className="bg-[#0a0a0f] p-3 rounded-lg text-[#f1f5f9] max-w-full overflow-x-auto whitespace-pre-wrap font-sans text-xs leading-relaxed border border-[#272738]">
                             {rec.instruction || rec.prompt}
                           </p>
@@ -1514,7 +1518,7 @@ export default function DatasetsPage() {
                       ) : null}
                       {rec.response || rec.output ? (
                         <div className="space-y-1">
-                          <p className="text-[10px] font-mono font-bold uppercase tracking-wider text-[#10b981]">Synthesized Output:</p>
+                          <p className="text-xs font-mono font-bold uppercase tracking-wider text-[#10b981]">Synthesized Output:</p>
                           <p className="bg-[#0a0a0f] p-3 rounded-lg text-[#f1f5f9] max-w-full overflow-x-auto whitespace-pre-wrap font-sans text-xs leading-relaxed border border-[#272738]">
                             {rec.response || rec.output}
                           </p>
@@ -1522,7 +1526,7 @@ export default function DatasetsPage() {
                       ) : null}
                       {rec.metadata?.rejected_response && (
                         <div className="space-y-1 pt-1 border-t border-[#272738]">
-                          <p className="text-[10px] font-mono font-bold uppercase tracking-wider text-rose-400">DPO Rejected Baseline:</p>
+                          <p className="text-xs font-mono font-bold uppercase tracking-wider text-rose-400">DPO Rejected Baseline:</p>
                           <p className="bg-[#0a0a0f] p-2.5 rounded-lg text-rose-200/90 text-xs font-sans whitespace-pre-wrap border border-rose-950">
                             {rec.metadata.rejected_response}
                           </p>
@@ -1531,21 +1535,21 @@ export default function DatasetsPage() {
                       {rec.metadata?.parallel_en && (
                         <div className="space-y-1 pt-1 border-t border-[#272738]">
                           <div className="flex items-center justify-between">
-                            <p className="text-[10px] font-mono font-bold uppercase tracking-wider text-[#f26625]">Parallel English Bitext:</p>
+                            <p className="text-xs font-mono font-bold uppercase tracking-wider text-[#f26625]">Parallel English Bitext:</p>
                             {rec.metadata.fidelity_metrics?.chrf_score && (
-                              <span className="text-[9px] font-mono text-[#f26625]">
+                              <span className="text-xs font-mono text-[#f26625]">
                                 chrF++: {rec.metadata.fidelity_metrics.chrf_score}%
                               </span>
                             )}
                           </div>
                           <div className="bg-[#0a0a0f] p-2.5 rounded-lg text-xs font-sans space-y-1 border border-[#272738]">
-                            <p className="text-[#94a3b8] font-mono text-[11px]"><span className="text-white font-medium">Prompt:</span> {rec.metadata.parallel_en.instruction}</p>
-                            <p className="text-[#f1f5f9]"><span className="text-white font-mono text-[11px] font-medium">Response:</span> {rec.metadata.parallel_en.response}</p>
+                            <p className="text-[#94a3b8] font-mono text-xs"><span className="text-white font-medium">Prompt:</span> {rec.metadata.parallel_en.instruction}</p>
+                            <p className="text-[#f1f5f9]"><span className="text-white font-mono text-xs font-medium">Response:</span> {rec.metadata.parallel_en.response}</p>
                           </div>
                         </div>
                       )}
                       {!rec.instruction && !rec.prompt && !rec.response && !rec.output ? (
-                        <pre className="text-[11px] font-mono text-[#f1f5f9] bg-[#0a0a0f] p-3 rounded-lg overflow-x-auto whitespace-pre border border-[#272738]">
+                        <pre className="text-xs font-mono text-[#f1f5f9] bg-[#0a0a0f] p-3 rounded-lg overflow-x-auto whitespace-pre border border-[#272738]">
                           {JSON.stringify(rec, null, 2)}
                         </pre>
                       ) : null}
@@ -1693,11 +1697,11 @@ export default function DatasetsPage() {
                 <div>
                   <h3 className="text-sm font-bold text-white font-mono flex items-center gap-2">
                     Hugging Face Dataset Card (README.md)
-                    <Badge variant="outline" className="text-[10px] bg-[#f26625]/10 text-[#f26625] border-[#f26625]/50">
+                    <Badge variant="outline" className="text-xs bg-[#f26625]/10 text-[#f26625] border-[#f26625]/50">
                       Hub Compliant
                     </Badge>
                   </h3>
-                  <p className="text-[11px] text-[#94a3b8]">
+                  <p className="text-xs text-[#94a3b8]">
                     Generated YAML frontmatter &amp; dataset documentation for {hfCardDomain}
                   </p>
                 </div>
@@ -1750,7 +1754,7 @@ export default function DatasetsPage() {
 
             {/* Modal Footer */}
             <div className="px-5 py-3 border-t border-[#272738] bg-[#0e0e14] flex items-center justify-between">
-              <span className="text-[10px] text-[#64748b] font-mono">
+              <span className="text-xs text-[#64748b] font-mono">
                 Ready for direct upload to Hugging Face Hub (huggingface.co/datasets)
               </span>
               <Button
@@ -1784,7 +1788,7 @@ export default function DatasetsPage() {
             {/* Body */}
             <div className="p-5 space-y-4 text-xs">
               <div>
-                <label className="text-[10px] text-[#94a3b8] uppercase block mb-1">Target Repository ID (username/dataset-name)</label>
+                <label className="text-xs text-[#94a3b8] uppercase block mb-1">Target Repository ID (username/dataset-name)</label>
                 <Input
                   value={hfRepoId}
                   onChange={(e) => setHfRepoId(e.target.value)}
@@ -1794,7 +1798,7 @@ export default function DatasetsPage() {
               </div>
 
               <div>
-                <label className="text-[10px] text-[#94a3b8] uppercase block mb-1">HF User Access Token (Write permission)</label>
+                <label className="text-xs text-[#94a3b8] uppercase block mb-1">HF User Access Token (Write permission)</label>
                 <Input
                   type="password"
                   value={hfToken}
@@ -1826,7 +1830,7 @@ export default function DatasetsPage() {
                     <CheckCircle2 className="h-4 w-4 text-[#10b981]" />
                     Dataset Published Successfully!
                   </div>
-                  <p className="text-[11px] text-[#94a3b8]">Uploaded {hfPublishResult.sample_count} samples and README dataset card.</p>
+                  <p className="text-xs text-[#94a3b8]">Uploaded {hfPublishResult.sample_count} samples and README dataset card.</p>
                   <a
                     href={hfPublishResult.repo_url}
                     target="_blank"
@@ -1879,7 +1883,7 @@ export default function DatasetsPage() {
                 </div>
                 <div>
                   <h3 className="text-sm font-bold text-white">Fine-Tuning Recipe &amp; Launch Scripts</h3>
-                  <p className="text-[11px] text-[#94a3b8]">Production configurations matching dataset format and base tokenizer</p>
+                  <p className="text-xs text-[#94a3b8]">Production configurations matching dataset format and base tokenizer</p>
                 </div>
               </div>
 
@@ -1908,7 +1912,7 @@ export default function DatasetsPage() {
             {/* Controls Bar */}
             <div className="flex flex-wrap items-center justify-between gap-3 px-5 py-3 border-b border-[#272738] bg-[#0a0a0f]">
               <div className="flex items-center gap-2">
-                <span className="text-[11px] text-[#94a3b8]">Framework:</span>
+                <span className="text-xs text-[#94a3b8]">Framework:</span>
                 {(['unsloth', 'axolotl', 'llamafactory'] as const).map((fw) => (
                   <button
                     key={fw}
@@ -1931,7 +1935,7 @@ export default function DatasetsPage() {
               {recipeData?.launch_command && (
                 <div className="flex items-center gap-1.5 text-xs">
                   <span className="text-[#94a3b8]">Command:</span>
-                  <code className="px-2 py-0.5 rounded bg-[#161622] text-cyan-300 text-[11px] border border-[#272738]">
+                  <code className="px-2 py-0.5 rounded bg-[#161622] text-cyan-300 text-xs border border-[#272738]">
                     {recipeData.launch_command}
                   </code>
                   <button
@@ -1957,7 +1961,7 @@ export default function DatasetsPage() {
                   <p className="text-xs text-[#94a3b8]">Generating optimized training recipe...</p>
                 </div>
               ) : (
-                <pre className="p-4 rounded-md bg-[#0d0d14] border border-[#272738] text-slate-200 overflow-x-auto whitespace-pre font-mono text-[11px] leading-relaxed select-all">
+                <pre className="p-4 rounded-md bg-[#0d0d14] border border-[#272738] text-slate-200 overflow-x-auto whitespace-pre font-mono text-xs leading-relaxed select-all">
                   {recipeData?.content || 'No recipe generated.'}
                 </pre>
               )}
@@ -1965,7 +1969,7 @@ export default function DatasetsPage() {
 
             {/* Footer */}
             <div className="px-5 py-3 border-t border-[#272738] bg-[#0e0e14] flex items-center justify-between">
-              <span className="text-[10px] text-[#64748b]">
+              <span className="text-xs text-[#64748b]">
                 Save as {recipeData?.filename || 'training_script'} in your training workspace.
               </span>
               <Button size="sm" variant="ghost" onClick={() => setRecipeModalOpen(false)} className="text-xs text-[#94a3b8] hover:text-white">
@@ -1986,7 +1990,7 @@ export default function DatasetsPage() {
                 <ShieldCheck className="h-5 w-5 text-purple-400" />
                 <div>
                   <h3 className="text-sm font-bold text-white">Cryptographic Data Bill of Materials (DBOM)</h3>
-                  <p className="text-[10px] text-[#94a3b8]">Tamper-evident Merkle root provenance &amp; Data Nutrition Label</p>
+                  <p className="text-xs text-[#94a3b8]">Tamper-evident Merkle root provenance &amp; Data Nutrition Label</p>
                 </div>
               </div>
               <Button size="icon" variant="ghost" onClick={() => setDbomModalOpen(false)} className="h-8 w-8 text-[#94a3b8] hover:text-white">
@@ -2009,21 +2013,21 @@ export default function DatasetsPage() {
                   <div className="p-3.5 rounded-md bg-[#0a0a0f] border border-[#272738] space-y-2">
                     <div className="flex items-center justify-between">
                       <div className="flex items-center gap-2">
-                        <span className="text-[10px] text-[#94a3b8] uppercase font-bold">Attestation Certificate</span>
+                        <span className="text-xs text-[#94a3b8] uppercase font-bold">Attestation Certificate</span>
                         {dbomData?.dbom?.synthesis_mode && (
-                          <Badge variant="secondary" className="text-[9px] bg-purple-950/80 text-purple-300 border border-purple-500/30 uppercase font-mono px-1.5 py-0">
+                          <Badge variant="secondary" className="text-xs bg-purple-950/80 text-purple-300 border border-purple-500/30 uppercase font-mono px-1.5 py-0">
                             Mode: {dbomData.dbom.synthesis_mode}
                           </Badge>
                         )}
                       </div>
-                      <Badge variant="outline" className="text-[10px] border-purple-800 text-purple-300 bg-purple-950/60 font-mono">
+                      <Badge variant="outline" className="text-xs border-purple-800 text-purple-300 bg-purple-950/60 font-mono">
                         {dbomData?.dbom?.certificate_id || 'DBOM-VERIFIED'}
                       </Badge>
                     </div>
                     <div>
-                      <span className="text-[10px] text-[#64748b] block mb-1">SHA-256 Merkle Root:</span>
+                      <span className="text-xs text-[#64748b] block mb-1">SHA-256 Merkle Root:</span>
                       <div className="flex items-center justify-between bg-[#161622] p-2 rounded-lg border border-[#272738]">
-                        <code className="text-[11px] text-purple-300 break-all select-all">
+                        <code className="text-xs text-purple-300 break-all select-all">
                           {dbomData?.dbom?.merkle_root_hash || 'Computing...'}
                         </code>
                         <Button
@@ -2045,19 +2049,19 @@ export default function DatasetsPage() {
                   {/* Compliance Matrix */}
                   <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5">
                     <div className="p-2.5 rounded-md bg-[#0a0a0f] border border-[#272738]">
-                      <span className="text-[10px] text-[#94a3b8] uppercase block">PII Scrubbing</span>
-                      <span className="text-xs font-bold text-emerald-400 mt-1 block">✅ Certified Clean</span>
+                      <span className="text-xs text-[#94a3b8] uppercase block">PII Scrubbing</span>
+                      <span className="text-xs font-bold text-emerald-400 mt-1 flex items-center gap-1"><CheckCircle2 className="h-3.5 w-3.5" />Certified Clean</span>
                     </div>
                     <div className="p-2.5 rounded-md bg-[#0a0a0f] border border-[#272738]">
-                      <span className="text-[10px] text-[#94a3b8] uppercase block">Cultural Safety</span>
-                      <span className="text-xs font-bold text-emerald-400 mt-1 block">✅ Indian IT Act</span>
+                      <span className="text-xs text-[#94a3b8] uppercase block">Cultural Safety</span>
+                      <span className="text-xs font-bold text-emerald-400 mt-1 flex items-center gap-1"><CheckCircle2 className="h-3.5 w-3.5" />Indian IT Act</span>
                     </div>
                     <div className="p-2.5 rounded-md bg-[#0a0a0f] border border-[#272738]">
-                      <span className="text-[10px] text-[#94a3b8] uppercase block">Contamination</span>
+                      <span className="text-xs text-[#94a3b8] uppercase block">Contamination</span>
                       <span className="text-xs font-bold text-cyan-400 mt-1 block">0.0% Leakage</span>
                     </div>
                     <div className="p-2.5 rounded-md bg-[#0a0a0f] border border-[#272738]">
-                      <span className="text-[10px] text-[#94a3b8] uppercase block">Topic Entropy</span>
+                      <span className="text-xs text-[#94a3b8] uppercase block">Topic Entropy</span>
                       <span className="text-xs font-bold text-purple-300 mt-1 block">
                         {Math.round((dbomData?.dbom?.compliance_audit?.diversity_entropy || 0.94) * 100)}% Parity
                       </span>
@@ -2068,7 +2072,7 @@ export default function DatasetsPage() {
                   <div className="p-3.5 rounded-md bg-[#161622] border border-[#3b3b52] flex flex-col sm:flex-row items-center justify-between gap-3">
                     <div>
                       <p className="text-xs font-bold text-white">Cryptographic Tamper Check</p>
-                      <p className="text-[10px] text-[#94a3b8]">Verify all dataset sample hashes against root</p>
+                      <p className="text-xs text-[#94a3b8]">Verify all dataset sample hashes against root</p>
                     </div>
                     <Button
                       size="sm"
@@ -2108,10 +2112,10 @@ export default function DatasetsPage() {
 
                   {/* Nutrition Label Preview */}
                   <div>
-                    <span className="text-[10px] text-[#94a3b8] uppercase font-bold block mb-1">
+                    <span className="text-xs text-[#94a3b8] uppercase font-bold block mb-1">
                       Data Nutrition Label Preview (DATA_NUTRITION_LABEL.md)
                     </span>
-                    <pre className="p-3 rounded-md bg-[#0a0a0f] border border-[#272738] text-slate-300 text-[11px] overflow-x-auto whitespace-pre-wrap max-h-48">
+                    <pre className="p-3 rounded-md bg-[#0a0a0f] border border-[#272738] text-slate-300 text-xs overflow-x-auto whitespace-pre-wrap max-h-48">
                       {dbomData?.nutrition_label_md || 'Generating label...'}
                     </pre>
                   </div>
@@ -2121,7 +2125,7 @@ export default function DatasetsPage() {
 
             {/* Footer */}
             <div className="px-6 py-3 border-t border-[#272738] bg-[#0e0e14] flex items-center justify-between">
-              <span className="text-[10px] text-[#64748b]">
+              <span className="text-xs text-[#64748b]">
                 Compliant with EU AI Act &amp; India DPDP Act 2023
               </span>
               <div className="flex items-center gap-2">

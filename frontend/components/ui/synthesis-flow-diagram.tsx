@@ -59,7 +59,7 @@ export function SynthesisFlowDiagram() {
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between pb-6 mb-6 border-b border-[#1c1c28] gap-3">
         <div>
-          <div className="flex items-center gap-2 text-[10px] font-mono uppercase tracking-widest text-[#f26625]">
+          <div className="flex items-center gap-2 text-xs font-mono uppercase tracking-widest text-[#f26625]">
             <span className="w-1.5 h-1.5 rounded-full bg-[#f26625] animate-ping" />
             <span>Interactive Architecture Vector</span>
           </div>
@@ -67,7 +67,7 @@ export function SynthesisFlowDiagram() {
             End-to-End Autonomous Refinery Stream
           </h3>
         </div>
-        <div className="flex items-center gap-2 text-[10px] font-mono text-zinc-400">
+        <div className="flex items-center gap-2 text-xs font-mono text-zinc-400">
           <span className="inline-block w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
           <span>Zero-Drop Fault Tolerant Bus</span>
         </div>
@@ -181,10 +181,10 @@ export function SynthesisFlowDiagram() {
                 </div>
                 {isSelected && <CheckCircle2 className="w-3.5 h-3.5 text-[#f26625]" />}
               </div>
-              <p className="text-[10px] text-zinc-400 mb-2 leading-relaxed font-sans">{stg.subtitle}</p>
-              <div className="pt-2 border-t border-[#1c1c28] flex items-center justify-between text-[10px] font-mono text-zinc-500">
+              <p className="text-xs text-zinc-400 mb-2 leading-relaxed font-sans">{stg.subtitle}</p>
+              <div className="pt-2 border-t border-[#1c1c28] flex items-center justify-between text-xs font-mono text-zinc-500">
                 <span className="text-[#f26625] font-semibold">{stg.metric}</span>
-                <span className="text-[9px] uppercase tracking-wider text-zinc-400">Validated</span>
+                <span className="text-xs uppercase tracking-wider text-zinc-400">Validated</span>
               </div>
             </div>
           )

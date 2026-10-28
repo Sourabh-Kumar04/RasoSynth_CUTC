@@ -222,7 +222,7 @@ export default function ProvidersPage() {
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-[#272738] pb-4">
         <div>
           <div className="flex items-center gap-2.5 mb-1">
-            <span className="text-[10px] font-mono px-2 py-0.5 rounded-sm bg-[#f26625]/10 border border-[#f26625]/30 text-[#f26625] font-bold uppercase tracking-wider">
+            <span className="text-xs font-mono px-2 py-0.5 rounded-sm bg-[#f26625]/10 border border-[#f26625]/30 text-[#f26625] font-bold uppercase tracking-wider">
               Model Routing &amp; Resilience
             </span>
             <h1 className="text-2xl font-bold tracking-tight text-white font-display">
@@ -252,7 +252,7 @@ export default function ProvidersPage() {
               <Card key={label} className="bg-[#12121a]/90 backdrop-blur-sm border-[#272738] rounded-xl card-shadow glow-card-hover group">
                 <CardContent className="pt-4 pb-4 px-4 flex items-center justify-between">
                   <div>
-                    <p className="text-[10px] text-[#94a3b8] font-mono uppercase tracking-wider">{label}</p>
+                    <p className="text-xs text-[#94a3b8] font-mono uppercase tracking-wider">{label}</p>
                     <p className={clsx('text-2xl font-bold font-mono mt-0.5 tnum tracking-tight', color)}>{value}</p>
                   </div>
                   <div className={clsx('h-9 w-9 rounded-lg flex items-center justify-center border border-white/5 transition-transform group-hover:scale-110', bg)}>
@@ -266,7 +266,7 @@ export default function ProvidersPage() {
           {/* Budget Cap Control Banner */}
           <div className="p-3.5 rounded-xl bg-[#12121a] border border-[#272738] flex flex-wrap items-center justify-between gap-3 text-xs font-mono">
             <div className="flex items-center gap-3">
-              <span className="text-[#94a3b8] uppercase text-[10px] font-bold">Demo Spending Cap:</span>
+              <span className="text-[#94a3b8] uppercase text-xs font-bold">Demo Spending Cap:</span>
               <div className="flex items-center gap-1.5">
                 <span className="text-white font-bold">${totalCost.toFixed(3)}</span>
                 <span className="text-zinc-500">/</span>
@@ -277,7 +277,7 @@ export default function ProvidersPage() {
               </div>
             </div>
             <div className="flex items-center gap-2">
-              <span className="text-[10px] text-[#94a3b8]">Adjust Cap:</span>
+              <span className="text-xs text-[#94a3b8]">Adjust Cap:</span>
               <input
                 type="number"
                 min={1}
@@ -286,7 +286,7 @@ export default function ProvidersPage() {
                 onChange={(e) => setBudgetCap(Number(e.target.value))}
                 className="w-20 bg-[#0a0a0f] border border-[#272738] rounded px-2 py-0.5 text-xs font-mono text-white"
               />
-              <span className="text-[10px] text-emerald-400">Circuit Breaker Enabled</span>
+              <span className="text-xs text-emerald-400">Circuit Breaker Enabled</span>
             </div>
           </div>
         </div>
@@ -339,11 +339,11 @@ export default function ProvidersPage() {
                           <div className="min-w-0">
                             <div className="flex items-center gap-1.5">
                               <p className="text-xs font-bold text-white truncate">{p.name.replace(/_/g, ' ')}</p>
-                              <span className="px-1.5 py-0.2 rounded bg-[#161622] text-[#f26625] border border-[#272738] text-[9px] font-mono font-bold">
+                              <span className="px-1.5 py-0.2 rounded bg-[#161622] text-[#f26625] border border-[#272738] text-xs font-mono font-bold">
                                 Priority #{idx + 1}
                               </span>
                             </div>
-                            <p className={clsx('text-[11px] font-mono uppercase mt-0.5', statusVariant(p.status))}>{p.status}</p>
+                            <p className={clsx('text-xs font-mono uppercase mt-0.5', statusVariant(p.status))}>{p.status}</p>
                           </div>
                         </div>
                         <Button
@@ -360,11 +360,11 @@ export default function ProvidersPage() {
 
                       <div className="grid grid-cols-2 gap-x-4 gap-y-1.5 text-xs bg-[#0a0a0f] p-3 rounded-xl border border-[#272738]">
                         <div className="flex justify-between">
-                          <span className="text-[#94a3b8] font-mono text-[11px]">Latency</span>
+                          <span className="text-[#94a3b8] font-mono text-xs">Latency</span>
                           <span className="font-mono text-xs font-bold text-[#f26625]">{p.latency_ms ? `${p.latency_ms}ms` : '—'}</span>
                         </div>
                         <div className="flex justify-between">
-                          <span className="text-[#94a3b8] font-mono text-[11px]">Success</span>
+                          <span className="text-[#94a3b8] font-mono text-xs">Success</span>
                           <span className="font-mono text-xs font-bold text-zinc-300">
                             {p.requests_today && p.requests_today > 0 && p.success_rate != null
                               ? `${(p.success_rate * 100).toFixed(1)}%`
@@ -374,11 +374,11 @@ export default function ProvidersPage() {
                           </span>
                         </div>
                         <div className="flex justify-between">
-                          <span className="text-[#94a3b8] font-mono text-[11px]">Requests</span>
+                          <span className="text-[#94a3b8] font-mono text-xs">Requests</span>
                           <span className="font-mono text-xs text-[#f26625]">{p.requests_today?.toLocaleString() ?? '—'}</span>
                         </div>
                         <div className="flex justify-between">
-                          <span className="text-[#94a3b8] font-mono text-[11px]">Cost today</span>
+                          <span className="text-[#94a3b8] font-mono text-xs">Cost today</span>
                           <span className="font-mono text-xs text-[#f26625]">{p.cost_today_usd != null ? `$${p.cost_today_usd.toFixed(4)}` : '—'}</span>
                         </div>
                       </div>
@@ -386,7 +386,7 @@ export default function ProvidersPage() {
                       {/* Inline Test Result Feedback */}
                       {testResults[p.name] && (
                         <div className={clsx(
-                          'text-[10px] font-mono px-2 py-1 rounded-md flex items-center justify-between border',
+                          'text-xs font-mono px-2 py-1 rounded-md flex items-center justify-between border',
                           testResults[p.name].ok
                             ? 'bg-emerald-950/40 text-emerald-300 border-emerald-500/40'
                             : 'bg-rose-950/40 text-rose-300 border-rose-500/40'
@@ -398,7 +398,7 @@ export default function ProvidersPage() {
 
                       {circuitBreakers[p.name] && (
                         <div className={clsx(
-                          'text-[11px] font-mono font-bold px-2.5 py-1 rounded-md flex items-center gap-1.5 border',
+                          'text-xs font-mono font-bold px-2.5 py-1 rounded-md flex items-center gap-1.5 border',
                           circuitBreakers[p.name] === 'open' ? 'bg-rose-950/40 text-rose-400 border-rose-500/30' : 'bg-emerald-950/40 text-emerald-400 border-emerald-500/30',
                         )}>
                           <ShieldAlert className="h-3 w-3 shrink-0" />
@@ -461,7 +461,7 @@ export default function ProvidersPage() {
                     <div key={name} className="flex items-center justify-between p-3 rounded-xl bg-[#0a0a0f] border border-[#272738]">
                       <span className="text-xs font-bold text-[#f26625]">{name.replace(/_/g, ' ')}</span>
                       <span className={clsx(
-                        'text-[10px] font-mono font-bold px-2.5 py-0.5 rounded-md border',
+                        'text-xs font-mono font-bold px-2.5 py-0.5 rounded-md border',
                         state === 'closed' && 'bg-emerald-950/40 text-emerald-400 border-emerald-500/30',
                         state === 'open' && 'bg-rose-950/40 text-rose-400 border-rose-500/30',
                         state === 'half_open' && 'bg-amber-950/40 text-amber-400 border-amber-500/30',
@@ -494,7 +494,7 @@ export default function ProvidersPage() {
               <CardContent className="p-4">
                 <form onSubmit={handleSwitchProvider} className="space-y-4">
                   <div>
-                    <label className="text-[11px] font-mono text-[#94a3b8] block mb-1">In-Flight Job ID</label>
+                    <label className="text-xs font-mono text-[#94a3b8] block mb-1">In-Flight Job ID</label>
                     <input
                       type="text"
                       placeholder="e.g. medical-sft-v1-verified or UUID"
@@ -505,7 +505,7 @@ export default function ProvidersPage() {
                   </div>
 
                   <div>
-                    <label className="text-[11px] font-mono text-[#94a3b8] block mb-1">Target Provider</label>
+                    <label className="text-xs font-mono text-[#94a3b8] block mb-1">Target Provider</label>
                     <Select value={switchTargetProvider} onValueChange={setSwitchTargetProvider}>
                       <SelectTrigger className="w-full h-9 text-xs rounded-lg border-[#272738] bg-[#0a0a0f] text-white">
                         <SelectValue />
@@ -560,7 +560,7 @@ export default function ProvidersPage() {
               <CardContent className="p-4">
                 <form onSubmit={handleTriggerFailover} className="space-y-4">
                   <div>
-                    <label className="text-[11px] font-mono text-[#94a3b8] block mb-1">Target Job ID</label>
+                    <label className="text-xs font-mono text-[#94a3b8] block mb-1">Target Job ID</label>
                     <input
                       type="text"
                       placeholder="e.g. medical-sft-v1-verified"
@@ -571,7 +571,7 @@ export default function ProvidersPage() {
                   </div>
 
                   <div>
-                    <label className="text-[11px] font-mono text-[#94a3b8] block mb-1">Failure Reason / Simulated Trigger</label>
+                    <label className="text-xs font-mono text-[#94a3b8] block mb-1">Failure Reason / Simulated Trigger</label>
                     <input
                       type="text"
                       value={failoverReason}
@@ -580,7 +580,7 @@ export default function ProvidersPage() {
                     />
                   </div>
 
-                  <div className="p-3 rounded-xl bg-[#0a0a0f] border border-[#272738] text-[11px] font-mono text-[#94a3b8] space-y-1">
+                  <div className="p-3 rounded-xl bg-[#0a0a0f] border border-[#272738] text-xs font-mono text-[#94a3b8] space-y-1">
                     <p className="text-white font-bold">Failover Protocol Rules:</p>
                     <p>• Circuit breaker updates automatically on repeated error triggers</p>
                     <p>• Intermediate constructed samples are saved to checkpoint storage</p>
@@ -628,7 +628,7 @@ export default function ProvidersPage() {
                 <div className="overflow-x-auto">
                   <table className="w-full text-left text-xs font-mono">
                     <thead>
-                      <tr className="border-b border-[#272738] text-[#94a3b8] text-[10px] uppercase">
+                      <tr className="border-b border-[#272738] text-[#94a3b8] text-xs uppercase">
                         <th className="pb-2">Migration ID</th>
                         <th className="pb-2">Job ID</th>
                         <th className="pb-2">Transition</th>
@@ -652,7 +652,7 @@ export default function ProvidersPage() {
                           <td className="py-2.5 text-[#f26625]">{m.checkpoint_id || 'ckpt-auto'}</td>
                           <td className="py-2.5">
                             <span className={clsx(
-                              'text-[10px] px-2 py-0.5 rounded-md font-bold uppercase border',
+                              'text-xs px-2 py-0.5 rounded-md font-bold uppercase border',
                               m.success ? 'bg-emerald-950/40 text-emerald-400 border-emerald-500/30' : 'bg-rose-950/40 text-rose-400 border-rose-500/30'
                             )}>
                               {m.success ? 'Success' : 'Failed'}

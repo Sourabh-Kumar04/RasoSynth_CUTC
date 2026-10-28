@@ -170,7 +170,7 @@ export default function QualityDashboardPage() {
       {/* Header */}
       <div className="border-b border-[#272738] pb-4">
         <div className="flex items-center gap-2.5 mb-1">
-          <span className="text-[10px] font-mono px-2 py-0.5 rounded-sm bg-[#f26625]/10 border border-[#f26625]/30 text-[#f26625] font-bold uppercase tracking-wider">
+          <span className="text-xs font-mono px-2 py-0.5 rounded-sm bg-[#f26625]/10 border border-[#f26625]/30 text-[#f26625] font-bold uppercase tracking-wider">
             Quality Intelligence
           </span>
           <h1 className="text-2xl font-bold tracking-tight text-white font-display flex items-center gap-2">
@@ -221,7 +221,7 @@ export default function QualityDashboardPage() {
               <Database className="h-3.5 w-3.5 text-[#f26625]" />
               Dataset 5D Jury Certification &amp; Fidelity Audit
             </h2>
-            <p className="text-[11px] text-[#64748b] font-mono mt-0.5">
+            <p className="text-xs text-[#64748b] font-mono mt-0.5">
               Per-dataset evaluation across topic adherence, grounding, and safety dimensions
             </p>
           </div>
@@ -250,16 +250,16 @@ export default function QualityDashboardPage() {
                 <span className="text-xs font-mono font-bold text-white">
                   Audited: <strong className="text-[#f26625]">{selectedJob?.dataset_name || selectedJob?.config?.dataset_name || selectedJob?.target_domain?.slice(0, 40) || 'Active Dataset'}</strong>
                 </span>
-                <span className="text-[10px] text-[#94a3b8] font-mono">[{selectedJobId.slice(0, 8)}...]</span>
+                <span className="text-xs text-[#94a3b8] font-mono">[{selectedJobId.slice(0, 8)}...]</span>
               </div>
               <div className="flex items-center gap-2">
                 {isTopicCertified ? (
-                  <Badge variant="outline" className="text-[10px] font-mono font-bold bg-emerald-950/50 text-emerald-400 border-emerald-600/50 flex items-center gap-1">
+                  <Badge variant="outline" className="text-xs font-mono font-bold bg-emerald-950/50 text-emerald-400 border-emerald-600/50 flex items-center gap-1">
                     <CheckCircle2 className="h-3 w-3 text-emerald-400" />
                     CERTIFIED READY (TOPIC &ge; 80%)
                   </Badge>
                 ) : (
-                  <Badge variant="outline" className="text-[10px] font-mono font-bold bg-amber-950/50 text-amber-400 border-amber-600/50 flex items-center gap-1">
+                  <Badge variant="outline" className="text-xs font-mono font-bold bg-amber-950/50 text-amber-400 border-amber-600/50 flex items-center gap-1">
                     <AlertCircle className="h-3 w-3 text-amber-400" />
                     NEEDS REVIEW (TOPIC &lt; 80% · HITL GATED)
                   </Badge>
@@ -281,14 +281,14 @@ export default function QualityDashboardPage() {
               ].map((dim, i) => (
                 <div key={i} className="px-3 py-2.5 space-y-1">
                   <div className="flex items-center justify-between">
-                    <span className="text-[10px] text-[#94a3b8] uppercase font-mono font-bold truncate">{dim.label}</span>
-                    <span className="text-[9px] text-zinc-500 font-mono">{dim.threshold}</span>
+                    <span className="text-xs text-[#94a3b8] uppercase font-mono font-bold truncate">{dim.label}</span>
+                    <span className="text-xs text-zinc-500 font-mono">{dim.threshold}</span>
                   </div>
                   <div className="flex items-baseline justify-between">
                     <span className={clsx("text-lg font-bold font-mono", dim.val >= 80 ? "text-emerald-400" : "text-amber-400")}>
                       {dim.val}%
                     </span>
-                    <span className="text-[9px] text-[#64748b] font-mono">
+                    <span className="text-xs text-[#64748b] font-mono">
                       {dim.val >= 80 ? "Pass" : "Flagged"}
                     </span>
                   </div>
@@ -298,7 +298,7 @@ export default function QualityDashboardPage() {
                       style={{ width: `${dim.val}%` }}
                     />
                   </div>
-                  <p className="text-[9px] text-[#64748b] font-sans truncate">{dim.desc}</p>
+                  <p className="text-xs text-[#64748b] font-sans truncate">{dim.desc}</p>
                 </div>
               ))}
             </div>
@@ -312,7 +312,7 @@ export default function QualityDashboardPage() {
           <h2 className="text-xs font-mono font-bold uppercase tracking-wider text-[#94a3b8]">
             Automated LLM-as-a-Judge Multi-Dimensional Rubric
           </h2>
-          <Badge variant="outline" className="text-[10px] border-[#272738] text-cyan-300 font-mono rounded-sm">
+          <Badge variant="outline" className="text-xs border-[#272738] text-cyan-300 font-mono rounded-sm">
             5-Dimension MT-Bench Rubric
           </Badge>
         </div>
@@ -347,7 +347,7 @@ export default function QualityDashboardPage() {
           <CardContent className="p-5 space-y-4 font-mono text-xs">
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div>
-                <label className="text-[10px] text-[#94a3b8] uppercase font-bold block mb-1">Test Instruction</label>
+                <label className="text-xs text-[#94a3b8] uppercase font-bold block mb-1">Test Instruction</label>
                 <textarea
                   value={judgeInstruction}
                   onChange={(e) => setJudgeInstruction(e.target.value)}
@@ -356,7 +356,7 @@ export default function QualityDashboardPage() {
                 />
               </div>
               <div>
-                <label className="text-[10px] text-[#94a3b8] uppercase font-bold block mb-1">Synthesized Response / CoT Trace</label>
+                <label className="text-xs text-[#94a3b8] uppercase font-bold block mb-1">Synthesized Response / CoT Trace</label>
                 <textarea
                   value={judgeResponse}
                   onChange={(e) => setJudgeResponse(e.target.value)}
@@ -370,11 +370,11 @@ export default function QualityDashboardPage() {
             {judgeResponse.includes("<thought>") && (
               <div className="p-3.5 rounded-md bg-[#0e0e16] border border-[#272738] space-y-2.5">
                 <div className="flex items-center justify-between">
-                  <span className="text-[10px] text-cyan-400 font-bold uppercase tracking-wider flex items-center gap-1.5 font-mono">
+                  <span className="text-xs text-cyan-400 font-bold uppercase tracking-wider flex items-center gap-1.5 font-mono">
                     <Sparkles className="h-3 w-3 text-cyan-400" />
                     Structured Reasoning Monologue Detected
                   </span>
-                  <Badge variant="outline" className="text-[9px] border-[#3b3b52] text-[#94a3b8] font-mono">
+                  <Badge variant="outline" className="text-xs border-[#3b3b52] text-[#94a3b8] font-mono">
                     Hinglish CoT Inspection
                   </Badge>
                 </div>
@@ -382,20 +382,20 @@ export default function QualityDashboardPage() {
                 <details open className="group rounded border border-[#272738] bg-[#0a0a0f] overflow-hidden">
                   <summary className="p-2.5 cursor-pointer bg-[#151520] hover:bg-[#1a1a28] flex items-center justify-between text-[#f26625] font-bold select-none text-xs">
                     <span className="flex items-center gap-2">
-                      <span className="px-1.5 py-0.5 rounded text-[10px] bg-[#f26625]/20 text-[#f26625] border border-[#f26625]/30">
+                      <span className="px-1.5 py-0.5 rounded text-xs bg-[#f26625]/20 text-[#f26625] border border-[#f26625]/30">
                         &lt;thought&gt;
                       </span>
                       <span>Hinglish Internal Reasoning Process (Expanded)</span>
                     </span>
-                    <span className="text-[10px] text-[#64748b] group-open:rotate-180 transition-transform">▼</span>
+                    <span className="text-xs text-[#64748b] group-open:rotate-180 transition-transform">▼</span>
                   </summary>
-                  <div className="p-3 bg-[#07070a] text-amber-200/90 font-mono text-[11px] border-t border-[#1f1f2e] whitespace-pre-wrap leading-relaxed">
+                  <div className="p-3 bg-[#07070a] text-amber-200/90 font-mono text-xs border-t border-[#1f1f2e] whitespace-pre-wrap leading-relaxed">
                     {judgeResponse.match(/<thought>([\s\S]*?)<\/thought>/i)?.[1].trim()}
                   </div>
                 </details>
 
                 <div className="p-2.5 rounded border border-[#272738] bg-[#0a0a0f]">
-                  <span className="text-[10px] text-[#94a3b8] uppercase font-bold block mb-1">
+                  <span className="text-xs text-[#94a3b8] uppercase font-bold block mb-1">
                     Customer-Facing Synthesized Answer
                   </span>
                   <p className="text-white text-xs leading-relaxed font-sans">
@@ -412,12 +412,12 @@ export default function QualityDashboardPage() {
                   <div className="flex items-center gap-2">
                     <CheckCircle2 className="h-4 w-4 text-[#10b981]" />
                     <span className="font-bold text-white text-xs">Jury Rubric Results</span>
-                    <Badge variant="outline" className={clsx("text-[10px] font-bold uppercase", judgeResult.rating === 'excellent' ? 'bg-emerald-950/60 text-emerald-400 border-emerald-700' : 'bg-amber-950/60 text-amber-300 border-amber-700')}>
+                    <Badge variant="outline" className={clsx("text-xs font-bold uppercase", judgeResult.rating === 'excellent' ? 'bg-emerald-950/60 text-emerald-400 border-emerald-700' : 'bg-amber-950/60 text-amber-300 border-amber-700')}>
                       {judgeResult.rating}
                     </Badge>
                   </div>
                   <div className="text-right">
-                    <span className="text-[10px] text-[#94a3b8] uppercase mr-2">Overall Quality Index</span>
+                    <span className="text-xs text-[#94a3b8] uppercase mr-2">Overall Quality Index</span>
                     <span className="text-base font-bold text-[#10b981]">
                       {Math.round(judgeResult.overall_score * 100)}%
                     </span>
@@ -433,7 +433,7 @@ export default function QualityDashboardPage() {
                     { label: "Conciseness", val: judgeResult.conciseness },
                   ].map((dim, i) => (
                     <div key={i} className="px-3 py-2.5 space-y-1">
-                      <span className="text-[10px] text-[#94a3b8] uppercase block truncate">{dim.label}</span>
+                      <span className="text-xs text-[#94a3b8] uppercase block truncate">{dim.label}</span>
                       <p className="text-sm font-bold text-white">
                         {Math.round(dim.val * 100)}%
                       </p>
@@ -460,7 +460,7 @@ export default function QualityDashboardPage() {
               Semantic Density &amp; 2D Topic Coverage Visualizer
             </h2>
             <Badge variant="warning" className="text-xs font-mono">DEMO</Badge>
-            <Badge variant="outline" className="text-[10px] border-[#272738] text-purple-300 font-mono">
+            <Badge variant="outline" className="text-xs border-[#272738] text-purple-300 font-mono">
               TF-IDF + Truncated SVD Projection
             </Badge>
           </div>
@@ -474,35 +474,35 @@ export default function QualityDashboardPage() {
             {densityLoading ? "Projecting..." : "Recompute 2D Clusters"}
           </Button>
         </div>
-        <p className="text-[11px] font-mono text-amber-300 mb-3">Demo data: the initial plot and the recompute run use fixed example samples, not the selected dataset&apos;s records.</p>
+        <p className="text-xs font-mono text-amber-300 mb-3">Demo data: the initial plot and the recompute run use fixed example samples, not the selected dataset&apos;s records.</p>
 
         <Card className="border-[#272738] bg-[#12121a] rounded-md card-shadow overflow-hidden">
           <CardHeader className="pb-3 border-b border-[#272738] bg-[#0e0e14]">
             <div className="flex flex-col sm:flex-row sm:divide-x divide-[#272738] rounded-md border border-[#272738] bg-[#161622] text-center sm:text-left">
               <div className="flex-1 px-3 py-2">
-                <span className="text-[10px] text-[#94a3b8] uppercase font-mono block">Audited Points</span>
+                <span className="text-xs text-[#94a3b8] uppercase font-mono block">Audited Points</span>
                 <span className="text-sm font-bold text-white font-mono">{densityResult?.total_samples || 0} records</span>
               </div>
               <div className="flex-1 px-3 py-2">
-                <span className="text-[10px] text-[#94a3b8] uppercase font-mono block">Topic Entropy</span>
+                <span className="text-xs text-[#94a3b8] uppercase font-mono block">Topic Entropy</span>
                 <span className="text-sm font-bold text-emerald-400 font-mono">
                   {Math.round((densityResult?.diversity_entropy || 0) * 100)}%
                 </span>
               </div>
               <div className="flex-1 px-3 py-2">
-                <span className="text-[10px] text-[#94a3b8] uppercase font-mono block">Semantic Coverage</span>
+                <span className="text-xs text-[#94a3b8] uppercase font-mono block">Semantic Coverage</span>
                 <span className="text-sm font-bold text-cyan-400 font-mono">
                   {densityResult?.semantic_coverage_pct || 0}%
                 </span>
               </div>
               <div className="flex-1 px-3 py-2">
-                <span className="text-[10px] text-[#94a3b8] uppercase font-mono block">Isolated Outliers</span>
+                <span className="text-xs text-[#94a3b8] uppercase font-mono block">Isolated Outliers</span>
                 <span className="text-sm font-bold text-rose-400 font-mono">
                   {densityResult?.outlier_count || 0} edge case(s)
                 </span>
               </div>
               <div className="flex-1 px-3 py-2">
-                <span className="text-[10px] text-[#94a3b8] uppercase font-mono block">Dense Redundancies</span>
+                <span className="text-xs text-[#94a3b8] uppercase font-mono block">Dense Redundancies</span>
                 <span className="text-sm font-bold text-sky-400 font-mono">
                   {densityResult?.redundancy_count || 0} core duplicates
                 </span>
@@ -514,7 +514,7 @@ export default function QualityDashboardPage() {
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
               {/* 2D Projection Canvas */}
               <div className="lg:col-span-2 relative bg-[#0a0a0f] border border-[#272738] rounded-md p-4 flex flex-col items-center justify-between min-h-[380px]">
-                <div className="w-full flex items-center justify-between text-[10px] font-mono text-[#64748b]">
+                <div className="w-full flex items-center justify-between text-xs font-mono text-[#64748b]">
                   <div className="flex items-center gap-2">
                     <Compass className="h-3.5 w-3.5 text-purple-400" />
                     <span className="text-white font-semibold">2D Latent Projection (Truncated SVD)</span>
@@ -526,7 +526,7 @@ export default function QualityDashboardPage() {
 
                 <div className="w-full relative my-2">
                   {/* Y-Axis Label */}
-                  <div className="absolute -left-2 top-1/2 -translate-y-1/2 -rotate-90 origin-center text-[9px] font-mono text-[#94a3b8] uppercase tracking-wider hidden sm:block">
+                  <div className="absolute -left-2 top-1/2 -translate-y-1/2 -rotate-90 origin-center text-xs font-mono text-[#94a3b8] uppercase tracking-wider hidden sm:block">
                     ← Procedural Recall · Legal Nuance &amp; Precedent →
                   </div>
 
@@ -608,12 +608,12 @@ export default function QualityDashboardPage() {
                   </svg>
 
                   {/* X-Axis Label */}
-                  <div className="w-full text-center text-[9px] font-mono text-[#94a3b8] uppercase tracking-wider pt-1">
+                  <div className="w-full text-center text-xs font-mono text-[#94a3b8] uppercase tracking-wider pt-1">
                     Dimension 1: Semantic Intent Spread (← Direct Query · Statutory Case Multi-Hop →)
                   </div>
                 </div>
 
-                <div className="w-full flex items-center justify-between text-[10px] font-mono text-[#64748b] pt-2 border-t border-[#1a1a24]">
+                <div className="w-full flex items-center justify-between text-xs font-mono text-[#64748b] pt-2 border-t border-[#1a1a24]">
                   <span>Hover node to see snippet · Click coordinate to inspect topic &amp; cluster balance</span>
                   <div className="flex items-center gap-3">
                     <span className="flex items-center gap-1">
@@ -650,12 +650,12 @@ export default function QualityDashboardPage() {
                             />
                             <div>
                               <p className="text-xs font-bold text-white leading-tight">{c.label}</p>
-                              <p className="text-[10px] text-[#64748b] font-mono">
+                              <p className="text-xs text-[#64748b] font-mono">
                                 {c.top_terms?.slice(0, 3).join(", ")}
                               </p>
                             </div>
                           </div>
-                          <Badge variant="outline" className="text-[10px] font-mono border-[#272738] text-white">
+                          <Badge variant="outline" className="text-xs font-mono border-[#272738] text-white">
                             {c.sample_count} ({c.percentage}%)
                           </Badge>
                         </div>
@@ -667,17 +667,17 @@ export default function QualityDashboardPage() {
                 {/* Point Detail Inspector */}
                 <div className="p-3.5 rounded-md bg-[#0a0a0f] border border-[#272738]">
                   <div className="flex items-center justify-between mb-2">
-                    <span className="text-[10px] font-mono uppercase text-[#94a3b8] flex items-center gap-1">
+                    <span className="text-xs font-mono uppercase text-[#94a3b8] flex items-center gap-1">
                       <Info className="h-3 w-3 text-cyan-400" />
                       Sample Inspector
                     </span>
                     {selectedPoint?.is_outlier && (
-                      <Badge className="text-[9px] bg-rose-950/70 text-rose-400 border border-rose-800">
+                      <Badge className="text-xs bg-rose-950/70 text-rose-400 border border-rose-800">
                         Isolated Edge Case
                       </Badge>
                     )}
                     {selectedPoint?.is_redundant && (
-                      <Badge className="text-[9px] bg-sky-950/70 text-sky-400 border border-sky-800">
+                      <Badge className="text-xs bg-sky-950/70 text-sky-400 border border-sky-800">
                         Cluster Core Duplicate
                       </Badge>
                     )}
@@ -687,7 +687,7 @@ export default function QualityDashboardPage() {
                       <p className="text-white font-medium line-clamp-3">
                         &ldquo;{selectedPoint.instruction_snippet}&rdquo;
                       </p>
-                      <div className="flex items-center justify-between pt-1 text-[10px] font-mono text-[#64748b]">
+                      <div className="flex items-center justify-between pt-1 text-xs font-mono text-[#64748b]">
                         <span>Domain: <strong className="text-slate-300">{selectedPoint.domain}</strong></span>
                         <span>Coord: [{selectedPoint.x}, {selectedPoint.y}]</span>
                       </div>
@@ -711,7 +711,7 @@ export default function QualityDashboardPage() {
             <Layers className="h-4 w-4 text-[#f26625]" />
             Curriculum Complexity &amp; Cognitive Tier Distribution
           </h2>
-          <span className="text-[10px] font-mono text-[#f26625] px-2 py-0.5 rounded bg-[#f26625]/10 border border-[#f26625]/30">
+          <span className="text-xs font-mono text-[#f26625] px-2 py-0.5 rounded bg-[#f26625]/10 border border-[#f26625]/30">
             5-Tier Stratified Balancing
           </span>
         </div>
@@ -728,14 +728,14 @@ export default function QualityDashboardPage() {
               ].map((item) => (
                 <div key={item.tier} className="px-3 py-2.5 space-y-1">
                   <div className="flex items-center justify-between">
-                    <span className={clsx('text-[10px] font-mono font-bold', item.text)}>{item.tier}</span>
+                    <span className={clsx('text-xs font-mono font-bold', item.text)}>{item.tier}</span>
                     <span className="text-xs font-bold text-white font-mono">{item.pct}%</span>
                   </div>
                   <p className="text-xs font-semibold text-white truncate">{item.label}</p>
                   <div className="w-full bg-[#1c1c28] h-1.5 rounded-full overflow-hidden">
                     <div className={clsx('h-full rounded-full', item.color)} style={{ width: `${item.pct * 2}%` }} />
                   </div>
-                  <div className="flex items-center justify-between text-[10px] text-[#94a3b8] font-mono pt-1">
+                  <div className="flex items-center justify-between text-xs text-[#94a3b8] font-mono pt-1">
                     <span>{item.tokens}</span>
                     <span className="text-emerald-400">{item.pass}</span>
                   </div>
@@ -744,7 +744,7 @@ export default function QualityDashboardPage() {
             </div>
 
             {/* Invariant Note */}
-            <div className="p-3 rounded-md bg-[#0a0a0f] border border-[#1f1f2e] flex flex-col sm:flex-row sm:items-center justify-between gap-2 text-[11px] font-mono text-[#94a3b8]">
+            <div className="p-3 rounded-md bg-[#0a0a0f] border border-[#1f1f2e] flex flex-col sm:flex-row sm:items-center justify-between gap-2 text-xs font-mono text-[#94a3b8]">
               <span className="flex items-center gap-2">
                 <CheckCircle2 className="w-4 h-4 text-emerald-400" />
                 Curriculum Stratification Invariant: Entropy score 0.942 (reference value — not computed from the active catalog)
@@ -764,7 +764,7 @@ export default function QualityDashboardPage() {
             <ShieldCheck className="h-4 w-4 text-[#10b981]" />
             Evaluation Benchmark Decontamination Purity
           </h2>
-          <span className="text-[10px] font-mono text-[#10b981] px-2 py-0.5 rounded bg-emerald-950/40 border border-emerald-500/30 flex items-center gap-1 font-bold">
+          <span className="text-xs font-mono text-[#10b981] px-2 py-0.5 rounded bg-emerald-950/40 border border-emerald-500/30 flex items-center gap-1 font-bold">
             <CheckCircle2 className="w-3 h-3 text-[#10b981]" />
             100% Zero Test Leakage Certified (Audit Date: 26 Oct 2026)
           </span>
@@ -782,17 +782,17 @@ export default function QualityDashboardPage() {
               ].map((b) => (
                 <div key={b.benchmark} className="px-3 py-2.5 space-y-1">
                   <div className="flex items-center justify-between text-xs">
-                    <span className="font-semibold text-white font-mono text-[11px] truncate">{b.benchmark}</span>
-                    <span className="text-[10px] font-mono text-emerald-400 font-bold">{b.status}</span>
+                    <span className="font-semibold text-white font-mono text-xs truncate">{b.benchmark}</span>
+                    <span className="text-xs font-mono text-emerald-400 font-bold">{b.status}</span>
                   </div>
                   <div className="flex items-baseline justify-between pt-1">
                     <span className="text-lg font-bold font-mono text-emerald-400">{b.purity}</span>
-                    <span className="text-[10px] font-mono text-[#64748b]">{b.samples}</span>
+                    <span className="text-xs font-mono text-[#64748b]">{b.samples}</span>
                   </div>
                   <div className="w-full bg-[#161622] h-1.5 rounded-full overflow-hidden">
                     <div className="h-full bg-emerald-500 rounded-full" style={{ width: '100%' }} />
                   </div>
-                  <p className="text-[10px] text-[#94a3b8] font-mono">Overlap: {b.overlap}</p>
+                  <p className="text-xs text-[#94a3b8] font-mono">Overlap: {b.overlap}</p>
                 </div>
               ))}
             </div>
@@ -807,10 +807,10 @@ export default function QualityDashboardPage() {
                   </span>
                 </div>
                 <div className="flex items-center gap-2">
-                  <span className="text-[10px] px-2 py-0.5 rounded bg-[#161622] text-[#f26625] border border-[#f26625]/30 font-mono">
+                  <span className="text-xs px-2 py-0.5 rounded bg-[#161622] text-[#f26625] border border-[#f26625]/30 font-mono">
                     Audited: 26 October 2026
                   </span>
-                  <span className="text-[10px] px-2 py-0.5 rounded bg-[#161622] text-purple-300 border border-[#272738] font-mono">
+                  <span className="text-xs px-2 py-0.5 rounded bg-[#161622] text-purple-300 border border-[#272738] font-mono">
                     Cert: CONTAM-AUDIT-RFC6962
                   </span>
                 </div>
@@ -818,20 +818,20 @@ export default function QualityDashboardPage() {
 
               <div className="grid grid-cols-1 md:grid-cols-3 gap-3 text-xs font-mono text-[#94a3b8]">
                 <div className="p-2.5 rounded bg-[#12121a] border border-[#1f1f2e] space-y-1">
-                  <p className="text-white font-bold text-[11px]">1. 8-Gram MinHash LSH Index</p>
-                  <p className="text-[10px] text-[#64748b] leading-relaxed">
+                  <p className="text-white font-bold text-xs">1. 8-Gram MinHash LSH Index</p>
+                  <p className="text-xs text-[#64748b] leading-relaxed">
                     All generated instructions and responses are broken into 8-token shingle n-grams and hashed across 128 permutation buckets to detect approximate overlaps.
                   </p>
                 </div>
                 <div className="p-2.5 rounded bg-[#12121a] border border-[#1f1f2e] space-y-1">
-                  <p className="text-white font-bold text-[11px]">2. Jaccard &gt; 0.85 Hard Threshold</p>
-                  <p className="text-[10px] text-[#64748b] leading-relaxed">
+                  <p className="text-white font-bold text-xs">2. Jaccard &gt; 0.85 Hard Threshold</p>
+                  <p className="text-xs text-[#64748b] leading-relaxed">
                     Any candidate sample exhibiting Jaccard coefficient exceeding 0.85 with benchmark test splits is automatically quarantined and purged from downstream training sets.
                   </p>
                 </div>
                 <div className="p-2.5 rounded bg-[#12121a] border border-[#1f1f2e] space-y-1">
-                  <p className="text-white font-bold text-[11px]">3. Zero Test Leakage Guarantee</p>
-                  <p className="text-[10px] text-[#64748b] leading-relaxed">
+                  <p className="text-white font-bold text-xs">3. Zero Test Leakage Guarantee</p>
+                  <p className="text-xs text-[#64748b] leading-relaxed">
                     Guarantees evaluated model checkpoints never memorize ground-truth benchmark prompts or test solutions, ensuring genuine zero-shot generalization.
                   </p>
                 </div>
@@ -841,15 +841,15 @@ export default function QualityDashboardPage() {
             <div className="p-3.5 rounded-md bg-[#0a0a0f] border border-[#1f1f2e] flex flex-wrap items-center justify-between gap-3 text-xs font-mono">
               <div className="space-y-0.5">
                 <div className="flex items-center gap-2">
-                  <span className="text-[#94a3b8] uppercase text-[10px] font-bold">Hashing Standard:</span>
+                  <span className="text-[#94a3b8] uppercase text-xs font-bold">Hashing Standard:</span>
                   <span className="text-white font-bold">8-Gram MinHash Jaccard Overlap Barrier</span>
                 </div>
-                <p className="text-[11px] text-[#64748b]">
+                <p className="text-xs text-[#64748b]">
                   Verified against evaluation splits across 5 frontier benchmarks. Zero ground truth contamination.
                 </p>
               </div>
               <div className="flex items-center gap-2">
-                <span className="text-[10px] px-2 py-1 rounded bg-[#161622] text-purple-300 border border-[#272738] font-mono">
+                <span className="text-xs px-2 py-1 rounded bg-[#161622] text-purple-300 border border-[#272738] font-mono">
                   Cert: CONTAM-AUDIT-RFC6962
                 </span>
               </div>

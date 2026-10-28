@@ -98,12 +98,12 @@ export function ZenSpatialCanvas({
         <div className="absolute inset-0 bg-dot-grid opacity-25 pointer-events-none" />
 
         {/* Aperture Controls Bar */}
-        <div className="relative z-10 flex items-center justify-end px-5 py-2.5 border-b border-[#1c1c28]/60 backdrop-blur-sm text-[10px] font-mono text-[#64748b]">
+        <div className="relative z-10 flex items-center justify-end px-5 py-2.5 border-b border-[#1c1c28]/60 backdrop-blur-sm text-xs font-mono text-[#64748b]">
           <div className="flex items-center gap-2">
             <button
               type="button"
               onClick={toggleZenMode}
-              className={`flex items-center gap-1.5 px-2.5 py-1 rounded text-[10px] font-mono font-medium transition-all ${
+              className={`flex items-center gap-1.5 px-2.5 py-1 rounded text-xs font-mono font-medium transition-all ${
                 isZenMode
                   ? 'bg-[#f26625] text-white shadow-sm'
                   : 'bg-[#12121a] hover:bg-[#1c1c28] text-zinc-300 hover:text-white border border-[#272738]'
@@ -139,7 +139,7 @@ export function ZenSpatialCanvas({
                 <Compass className="w-3.5 h-3.5 animate-spin" style={{ animationDuration: '8s' }} />
                 <span>Zen Spatial Density Active: Secondary chrome suppressed · Deep negative space</span>
               </span>
-              <span className="text-[10px] text-zinc-400">Press Lab View to expand controls</span>
+              <span className="text-xs text-zinc-400">Press Lab View to expand controls</span>
             </motion.div>
           )}
         </AnimatePresence>

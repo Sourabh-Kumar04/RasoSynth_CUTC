@@ -488,7 +488,7 @@ function StudioContent() {
               <Sparkles className="w-3.5 h-3.5 text-[#f26625]" />
               Domain Curricula & Linguistic Presets
             </span>
-            <span className="text-[11px] font-mono text-[#10b981]">Grounded Schemas</span>
+            <span className="text-xs font-mono text-[#10b981]">Grounded Schemas</span>
           </div>
 
           {/* Facet Filter Toolbar */}
@@ -605,10 +605,10 @@ function StudioContent() {
                 </p>
               </div>
               <div className="flex items-center gap-2">
-                <span className="text-[10px] font-mono text-emerald-400 px-2 py-0.5 rounded bg-emerald-500/10 border border-emerald-500/20">
+                <span className="text-xs font-mono text-emerald-400 px-2 py-0.5 rounded bg-emerald-500/10 border border-emerald-500/20">
                   {datasetSize.toLocaleString()} samples
                 </span>
-                <span className="text-[10px] font-mono text-[#f26625] px-2 py-0.5 rounded bg-[#f26625]/10 border border-[#f26625]/20 uppercase">
+                <span className="text-xs font-mono text-[#f26625] px-2 py-0.5 rounded bg-[#f26625]/10 border border-[#f26625]/20 uppercase">
                   {synthesisMode}
                 </span>
               </div>
@@ -616,7 +616,7 @@ function StudioContent() {
 
             <div className="space-y-4">
               <div>
-                <label className="text-[10px] font-mono uppercase text-zinc-400 block mb-1.5">
+                <label className="text-xs font-mono uppercase text-zinc-400 block mb-1.5">
                   Target Domain or Corpus
                 </label>
                 <Input
@@ -628,7 +628,7 @@ function StudioContent() {
               </div>
 
               <div>
-                <label className="text-[10px] font-mono uppercase text-zinc-400 block mb-1.5">
+                <label className="text-xs font-mono uppercase text-zinc-400 block mb-1.5">
                   Synthesis Instruction Scope &amp; Constraints
                 </label>
                 <textarea
@@ -642,7 +642,7 @@ function StudioContent() {
                 {prompt.trim().length > 0 && (
                   <div className="mt-2 p-2.5 rounded-md bg-[#0a0a0f] border border-[#1f1f2e] space-y-1.5 text-xs font-mono">
                     <div className="flex items-center justify-between">
-                      <span className="text-[10px] text-[#94a3b8] uppercase font-bold flex items-center gap-1.5">
+                      <span className="text-xs text-[#94a3b8] uppercase font-bold flex items-center gap-1.5">
                         <ShieldCheck className="h-3.5 w-3.5 text-[#10b981]" />
                         Prompt Quality:
                         <strong className={clsx(
@@ -654,13 +654,13 @@ function StudioContent() {
                       </span>
                     </div>
                     {promptLint.warnings.map((w, idx) => (
-                      <div key={idx} className="flex items-center gap-1.5 text-amber-400/90 text-[11px]">
+                      <div key={idx} className="flex items-center gap-1.5 text-amber-400/90 text-xs">
                         <AlertCircle className="h-3 w-3 shrink-0" />
                         <span>{w}</span>
                       </div>
                     ))}
                     {promptLint.tips.map((tip, idx) => (
-                      <div key={idx} className="text-[#94a3b8] text-[11px] flex items-center justify-between gap-2 bg-[#12121c] p-1.5 rounded border border-[#222232]">
+                      <div key={idx} className="text-[#94a3b8] text-xs flex items-center justify-between gap-2 bg-[#12121c] p-1.5 rounded border border-[#222232]">
                         <div className="flex items-center gap-1.5 truncate">
                           <span className="text-cyan-400 shrink-0">💡</span>
                           <span className="truncate">{tip.text}</span>
@@ -671,7 +671,7 @@ function StudioContent() {
                             playClickSound()
                             setPrompt((p) => (p.trim() ? `${p.trim()} ${tip.appendSnippet.trim()}` : tip.appendSnippet.trim()))
                           }}
-                          className="shrink-0 text-[10px] font-mono text-[#f26625] hover:text-white px-2 py-0.5 rounded bg-[#f26625]/10 hover:bg-[#f26625]/20 border border-[#f26625]/30 transition-all cursor-pointer"
+                          className="shrink-0 text-xs font-mono text-[#f26625] hover:text-white px-2 py-0.5 rounded bg-[#f26625]/10 hover:bg-[#f26625]/20 border border-[#f26625]/30 transition-all cursor-pointer"
                         >
                           {tip.actionLabel}
                         </button>
@@ -683,7 +683,7 @@ function StudioContent() {
 
               {/* Synthesis Mode Switcher */}
               <div className="space-y-1.5">
-                <label className="text-[10px] font-mono uppercase text-zinc-400 block">
+                <label className="text-xs font-mono uppercase text-zinc-400 block">
                   Synthesis Cognitive Engine
                 </label>
                 <div className="flex flex-wrap gap-1.5">
@@ -787,7 +787,7 @@ function StudioContent() {
 
           <div className="space-y-4">
             <div>
-              <label className="text-[10px] font-mono uppercase text-[#94a3b8] block mb-1.5">
+              <label className="text-xs font-mono uppercase text-[#94a3b8] block mb-1.5">
                 Target Domain or Repository Topic
               </label>
               <Input
@@ -799,7 +799,7 @@ function StudioContent() {
             </div>
 
             <div>
-              <label className="text-[10px] font-mono uppercase text-[#94a3b8] block mb-1.5">
+              <label className="text-xs font-mono uppercase text-[#94a3b8] block mb-1.5">
                 Specification Prompt
               </label>
               <textarea
@@ -813,7 +813,7 @@ function StudioContent() {
               {prompt.trim().length > 0 && (
                 <div className="mt-2 p-2.5 rounded-md bg-[#0a0a0f] border border-[#1f1f2e] space-y-1.5 text-xs font-mono">
                   <div className="flex items-center justify-between">
-                    <span className="text-[10px] text-[#94a3b8] uppercase font-bold flex items-center gap-1.5">
+                    <span className="text-xs text-[#94a3b8] uppercase font-bold flex items-center gap-1.5">
                       <ShieldCheck className="h-3.5 w-3.5 text-[#10b981]" />
                       Prompt Specification Quality:
                       <strong className={clsx(
@@ -825,13 +825,13 @@ function StudioContent() {
                     </span>
                   </div>
                   {promptLint.warnings.map((w, idx) => (
-                    <div key={idx} className="flex items-center gap-1.5 text-amber-400/90 text-[11px]">
+                    <div key={idx} className="flex items-center gap-1.5 text-amber-400/90 text-xs">
                       <AlertCircle className="h-3 w-3 shrink-0" />
                       <span>{w}</span>
                     </div>
                   ))}
                   {promptLint.tips.map((tip, idx) => (
-                    <div key={idx} className="text-[#94a3b8] text-[11px] flex items-center justify-between gap-2 bg-[#12121c] p-1.5 rounded border border-[#222232]">
+                    <div key={idx} className="text-[#94a3b8] text-xs flex items-center justify-between gap-2 bg-[#12121c] p-1.5 rounded border border-[#222232]">
                       <div className="flex items-center gap-1.5 truncate">
                         <span className="text-cyan-400 shrink-0">💡</span>
                         <span className="truncate">{tip.text}</span>
@@ -842,7 +842,7 @@ function StudioContent() {
                           playClickSound()
                           setPrompt((p) => (p.trim() ? `${p.trim()} ${tip.appendSnippet.trim()}` : tip.appendSnippet.trim()))
                         }}
-                        className="shrink-0 text-[10px] font-mono text-[#f26625] hover:text-white px-2 py-0.5 rounded bg-[#f26625]/10 hover:bg-[#f26625]/20 border border-[#f26625]/30 transition-all cursor-pointer"
+                        className="shrink-0 text-xs font-mono text-[#f26625] hover:text-white px-2 py-0.5 rounded bg-[#f26625]/10 hover:bg-[#f26625]/20 border border-[#f26625]/30 transition-all cursor-pointer"
                       >
                         {tip.actionLabel}
                       </button>
@@ -865,7 +865,7 @@ function StudioContent() {
                   </Button>
                 </div>
                 {autoDetectNotice && (
-                  <span className="text-[11px] font-mono text-emerald-400 flex items-center gap-1">
+                  <span className="text-xs font-mono text-emerald-400 flex items-center gap-1">
                     <Check className="w-3.5 h-3.5 text-emerald-400" />
                     {autoDetectNotice}
                   </span>
@@ -875,7 +875,7 @@ function StudioContent() {
 
             {/* Preserved Domain Terms / Glossary */}
             <div className="space-y-2 pt-2 border-t border-[#1c1c28]">
-              <label className="text-[10px] font-mono uppercase text-[#94a3b8] block">
+              <label className="text-xs font-mono uppercase text-[#94a3b8] block">
                 Preserved Domain Terms (Invariants)
               </label>
               <Input
@@ -894,7 +894,7 @@ function StudioContent() {
                     .map((term, i) => (
                       <span
                         key={i}
-                        className="inline-flex items-center gap-1 px-2 py-0.5 rounded-sm bg-[#161622] border border-[#f26625]/30 text-[#f26625] text-[10px] font-mono"
+                        className="inline-flex items-center gap-1 px-2 py-0.5 rounded-sm bg-[#161622] border border-[#f26625]/30 text-[#f26625] text-xs font-mono"
                       >
                         {term}
                         <button
@@ -920,10 +920,10 @@ function StudioContent() {
             {discoveredSources.length > 0 && (
               <div className="space-y-1.5 pt-2 border-t border-[#1c1c28]">
                 <div className="flex items-center justify-between">
-                  <span className="text-[10px] font-mono uppercase text-[#94a3b8]">
+                  <span className="text-xs font-mono uppercase text-[#94a3b8]">
                     Authoritative Grounding Sources ({discoveredSources.length}):
                   </span>
-                  <span className="px-1.5 py-0.5 rounded-sm bg-emerald-950/60 border border-emerald-800/60 text-[9px] font-mono text-emerald-400 flex items-center gap-1">
+                  <span className="px-1.5 py-0.5 rounded-sm bg-emerald-950/60 border border-emerald-800/60 text-xs font-mono text-emerald-400 flex items-center gap-1">
                     <ShieldCheck className="w-3 h-3 text-emerald-400" />
                     Polysemy Filtered
                   </span>
@@ -946,7 +946,7 @@ function StudioContent() {
                     return (
                       <span
                         key={idx}
-                        className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-sm bg-[#0a0a0f] border border-[#272738] text-[10px] font-mono text-zinc-200 truncate max-w-[280px]"
+                        className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-sm bg-[#0a0a0f] border border-[#272738] text-xs font-mono text-zinc-200 truncate max-w-[280px]"
                         title={s.name}
                       >
                         {typeLabel && (
@@ -966,11 +966,11 @@ function StudioContent() {
             {coverageMatrix && coverageMatrix.cells && coverageMatrix.cells.length > 0 && (
               <div className="space-y-2 pt-2 border-t border-[#1c1c28]">
                 <div className="flex items-center justify-between">
-                  <span className="text-[10px] font-mono uppercase text-[#94a3b8] flex items-center gap-1.5">
+                  <span className="text-xs font-mono uppercase text-[#94a3b8] flex items-center gap-1.5">
                     <Layers className="w-3.5 h-3.5 text-[#f26625]" />
                     Topic &amp; Diversity Coverage Matrix ({coverageMatrix.cells.length} cells planned)
                   </span>
-                  <span className="px-1.5 py-0.5 rounded-sm bg-purple-950/60 border border-purple-800/60 text-[9px] font-mono text-purple-300">
+                  <span className="px-1.5 py-0.5 rounded-sm bg-purple-950/60 border border-purple-800/60 text-xs font-mono text-purple-300">
                     Balanced Sampling Guarantee
                   </span>
                 </div>
@@ -978,10 +978,10 @@ function StudioContent() {
                   {coverageMatrix.cells.map((cell, idx) => (
                     <div
                       key={idx}
-                      className="p-1.5 rounded bg-[#161622] border border-[#272738]/60 text-[10px] font-mono space-y-0.5 hover:border-[#f26625]/40 transition-colors"
+                      className="p-1.5 rounded bg-[#161622] border border-[#272738]/60 text-xs font-mono space-y-0.5 hover:border-[#f26625]/40 transition-colors"
                     >
                       {Object.entries(cell).map(([k, v]) => (
-                        <div key={k} className="flex items-center justify-between text-[9px]">
+                        <div key={k} className="flex items-center justify-between text-xs">
                           <span className="text-[#64748b] truncate max-w-[70px]">{k}:</span>
                           <span className="text-purple-300 font-semibold truncate max-w-[90px]" title={String(v)}>
                             {String(v)}
@@ -1011,7 +1011,7 @@ function StudioContent() {
                 <div className="space-y-3 pt-3">
                   {idealSamples.map((sample, idx) => (
                     <div key={idx} className="p-3 rounded-md bg-[#0a0a0f] border border-[#272738] space-y-2">
-                      <div className="flex items-center justify-between text-[10px] font-mono text-[#f26625]">
+                      <div className="flex items-center justify-between text-xs font-mono text-[#f26625]">
                         <span>Anchor #{idx + 1}</span>
                         <button
                           type="button"
@@ -1073,13 +1073,13 @@ function StudioContent() {
                   Dataset Parameters
                 </h3>
               </div>
-              <span className="text-[10px] font-mono text-[#94a3b8]">Format: JSONL</span>
+              <span className="text-xs font-mono text-[#94a3b8]">Format: JSONL</span>
             </div>
 
             {/* Core Settings */}
             <div className="space-y-3.5">
               <div>
-                <label className="text-[10px] font-mono uppercase text-[#94a3b8] block mb-1">
+                <label className="text-xs font-mono uppercase text-[#94a3b8] block mb-1">
                   Dataset Type
                 </label>
                 <select
@@ -1098,7 +1098,7 @@ function StudioContent() {
               </div>
 
               <div>
-                <label className="text-[10px] font-mono uppercase text-[#94a3b8] block mb-1">
+                <label className="text-xs font-mono uppercase text-[#94a3b8] block mb-1">
                   Synthesis Engine Mode
                 </label>
                 <select
@@ -1119,7 +1119,7 @@ function StudioContent() {
               </div>
 
               <div>
-                <label className="text-[10px] font-mono uppercase text-[#94a3b8] block mb-1">
+                <label className="text-xs font-mono uppercase text-[#94a3b8] block mb-1">
                   Language
                 </label>
                 <select
@@ -1194,7 +1194,7 @@ function StudioContent() {
 
               <div>
                 <div className="flex justify-between items-center mb-1.5">
-                  <label className="text-[10px] font-mono uppercase text-[#94a3b8]">Target Size</label>
+                  <label className="text-xs font-mono uppercase text-[#94a3b8]">Target Size</label>
                   <span className="text-xs font-mono text-[#f26625] font-bold">
                     {datasetSize.toLocaleString()} rows
                   </span>
@@ -1208,7 +1208,7 @@ function StudioContent() {
                   onChange={(e) => setDatasetSize(Number(e.target.value))}
                   className="w-full accent-[#f26625] bg-[#0a0a0f] cursor-pointer"
                 />
-                <div className="flex items-center justify-between text-[10px] font-mono text-[#94a3b8] mt-2 p-2 rounded bg-[#0a0a0f] border border-[#1f1f2e]">
+                <div className="flex items-center justify-between text-xs font-mono text-[#94a3b8] mt-2 p-2 rounded bg-[#0a0a0f] border border-[#1f1f2e]">
                   <span>Est. Cloud API (planning estimate: $0.06/1000 rows, not metered spend): <strong className="text-zinc-200 font-bold">${((datasetSize / 1000) * 0.06).toFixed(2)}</strong> <span className="text-emerald-400">($0.00 Local)</span></span>
                   <span>Est. Time: <strong className="text-zinc-200 font-bold">{datasetSize <= 100 ? '~15s' : datasetSize <= 1000 ? '~1.8m' : datasetSize <= 5000 ? '~8.5m' : `~${Math.round(datasetSize / 650)}m`}</strong></span>
                 </div>
@@ -1217,10 +1217,10 @@ function StudioContent() {
               {/* Quality & Human Review Gates */}
               <div className="pt-3 border-t border-[#1c1c28] space-y-3">
                 <div className="flex items-center justify-between">
-                  <span className="text-[10px] font-mono uppercase text-[#94a3b8] font-bold">
+                  <span className="text-xs font-mono uppercase text-[#94a3b8] font-bold">
                     Pipeline Gates &amp; Sources
                   </span>
-                  <span className="text-[10px] font-mono text-[#f26625]">Quality Control</span>
+                  <span className="text-xs font-mono text-[#f26625]">Quality Control</span>
                 </div>
 
                 {/* HITL Review Toggle */}
@@ -1228,7 +1228,7 @@ function StudioContent() {
                   <label className="flex items-center justify-between text-xs font-mono text-white cursor-pointer">
                     <div className="flex flex-col">
                       <span className="font-semibold text-white">Stratified HITL Review</span>
-                      <span className="text-[10px] text-[#94a3b8]">
+                      <span className="text-xs text-[#94a3b8]">
                         Pause at awaiting_review gate to inspect, edit, or reject samples
                       </span>
                     </div>
@@ -1242,7 +1242,7 @@ function StudioContent() {
 
                   {humanReview && (
                     <div className="pt-2 border-t border-[#1c1c28] space-y-1.5">
-                      <div className="flex justify-between items-center text-[10px] font-mono">
+                      <div className="flex justify-between items-center text-xs font-mono">
                         <span className="text-[#94a3b8]">Sampling Ratio</span>
                         <span className="text-[#f26625] font-bold">{humanReviewPercentage}% of dataset</span>
                       </div>
@@ -1263,7 +1263,7 @@ function StudioContent() {
                   <label className="flex items-center justify-between text-xs font-mono text-white cursor-pointer">
                     <div className="flex flex-col">
                       <span className="font-semibold text-white">Independent LLM Jury</span>
-                      <span className="text-[10px] text-[#94a3b8]">
+                      <span className="text-xs text-[#94a3b8]">
                         Compare provider-specific reviews; disagreements are escalated to HITL
                       </span>
                     </div>
@@ -1280,7 +1280,7 @@ function StudioContent() {
                   <label className="flex items-center justify-between text-xs font-mono text-white cursor-pointer">
                     <div className="flex flex-col">
                       <span className="font-semibold text-white">Require Source Evidence</span>
-                      <span className="text-[10px] text-[#94a3b8]">
+                      <span className="text-xs text-[#94a3b8]">
                         Keep only examples with a source URL, content hash, and citation span
                       </span>
                     </div>
@@ -1298,7 +1298,7 @@ function StudioContent() {
                   <label className="flex items-center justify-between text-xs font-mono text-white cursor-pointer">
                     <div className="flex flex-col">
                       <span className="font-semibold text-white">Prioritize AI Kosh &amp; IndiaAI</span>
-                      <span className="text-[10px] text-[#94a3b8]">
+                      <span className="text-xs text-[#94a3b8]">
                         Query Indian statutory, GST, and legal open corpora first
                       </span>
                     </div>
@@ -1328,7 +1328,7 @@ function StudioContent() {
                 {showAdvanced && (
                   <div className="space-y-3 pt-3">
                     <div>
-                      <label className="text-[10px] font-mono uppercase text-[#94a3b8] block mb-1">
+                      <label className="text-xs font-mono uppercase text-[#94a3b8] block mb-1">
                         Script &amp; Orthography
                       </label>
                       <select
@@ -1343,7 +1343,7 @@ function StudioContent() {
                     </div>
 
                     <div>
-                      <label className="text-[10px] font-mono uppercase text-[#94a3b8] block mb-1">
+                      <label className="text-xs font-mono uppercase text-[#94a3b8] block mb-1">
                         Register &amp; Honorifics
                       </label>
                       <select
@@ -1359,11 +1359,11 @@ function StudioContent() {
 
                     <div>
                       <div className="flex items-center justify-between mb-1">
-                        <label className="text-[10px] font-mono uppercase text-[#94a3b8] flex items-center gap-1.5">
+                        <label className="text-xs font-mono uppercase text-[#94a3b8] flex items-center gap-1.5">
                           <ShieldCheck className="w-3.5 h-3.5 text-emerald-400" />
                           Anti-Domains &amp; Homonym Exclusions
                         </label>
-                        <span className="text-[9px] font-mono text-emerald-400">Polysemy Guard Active</span>
+                        <span className="text-xs font-mono text-emerald-400">Polysemy Guard Active</span>
                       </div>
                       <Input
                         value={antiDomainsInput}
@@ -1371,7 +1371,7 @@ function StudioContent() {
                         placeholder="e.g. glutathione, puccinia, uzbekistan (comma-separated)"
                         className="bg-[#0a0a0f] border-[#272738] text-xs font-mono text-white h-8"
                       />
-                      <p className="text-[10px] font-mono text-[#64748b] mt-1">
+                      <p className="text-xs font-mono text-[#64748b] mt-1">
                         Excludes cross-discipline collisions, foreign statutory codes, and unrelated scientific homonyms.
                       </p>
                     </div>
@@ -1420,14 +1420,14 @@ function StudioContent() {
                     </div>
 
                     {/* Tokenizer Fertility */}
-                    <div className="p-2.5 rounded-md bg-[#0a0a0f] border border-[#272738] font-mono text-[11px] space-y-1">
-                      <div className="flex justify-between items-center text-[10px]">
+                    <div className="p-2.5 rounded-md bg-[#0a0a0f] border border-[#272738] font-mono text-xs space-y-1">
+                      <div className="flex justify-between items-center text-xs">
                         <span className="text-[#94a3b8] uppercase font-bold">Tokenizer Efficiency</span>
                         <span className="text-[#10b981] font-bold">
                           {isIndicOrHinglish ? `~${estSavings}% Token Savings` : 'Standard Latin'}
                         </span>
                       </div>
-                      <div className="flex justify-between text-[10px] text-[#94a3b8]">
+                      <div className="flex justify-between text-xs text-[#94a3b8]">
                         <span>Llama-3: {estLlama3Fertility} t/w</span>
                         <span className="text-[#10b981]">Sarvam: {estSarvamFertility} t/w</span>
                       </div>

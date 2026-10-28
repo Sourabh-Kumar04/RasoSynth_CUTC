@@ -100,7 +100,7 @@ export function TopNav() {
                 <Search className="w-3.5 h-3.5 text-[#94a3b8] group-hover:text-[#f26625] transition-colors" />
                 <span className="truncate">Search studio, presets, datasets...</span>
               </div>
-              <kbd className="px-1.5 py-0.5 rounded bg-[#161622] border border-[#272738] text-[10px] font-mono text-[#94a3b8] group-hover:text-white group-hover:border-[#3b3b52]">
+              <kbd className="px-1.5 py-0.5 rounded bg-[#161622] border border-[#272738] text-xs font-mono text-[#94a3b8] group-hover:text-white group-hover:border-[#3b3b52]">
                 ⌘K
               </kbd>
             </button>

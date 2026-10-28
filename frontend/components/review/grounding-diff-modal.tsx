@@ -93,11 +93,11 @@ export function GroundingDiffModal({
                 <h2 className="text-sm font-bold text-white tracking-wide">
                   Source-to-Synthesis Grounding Diff
                 </h2>
-                <span className="font-mono text-[10px] px-2 py-0.5 rounded bg-[#161622] text-[#94a3b8] border border-[#272738]">
+                <span className="font-mono text-xs px-2 py-0.5 rounded bg-[#161622] text-[#94a3b8] border border-[#272738]">
                   ID: {item.id.slice(0, 8)}
                 </span>
                 <span className={clsx(
-                  "font-mono text-[10px] px-2 py-0.5 rounded border uppercase font-semibold",
+                  "font-mono text-xs px-2 py-0.5 rounded border uppercase font-semibold",
                   item.review_status === 'approved' ? 'bg-emerald-950/40 text-emerald-400 border-emerald-500/40' :
                   item.review_status === 'rejected' ? 'bg-rose-950/40 text-rose-400 border-rose-500/40' :
                   item.review_status === 'flagged' ? 'bg-amber-950/40 text-amber-400 border-amber-500/40' :
@@ -161,25 +161,25 @@ export function GroundingDiffModal({
         {/* Metrics Banner */}
         <div className="grid grid-cols-2 sm:grid-cols-5 gap-3 px-6 py-3 bg-[#09090f] border-b border-[#272738] text-xs font-mono">
           <div className="flex flex-col">
-            <span className="text-[10px] text-[#94a3b8] uppercase">Quality Score</span>
+            <span className="text-xs text-[#94a3b8] uppercase">Quality Score</span>
             <span className="text-sm font-bold text-emerald-400">{(item.quality_score * 100).toFixed(1)}%</span>
           </div>
           <div className="flex flex-col">
-            <span className="text-[10px] text-[#94a3b8] uppercase">Hallucination Risk</span>
+            <span className="text-xs text-[#94a3b8] uppercase">Hallucination Risk</span>
             <span className={clsx("text-sm font-bold", item.hallucination_risk < 0.15 ? "text-emerald-400" : "text-amber-400")}>
               {(item.hallucination_risk * 100).toFixed(1)}%
             </span>
           </div>
           <div className="flex flex-col">
-            <span className="text-[10px] text-[#94a3b8] uppercase">Expansion Ratio</span>
+            <span className="text-xs text-[#94a3b8] uppercase">Expansion Ratio</span>
             <span className="text-sm font-bold text-[#f26625]">{expansionRatio}x ({sourceWordCount}w → {responseWordCount}w)</span>
           </div>
           <div className="flex flex-col">
-            <span className="text-[10px] text-[#94a3b8] uppercase">Diversity Score</span>
+            <span className="text-xs text-[#94a3b8] uppercase">Diversity Score</span>
             <span className="text-sm font-bold text-cyan-400">{(item.diversity_score * 100).toFixed(1)}%</span>
           </div>
           <div className="flex flex-col">
-            <span className="text-[10px] text-[#94a3b8] uppercase">Engine Mode</span>
+            <span className="text-xs text-[#94a3b8] uppercase">Engine Mode</span>
             <span className="text-sm font-bold text-purple-300 truncate">
               {item.metadata?.synthesis_mode || item.metadata?.engine || 'Cognitive CoT'}
             </span>
@@ -199,7 +199,7 @@ export function GroundingDiffModal({
                       Chosen Response (High Fidelity)
                     </span>
                   </div>
-                  <span className="text-[10px] font-mono text-emerald-400/80">
+                  <span className="text-xs font-mono text-emerald-400/80">
                     {responseWordCount} words
                   </span>
                 </div>
@@ -217,7 +217,7 @@ export function GroundingDiffModal({
                       Rejected Candidate (Baseline / Flawed)
                     </span>
                   </div>
-                  <span className="text-[10px] font-mono text-rose-400/80">
+                  <span className="text-xs font-mono text-rose-400/80">
                     {item.metadata.rejected_response.split(/\s+/).filter(Boolean).length} words
                   </span>
                 </div>
@@ -237,14 +237,14 @@ export function GroundingDiffModal({
                       Raw Source Grounding
                     </h3>
                   </div>
-                  <span className="text-[10px] font-mono text-[#94a3b8]">
+                  <span className="text-xs font-mono text-[#94a3b8]">
                     {sourceWordCount} words · {rawSource.length} chars
                   </span>
                 </div>
 
                 {item.source_url && (
                   <div className="flex items-center gap-1.5 text-xs font-mono text-[#94a3b8] bg-[#12121a] p-2 rounded border border-[#272738]">
-                    <span className="text-[10px] uppercase text-[#f26625] font-bold">URI:</span>
+                    <span className="text-xs uppercase text-[#f26625] font-bold">URI:</span>
                     <a
                       href={item.source_url}
                       target="_blank"
@@ -271,14 +271,14 @@ export function GroundingDiffModal({
                       Synthesized Output & Reasoning
                     </h3>
                   </div>
-                  <span className="text-[10px] font-mono text-[#94a3b8]">
+                  <span className="text-xs font-mono text-[#94a3b8]">
                     {responseWordCount} words · {item.response.length} chars
                   </span>
                 </div>
 
                 {/* Prompt / Instruction */}
                 <div className="bg-[#12121a] border border-[#272738] rounded-md p-3 space-y-1">
-                  <span className="text-[10px] font-mono uppercase tracking-wider text-[#f26625] font-bold block">
+                  <span className="text-xs font-mono uppercase tracking-wider text-[#f26625] font-bold block">
                     Curriculum Prompt / Instruction:
                   </span>
                   <p className="text-xs font-medium text-white font-sans leading-relaxed">
@@ -290,13 +290,13 @@ export function GroundingDiffModal({
                 {cotTrace && (
                   <div className="rounded-md border border-amber-900/40 bg-amber-950/20 p-3 space-y-1">
                     <div className="flex items-center justify-between">
-                      <span className="text-[10px] font-mono uppercase tracking-wider text-amber-400 font-bold flex items-center gap-1">
+                      <span className="text-xs font-mono uppercase tracking-wider text-amber-400 font-bold flex items-center gap-1">
                         <Sparkles className="h-3 w-3" />
                         Chain-of-Thought (CoT) Trajectory
                       </span>
-                      <span className="text-[9px] font-mono text-amber-400/80">DeepSeek-R1 / o1 Reasoning</span>
+                      <span className="text-xs font-mono text-amber-400/80">DeepSeek-R1 / o1 Reasoning</span>
                     </div>
-                    <div className="text-[11px] font-mono text-amber-200/90 whitespace-pre-wrap bg-[#050508] p-2 rounded border border-amber-950/60 max-h-36 overflow-y-auto leading-relaxed">
+                    <div className="text-xs font-mono text-amber-200/90 whitespace-pre-wrap bg-[#050508] p-2 rounded border border-amber-950/60 max-h-36 overflow-y-auto leading-relaxed">
                       {cotTrace}
                     </div>
                   </div>
@@ -314,7 +314,7 @@ export function GroundingDiffModal({
         {/* Modal Footer / Direct Actions */}
         <div className="flex items-center justify-between px-6 py-3 border-t border-[#272738] bg-[#12121a]">
           <div className="text-xs text-[#94a3b8] font-mono flex items-center gap-2">
-            <span>Press <kbd className="px-1.5 py-0.5 rounded bg-[#161622] text-white border border-[#272738] text-[10px]">ESC</kbd> to close</span>
+            <span>Press <kbd className="px-1.5 py-0.5 rounded bg-[#161622] text-white border border-[#272738] text-xs">ESC</kbd> to close</span>
           </div>
 
           <div className="flex items-center gap-2">

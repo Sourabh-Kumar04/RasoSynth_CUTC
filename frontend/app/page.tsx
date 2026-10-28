@@ -364,7 +364,7 @@ export default function ZenPortalPage() {
               <span className="font-display text-sm font-bold tracking-tight text-white">
                 Raso<span className="bg-gradient-to-r from-[#f26625] via-[#ff8238] to-[#f59e0b] bg-clip-text text-transparent">Synth</span><span className="text-[#94a3b8] font-semibold">Tune</span>
               </span>
-              <span className="text-[9px] font-mono text-zinc-400 uppercase tracking-widest">
+              <span className="text-xs font-mono text-zinc-400 uppercase tracking-widest">
                 Sovereign Synthesis Hub
               </span>
             </div>
@@ -392,7 +392,7 @@ export default function ZenPortalPage() {
         <div className="flex items-center space-x-3">
           <Link
             href="/providers"
-            className="hidden sm:flex items-center space-x-2 text-[10px] font-mono px-2.5 py-1 rounded bg-[#12121a] border border-[#272738] text-zinc-300 hover:border-[#f26625]/40 transition-colors"
+            className="hidden sm:flex items-center space-x-2 text-xs font-mono px-2.5 py-1 rounded bg-[#12121a] border border-[#272738] text-zinc-300 hover:border-[#f26625]/40 transition-colors"
           >
             <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
             <span>7 ENGINES CONFIGURED</span>
@@ -431,7 +431,7 @@ export default function ZenPortalPage() {
             exit={{ opacity: 0, height: 0 }}
             className="md:hidden relative z-30 bg-[#0d0d15] border-b border-[#272738] px-6 py-4 space-y-3 font-mono text-xs overflow-hidden"
           >
-            <div className="text-[10px] uppercase tracking-wider text-zinc-400 pb-1 border-b border-[#1c1c28]">
+            <div className="text-xs uppercase tracking-wider text-zinc-400 pb-1 border-b border-[#1c1c28]">
               Platform Navigation
             </div>
             <div className="grid grid-cols-2 gap-2 text-zinc-300">
@@ -516,7 +516,7 @@ export default function ZenPortalPage() {
                 <ArrowRight className="w-3 h-3 text-[#f26625]" />
               </Link>
             </div>
-            <div className="pt-2 flex items-center justify-between text-[11px] text-zinc-400 border-t border-[#1c1c28]">
+            <div className="pt-2 flex items-center justify-between text-xs text-zinc-400 border-t border-[#1c1c28]">
               <a href="#engines" onClick={() => setIsMobileMenuOpen(false)} className="hover:text-white">Engines</a>
               <a href="#dag" onClick={() => setIsMobileMenuOpen(false)} className="hover:text-white">Architecture</a>
               <a href="#dbom" onClick={() => setIsMobileMenuOpen(false)} className="hover:text-white">DBOM</a>
@@ -536,7 +536,7 @@ export default function ZenPortalPage() {
           initial={{ opacity: 0, y: -10 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.6 }}
-          className="inline-flex items-center space-x-2 px-3.5 py-1 rounded-full bg-[#12121a]/90 border border-[#272738] text-[10px] font-mono text-zinc-400 mb-6 backdrop-blur-md shadow-sm"
+          className="inline-flex items-center space-x-2 px-3.5 py-1 rounded-full bg-[#12121a]/90 border border-[#272738] text-xs font-mono text-zinc-400 mb-6 backdrop-blur-md shadow-sm"
         >
           <span className="w-1.5 h-1.5 rounded-full bg-[#f26625] animate-ping" />
           <span className="tracking-widest uppercase text-white font-semibold">SYNTH_NEXUS // VERIFIED DBOM</span>
@@ -588,7 +588,7 @@ export default function ZenPortalPage() {
           {/* Engine Selector Pills */}
           <div className="pt-3 border-t border-[#1c1c28] flex flex-wrap items-center justify-between gap-3">
             <div className="flex items-center flex-wrap gap-1">
-              <span className="text-[10px] font-mono text-zinc-500 mr-1 uppercase">Engine:</span>
+              <span className="text-xs font-mono text-zinc-500 mr-1 uppercase">Engine:</span>
               {ENGINES.map((eng) => {
                 const isSelected = selectedEngine === eng.id
                 return (
@@ -599,7 +599,7 @@ export default function ZenPortalPage() {
                       setSelectedEngine(eng.id)
                     }}
                     className={clsx(
-                      'relative px-2.5 py-1 rounded text-[10px] font-mono transition-all',
+                      'relative px-2.5 py-1 rounded text-xs font-mono transition-all',
                       isSelected
                         ? 'text-white font-semibold'
                         : 'text-zinc-400 hover:text-zinc-200 hover:bg-[#161622]'
@@ -657,14 +657,14 @@ export default function ZenPortalPage() {
           transition={{ duration: 0.6, delay: 0.4 }}
           className="mt-6 flex flex-wrap items-center justify-center gap-2 max-w-2xl"
         >
-          <span className="text-[10px] font-mono text-zinc-500 uppercase tracking-widest mr-1">
+          <span className="text-xs font-mono text-zinc-500 uppercase tracking-widest mr-1">
             Presets:
           </span>
           {QUICK_SEEDS.map((seed, idx) => (
             <button
               key={idx}
               onClick={() => handleApplySeed(seed)}
-              className="px-2.5 py-1 rounded-full bg-[#12121a] hover:bg-[#1c1c28] border border-[#272738] hover:border-[#f26625]/50 text-[10px] font-mono text-zinc-300 transition-colors shadow-sm active:scale-95"
+              className="px-2.5 py-1 rounded-full bg-[#12121a] hover:bg-[#1c1c28] border border-[#272738] hover:border-[#f26625]/50 text-xs font-mono text-zinc-300 transition-colors shadow-sm active:scale-95"
             >
               {seed.label}
             </button>
@@ -672,7 +672,7 @@ export default function ZenPortalPage() {
         </motion.div>
 
         {/* Real-time Telemetry Strip */}
-        <div className="mt-12 flex flex-wrap items-center justify-center gap-6 text-[11px] font-mono text-zinc-500 border-t border-[#1c1c28]/60 pt-6">
+        <div className="mt-12 flex flex-wrap items-center justify-center gap-6 text-xs font-mono text-zinc-500 border-t border-[#1c1c28]/60 pt-6">
           <Link href="/observability" className="flex items-center gap-2 hover:text-zinc-300 transition-colors group">
             <Server className="w-3.5 h-3.5 text-[#f26625]" />
             <span>Worker Pool: <strong className="text-zinc-200 font-normal group-hover:text-white">8 Threads Configured</strong></span>
@@ -696,7 +696,7 @@ export default function ZenPortalPage() {
       <section id="engines" className="relative z-10 max-w-6xl mx-auto px-6 py-20 border-t border-[#1c1c28]">
         <div className="flex flex-col sm:flex-row sm:items-end justify-between mb-8 gap-4">
           <div>
-            <div className="flex items-center space-x-2 text-[10px] font-mono uppercase tracking-widest text-[#f26625] mb-1">
+            <div className="flex items-center space-x-2 text-xs font-mono uppercase tracking-widest text-[#f26625] mb-1">
               <Layers className="w-3.5 h-3.5" />
               <span>Cognitive Architecture</span>
             </div>
@@ -738,18 +738,18 @@ export default function ZenPortalPage() {
                   )}
                 >
                   <div className="flex items-center justify-between mb-1">
-                    <span className="text-[10px] font-mono px-2 py-0.5 rounded bg-[#1c1c28] text-white font-semibold">
+                    <span className="text-xs font-mono px-2 py-0.5 rounded bg-[#1c1c28] text-white font-semibold">
                       {eng.badge}
                     </span>
                     {isCurrent && (
-                      <span className="flex items-center gap-1 text-[10px] font-mono text-[#f26625]">
+                      <span className="flex items-center gap-1 text-xs font-mono text-[#f26625]">
                         <CheckCircle2 className="w-3 h-3" />
                         Selected
                       </span>
                     )}
                   </div>
                   <h3 className="text-xs font-bold text-white">{eng.name}</h3>
-                  <p className="text-[11px] text-zinc-400 mt-0.5 leading-relaxed">{eng.description}</p>
+                  <p className="text-xs text-zinc-400 mt-0.5 leading-relaxed">{eng.description}</p>
                 </div>
               )
             })}
@@ -769,7 +769,7 @@ export default function ZenPortalPage() {
               </div>
               <button
                 onClick={() => handleCopyCode(JSON.stringify(currentEngineObj.sample, null, 2))}
-                className="flex items-center gap-1.5 px-2.5 py-1 rounded bg-[#161622] hover:bg-[#202030] text-zinc-300 hover:text-white text-[11px] font-mono transition-colors"
+                className="flex items-center gap-1.5 px-2.5 py-1 rounded bg-[#161622] hover:bg-[#202030] text-zinc-300 hover:text-white text-xs font-mono transition-colors"
               >
                 {copiedCode ? <Check className="w-3 h-3 text-emerald-400" /> : <Copy className="w-3 h-3" />}
                 <span>{copiedCode ? 'Copied' : 'Copy Sample'}</span>
@@ -777,13 +777,13 @@ export default function ZenPortalPage() {
             </div>
 
             {/* Structured Preview */}
-            <div className="rounded-lg bg-[#050508] border border-[#1a1a24] p-4 font-mono text-[11px] text-zinc-300 leading-relaxed overflow-x-auto max-h-[380px] space-y-3">
+            <div className="rounded-lg bg-[#050508] border border-[#1a1a24] p-4 font-mono text-xs text-zinc-300 leading-relaxed overflow-x-auto max-h-[380px] space-y-3">
               <pre className="text-emerald-400 whitespace-pre-wrap">
                 {JSON.stringify(currentEngineObj.sample, null, 2)}
               </pre>
             </div>
 
-            <div className="pt-2 border-t border-[#1c1c28] flex items-center justify-between text-[10px] font-mono text-zinc-500">
+            <div className="pt-2 border-t border-[#1c1c28] flex items-center justify-between text-xs font-mono text-zinc-500">
               <span>Grounding Invariant: Strict DPDP Act &amp; Citation Rules</span>
               <span className="text-[#f26625]">Example quality score: 0.94 / 1.00 (illustrative, not a live result)</span>
             </div>
@@ -796,7 +796,7 @@ export default function ZenPortalPage() {
       ───────────────────────────────────────────────────────────── */}
       <section id="dag" className="relative z-10 max-w-6xl mx-auto px-6 py-20 border-t border-[#1c1c28]">
         <div className="mb-12 text-center max-w-2xl mx-auto">
-          <div className="inline-flex items-center space-x-2 text-[10px] font-mono uppercase tracking-widest text-[#f26625] mb-2">
+          <div className="inline-flex items-center space-x-2 text-xs font-mono uppercase tracking-widest text-[#f26625] mb-2">
             <GitBranch className="w-3.5 h-3.5" />
             <span>Distributed Orchestration DAG</span>
           </div>
@@ -811,7 +811,7 @@ export default function ZenPortalPage() {
         {/* Dynamic Vector Architecture Stream */}
         <SynthesisFlowDiagram />
 
-        <div className="mt-4 p-3 rounded-lg bg-[#0e0e16] border border-[#1f1f2e] text-[10px] font-mono text-zinc-400 text-center">
+        <div className="mt-4 p-3 rounded-lg bg-[#0e0e16] border border-[#1f1f2e] text-xs font-mono text-zinc-400 text-center">
           * Latency benchmarked on local multi-worker container setup (45ms corpus discovery, 280ms synthesis, 120ms neural evaluation, 15ms Merkle packaging). Real LLM provider API latency varies from 1.2s to 4.5s depending on model and context window size.
         </div>
       </section>
@@ -822,7 +822,7 @@ export default function ZenPortalPage() {
       <section id="dbom" className="relative z-10 max-w-6xl mx-auto px-6 py-20 border-t border-[#1c1c28]">
         <div className="mb-10 flex flex-col sm:flex-row sm:items-end justify-between gap-4">
           <div>
-            <div className="flex items-center space-x-2 text-[10px] font-mono uppercase tracking-widest text-purple-400 mb-1">
+            <div className="flex items-center space-x-2 text-xs font-mono uppercase tracking-widest text-purple-400 mb-1">
               <ShieldCheck className="w-3.5 h-3.5" />
               <span>Cryptographic Provenance Guarantee</span>
             </div>
@@ -884,31 +884,31 @@ export default function ZenPortalPage() {
 
               <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                 <div className="p-3 rounded-lg bg-[#07060d] border border-purple-900/30 space-y-1.5">
-                  <span className="text-[10px] text-[#f26625] font-bold">STEP 1: Export Payload</span>
-                  <p className="text-[11px] text-zinc-400 font-sans">
+                  <span className="text-xs text-[#f26625] font-bold">STEP 1: Export Payload</span>
+                  <p className="text-xs text-zinc-400 font-sans">
                     Download the raw certified JSONL samples from the dataset library.
                   </p>
-                  <code className="text-[10px] text-purple-300 block bg-[#12101e] p-1.5 rounded overflow-x-auto">
+                  <code className="text-xs text-purple-300 block bg-[#12101e] p-1.5 rounded overflow-x-auto">
                     curl -s https://rasosynthtune.vercel.app/api/export -o samples.jsonl
                   </code>
                 </div>
 
                 <div className="p-3 rounded-lg bg-[#07060d] border border-purple-900/30 space-y-1.5">
-                  <span className="text-[10px] text-purple-400 font-bold">STEP 2: Compute SHA-256</span>
-                  <p className="text-[11px] text-zinc-400 font-sans">
+                  <span className="text-xs text-purple-400 font-bold">STEP 2: Compute SHA-256</span>
+                  <p className="text-xs text-zinc-400 font-sans">
                     Run native standard SHA-256 on your local machine to obtain leaf digests.
                   </p>
-                  <code className="text-[10px] text-purple-300 block bg-[#12101e] p-1.5 rounded overflow-x-auto">
+                  <code className="text-xs text-purple-300 block bg-[#12101e] p-1.5 rounded overflow-x-auto">
                     python3 -c &quot;import hashlib; print(hashlib.sha256(open(&apos;samples.jsonl&apos;,&apos;rb&apos;).read()).hexdigest())&quot;
                   </code>
                 </div>
 
                 <div className="p-3 rounded-lg bg-[#07060d] border border-purple-900/30 space-y-1.5">
-                  <span className="text-[10px] text-emerald-400 font-bold">STEP 3: Fold Merkle Parent</span>
-                  <p className="text-[11px] text-zinc-400 font-sans">
+                  <span className="text-xs text-emerald-400 font-bold">STEP 3: Fold Merkle Parent</span>
+                  <p className="text-xs text-zinc-400 font-sans">
                     Pairwise hash siblings: H(Leaf0 || Leaf1). Example 64-hex root (illustrative):
                   </p>
-                  <code className="text-[10px] text-emerald-300 block bg-[#12101e] p-1.5 rounded overflow-x-auto truncate">
+                  <code className="text-xs text-emerald-300 block bg-[#12101e] p-1.5 rounded overflow-x-auto truncate">
                     9b87df7a3982f6e9b418a096c429712a5542a1ef248f27af3b028da3d91cf972
                   </code>
                 </div>
@@ -917,14 +917,14 @@ export default function ZenPortalPage() {
               {/* In-Browser Interactive Recomputation Bar */}
               <div className="pt-3 border-t border-purple-900/40 flex flex-col sm:flex-row sm:items-center justify-between gap-3 bg-[#0a0814] p-3 rounded-lg border border-purple-950">
                 <div className="space-y-0.5">
-                  <div className="flex items-center space-x-1.5 text-white font-bold text-[11px]">
+                  <div className="flex items-center space-x-1.5 text-white font-bold text-xs">
                     <CheckCircle2 className="w-3.5 h-3.5 text-emerald-400" />
                     <span className="inline-flex items-center rounded-sm border border-amber-500/30 bg-amber-500/10 px-1.5 py-0.5 font-mono text-xs font-bold text-amber-400">
                       DEMO
                     </span>
                     <span>In-Browser Demo Verifier (2 example samples)</span>
                   </div>
-                  <p className="text-[10px] text-zinc-400 font-sans">
+                  <p className="text-xs text-zinc-400 font-sans">
                     Demo only: hashes 2 fixed example samples in-browser. It does not hash or verify any active dataset.
                   </p>
                 </div>
@@ -933,7 +933,7 @@ export default function ZenPortalPage() {
                   type="button"
                   onClick={handleRecomputeClientSide}
                   disabled={isRecomputing}
-                  className="px-3 py-1.5 rounded bg-purple-600/30 hover:bg-purple-600/50 border border-purple-500/50 text-white text-[11px] font-mono transition-all flex items-center justify-center space-x-1.5 disabled:opacity-50 shrink-0"
+                  className="px-3 py-1.5 rounded bg-purple-600/30 hover:bg-purple-600/50 border border-purple-500/50 text-white text-xs font-mono transition-all flex items-center justify-center space-x-1.5 disabled:opacity-50 shrink-0"
                 >
                   {isRecomputing ? (
                     <div className="w-3 h-3 border-2 border-white border-t-transparent rounded-full animate-spin" />
@@ -945,12 +945,12 @@ export default function ZenPortalPage() {
               </div>
 
               {recomputedRoot && (
-                <div className="p-2.5 rounded bg-[#0e1612] border border-emerald-500/40 text-emerald-300 text-[11px] space-y-1">
+                <div className="p-2.5 rounded bg-[#0e1612] border border-emerald-500/40 text-emerald-300 text-xs space-y-1">
                   <div className="flex items-center space-x-2 font-bold">
                     <Check className="w-3.5 h-3.5 text-emerald-400" />
                     <span>Demo recomputation complete: root of the 2 example samples (not compared to any stored dataset root)</span>
                   </div>
-                  <div className="font-mono text-[10px] break-all text-zinc-300 bg-[#070b09] p-1.5 rounded">
+                  <div className="font-mono text-xs break-all text-zinc-300 bg-[#070b09] p-1.5 rounded">
                     Root: {recomputedRoot}
                   </div>
                 </div>
@@ -962,7 +962,7 @@ export default function ZenPortalPage() {
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
           {/* Left Column: Interactive Merkle Tree Graph */}
           <div className="lg:col-span-7">
-            <p className="text-[11px] font-mono text-amber-300 mb-3">Example attestation - the root, certificate ID, sample count, and date below are illustrative, not fetched from a live dataset.</p>
+            <p className="text-xs font-mono text-amber-300 mb-3">Example attestation - the root, certificate ID, sample count, and date below are illustrative, not fetched from a live dataset.</p>
             <MerkleTreeGraph
               rootHash="9b87df7a3982f6e9b418a096c429712a5542a1ef248f27af3b028da3d91cf972"
               certificateId="DBOM-VERIFIED-DATASET"
@@ -980,7 +980,7 @@ export default function ZenPortalPage() {
                   Data Nutrition Facts (Reference Example)
                 </span>
               </div>
-              <span className="text-[10px] font-mono text-emerald-400 font-semibold">Reference Example</span>
+              <span className="text-xs font-mono text-emerald-400 font-semibold">Reference Example</span>
             </div>
 
             <div className="space-y-2.5 text-xs font-mono">
@@ -1032,7 +1032,7 @@ export default function ZenPortalPage() {
       ───────────────────────────────────────────────────────────── */}
       <section id="quality" className="relative z-10 max-w-6xl mx-auto px-6 py-20 border-t border-[#1c1c28]">
         <div className="mb-10 text-center max-w-2xl mx-auto">
-          <div className="inline-flex items-center space-x-2 text-[10px] font-mono uppercase tracking-widest text-[#10b981] mb-2">
+          <div className="inline-flex items-center space-x-2 text-xs font-mono uppercase tracking-widest text-[#10b981] mb-2">
             <BarChart3 className="w-3.5 h-3.5" />
             <span>Neural Quality Scorer</span>
           </div>
@@ -1046,36 +1046,36 @@ export default function ZenPortalPage() {
 
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
           <div className="p-5 rounded-xl border border-[#272738] bg-[#0c0c14] space-y-2">
-            <span className="text-[10px] font-mono text-zinc-500 uppercase">Reasoning Depth</span>
+            <span className="text-xs font-mono text-zinc-500 uppercase">Reasoning Depth</span>
             <div className="text-2xl font-bold text-white font-mono">+48.2%</div>
-            <p className="text-[11px] text-zinc-400">Cognitive multi-step reasoning steps vs generic web crawling.</p>
+            <p className="text-xs text-zinc-400">Cognitive multi-step reasoning steps vs generic web crawling.</p>
             <div className="w-full bg-[#1c1c28] h-1.5 rounded-full overflow-hidden mt-3">
               <div className="bg-[#f26625] h-full rounded-full" style={{ width: '92%' }} />
             </div>
           </div>
 
           <div className="p-5 rounded-xl border border-[#272738] bg-[#0c0c14] space-y-2">
-            <span className="text-[10px] font-mono text-zinc-500 uppercase">Statutory Grounding</span>
+            <span className="text-xs font-mono text-zinc-500 uppercase">Statutory Grounding</span>
             <div className="text-2xl font-bold text-emerald-400 font-mono">99.4%</div>
-            <p className="text-[11px] text-zinc-400">Verified statutory and circular citations with zero hallucination.</p>
+            <p className="text-xs text-zinc-400">Verified statutory and circular citations with zero hallucination.</p>
             <div className="w-full bg-[#1c1c28] h-1.5 rounded-full overflow-hidden mt-3">
               <div className="bg-emerald-400 h-full rounded-full" style={{ width: '99%' }} />
             </div>
           </div>
 
           <div className="p-5 rounded-xl border border-[#272738] bg-[#0c0c14] space-y-2">
-            <span className="text-[10px] font-mono text-zinc-500 uppercase">Script Fidelity</span>
+            <span className="text-xs font-mono text-zinc-500 uppercase">Script Fidelity</span>
             <div className="text-2xl font-bold text-purple-400 font-mono">99.8%</div>
-            <p className="text-[11px] text-zinc-400">Zero Romanized transliteration leakage on native Indic corpora.</p>
+            <p className="text-xs text-zinc-400">Zero Romanized transliteration leakage on native Indic corpora.</p>
             <div className="w-full bg-[#1c1c28] h-1.5 rounded-full overflow-hidden mt-3">
               <div className="bg-purple-400 h-full rounded-full" style={{ width: '99.8%' }} />
             </div>
           </div>
 
           <div className="p-5 rounded-xl border border-[#272738] bg-[#0c0c14] space-y-2">
-            <span className="text-[10px] font-mono text-zinc-500 uppercase">Deduplication Distance</span>
+            <span className="text-xs font-mono text-zinc-500 uppercase">Deduplication Distance</span>
             <div className="text-2xl font-bold text-cyan-400 font-mono">0.85</div>
-            <p className="text-[11px] text-zinc-400">Cosine similarity threshold eliminating redundant synthetic tokens.</p>
+            <p className="text-xs text-zinc-400">Cosine similarity threshold eliminating redundant synthetic tokens.</p>
             <div className="w-full bg-[#1c1c28] h-1.5 rounded-full overflow-hidden mt-3">
               <div className="bg-cyan-400 h-full rounded-full" style={{ width: '85%' }} />
             </div>
@@ -1088,7 +1088,7 @@ export default function ZenPortalPage() {
       ───────────────────────────────────────────────────────────── */}
       <section id="sdk" className="relative z-10 max-w-6xl mx-auto px-6 py-20 border-t border-[#1c1c28]">
         <div className="mb-10 text-center max-w-2xl mx-auto">
-          <div className="inline-flex items-center space-x-2 text-[10px] font-mono uppercase tracking-widest text-[#f26625] mb-2">
+          <div className="inline-flex items-center space-x-2 text-xs font-mono uppercase tracking-widest text-[#f26625] mb-2">
             <Terminal className="w-3.5 h-3.5" />
             <span>Developer Integration</span>
           </div>
@@ -1126,7 +1126,7 @@ export default function ZenPortalPage() {
 
             <button
               onClick={() => handleCopyCode(CODE_SNIPPETS[codeTab])}
-              className="flex items-center gap-1.5 px-2.5 py-1 rounded bg-[#161622] hover:bg-[#202030] text-zinc-300 hover:text-white text-[11px] font-mono transition-colors"
+              className="flex items-center gap-1.5 px-2.5 py-1 rounded bg-[#161622] hover:bg-[#202030] text-zinc-300 hover:text-white text-xs font-mono transition-colors"
             >
               {copiedCode ? <Check className="w-3 h-3 text-emerald-400" /> : <Copy className="w-3 h-3" />}
               <span>{copiedCode ? 'Copied' : 'Copy'}</span>
@@ -1154,10 +1154,10 @@ export default function ZenPortalPage() {
                   Raso<span className="bg-gradient-to-r from-[#f26625] via-[#ff8238] to-[#f59e0b] bg-clip-text text-transparent">Synth</span><span className="text-[#94a3b8] font-semibold">Tune</span>
                 </span>
               </div>
-              <p className="text-[11px] text-zinc-400 leading-relaxed font-sans">
+              <p className="text-xs text-zinc-400 leading-relaxed font-sans">
                 Autonomous dataset synthesis and evaluation orchestration platform for frontier AI models.
               </p>
-              <div className="flex items-center gap-2 text-[10px] text-emerald-400">
+              <div className="flex items-center gap-2 text-xs text-emerald-400">
                 <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
                 <span>Hybrid Standalone · Operational</span>
               </div>
@@ -1165,8 +1165,8 @@ export default function ZenPortalPage() {
 
             {/* Col 2: Synthesis Engines */}
             <div className="space-y-2">
-              <span className="text-zinc-200 font-bold uppercase tracking-wider text-[11px]">7 Engines</span>
-              <ul className="space-y-1.5 text-zinc-400 text-[11px]">
+              <span className="text-zinc-200 font-bold uppercase tracking-wider text-xs">7 Engines</span>
+              <ul className="space-y-1.5 text-zinc-400 text-xs">
                 <li>Chain-of-Thought (CoT)</li>
                 <li>Socratic Dialectic</li>
                 <li>DPO Preference Pairs</li>
@@ -1179,8 +1179,8 @@ export default function ZenPortalPage() {
 
             {/* Col 3: Navigation */}
             <div className="space-y-2">
-              <span className="text-zinc-200 font-bold uppercase tracking-wider text-[11px]">Platform</span>
-              <ul className="space-y-1.5 text-zinc-400 text-[11px]">
+              <span className="text-zinc-200 font-bold uppercase tracking-wider text-xs">Platform</span>
+              <ul className="space-y-1.5 text-zinc-400 text-xs">
                 <li><Link href="/studio" className="hover:text-white transition-colors">Studio Lab</Link></li>
                 <li><Link href="/review" className="hover:text-white transition-colors">Review &amp; DBOM Audit</Link></li>
                 <li><Link href="/datasets" className="hover:text-white transition-colors">Attested Datasets</Link></li>
@@ -1191,8 +1191,8 @@ export default function ZenPortalPage() {
 
             {/* Col 4: Cryptographic Governance */}
             <div className="space-y-2">
-              <span className="text-zinc-200 font-bold uppercase tracking-wider text-[11px]">Governance</span>
-              <ul className="space-y-1.5 text-zinc-400 text-[11px]">
+              <span className="text-zinc-200 font-bold uppercase tracking-wider text-xs">Governance</span>
+              <ul className="space-y-1.5 text-zinc-400 text-xs">
                 <li>SHA-256 Merkle Provenance</li>
                 <li>Indian DPDP Act Masking</li>
                 <li>Data Nutrition Labels</li>
@@ -1202,7 +1202,7 @@ export default function ZenPortalPage() {
             </div>
           </div>
 
-          <div className="pt-8 border-t border-[#1c1c28]/60 flex flex-col sm:flex-row items-center justify-between text-[11px] font-mono text-zinc-500 gap-4">
+          <div className="pt-8 border-t border-[#1c1c28]/60 flex flex-col sm:flex-row items-center justify-between text-xs font-mono text-zinc-500 gap-4">
             <div className="flex flex-col sm:flex-row items-center gap-2 sm:gap-4">
               <p>© 2026 RasoSynthTune · Apache 2.0 Open Source Architecture</p>
               <span className="hidden sm:inline text-zinc-700">·</span>

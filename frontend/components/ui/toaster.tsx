@@ -74,7 +74,7 @@ export function Toaster() {
             <div className="flex-1 space-y-0.5">
               <p className="text-xs font-bold text-white">{toast.title}</p>
               {toast.description && (
-                <p className="text-[11px] text-[#94a3b8]">{toast.description}</p>
+                <p className="text-xs text-[#94a3b8]">{toast.description}</p>
               )}
             </div>
             <button

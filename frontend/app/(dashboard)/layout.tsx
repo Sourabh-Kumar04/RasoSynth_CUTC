@@ -36,13 +36,13 @@ export default function DashboardLayout({
               </Link>
               <span className="text-[#334155] hidden sm:inline">|</span>
               <FooterStatus />
-              <span className="text-[11px] text-amber-400/90 hidden lg:inline">
+              <span className="text-xs text-amber-400/90 hidden lg:inline">
                 (Demo Guard: $50 Cap · In-Memory Ring Logging)
               </span>
             </div>
 
             {/* Right: Quick Links, Docs, GitHub, Open Source */}
-            <div className="flex flex-wrap items-center justify-center gap-4 text-[11px]">
+            <div className="flex flex-wrap items-center justify-center gap-4 text-xs">
               <Link href="/observability" className="hover:text-white transition-colors flex items-center gap-1">
                 <Activity className="w-3 h-3 text-[#f26625]" />
                 <span>Telemetry</span>

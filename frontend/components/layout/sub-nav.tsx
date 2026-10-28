@@ -170,7 +170,7 @@ export function DashboardNavigation() {
         </nav>
 
         {/* Active Deployment Commit Marker */}
-        <div className="hidden lg:flex items-center space-x-2 shrink-0 pl-3 border-l border-[#22222e] text-[10px] font-mono text-zinc-500">
+        <div className="hidden lg:flex items-center space-x-2 shrink-0 pl-3 border-l border-[#22222e] text-xs font-mono text-zinc-500">
           <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
           <span className="text-zinc-400">v2.0.0</span>
           <span className="text-zinc-600">/</span>

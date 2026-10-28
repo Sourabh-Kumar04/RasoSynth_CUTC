@@ -6,6 +6,9 @@ import {
   List, Plus, ChevronDown, ChevronUp, Copy,
   CheckCircle2, AlertCircle, AlertTriangle, Loader2, X, Zap, Sparkles,
   Download, FileText, Check, Clock, Activity, FileCode2, Lock,
+  Bot,
+  Monitor,
+  Laptop
 } from 'lucide-react'
 import { clsx } from 'clsx'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
@@ -104,7 +107,7 @@ const STATUS_STRIPE: Record<FTJob['status'], string> = {
 
 function StatusPill({ status }: { status: FTJob['status'] }) {
   return (
-    <span className={clsx('inline-flex items-center gap-1.5 text-[10px] px-2 py-0.5 rounded-sm border font-mono font-medium shrink-0', STATUS_PILL[status])}>
+    <span className={clsx('inline-flex items-center gap-1.5 text-xs px-2 py-0.5 rounded-sm border font-mono font-medium shrink-0', STATUS_PILL[status])}>
       {status === 'running' && (
         <span className="w-1.5 h-1.5 rounded-full bg-[#10b981] animate-pulse" />
       )}
@@ -323,7 +326,7 @@ function DetailPane({ job, logs, lossHistory, onCancel, onCopy, onReconnect, log
 
           {/* Run Alias & Custom Notes */}
           <div className="pt-2 border-t border-[#1c1c28] space-y-2">
-            <div className="flex items-center justify-between text-[10px] font-mono uppercase text-[#94a3b8]">
+            <div className="flex items-center justify-between text-xs font-mono uppercase text-[#94a3b8]">
               <span>Run Name &amp; Notes</span>
               <span className="text-zinc-500">Persistent Metadata</span>
             </div>
@@ -436,10 +439,10 @@ function DetailPane({ job, logs, lossHistory, onCancel, onCopy, onReconnect, log
               <div className="p-3 rounded-md bg-[#0a0a0f] border border-cyan-500/30 text-xs font-mono space-y-2.5">
                 <div className="flex flex-wrap items-center justify-between gap-2">
                   <div className="flex items-center gap-2">
-                    <span className="px-2 py-0.5 rounded bg-cyan-950/60 border border-cyan-500/40 text-cyan-300 font-bold text-[11px]">
+                    <span className="px-2 py-0.5 rounded bg-cyan-950/60 border border-cyan-500/40 text-cyan-300 font-bold text-xs">
                       {ggufData.format}
                     </span>
-                    <span className="text-[#94a3b8] text-[11px]">{ggufData.file_size_mb} MB</span>
+                    <span className="text-[#94a3b8] text-xs">{ggufData.file_size_mb} MB</span>
                   </div>
                   <div className="flex items-center gap-1.5">
                     <Button
@@ -462,24 +465,24 @@ function DetailPane({ job, logs, lossHistory, onCancel, onCopy, onReconnect, log
                 </div>
 
                 {/* Platform & Runtime Compatibility Badges */}
-                <div className="flex flex-wrap items-center gap-1.5 pt-1 border-t border-[#1f1f2e] text-[10px]">
+                <div className="flex flex-wrap items-center gap-1.5 pt-1 border-t border-[#1f1f2e] text-xs">
                   <span className="text-[#94a3b8]">Target Runtimes:</span>
                   <span className="px-1.5 py-0.5 rounded bg-[#161622] border border-[#272738] text-zinc-300 flex items-center gap-1">
-                    🦙 Ollama
+                    <Bot className="h-3 w-3" />Ollama
                   </span>
                   <span className="px-1.5 py-0.5 rounded bg-[#161622] border border-[#272738] text-zinc-300 flex items-center gap-1">
-                    🖥️ LM Studio
+                    <Monitor className="h-3 w-3" />LM Studio
                   </span>
                   <span className="px-1.5 py-0.5 rounded bg-[#161622] border border-[#272738] text-zinc-300 flex items-center gap-1">
-                    ⚡ vLLM / llama.cpp
+                    <Zap className="h-3 w-3" />vLLM / llama.cpp
                   </span>
-                  <span className="px-1.5 py-0.5 rounded bg-[#161622] border border-[#272738] text-emerald-400">
-                    🍏 Apple Metal + 🟢 NVIDIA CUDA
+                  <span className="px-1.5 py-0.5 rounded bg-[#161622] border border-[#272738] text-emerald-400 flex items-center gap-1">
+                    <Cpu className="h-3 w-3" />Apple Metal + NVIDIA CUDA
                   </span>
                 </div>
 
                 {/* Ollama 1-Click Run Helper */}
-                <div className="flex items-center justify-between pt-1 border-t border-[#1f1f2e] text-[11px]">
+                <div className="flex items-center justify-between pt-1 border-t border-[#1f1f2e] text-xs">
                   <button
                     type="button"
                     onClick={handleFetchModelfile}
@@ -504,7 +507,7 @@ function DetailPane({ job, logs, lossHistory, onCancel, onCopy, onReconnect, log
                 </div>
 
                 {modelfileOpen && (
-                  <div className="p-2.5 bg-[#08080c] border border-[#272738] rounded max-h-36 overflow-y-auto text-[11px] font-mono text-[#94a3b8] whitespace-pre-wrap">
+                  <div className="p-2.5 bg-[#08080c] border border-[#272738] rounded max-h-36 overflow-y-auto text-xs font-mono text-[#94a3b8] whitespace-pre-wrap">
                     {modelfileText || 'Generating Modelfile...'}
                   </div>
                 )}
@@ -537,7 +540,7 @@ function DetailPane({ job, logs, lossHistory, onCancel, onCopy, onReconnect, log
             </div>
 
             {cardOpen && (
-              <div className="mt-2 p-3 bg-[#0a0a0f] border border-[#272738] rounded-md max-h-48 overflow-y-auto text-[11px] font-mono text-[#94a3b8] whitespace-pre-wrap">
+              <div className="mt-2 p-3 bg-[#0a0a0f] border border-[#272738] rounded-md max-h-48 overflow-y-auto text-xs font-mono text-[#94a3b8] whitespace-pre-wrap">
                 {cardLoading ? 'Generating verified model card...' : cardText}
               </div>
             )}
@@ -1193,7 +1196,7 @@ function FineTuneContent() {
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-[#272738] pb-4">
         <div>
           <div className="flex items-center gap-2.5 mb-1">
-            <span className="text-[10px] font-mono px-2 py-0.5 rounded-sm bg-[#f26625]/10 border border-[#f26625]/30 text-[#f26625] font-bold uppercase tracking-wider">
+            <span className="text-xs font-mono px-2 py-0.5 rounded-sm bg-[#f26625]/10 border border-[#f26625]/30 text-[#f26625] font-bold uppercase tracking-wider">
               Autonomous Training
             </span>
             <h1 className="text-2xl font-bold tracking-tight text-white font-display">
@@ -1241,7 +1244,7 @@ function FineTuneContent() {
           <Card key={key} className={clsx('border-l-4 bg-[#12121a]/90 backdrop-blur-sm border-[#272738] rounded-md card-shadow glow-card-hover group', stripe)}>
             <CardContent className="pt-4 pb-4 px-4 flex items-center justify-between">
               <div>
-                <p className="text-[10px] text-[#94a3b8] font-mono uppercase tracking-wider">{label}</p>
+                <p className="text-xs text-[#94a3b8] font-mono uppercase tracking-wider">{label}</p>
                 <p className={clsx('text-2xl font-bold font-mono mt-0.5 tnum tracking-tight', color)}>{counts[key]}</p>
               </div>
               <div className={clsx('w-9 h-9 rounded-md flex items-center justify-center border border-white/5 transition-transform group-hover:scale-110', bg)}>
@@ -1270,7 +1273,7 @@ function FineTuneContent() {
               <Section title="Dataset Source">
                 {pipelineDatasets.length > 0 && (
                   <div className="mb-3">
-                    <label className="text-[10px] mb-1 block font-bold font-mono uppercase text-[#f26625] flex items-center gap-1.5">
+                    <label className="text-xs mb-1 block font-bold font-mono uppercase text-[#f26625] flex items-center gap-1.5">
                       <Sparkles className="w-3 h-3 text-[#f26625]" />
                       Synthesized Datasets ({pipelineDatasets.length} available from pipeline)
                     </label>
@@ -1298,13 +1301,13 @@ function FineTuneContent() {
 
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                   <div>
-                    <label className="text-[10px] mb-1 block font-bold font-mono uppercase text-[#94a3b8]">JSONL file path</label>
+                    <label className="text-xs mb-1 block font-bold font-mono uppercase text-[#94a3b8]">JSONL file path</label>
                     <Input placeholder="outputs/my-dataset.jsonl" className="rounded-md border-[#272738] bg-[#0a0a0f] text-white focus:border-[#f26625] text-xs font-mono"
                       value={form.dataset_path}
                       onChange={e => f('dataset_path', e.target.value)} />
                   </div>
                   <div>
-                    <label className="text-[10px] mb-1 block font-bold font-mono uppercase text-[#94a3b8]">Or Dataset ID (from DB)</label>
+                    <label className="text-xs mb-1 block font-bold font-mono uppercase text-[#94a3b8]">Or Dataset ID (from DB)</label>
                     <Input placeholder="17487774-1b8e-..." className="rounded-md border-[#272738] bg-[#0a0a0f] text-white focus:border-[#f26625] text-xs font-mono"
                       value={form.dataset_id}
                       onChange={e => f('dataset_id', e.target.value)} />
@@ -1315,33 +1318,33 @@ function FineTuneContent() {
               <Section title="Base Model">
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                   <div>
-                    <label className="text-[10px] mb-1 block font-bold font-mono uppercase text-[#94a3b8]">Model Architecture</label>
+                    <label className="text-xs mb-1 block font-bold font-mono uppercase text-[#94a3b8]">Model Architecture</label>
                     <Select value={form.base_model}
                       onValueChange={v => f('base_model', v)}>
                       <SelectTrigger className="rounded-md border-[#272738] bg-[#0a0a0f] text-white text-xs font-mono"><SelectValue /></SelectTrigger>
                       <SelectContent className="bg-[#12121a] border-[#272738] text-white text-xs font-mono">
                         {models.map(m => (
                           <SelectItem key={m.id} value={m.id}>
-                            {m.name} ({m.params}) {m.requires_gpu ? '🖥' : '💻'}
+                            {m.name} ({m.params}) {m.requires_gpu ? <Monitor className="inline h-3 w-3" /> : <Laptop className="inline h-3 w-3" />}
                           </SelectItem>
                         ))}
                       </SelectContent>
                     </Select>
                     <Input
                       placeholder="Or enter custom HF model (e.g. Qwen/Qwen2.5-7B-Instruct)"
-                      className="rounded-md border-[#272738] bg-[#0a0a0f] text-white focus:border-[#f26625] text-[11px] font-mono mt-1.5"
+                      className="rounded-md border-[#272738] bg-[#0a0a0f] text-white focus:border-[#f26625] text-xs font-mono mt-1.5"
                       value={form.base_model}
                       onChange={e => f('base_model', e.target.value)}
                     />
                   </div>
                   <div>
-                    <label className="text-[10px] mb-1 block font-bold font-mono uppercase text-[#94a3b8]">Output model tag</label>
+                    <label className="text-xs mb-1 block font-bold font-mono uppercase text-[#94a3b8]">Output model tag</label>
                     <Input placeholder="my-finetuned-model" className="rounded-md border-[#272738] bg-[#0a0a0f] text-white focus:border-[#f26625] text-xs font-mono"
                       value={form.output_model_name}
                       onChange={e => f('output_model_name', e.target.value)} />
                   </div>
                   <div>
-                    <label className="text-[10px] mb-1 block font-bold font-mono uppercase text-[#94a3b8]">Chat template</label>
+                    <label className="text-xs mb-1 block font-bold font-mono uppercase text-[#94a3b8]">Chat template</label>
                     <Select value={form.chat_template}
                       onValueChange={v => f('chat_template', v)}>
                       <SelectTrigger className="rounded-md border-[#272738] bg-[#0a0a0f] text-white text-xs font-mono"><SelectValue /></SelectTrigger>
@@ -1355,7 +1358,7 @@ function FineTuneContent() {
                     </Select>
                   </div>
                   <div>
-                    <label className="text-[10px] mb-1 block font-bold font-mono uppercase text-[#94a3b8]">Hardware Acceleration Engine</label>
+                    <label className="text-xs mb-1 block font-bold font-mono uppercase text-[#94a3b8]">Hardware Acceleration Engine</label>
                     <Select value={form.execution_target}
                       onValueChange={v => f('execution_target', v)}>
                       <SelectTrigger className="rounded-md border-[#272738] bg-[#0a0a0f] text-white text-xs font-mono"><SelectValue /></SelectTrigger>
@@ -1381,7 +1384,7 @@ function FineTuneContent() {
                                 <Sparkles className="w-3.5 h-3.5 text-[#f26625]" />
                                 <span>Dataset Stream for Colab</span>
                               </div>
-                              <div className="text-[11px] text-[#f26625] font-semibold mt-0.5 truncate max-w-xs sm:max-w-md">
+                              <div className="text-xs text-[#f26625] font-semibold mt-0.5 truncate max-w-xs sm:max-w-md">
                                 {dsName}
                               </div>
                             </div>
@@ -1412,11 +1415,11 @@ function FineTuneContent() {
                           </div>
 
                           <div className="space-y-1">
-                            <div className="text-[10px] text-zinc-400 flex flex-wrap items-center justify-between gap-1">
+                            <div className="text-xs text-zinc-400 flex flex-wrap items-center justify-between gap-1">
                               <span className="flex items-center gap-1">
                                 <Lock className="w-3 h-3 text-emerald-400" />
                                 <span>Database Streaming Endpoint</span>
-                                <span className="px-1.5 py-0.5 rounded text-[9px] bg-emerald-500/10 text-emerald-400 border border-emerald-500/30">
+                                <span className="px-1.5 py-0.5 rounded text-xs bg-emerald-500/10 text-emerald-400 border border-emerald-500/30">
                                   HMAC-SHA256 Presigned
                                 </span>
                               </span>
@@ -1428,7 +1431,7 @@ function FineTuneContent() {
                                     toast('Generated fresh presigned token (60m validity)', 'info')
                                   }}
                                   disabled={isSigningUrl}
-                                  className="text-[10px] text-zinc-400 hover:text-white inline-flex items-center gap-1 font-semibold transition-colors"
+                                  className="text-xs text-zinc-400 hover:text-white inline-flex items-center gap-1 font-semibold transition-colors"
                                   title="Refresh signed token"
                                 >
                                   <RefreshCw className={clsx("w-3 h-3", isSigningUrl && "animate-spin text-[#f26625]")} />
@@ -1440,7 +1443,7 @@ function FineTuneContent() {
                                     navigator.clipboard.writeText(downloadUrl)
                                     toast('Signed API stream URL copied to clipboard!', 'success')
                                   }}
-                                  className="text-[10px] text-[#f26625] hover:underline inline-flex items-center gap-1 font-semibold"
+                                  className="text-xs text-[#f26625] hover:underline inline-flex items-center gap-1 font-semibold"
                                 >
                                   <Copy className="w-3 h-3" />
                                   <span>Copy API URL</span>
@@ -1450,10 +1453,10 @@ function FineTuneContent() {
                             <input
                               readOnly
                               value={downloadUrl}
-                              className="w-full text-[11px] px-2.5 py-1.5 rounded bg-[#0a0a0f] border border-[#272738] text-zinc-300 select-all focus:outline-none"
+                              className="w-full text-xs px-2.5 py-1.5 rounded bg-[#0a0a0f] border border-[#272738] text-zinc-300 select-all focus:outline-none"
                             />
                             {signedUrlExpires && (
-                              <p className="text-[10px] text-zinc-500 flex items-center gap-1">
+                              <p className="text-xs text-zinc-500 flex items-center gap-1">
                                 <Clock className="w-2.5 h-2.5 text-zinc-400" />
                                 <span>Token active until {new Date(signedUrlExpires * 1000).toLocaleTimeString()} (60m TTL) · IDOR-protected</span>
                               </p>
@@ -1461,7 +1464,7 @@ function FineTuneContent() {
                           </div>
 
                           <div className="space-y-1 pt-1 border-t border-[#272738]/60">
-                            <div className="text-[10px] text-zinc-400 flex items-center justify-between">
+                            <div className="text-xs text-zinc-400 flex items-center justify-between">
                               <span className="flex items-center gap-1.5 font-semibold text-zinc-300">
                                 <FileCode2 className="w-3.5 h-3.5 text-[#f26625]" />
                                 <span>Notebook Code Cell (Configured for {form.base_model})</span>
@@ -1473,13 +1476,13 @@ function FineTuneContent() {
                                   navigator.clipboard.writeText(snippet)
                                   toast('Colab code block copied! Paste into Notebook Cell 2.', 'success')
                                 }}
-                                className="text-[10px] text-[#f26625] hover:underline inline-flex items-center gap-1 font-semibold"
+                                className="text-xs text-[#f26625] hover:underline inline-flex items-center gap-1 font-semibold"
                               >
                                 <Copy className="w-3 h-3" />
                                 <span>Copy Code Block</span>
                               </button>
                             </div>
-                            <pre className="p-2.5 rounded bg-[#0a0a0f] border border-[#272738] text-[10px] text-emerald-400 overflow-x-auto leading-relaxed select-all">
+                            <pre className="p-2.5 rounded bg-[#0a0a0f] border border-[#272738] text-xs text-emerald-400 overflow-x-auto leading-relaxed select-all">
 {`BASE_MODEL = "${form.base_model}"
 DATASET_URL_OR_PATH = "${downloadUrl}"
 CHAT_TEMPLATE = "${form.chat_template}"
@@ -1491,19 +1494,19 @@ LORA_ALPHA = ${form.lora_alpha}`}
                           </div>
 
                           <div className="space-y-1.5 pt-1 border-t border-[#272738]/60">
-                            <div className="text-[10px] text-zinc-400 flex items-center justify-between">
+                            <div className="text-xs text-zinc-400 flex items-center justify-between">
                               <span className="flex items-center gap-1.5 font-semibold text-zinc-300">
                                 <Activity className="w-3 h-3 text-emerald-400" />
                                 <span>Cell Execution Outputs Preview</span>
                               </span>
-                              <span className="text-[9px] px-1.5 py-0.5 rounded bg-emerald-500/10 text-emerald-400 border border-emerald-500/30">
+                              <span className="text-xs px-1.5 py-0.5 rounded bg-emerald-500/10 text-emerald-400 border border-emerald-500/30">
                                 4 Stages Ready
                               </span>
                             </div>
 
-                            <div className="p-3 rounded bg-[#0a0a0f] border border-[#272738] space-y-2 text-[11px] font-mono leading-relaxed">
+                            <div className="p-3 rounded bg-[#0a0a0f] border border-[#272738] space-y-2 text-xs font-mono leading-relaxed">
                               <div className="flex items-start gap-2 border-b border-[#1c1c2b] pb-2">
-                                <span className="px-1.5 py-0.5 text-[9px] font-bold rounded bg-blue-500/15 text-blue-400 shrink-0">
+                                <span className="px-1.5 py-0.5 text-xs font-bold rounded bg-blue-500/15 text-blue-400 shrink-0">
                                   Cell 1 [GPU & Setup]
                                 </span>
                                 <div className="text-zinc-300">
@@ -1512,7 +1515,7 @@ LORA_ALPHA = ${form.lora_alpha}`}
                               </div>
 
                               <div className="flex items-start gap-2 border-b border-[#1c1c2b] pb-2">
-                                <span className="px-1.5 py-0.5 text-[9px] font-bold rounded bg-purple-500/15 text-purple-400 shrink-0">
+                                <span className="px-1.5 py-0.5 text-xs font-bold rounded bg-purple-500/15 text-purple-400 shrink-0">
                                   Cell 2 [Data Stream]
                                 </span>
                                 <div className="text-zinc-300">
@@ -1521,7 +1524,7 @@ LORA_ALPHA = ${form.lora_alpha}`}
                               </div>
 
                               <div className="flex items-start gap-2 border-b border-[#1c1c2b] pb-2">
-                                <span className="px-1.5 py-0.5 text-[9px] font-bold rounded bg-emerald-500/15 text-emerald-400 shrink-0">
+                                <span className="px-1.5 py-0.5 text-xs font-bold rounded bg-emerald-500/15 text-emerald-400 shrink-0">
                                   Cell 3 [QLoRA Setup]
                                 </span>
                                 <div className="text-zinc-300">
@@ -1530,7 +1533,7 @@ LORA_ALPHA = ${form.lora_alpha}`}
                               </div>
 
                               <div className="flex items-start gap-2">
-                                <span className="px-1.5 py-0.5 text-[9px] font-bold rounded bg-amber-500/15 text-amber-400 shrink-0">
+                                <span className="px-1.5 py-0.5 text-xs font-bold rounded bg-amber-500/15 text-amber-400 shrink-0">
                                   Cell 4 [SFT Training]
                                 </span>
                                 <div className="text-zinc-300">
@@ -1557,7 +1560,7 @@ LORA_ALPHA = ${form.lora_alpha}`}
                     { key: 'lora_alpha',                  label: 'LoRA alpha',    tip: 'LoRA scaling (usually 2× rank)',    int: true  },
                   ] as const).map(({ key, label, tip, int: isInt }) => (
                     <div key={key}>
-                      <label className="text-[10px] mb-1 block font-bold font-mono uppercase text-[#94a3b8]" title={tip}>
+                      <label className="text-xs mb-1 block font-bold font-mono uppercase text-[#94a3b8]" title={tip}>
                         {label}
                       </label>
                       <Input
@@ -1603,13 +1606,13 @@ LORA_ALPHA = ${form.lora_alpha}`}
                 {form.push_to_hub && (
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                     <div>
-                      <label className="text-[10px] mb-1 block font-bold font-mono uppercase text-[#94a3b8]">HF Token</label>
+                      <label className="text-xs mb-1 block font-bold font-mono uppercase text-[#94a3b8]">HF Token</label>
                       <Input type="password" placeholder="hf_..." className="rounded-md border-[#272738] bg-[#0a0a0f] text-white focus:border-[#f26625] text-xs font-mono"
                         value={form.hf_token}
                         onChange={e => f('hf_token', e.target.value)} />
                     </div>
                     <div>
-                      <label className="text-[10px] mb-1 block font-bold font-mono uppercase text-[#94a3b8]">Org / Namespace (optional)</label>
+                      <label className="text-xs mb-1 block font-bold font-mono uppercase text-[#94a3b8]">Org / Namespace (optional)</label>
                       <Input placeholder="my-org" className="rounded-md border-[#272738] bg-[#0a0a0f] text-white focus:border-[#f26625] text-xs font-mono"
                         value={form.hf_org}
                         onChange={e => f('hf_org', e.target.value)} />
@@ -1620,7 +1623,7 @@ LORA_ALPHA = ${form.lora_alpha}`}
 
               <Section title="Webhooks & Notifications (Optional)" defaultOpen={false}>
                 <div>
-                  <label className="text-[10px] mb-1 block font-bold font-mono uppercase text-[#94a3b8]">
+                  <label className="text-xs mb-1 block font-bold font-mono uppercase text-[#94a3b8]">
                     Webhook URL (Discord / Slack / Generic HTTP)
                   </label>
                   <Input
@@ -1629,7 +1632,7 @@ LORA_ALPHA = ${form.lora_alpha}`}
                     value={form.webhook_url}
                     onChange={e => f('webhook_url', e.target.value)}
                   />
-                  <p className="text-[10px] text-[#64748b] mt-1 font-mono">
+                  <p className="text-xs text-[#64748b] mt-1 font-mono">
                     Dispatches asynchronous status alerts, training loss, and artifact download links upon job completion or failure.
                   </p>
                 </div>
@@ -1687,7 +1690,7 @@ LORA_ALPHA = ${form.lora_alpha}`}
                         <p className="text-xs font-bold text-white truncate">
                           {job.output_model_name || job.id.slice(0, 8)}
                         </p>
-                        <p className="text-[11px] text-[#94a3b8] font-mono truncate mt-0.5">
+                        <p className="text-xs text-[#94a3b8] font-mono truncate mt-0.5">
                           {job.base_model}
                         </p>
                       </div>
@@ -1696,12 +1699,12 @@ LORA_ALPHA = ${form.lora_alpha}`}
                     {job.status === 'running' && (
                       <div className="mt-2 space-y-1">
                         <Progress value={job.progress ?? 0} className="h-1.5 bg-[#0a0a0f]" />
-                        <p className="text-[11px] font-mono text-[#94a3b8]">
+                        <p className="text-xs font-mono text-[#94a3b8]">
                           {(job.progress ?? 0).toFixed(0)}% · epoch {job.current_epoch}/{job.total_epochs}
                         </p>
                       </div>
                     )}
-                    <p className="text-[10px] font-mono text-[#64748b] mt-1.5">
+                    <p className="text-xs font-mono text-[#64748b] mt-1.5">
                       {fmtDate(job.created_at)}
                     </p>
                   </div>
