@@ -1,9 +1,9 @@
 import pytest
 
-from agents.agents.discovery import SourceDiscoveryAgent
-from agents.agents.extraction import WebCrawlerAgent
-from agents.agents.quality import DedupAgent, QualityEvaluationAgent
-from agents.agents.synthetic import ConsensusAgent, SyntheticGenerationAgent
+from agents.discovery import SourceDiscoveryAgent
+from agents.extraction import WebCrawlerAgent
+from agents.quality import DedupAgent, QualityEvaluationAgent
+from agents.synthetic import ConsensusAgent, SyntheticGenerationAgent
 from agents.base import AgentConfig, AgentContext, AgentType
 
 

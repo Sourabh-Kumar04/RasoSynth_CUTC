@@ -199,15 +199,15 @@ class AgentRegistryInitializer:
     @staticmethod
     def initialize():
         """Register all default agent types."""
-        from agents.agents.research import ResearchAgent
-        from agents.agents.planning import StrategyAgent
-        from agents.agents.discovery import SourceDiscoveryAgent, SearchOptimizationAgent
-        from agents.agents.extraction import WebCrawlerAgent, OCRAgent, MultimodalAgent
-        from agents.agents.quality import QualityEvaluationAgent, DedupAgent, ToxicityAgent
-        from agents.agents.synthetic import SyntheticGenerationAgent, ValidationAgent
-        from agents.agents.optimization import FineTuningAgent, CurriculumAgent
-        from agents.agents.curation import ContextAgent, HumanArbiterAgent
-        from agents.agents.infrastructure import (
+        from agents.research import ResearchAgent
+        from agents.planning import StrategyAgent
+        from agents.discovery import SourceDiscoveryAgent, SearchOptimizationAgent
+        from agents.extraction import WebCrawlerAgent, OCRAgent, MultimodalAgent
+        from agents.quality import QualityEvaluationAgent, DedupAgent, ToxicityAgent
+        from agents.synthetic import SyntheticGenerationAgent, ValidationAgent
+        from agents.optimization import FineTuningAgent, CurriculumAgent
+        from agents.curation import ContextAgent, HumanArbiterAgent
+        from agents.infrastructure import (
             GPUSchedulingAgent,
             StorageOptimizationAgent,
             DistributionAgent,

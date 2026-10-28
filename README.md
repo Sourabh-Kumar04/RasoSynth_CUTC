@@ -124,6 +124,7 @@ rasosynthtune recipe --framework unsloth --model "sarvamai/sarvam-2b-v0.5" --dat
 
 ```text
 api/          FastAPI backend (jobs, fine-tuning, review, quality, schemas)
+agents/       Multi-agent system (graph, registry, specialized agents)
 core/         Orchestration, generation engines, DBOM, review, validation, storage
 pipeline/     Dataset construction pipeline
 providers/    Provider router and provider clients
