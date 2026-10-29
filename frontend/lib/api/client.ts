@@ -173,28 +173,59 @@ export interface FailoverStats {
 class APIClient {
   private baseUrl: string
   private csrfToken: string | null = null
+  private authToken: string | null = null
 
   constructor(baseUrl: string) {
     this.baseUrl = baseUrl
+    if (typeof window !== 'undefined') {
+      try {
+        this.authToken = localStorage.getItem('rasosynth_auth_token')
+      } catch {
+        this.authToken = null
+      }
+    }
+  }
+
+  public getToken(): string | null {
+    if (this.authToken) return this.authToken
+    if (typeof window !== 'undefined') {
+      try {
+        this.authToken = localStorage.getItem('rasosynth_auth_token')
+      } catch {}
+    }
+    return this.authToken
+  }
+
+  public setToken(token: string | null): void {
+    this.authToken = token
+    if (typeof window !== 'undefined') {
+      try {
+        if (token) {
+          localStorage.setItem('rasosynth_auth_token', token)
+        } else {
+          localStorage.removeItem('rasosynth_auth_token')
+        }
+      } catch {}
+    }
+  }
+
+  public isAuthenticated(): boolean {
+    return !!this.getToken()
   }
 
   private async fetchCsrfToken(): Promise<string> {
-    if (typeof window !== 'undefined' && localStorage.getItem('mockMode') === 'true') {
-      return 'mock-csrf-token'
+    const response = await fetch(`${this.baseUrl}/auth/csrf-token`, {
+      credentials: 'include',
+    })
+    if (!response.ok) {
+      throw new Error(`Failed to fetch CSRF token: HTTP ${response.status}`)
     }
-    try {
-      const response = await fetch(`${this.baseUrl}/auth/csrf-token`, {
-        credentials: 'include',
-      })
-      if (!response.ok) {
-        throw new Error('Failed to fetch CSRF token')
-      }
-      const data = await response.json()
-      this.csrfToken = data.csrf_token
-      return data.csrf_token
-    } catch {
-      return 'mock-csrf-token'
+    const data = await response.json()
+    if (!data?.csrf_token) {
+      throw new Error('Invalid CSRF token received from backend')
     }
+    this.csrfToken = data.csrf_token
+    return data.csrf_token
   }
 
   private async ensureCsrfToken(): Promise<string> {
@@ -229,14 +260,19 @@ class APIClient {
       'X-Correlation-ID': correlationId,
     }
 
-    // Fetch and attach CSRF token for state-changing methods
+    // Attach JWT Authorization header if stored
+    const jwtToken = this.getToken()
+    if (jwtToken) {
+      headers['Authorization'] = `Bearer ${jwtToken}`
+    }
+
+    // Fetch and attach CSRF token for state-changing methods (fail closed)
     const method = (fetchOptions.method || 'GET').toUpperCase()
     if (['POST', 'PUT', 'PATCH', 'DELETE'].includes(method)) {
-      try {
-        const token = await this.ensureCsrfToken()
-        headers['X-CSRF-Token'] = token
-      } catch {
-        // CSRF token fetch failed — proceed without it, server may reject
+      // CSRF token is required for mutations; fail closed if unavailable
+      if (!endpoint.startsWith('/auth/login')) {
+        const csrf = await this.ensureCsrfToken()
+        headers['X-CSRF-Token'] = csrf
       }
     }
 
@@ -661,10 +697,14 @@ class APIClient {
 
   // === Auth API ===
   async login(username: string, password: string) {
-    return this.request<any>('/auth/login', {
+    const res = await this.request<any>('/auth/login', {
       method: 'POST',
       body: JSON.stringify({ username, password }),
     })
+    if (res?.token) {
+      this.setToken(res.token)
+    }
+    return res
   }
 
   async getCurrentUser() {
@@ -672,7 +712,11 @@ class APIClient {
   }
 
   async logout() {
-    return this.request<any>('/auth/logout', { method: 'POST' })
+    try {
+      await this.request<any>('/auth/logout', { method: 'POST' })
+    } finally {
+      this.setToken(null)
+    }
   }
 
   // === Job Reports API ===
@@ -1026,28 +1070,33 @@ class APIClient {
   async downloadDataset(id: string, format: string = 'jsonl'): Promise<Blob> {
     if (typeof window !== 'undefined' && localStorage.getItem('mockMode') === 'true') {
       const records = [{
-        instruction: "Sample instruction for dataset " + id,
-        response: "Sample synthesized response for dataset generation."
+        mock_notice: "MOCK DATA — not live backend data",
+        dataset_id: id,
+        instruction: "Plain-text mock instruction for dataset " + id,
+        response: "Plain-text mock response. Fake file magic is disabled in mock mode."
       }];
       if (format === 'json') {
         return new Blob([JSON.stringify(records, null, 2)], { type: 'application/json' });
       }
       if (format === 'csv') {
-        return new Blob(['instruction,response\n"Sample instruction for dataset ' + id + '","Sample synthesized response"\n'], { type: 'text/csv' });
+        return new Blob(['mock_notice,dataset_id,instruction,response\n"MOCK DATA","' + id + '","Plain-text mock instruction","Plain-text mock response"\n'], { type: 'text/csv' });
       }
-      if (format === 'parquet') {
-        return new Blob(['PAR1_MOCK_PARQUET_BINARY_STREAM'], { type: 'application/octet-stream' });
-      }
-      if (format === 'zip') {
-        return new Blob(['PK_MOCK_ZIP_ARCHIVE_STREAM'], { type: 'application/zip' });
+      if (format === 'parquet' || format === 'zip') {
+        return new Blob([`MOCK DATA — Binary format (${format}) is disabled in mock mode to prevent fake file magic.`], { type: 'text/plain' });
       }
       return new Blob([records.map((record) => JSON.stringify(record)).join('\n') + '\n'], { type: 'application/x-ndjson' });
     }
 
     try {
-      const token = await this.ensureCsrfToken().catch(() => null)
-      const headers: Record<string, string> = { 'Content-Type': 'application/json' }
-      if (token) headers['X-CSRF-Token'] = token
+      const csrf = await this.ensureCsrfToken()
+      const headers: Record<string, string> = {
+        'Content-Type': 'application/json',
+        'X-CSRF-Token': csrf,
+      }
+      const jwt = this.getToken()
+      if (jwt) {
+        headers['Authorization'] = `Bearer ${jwt}`
+      }
 
       const response = await fetch(`${this.baseUrl}/datasets/${id}/export`, {
         method: 'POST',
@@ -1101,7 +1150,7 @@ class APIClient {
     }
 
     if (endpoint.startsWith('/auth/csrf-token')) {
-      return parse({ csrf_token: 'mock-csrf-token' });
+      return parse({ csrf_token: 'mock-mode-active' });
     }
 
     if (endpoint.startsWith('/health') || endpoint.startsWith('/readiness')) {

@@ -20,11 +20,14 @@ import {
   X,
   Sparkles,
   Zap,
+  LogIn,
+  LogOut,
 } from 'lucide-react'
 import { clsx } from 'clsx'
 import { CommandPalette } from '@/components/search/CommandPalette'
 import { SpotlightProductTour } from '@/components/onboarding/SpotlightProductTour'
 import { BrandLogo } from '@/components/ui/brand-logo'
+import { api } from '@/lib/api/client'
 
 const MOBILE_NAV_ITEMS = [
   { href: '/dashboard', label: 'Dashboard', icon: LayoutDashboard },
@@ -45,8 +48,22 @@ export function TopNav() {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false)
   const [showTour, setShowTour] = useState(false)
   const [showSearch, setShowSearch] = useState(false)
+  const [authenticated, setAuthenticated] = useState<boolean | null>(null)
   const mobileToggleRef = useRef<HTMLButtonElement>(null)
   const mobileDrawerRef = useRef<HTMLElement>(null)
+
+  useEffect(() => {
+    setAuthenticated(api.isAuthenticated())
+    const handleAuthChange = () => setAuthenticated(api.isAuthenticated())
+    window.addEventListener('storage', handleAuthChange)
+    return () => window.removeEventListener('storage', handleAuthChange)
+  }, [])
+
+  const handleLogout = async () => {
+    await api.logout()
+    setAuthenticated(false)
+    window.location.href = '/dashboard'
+  }
 
   // Mobile drawer is a dialog: Escape closes and returns focus to the
   // toggle, the page behind it does not scroll, and the active link is
