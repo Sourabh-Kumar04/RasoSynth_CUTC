@@ -42,7 +42,14 @@ DEFAULT_PROVIDERS = [
 
 @dataclass(frozen=True)
 class JudgeResult:
-    """Immutable result from LLM judge evaluation."""
+    """Immutable result from LLM judge evaluation.
+
+    Honesty contract: a result with provider "fallback" is an UNAVAILABLE
+    evaluation, not a measurement -- its 0.5 scores must be filtered out
+    of aggregates (ReviewEnsemble does; FilteringPipeline marks them).
+    A dimension absent or non-numeric in the model reply is filled with
+    0.5 for the weighted sum ONLY and is listed in missing_dimensions.
+    """
     instruction: str
     response: str
     scores: dict[str, float]  # dimension -> score (0.0 - 1.0)
@@ -52,6 +59,8 @@ class JudgeResult:
     latency_ms: float
     cached: bool = False
     raw_response: Optional[str] = None
+    method: str = "llm"
+    missing_dimensions: tuple = ()
 
     @property
     def reasoning_score(self) -> float:
@@ -74,6 +83,9 @@ class JudgeResult:
             "model": self.model,
             "latency_ms": round(self.latency_ms, 2),
             "cached": self.cached,
+            "method": self.method,
+            "status": "unavailable" if self.provider == "fallback" else "measured",
+            "missing_dimensions": list(self.missing_dimensions),
         }
 
 
@@ -334,9 +346,15 @@ class LLMJudge:
             # Try to extract numbers from the response
             scores_data = self._heuristic_parse(content)
 
-        # Extract dimension scores
+        # Extract dimension scores. A dimension absent (or non-numeric)
+        # in the model reply is filled with 0.5 for the weighted sum ONLY
+        # and recorded in missing_dimensions -- it is not a measurement.
         scores = {}
+        missing_dimensions = []
         for dim in JudgeDimension:
+            raw = scores_data.get(dim.value)
+            if not isinstance(raw, (int, float)):
+                missing_dimensions.append(dim.value)
             scores[dim.value] = self._extract_score(scores_data, dim.value)
 
         # Calculate overall (weighted average)
@@ -361,15 +379,22 @@ class LLMJudge:
             model=getattr(result, "model", "unknown"),
             latency_ms=latency_ms,
             raw_response=content,
+            method="llm",
+            missing_dimensions=tuple(missing_dimensions),
         )
 
     def _extract_score(self, data: dict, dimension: str) -> float:
-        """Extract a score value from parsed JSON."""
+        """Extract a score value from parsed JSON.
+
+        Missing/non-numeric dimensions fall back to a neutral 0.5 for
+        the weighted sum only; the caller records them in
+        JudgeResult.missing_dimensions so the fill is never silent.
+        """
         if dimension in data:
             val = data[dimension]
             if isinstance(val, (int, float)):
                 return max(0.0, min(1.0, float(val)))
-        return 0.5  # Default neutral score
+        return 0.5  # Neutral fill for the weighted sum only, never a measurement
 
     def _heuristic_parse(self, content: str) -> dict:
         """Try to extract scores from non-JSON response."""
@@ -390,7 +415,12 @@ class LLMJudge:
     def _fallback_result(
         self, instruction: str, response: str, reason: str
     ) -> JudgeResult:
-        """Return a fallback result when evaluation is not possible."""
+        """Return a fallback result when evaluation is not possible.
+
+        The 0.5 scores are UNAVAILABLE markers, not measurements: the
+        result carries provider "fallback" / method "fallback" and
+        status "unavailable", and must be filtered out of aggregates.
+        """
         scores = {dim.value: 0.5 for dim in JudgeDimension}
         return JudgeResult(
             instruction=instruction,
@@ -401,6 +431,7 @@ class LLMJudge:
             model="none",
             latency_ms=0.0,
             raw_response=reason,
+            method="fallback",
         )
 
     def get_stats(self) -> dict:

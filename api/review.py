@@ -36,10 +36,12 @@ class SubmitRequest(BaseModel):
     dataset_id: str = ""
     source_url: str = ""
     source_text: str = ""
-    quality_score: float = 0.0
-    hallucination_risk: float = 0.0
-    duplicate_score: float = 0.0
-    diversity_score: float = 0.0
+    # Omitted scores are unavailable (None -> NULL in the review queue),
+    # never a measured 0.0.
+    quality_score: Optional[float] = None
+    hallucination_risk: Optional[float] = None
+    duplicate_score: Optional[float] = None
+    diversity_score: Optional[float] = None
 
 
 class ReviewAction(BaseModel):

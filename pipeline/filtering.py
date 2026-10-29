@@ -247,6 +247,12 @@ class FilteringPipeline:
         sample.llm_judge_score = llm_judge_score
         sample.compliance_score = compliance_score
         sample.issues.extend(signal_issues + statistical_issues + semantic_issues + llm_judge_issues)
+        # Neutral 0.5 dimension scores returned without a router are
+        # unavailable evaluations, not measurements; mark the sample
+        # (the pinned (0.5, []) returns themselves are left unchanged).
+        if not self.router:
+            sample.issues.append("llm_judge_unavailable_no_router")
+            sample.issues.append("semantic_unavailable_no_router")
 
         # --- 2. Build deterministic breakdown & compute final score -----------
         # The filter_passed flag is computed _after_ scoring, not during it.
@@ -669,6 +675,12 @@ class FilteringPipeline:
                     response=text[:2000],
                     domain=target_domain or "general"
                 )
+                if judge_result and judge_result.provider == "fallback":
+                    # Fallback 0.5 is an unavailable evaluation, not a
+                    # measurement: keep the neutral value for threshold
+                    # plumbing but mark it so it is never read as a score.
+                    issues.append("llm_judge_fallback_unavailable")
+                    return 0.5, issues
                 if judge_result and judge_result.overall > 0:
                     if judge_result.accuracy_score < 0.4:
                         issues.append("low_llm_factual_accuracy")

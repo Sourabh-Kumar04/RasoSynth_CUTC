@@ -17,13 +17,19 @@ from pipeline.llm_judge import DEFAULT_PROVIDERS, JudgeCache, JudgeResult, LLMJu
 
 @dataclass(frozen=True)
 class EnsembleVerdict:
-    """A compact, serializable decision from independent automated reviewers."""
+    """A compact, serializable decision from independent automated reviewers.
+
+    When no reviewer returned a usable verdict, score stays 0.0 only as a
+    numeric placeholder and status is "unavailable" -- the 0.0 is not a
+    measured quality score, and needs_human_review is True.
+    """
 
     score: float
     consensus: float
     reviewers: tuple[dict[str, Any], ...]
     needs_human_review: bool
     reason: str
+    status: str = "measured"
 
     def to_dict(self) -> dict[str, Any]:
         return {
@@ -32,6 +38,7 @@ class EnsembleVerdict:
             "reviewers": list(self.reviewers),
             "needs_human_review": self.needs_human_review,
             "reason": self.reason,
+            "status": self.status,
         }
 
 
@@ -85,6 +92,7 @@ class ReviewEnsemble:
                 reviewers=reviewer_records,
                 needs_human_review=True,
                 reason="No configured LLM reviewer returned a usable verdict.",
+                status="unavailable",
             )
 
         scores = [result.overall for result in votes]

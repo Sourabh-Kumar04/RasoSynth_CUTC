@@ -68,12 +68,17 @@ async def quality_overview(request: Request,
         except Exception:
             pass
 
+    # Empty/unavailable aggregates are reported as "unavailable", never
+    # as a 0.0 that would read as a measured zero-quality average.
+    total_reviewed = total_samples or review_stats.get("total", 0)
+    approval_rate = review_stats.get("approval_rate") if review_stats else None
+    rejection_rate = review_stats.get("rejection_rate") if review_stats else None
     return {
-        "average_quality": round(avg_quality, 3),
+        "average_quality": round(avg_quality, 3) if total_samples > 0 else "unavailable",
         "total_jobs": total_jobs,
-        "total_samples_reviewed": total_samples or review_stats.get("total", 0),
-        "approval_rate": review_stats.get("approval_rate", 0.0),
-        "rejection_rate": review_stats.get("rejection_rate", 0.0),
+        "total_samples_reviewed": total_reviewed,
+        "approval_rate": approval_rate if approval_rate is not None else "unavailable",
+        "rejection_rate": rejection_rate if rejection_rate is not None else "unavailable",
         "last_updated": datetime.now(timezone.utc).isoformat(),
     }
 
@@ -96,7 +101,7 @@ async def job_quality(job_id: str,
                     return {
                         "job_id": job_id,
                         "samples_count": row[0],
-                        "avg_quality": round(float(row[1] or 0.0), 3)
+                        "avg_quality": round(float(row[1]), 3) if row[1] is not None else "unavailable"
                     }
         except Exception as e:
             logger.error(f"Error fetching job quality: {e}")
@@ -132,9 +137,9 @@ async def quality_trends(days: int = Query(7, ge=1, le=90),
         "period_days": days,
         "data_points": len(recent),
         "trends": recent,
-        "avg_quality": round(sum(e["avg_quality"] for e in recent) / len(recent), 3) if recent else 0.0,
-        "min_quality": round(min((e["avg_quality"] for e in recent), default=0.0), 3),
-        "max_quality": round(max((e["avg_quality"] for e in recent), default=0.0), 3),
+        "avg_quality": round(sum(e["avg_quality"] for e in recent) / len(recent), 3) if recent else "unavailable",
+        "min_quality": round(min(e["avg_quality"] for e in recent), 3) if recent else "unavailable",
+        "max_quality": round(max(e["avg_quality"] for e in recent), 3) if recent else "unavailable",
     }
 
 
@@ -222,7 +227,11 @@ async def segmented_quality(current_user: User = Depends(get_current_user)):
             by_domain = {}
 
             for quality, inst, meta, dtype in samples:
-                q = quality or 0.0
+                # NULL quality scores are filtered out of aggregates,
+                # never coerced to 0.0 (which would drag every average).
+                if quality is None:
+                    continue
+                q = quality
                 inst_len = len(inst) if inst else 0
                 meta = meta or {}
                 domain = meta.get("domain", "general")
@@ -255,7 +264,7 @@ async def segmented_quality(current_user: User = Depends(get_current_user)):
                 },
                 "prompt_lengths": {
                     l: {
-                        "avg": round(sum(v) / len(v), 3) if v else 0.0,
+                        "avg": round(sum(v) / len(v), 3) if v else "unavailable",
                         "count": len(v)
                     } for l, v in by_length.items()
                 },
@@ -272,12 +281,13 @@ async def segmented_quality(current_user: User = Depends(get_current_user)):
 
 
 def get_empty_segmented_metrics():
+    # No samples: averages are unavailable, not 0.0.
     return {
         "dataset_types": {},
         "prompt_lengths": {
-            "short": {"avg": 0.0, "count": 0},
-            "medium": {"avg": 0.0, "count": 0},
-            "long": {"avg": 0.0, "count": 0}
+            "short": {"avg": "unavailable", "count": 0},
+            "medium": {"avg": "unavailable", "count": 0},
+            "long": {"avg": "unavailable", "count": 0}
         },
         "domains": {}
     }

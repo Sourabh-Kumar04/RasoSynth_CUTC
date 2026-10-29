@@ -21,6 +21,8 @@ class QualityScore:
 
     Each dimension captures a distinct aspect of instruction-response quality.
     The final_score is a weighted combination of the four sub-scores.
+    Default 0.0 values mean "not scored", not a measured zero; use the
+    output of score(), whose details record each dimension's method.
     """
 
     semantic_score: float = 0.0
@@ -41,6 +43,11 @@ class QualityScore:
             "final_score": self.final_score,
             "scores": self.scores,
             "details": self.details,
+            "methods": {
+                dim: d.get("method", "heuristic")
+                for dim, d in self.details.items()
+                if isinstance(d, dict)
+            },
         }
 
 
@@ -434,6 +441,7 @@ class QualityScorer:
         if sentences >= 3:
             score += 0.1
         details["sentence_count"] = sentences
+        details["method"] = "heuristic_lexical"
 
         return max(0.0, min(1.0, score)), details
 
@@ -509,6 +517,7 @@ class QualityScorer:
             details["avg_sentence_length"] = round(avg_sent_len, 2)
         else:
             details["avg_sentence_length"] = 0.0
+        details["method"] = "heuristic_structural"
 
         return max(0.0, min(1.0, score)), details
 

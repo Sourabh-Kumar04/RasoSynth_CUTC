@@ -89,9 +89,13 @@ class SemanticQualityScorer:
         """Embedding-based semantic scoring."""
         details: dict[str, Any] = {}
 
-        # Get embeddings
+        # Get embeddings. Empty embeddings are unavailable input, not
+        # zero similarity: fail so score() falls back to the labelled
+        # heuristic path instead of reporting an embedding 0.0.
         inst_emb = await self._get_embedding(instruction)
         resp_emb = await self._get_embedding(response)
+        if not inst_emb or not resp_emb:
+            raise RuntimeError("Empty embedding returned; no embedding similarity available")
 
         # Compute cosine similarity for relevance
         relevance = self._cosine_similarity(inst_emb, resp_emb)
