@@ -13,31 +13,197 @@ const BACKEND_URL = (
 // Server-side private Hugging Face token (never exposed to browser)
 const HF_TOKEN = process.env.HF_TOKEN || process.env.HUGGINGFACE_TOKEN || process.env.HF_API_KEY || ''
 
+type HttpMethod = 'GET' | 'POST' | 'PATCH' | 'DELETE'
+
+interface AllowlistRule {
+  pattern: RegExp
+  methods: HttpMethod[]
+}
+
+// Strict allowlist derived directly from frontend/lib/api/client.ts call sites
+const ALLOWLIST: AllowlistRule[] = [
+  // Health & System
+  { pattern: /^health$/, methods: ['GET'] },
+  { pattern: /^health\/ready$/, methods: ['GET'] },
+  { pattern: /^health\/providers\/metrics$/, methods: ['GET'] },
+  { pattern: /^health\/circuit-breakers$/, methods: ['GET'] },
+
+  // Auth & CSRF
+  { pattern: /^auth\/csrf-token$/, methods: ['GET'] },
+  { pattern: /^auth\/login$/, methods: ['POST'] },
+  { pattern: /^auth\/me$/, methods: ['GET'] },
+  { pattern: /^auth\/logout$/, methods: ['POST'] },
+
+  // Jobs
+  { pattern: /^jobs$/, methods: ['GET', 'POST'] },
+  { pattern: /^jobs\/estimate$/, methods: ['POST'] },
+  { pattern: /^jobs\/preview$/, methods: ['POST'] },
+  { pattern: /^jobs\/preview\/batch$/, methods: ['POST'] },
+  { pattern: /^jobs\/plan$/, methods: ['POST'] },
+  { pattern: /^jobs\/[^/]+$/, methods: ['GET', 'DELETE'] },
+  { pattern: /^jobs\/[^/]+\/cancel$/, methods: ['POST'] },
+  { pattern: /^jobs\/[^/]+\/preview_samples$/, methods: ['GET'] },
+  { pattern: /^jobs\/[^/]+\/accept_preview$/, methods: ['POST'] },
+  { pattern: /^jobs\/[^/]+\/reject_preview$/, methods: ['POST'] },
+  { pattern: /^jobs\/[^/]+\/report$/, methods: ['GET'] },
+  { pattern: /^jobs\/[^/]+\/records$/, methods: ['GET'] },
+  { pattern: /^jobs\/[^/]+\/summary$/, methods: ['GET'] },
+  { pattern: /^jobs\/[^/]+\/signed-url$/, methods: ['POST'] },
+
+  // Datasets & Deliveries
+  { pattern: /^datasets$/, methods: ['GET'] },
+  { pattern: /^datasets\/[^/]+$/, methods: ['GET', 'DELETE'] },
+  { pattern: /^datasets\/[^/]+\/export$/, methods: ['POST'] },
+  { pattern: /^datasets\/[^/]+\/deliver$/, methods: ['POST'] },
+  { pattern: /^datasets\/[^/]+\/huggingface-card$/, methods: ['GET'] },
+  { pattern: /^datasets\/[^/]+\/publish-huggingface$/, methods: ['POST'] },
+  { pattern: /^datasets\/[^/]+\/training-recipe$/, methods: ['GET'] },
+  { pattern: /^datasets\/[^/]+\/dbom$/, methods: ['GET'] },
+  { pattern: /^deliveries\/[^/]+$/, methods: ['GET'] },
+
+  // Providers & Failover
+  { pattern: /^providers$/, methods: ['GET'] },
+  { pattern: /^providers\/[^/]+$/, methods: ['GET', 'PATCH'] },
+  { pattern: /^providers\/[^/]+\/metrics$/, methods: ['GET'] },
+  { pattern: /^providers\/switch$/, methods: ['POST'] },
+  { pattern: /^providers\/failover$/, methods: ['POST'] },
+  { pattern: /^providers\/techniques$/, methods: ['GET'] },
+  { pattern: /^providers\/test$/, methods: ['POST'] },
+  { pattern: /^failover\/history$/, methods: ['GET'] },
+  { pattern: /^failover\/stats$/, methods: ['GET'] },
+
+  // Metrics & Observability
+  { pattern: /^metrics$/, methods: ['GET'] },
+  { pattern: /^metrics\/history$/, methods: ['GET'] },
+  { pattern: /^traces$/, methods: ['GET'] },
+  { pattern: /^traces\/correlation$/, methods: ['GET'] },
+  { pattern: /^traces\/[^/]+$/, methods: ['GET'] },
+  { pattern: /^cluster\/ray$/, methods: ['GET'] },
+  { pattern: /^orchestration\/dag$/, methods: ['GET'] },
+
+  // Settings & Validation
+  { pattern: /^settings\/compute$/, methods: ['GET', 'POST'] },
+  { pattern: /^validate$/, methods: ['POST'] },
+  { pattern: /^validate\/dataset$/, methods: ['POST'] },
+
+  // Checkpoints
+  { pattern: /^checkpoints$/, methods: ['POST'] },
+  { pattern: /^checkpoints\/[^/]+$/, methods: ['GET'] },
+  { pattern: /^checkpoints\/[^/]+\/history$/, methods: ['GET'] },
+  { pattern: /^checkpoints\/[^/]+\/restore$/, methods: ['POST'] },
+
+  // Research & Benchmarks & Adaptability & Agent
+  { pattern: /^research$/, methods: ['POST'] },
+  { pattern: /^research\/status$/, methods: ['GET'] },
+  { pattern: /^benchmarks\/quality$/, methods: ['GET'] },
+  { pattern: /^benchmarks\/evaluation$/, methods: ['GET'] },
+  { pattern: /^adaptability$/, methods: ['POST'] },
+  { pattern: /^agent\/analyze-domain$/, methods: ['POST'] },
+
+  // Tools & Analysis
+  { pattern: /^tools\/generate-adversarial-probes$/, methods: ['POST'] },
+  { pattern: /^tools\/audit-contamination$/, methods: ['POST'] },
+  { pattern: /^tools\/evaluate-rubric$/, methods: ['POST'] },
+  { pattern: /^tools\/evaluate-rag$/, methods: ['POST'] },
+  { pattern: /^tools\/semantic-density$/, methods: ['POST'] },
+  { pattern: /^tools\/evaluate-dialogue$/, methods: ['POST'] },
+  { pattern: /^tools\/best-of-n$/, methods: ['POST'] },
+  { pattern: /^tools\/audit-representation$/, methods: ['POST'] },
+  { pattern: /^tools\/verify-dbom$/, methods: ['POST'] },
+  { pattern: /^tools\/generate-contrastive-pair$/, methods: ['POST'] },
+  { pattern: /^tools\/rebalance-dataset$/, methods: ['POST'] },
+  { pattern: /^tools\/generate-dialectic$/, methods: ['POST'] },
+  { pattern: /^tools\/calibrate-judge$/, methods: ['POST'] },
+  { pattern: /^tools\/evaluate-benchmark$/, methods: ['POST'] },
+  { pattern: /^tools\/shard-dataset$/, methods: ['POST'] },
+
+  // Fine-tuning API
+  { pattern: /^api\/finetune\/models$/, methods: ['GET'] },
+  { pattern: /^api\/finetune\/jobs$/, methods: ['GET', 'POST'] },
+  { pattern: /^api\/finetune\/jobs\/[^/]+$/, methods: ['GET', 'DELETE'] },
+  { pattern: /^api\/finetune\/jobs\/[^/]+\/logs$/, methods: ['GET'] },
+  { pattern: /^api\/finetune\/jobs\/[^/]+\/model_card$/, methods: ['GET'] },
+  { pattern: /^api\/finetune\/jobs\/[^/]+\/export_gguf$/, methods: ['POST'] },
+  { pattern: /^api\/finetune\/jobs\/[^/]+\/modelfile$/, methods: ['GET'] },
+
+  // Review (HITL) API
+  { pattern: /^api\/review\/queue$/, methods: ['GET'] },
+  { pattern: /^api\/review\/queue\/[^/]+$/, methods: ['GET'] },
+  { pattern: /^api\/review\/queue\/[^/]+\/approve$/, methods: ['POST'] },
+  { pattern: /^api\/review\/queue\/[^/]+\/reject$/, methods: ['POST'] },
+  { pattern: /^api\/review\/queue\/[^/]+\/edit$/, methods: ['POST'] },
+  { pattern: /^api\/review\/queue\/[^/]+\/flag$/, methods: ['POST'] },
+  { pattern: /^api\/review\/stats$/, methods: ['GET'] },
+  { pattern: /^api\/review\/jobs\/[^/]+\/resume$/, methods: ['POST'] },
+  { pattern: /^api\/review\/jobs\/[^/]+\/status$/, methods: ['GET'] },
+  { pattern: /^api\/review\/paused$/, methods: ['GET'] },
+
+  // Agents API
+  { pattern: /^agents$/, methods: ['GET'] },
+  { pattern: /^agents\/stats$/, methods: ['GET'] },
+
+  // Quality Analytics API
+  { pattern: /^api\/quality\/overview$/, methods: ['GET'] },
+  { pattern: /^api\/quality\/trends$/, methods: ['GET'] },
+  { pattern: /^api\/quality\/distributions$/, methods: ['GET'] },
+  { pattern: /^api\/quality\/sources$/, methods: ['GET'] },
+  { pattern: /^api\/quality\/segmented$/, methods: ['GET'] },
+]
+
+function isPathAndMethodAllowed(path: string, method: string): boolean {
+  for (const rule of ALLOWLIST) {
+    if (rule.pattern.test(path) && rule.methods.includes(method as HttpMethod)) {
+      return true
+    }
+  }
+  return false
+}
+
 async function handleProxy(req: NextRequest, { params }: { params: { path?: string[] } }) {
   const path = (params.path || []).join('/')
+  const method = req.method as HttpMethod
+
+  // Strict allowlist validation
+  if (!isPathAndMethodAllowed(path, method)) {
+    return NextResponse.json(
+      { error: 'Endpoint or method not permitted by proxy allowlist' },
+      { status: 403 }
+    )
+  }
+
   const search = req.nextUrl.search
   const targetUrl = `${BACKEND_URL}/${path}${search}`
   const isHealthCheck = path === 'health' || path === 'health/ready'
 
+  // Header hygiene: forward only explicitly permitted headers, never cookies or ambient auth
   const headers: Record<string, string> = {}
-  req.headers.forEach((value, key) => {
-    const lowerKey = key.toLowerCase()
-    if (!['host', 'connection', 'content-length'].includes(lowerKey)) {
-      headers[lowerKey] = value
-    }
-  })
+  
+  // Explicitly forward content-type, accept, and correlation headers if present
+  const contentType = req.headers.get('content-type')
+  if (contentType) headers['content-type'] = contentType
 
-  // Securely inject private HF_TOKEN on server-side without exposing to browser
-  if (HF_TOKEN && (BACKEND_URL.includes('hf.space') || BACKEND_URL.includes('huggingface.co'))) {
-    if (!headers['authorization']) {
-      headers['authorization'] = `Bearer ${HF_TOKEN}`
-    }
+  const accept = req.headers.get('accept')
+  if (accept) headers['accept'] = accept
+
+  const correlationId = req.headers.get('x-correlation-id')
+  if (correlationId) headers['x-correlation-id'] = correlationId
+
+  const csrfToken = req.headers.get('x-csrf-token')
+  if (csrfToken) headers['x-csrf-token'] = csrfToken
+
+  // Explicitly forward backend token attached by client (e.g. from localStorage/sessionStorage)
+  const clientAuth = req.headers.get('authorization')
+  if (clientAuth && clientAuth.startsWith('Bearer ')) {
+    headers['authorization'] = clientAuth
   }
 
-  const method = req.method
+  // If targeting Hugging Face Space and no client auth was provided, securely inject HF_TOKEN
+  if (!headers['authorization'] && HF_TOKEN && (BACKEND_URL.includes('hf.space') || BACKEND_URL.includes('huggingface.co'))) {
+    headers['authorization'] = `Bearer ${HF_TOKEN}`
+  }
+
   const body = ['GET', 'HEAD'].includes(method) ? undefined : await req.arrayBuffer()
 
-  // Use a shorter timeout for health checks so UI stays responsive during cold starts
   const timeoutMs = isHealthCheck ? 8000 : 45000
   const controller = new AbortController()
   const timeoutId = setTimeout(() => controller.abort(), timeoutMs)
@@ -59,20 +225,10 @@ async function handleProxy(req: NextRequest, { params }: { params: { path?: stri
       response.headers.get('x-space-status') === 'paused'
 
     if (isSleeping) {
-      if (isHealthCheck) {
-        return NextResponse.json({
-          status: 'standby',
-          service: 'rasosynthtune-backend',
-          warming_up: true,
-          message: 'Hugging Face Space backend is warming up...',
-        }, { status: 200 })
-      }
       return NextResponse.json({
-        error: 'Backend container is warming up',
+        error: 'Backend service unavailable',
         status: 'standby',
         warming_up: true,
-        target: targetUrl,
-        message: 'Hugging Face Space backend is currently waking from standby. Please retry in a few seconds.',
       }, {
         status: 503,
         headers: { 'Retry-After': '15' }
@@ -82,7 +238,7 @@ async function handleProxy(req: NextRequest, { params }: { params: { path?: stri
     const responseHeaders = new Headers()
     response.headers.forEach((value, key) => {
       const lowerKey = key.toLowerCase()
-      if (!['transfer-encoding', 'content-encoding', 'content-length'].includes(lowerKey)) {
+      if (!['transfer-encoding', 'content-encoding', 'content-length', 'set-cookie'].includes(lowerKey)) {
         responseHeaders.set(key, value)
       }
     })
@@ -95,23 +251,10 @@ async function handleProxy(req: NextRequest, { params }: { params: { path?: stri
   } catch (err: any) {
     clearTimeout(timeoutId)
 
-    // Graceful standby response on network timeout or connection failure
-    if (isHealthCheck) {
-      return NextResponse.json({
-        status: 'standby',
-        service: 'rasosynthtune-backend',
-        warming_up: true,
-        message: 'Backend is warming up or temporarily unreachable.',
-      }, { status: 200 })
-    }
-
     return NextResponse.json(
       {
-        error: 'Failed to connect to backend service',
-        status: 'standby',
-        warming_up: true,
-        target: targetUrl,
-        details: err?.message || String(err),
+        error: 'Backend service unavailable',
+        status: 'unavailable',
       },
       { status: 503, headers: { 'Retry-After': '15' } }
     )
@@ -120,7 +263,5 @@ async function handleProxy(req: NextRequest, { params }: { params: { path?: stri
 
 export const GET = handleProxy
 export const POST = handleProxy
-export const PUT = handleProxy
 export const PATCH = handleProxy
 export const DELETE = handleProxy
-export const OPTIONS = handleProxy
