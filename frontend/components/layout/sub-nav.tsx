@@ -12,6 +12,7 @@ import {
   Database,
   Workflow,
   FlaskConical,
+  LayoutDashboard,
   Beaker,
   Settings,
   ChevronDown,
@@ -20,6 +21,7 @@ import { clsx } from 'clsx'
 import { api } from '@/lib/api/client'
 
 const PRIMARY_NAV_LINKS = [
+  { href: '/dashboard', label: 'Dashboard', fullLabel: 'Workspace Dashboard', icon: LayoutDashboard },
   { href: '/studio', label: 'Studio', fullLabel: 'Dataset Studio', icon: FlaskConical },
   { href: '/datasets', label: 'Data Library', fullLabel: 'Data Library & Exports', icon: Database },
   { href: '/finetune', label: 'Model Training', fullLabel: 'QLoRA Training Studio', icon: Cpu },

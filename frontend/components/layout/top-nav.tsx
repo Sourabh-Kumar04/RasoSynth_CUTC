@@ -5,6 +5,7 @@ import { usePathname } from 'next/navigation'
 import { useState, useEffect, useRef } from 'react'
 import {
   FlaskConical,
+  LayoutDashboard,
   Database,
   Search,
   Workflow,
@@ -26,6 +27,7 @@ import { SpotlightProductTour } from '@/components/onboarding/SpotlightProductTo
 import { BrandLogo } from '@/components/ui/brand-logo'
 
 const MOBILE_NAV_ITEMS = [
+  { href: '/dashboard', label: 'Dashboard', icon: LayoutDashboard },
   { href: '/studio', label: 'Studio', icon: FlaskConical },
   { href: '/datasets', label: 'Data Library', icon: Database },
   { href: '/finetune', label: 'Model Training', icon: Cpu },
