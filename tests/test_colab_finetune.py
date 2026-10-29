@@ -33,16 +33,20 @@ def test_colab_bridge_headless_execution():
         
         assert artifacts_path.exists()
         assert (artifacts_path / "adapter_config.json").exists()
-        assert (artifacts_path / "adapter_model.safetensors").exists()
+        # P0 honesty: no loadable weights are fabricated. The only weights
+        # file is explicitly suffixed .PLACEHOLDER; a bare .safetensors
+        # file must NOT exist.
+        assert not (artifacts_path / "adapter_model.safetensors").exists()
+        assert (artifacts_path / "adapter_model.safetensors.PLACEHOLDER").exists()
         assert (artifacts_path / "README.md").exists()
         
         # Verify downloadable zip
-        zip_path = temp_dir / "finetuned_model_lora.zip"
+        zip_path = temp_dir / "finetuned_model_lora_PLACEHOLDER.zip"
         assert zip_path.exists()
         assert zip_path.stat().st_size > 0
         
         # Verify GGUF output
-        gguf_path = temp_dir / "test-indic-lora-q4_k_m.gguf"
+        gguf_path = temp_dir / "test-indic-lora-q4_k_m.gguf.PLACEHOLDER"
         assert gguf_path.exists()
         
         # Verify event stream produced progress and completed

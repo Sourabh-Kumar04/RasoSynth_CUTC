@@ -181,7 +181,9 @@ async def test_v1_patient_rights_topic_fidelity():
 
 
 def test_v2_finetune_loss_diversity_and_simulated_label():
-    """V2: Two fine-tune runs on DIFFERENT datasets produce different losses and are labeled Simulated."""
+    """V2: Two fine-tune runs on DIFFERENT datasets are labeled Simulated and report
+    no measured loss (P0 honesty: formula losses were removed, so loss
+    diversity no longer applies; distinct outputs are checked instead)."""
     tmp_dir = tempfile.mkdtemp(prefix="rasosynth_v2_")
     try:
         events_1 = []
@@ -218,15 +220,15 @@ def test_v2_finetune_loss_diversity_and_simulated_label():
         completed_1 = next(e for e in events_1 if e.get("type") == "completed")
         completed_2 = next(e for e in events_2 if e.get("type") == "completed")
 
-        loss_1 = completed_1["final_train_loss"]
-        loss_2 = completed_2["final_train_loss"]
-
-        # 1. Losses must be different
-        assert loss_1 != loss_2, f"V2 Failed: byte-identical loss {loss_1} across two different datasets!"
-        # 2. Both must be explicitly labeled simulated
+        # 1. No fabricated loss is reported on either run.
+        assert "final_train_loss" not in completed_1
+        assert "final_train_loss" not in completed_2
+        # 2. Both must be explicitly labeled simulated, with distinct outputs.
         assert completed_1.get("is_simulated") is True
         assert completed_2.get("is_simulated") is True
         assert completed_1.get("execution_mode") == "simulated"
+        assert completed_2.get("execution_mode") == "simulated"
+        assert completed_1.get("output_path") != completed_2.get("output_path")
     finally:
         shutil.rmtree(tmp_dir, ignore_errors=True)
 

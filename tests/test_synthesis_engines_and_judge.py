@@ -8,7 +8,7 @@ from pipeline.construction import ConstructionPipeline, ConstructedSample
 from pipeline.filtering import FilteringPipeline
 from core.intent import UserIntent
 from api.server import RateLimiter, _validate_security_config
-from core.config import get_settings
+from core.config import SecurityError, get_settings
 
 
 class DummySample:
@@ -268,9 +268,10 @@ def test_production_jwt_secret_validation(monkeypatch):
     monkeypatch.delenv("SPACE_ID", raising=False)
     get_settings.cache_clear()
 
-    with pytest.raises(RuntimeError) as exc_info:
+    # P0 fail-closed: the removed public default is rejected at settings
+    # validation with SecurityError, before any startup check runs.
+    with pytest.raises(SecurityError, match="removed public default value"):
         _validate_security_config()
-    assert "CRITICAL SECURITY ERROR" in str(exc_info.value)
 
 
 def test_hf_space_jwt_secret_autogen(monkeypatch, tmp_path):
@@ -281,11 +282,10 @@ def test_hf_space_jwt_secret_autogen(monkeypatch, tmp_path):
     monkeypatch.setattr("tempfile.gettempdir", lambda: str(tmp_path))
     get_settings.cache_clear()
 
-    _validate_security_config()
-    autogen_secret = os.getenv("JWT_SECRET")
-    assert autogen_secret != "rasosynthtune-sovereign-production-jwt-token-secret-key-32b-secure"
-    assert len(autogen_secret) >= 32
-    assert (tmp_path / ".rasosynth_jwt_secret").exists()
+    # P0 fail-closed: even on a Space, a known public default is rejected
+    # rather than silently replaced by an auto-generated secret.
+    with pytest.raises(SecurityError, match="removed public default value"):
+        _validate_security_config()
 
 
 @pytest.mark.asyncio

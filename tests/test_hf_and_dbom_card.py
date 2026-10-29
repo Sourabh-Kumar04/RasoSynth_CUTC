@@ -28,7 +28,9 @@ def test_generate_hf_dataset_card_with_dbom_attestation():
     assert "Cryptographic DBOM Attestation & Data Nutrition Label" in card
     assert "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855" in card
     assert "DBOM-2026-TAX-01" in card
-    assert "DPDP Act Compliance" in card
+    # P0 honesty: no DPDP compliance is claimed; the card states that explicitly.
+    assert "DPDP Act Compliance" not in card
+    assert "no DPDP Act compliance is claimed or verified" in card
 
 
 def test_publish_dataset_to_hf_hub_requires_token(monkeypatch):
