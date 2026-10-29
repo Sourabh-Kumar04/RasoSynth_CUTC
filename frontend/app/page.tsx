@@ -251,7 +251,6 @@ export default function ZenPortalPage() {
   const [showVerifyModal, setShowVerifyModal] = useState(false)
   const [recomputedRoot, setRecomputedRoot] = useState<string | null>(null)
   const [isRecomputing, setIsRecomputing] = useState(false)
-  const [deploymentMode, setDeploymentMode] = useState<string | null>(null)
 
   const handleRecomputeClientSide = () => {
     setIsRecomputing(true)
@@ -293,12 +292,6 @@ export default function ZenPortalPage() {
     return () => canvas.removeEventListener('mousemove', handleMouseMove)
   }, [])
 
-  // Hero status pill: actual deployment mode from backend /health, never a hardcoded LIVE.
-  useEffect(() => {
-    api.getHealth().then((h) => {
-      if (h && h.deployment_mode) setDeploymentMode(h.deployment_mode)
-    }).catch(() => {})
-  }, [])
 
   const handleLaunch = async () => {
     playClickSound()
@@ -373,9 +366,6 @@ export default function ZenPortalPage() {
             <div className="flex flex-col">
               <span className="font-display text-sm font-bold tracking-tight text-white">
                 Raso<span className="text-[#f26625]">Synth</span><span className="text-[#a8a29e] font-semibold">Tune</span>
-              </span>
-              <span className="text-xs font-mono text-zinc-400 uppercase tracking-widest">
-                Sovereign Synthesis Hub
               </span>
             </div>
           </Link>
@@ -541,35 +531,21 @@ export default function ZenPortalPage() {
           SECTION 1: Zen Spatial Command Hub (Hero)
       ───────────────────────────────────────────────────────────── */}
       <section className="relative z-10 flex flex-col items-center justify-center min-h-[82vh] px-4 sm:px-6 max-w-5xl mx-auto py-12">
-        {/* Hero mascot + status pill (TummyTap composition, dark only) */}
+        {/* Hero mascot (TummyTap composition, dark only) */}
         <Mascot size="large" className="mb-2" />
-        <motion.div
-          initial={{ opacity: 0, y: -10 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.6 }}
-          className="inline-flex items-center space-x-2 px-3.5 py-1 rounded-full bg-[#12121a]/90 border border-[#272738] text-xs font-mono text-zinc-400 mb-6 backdrop-blur-md shadow-sm"
-          title="Deployment mode reported by the backend /health endpoint"
-        >
-          <span className="w-1.5 h-1.5 rounded-full bg-[#f26625]" />
-          <span className="tracking-widest uppercase text-white font-semibold">
-            {deploymentMode ? deploymentMode.toUpperCase() : "MODE UNKNOWN"}
-          </span>
-        </motion.div>
 
 
-        {/* Hero Title */}
+
+
+        {/* Hero tagline + orange underline bar + shadcn CTAs */}
         <motion.h1
-          initial={{ opacity: 0, y: 14 }}
+          initial={{ opacity: 0, y: 10 }}
           animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.7, delay: 0.1 }}
-          className="text-3xl sm:text-5xl lg:text-6xl font-extrabold tracking-tight text-center text-white font-display max-w-4xl leading-[1.15]"
+          transition={{ duration: 0.7, delay: 0.25 }}
+          className="mt-6 text-xl sm:text-2xl font-extrabold tracking-wide text-center text-white"
         >
-          Autonomous Dataset <br className="hidden sm:inline" />
-          <span className="text-[#f26625]">
-            Synthesis &amp; Alignment.
-          </span>
+          RAW IDEAS. REAL DATASETS. <span className="text-[#f26625]">REAL MODELS.</span>
         </motion.h1>
-
         {/* Minimal Subtitle */}
         <motion.p
           initial={{ opacity: 0, y: 10 }}
@@ -578,16 +554,6 @@ export default function ZenPortalPage() {
           className="mt-4 text-xs sm:text-sm text-zinc-400 text-center max-w-2xl font-sans"
         >
           Turn raw ideas into verified datasets and fine-tuned models.
-        </motion.p>
-
-        {/* Hero tagline + orange underline bar + shadcn CTAs */}
-        <motion.p
-          initial={{ opacity: 0, y: 10 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.7, delay: 0.25 }}
-          className="mt-6 text-xl sm:text-2xl font-extrabold tracking-wide text-center text-white"
-        >
-          RAW IDEAS. REAL DATASETS. <span className="text-[#f26625]">REAL MODELS.</span>
         </motion.p>
         <div className="mt-4 h-1.5 w-[120px] rounded bg-[#f26625]" aria-hidden="true" />
         <motion.div
