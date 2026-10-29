@@ -1,13 +1,10 @@
-"""Benchmark Contamination & Leakage Audit Engine.
+"""Benchmark canary spot-check (NOT a leakage audit).
 
-Detects and prevents test-set contamination across standard Indic & global LLM evaluation benchmarks:
-1. MMLU / MMLU-Hindi
-2. IndicGLUE (RTE, WNLI, BoolQ in Indic languages)
-3. GSM8K (Grade School Math in English & Hindi)
-4. ARC (AI2 Reasoning Challenge)
-5. IN22-Gen (Indic-English MT benchmark)
-
-Uses n-gram overlap hashing and word-level Jaccard / MinHash similarity to guarantee zero test leakage.
+Compares samples against a small hand-written list of canary phrases
+associated with MMLU, IndicGLUE, GSM8K, and ARC. It does NOT check the
+benchmark test sets themselves, so a "clean" result is NOT a guarantee of
+zero test leakage — it only means none of these canary phrases matched.
+Every report carries method="canary_spot_check" and this scope note.
 """
 
 import hashlib
@@ -57,7 +54,8 @@ def check_dataset_contamination(
     similarity_threshold: float = 0.50,
 ) -> Dict[str, Any]:
     """
-    Audit dataset samples for benchmark leakage or test-set contamination.
+    Spot-check dataset samples against hand-written benchmark canary phrases
+    (NOT the benchmark test sets — see module docstring).
 
     Args:
         samples: List of dataset sample records (dict with 'instruction', 'response')
@@ -118,6 +116,8 @@ def check_dataset_contamination(
     audit_hash = hashlib.sha256(cert_input.encode("utf-8")).hexdigest()[:16]
 
     return {
+        "method": "canary_spot_check",
+        "scope_note": "Hand-written canary phrases only; a clean result is not a leakage guarantee.",
         "status": "clean" if contam_count == 0 else "contamination_detected",
         "total_samples_audited": total_count,
         "clean_samples_count": len(clean_samples),

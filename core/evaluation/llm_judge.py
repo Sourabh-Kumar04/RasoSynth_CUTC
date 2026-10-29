@@ -1,13 +1,11 @@
-"""Automated LLM-as-a-Judge Multi-Dimensional Evaluation Rubric.
+"""Heuristic multi-dimensional evaluation rubric (NOT an LLM judge).
 
-Evaluates synthetic instruction-response pairs across 5 standardized dimensions:
-1. Groundedness / Context Faithfulness
-2. Linguistic Authenticity (Register, script & natural code-switching)
-3. Statutory & Factual Correctness
-4. Safety, Tone & Guardrail Adherence
-5. Conciseness & Zero Boilerplate
-
-Returns granular scores (0.0 - 1.0) and an overall weighted index matching AlpacaEval / MT-Bench standards.
+Scores synthetic instruction-response pairs across 5 dimensions with fixed
+rules and constants (word overlap, keyword checks, length bands, a guardrail
+predicate). No model is called, nothing is "judged" by an LLM, and the
+weights are this repo's own — they do not match AlpacaEval / MT-Bench or
+any other external standard. Every result carries method="heuristic_rubric"
+so downstream consumers cannot mistake these constants for model judgements.
 """
 
 import re
@@ -22,16 +20,18 @@ def evaluate_sample_rubric(
     formality_register: str = "formal",
 ) -> Dict[str, Any]:
     """
-    Evaluate sample quality deterministically and score against rubric.
+    Score sample quality with the heuristic rubric (no model call).
 
     Returns:
-        Dict with dimension scores, overall_score, and qualitative assessment.
+        Dict with dimension scores, overall_score, qualitative assessment,
+        and method="heuristic_rubric".
     """
     inst = (instruction or "").strip()
     resp = (response or "").strip()
 
     if not inst or not resp:
         return {
+            "method": "heuristic_rubric",
             "groundedness": 0.0,
             "authenticity": 0.0,
             "domain_correctness": 0.0,
@@ -48,7 +48,8 @@ def evaluate_sample_rubric(
         overlap = len(ref_words & resp_words) / max(len(resp_words), 1)
         groundedness = min(1.0, round(0.4 + overlap * 0.8, 2))
     else:
-        groundedness = 0.90  # Synthetic timeless generation
+        # Heuristic constant, not a measurement: no reference was supplied.
+        groundedness = 0.90
 
     # 2. Linguistic Authenticity
     lang = (language or "en").lower()
@@ -97,6 +98,7 @@ def evaluate_sample_rubric(
     )
 
     return {
+        "method": "heuristic_rubric",
         "groundedness": groundedness,
         "authenticity": authenticity,
         "domain_correctness": domain_correctness,

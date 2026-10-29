@@ -1,8 +1,11 @@
 """
-Semantic Cache Manager - Embedding-based similarity caching
+Semantic Cache Manager - hash-bucket caching (NOT semantic embeddings).
 
-Implements semantic caching with fuzzy matching, instruction equivalence,
-and partial-response reuse for LLM call optimization.
+Implements caching with fuzzy matching, instruction equivalence, and
+partial-response reuse for LLM call optimization. "Embeddings" here are
+SHA-256 hash bytes stretched into a vector — cosine similarity over hash
+bytes does NOT measure meaning, so matches are hash-bucket collisions,
+not semantic similarity. Nothing in this module calls an embedding model.
 """
 
 from typing import Dict, List, Optional, Any, Tuple, Callable
@@ -61,7 +64,7 @@ class PartialMatch:
 
 
 class SemanticCacheManager:
-    """Manages semantic caching with embedding-based similarity."""
+    """Manages hash-bucket caching. Vectors are hash bytes, not model embeddings."""
 
     def __init__(
         self,
@@ -198,7 +201,7 @@ class SemanticCacheManager:
         return None
 
     async def _generate_embedding(self, text: str) -> np.ndarray:
-        """Generate embedding for text."""
+        """Derive a hash pseudo-vector from text (SHA-256 bytes, NOT a model embedding)."""
         hash_val = int(hashlib.sha256(text.encode()).hexdigest(), 16)
         embedding = np.array([
             (hash_val >> (i * 8) & 0xFF) / 255.0
@@ -230,6 +233,17 @@ class SemanticCacheManager:
             return 0.0
         return float(np.dot(a, b) / (norm_a * norm_b))
 
+    def _mean_pairwise_similarity(self) -> Optional[float]:
+        """Mean cosine similarity over distinct stored-vector pairs (max 100 vectors)."""
+        vecs = list(self._embeddings.values())[:100]
+        if len(vecs) < 2:
+            return None
+        sims = [
+            self._cosine_similarity(vecs[i], vecs[j])
+            for i in range(len(vecs)) for j in range(i + 1, len(vecs))
+        ]
+        return float(np.mean(sims)) if sims else None
+
     def get_stats(self) -> Dict[str, Any]:
         """Get semantic cache statistics."""
         total = self._hits + self._misses
@@ -239,10 +253,10 @@ class SemanticCacheManager:
             "misses": self._misses,
             "fuzzy_matches": self._fuzzy_matches,
             "hit_rate": self._hits / max(total, 1),
-            "avg_similarity": np.mean([
-                self._cosine_similarity(e, e)
-                for e in self._embeddings.values()
-            ]) if self._embeddings else 0.0,
+            # P0: the old value compared every vector with ITSELF, so it
+            # was always 1.0. Honest value: mean pairwise similarity over
+            # distinct pairs (capped for cost); None when fewer than 2.
+            "avg_similarity": self._mean_pairwise_similarity(),
         }
 
 

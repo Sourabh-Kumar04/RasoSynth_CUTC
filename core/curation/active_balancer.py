@@ -2,7 +2,7 @@
 
 Analyzes demographic, geographic, and topical representation deficits,
 computing exact quota adjustments and formulating targeted prompt mutations
-to bridge underrepresented clusters and achieve 100% distribution parity.
+to bridge underrepresented clusters. Post-rebalance parity is a PROJECTION, not a measured outcome.
 """
 
 from typing import Any, Dict, List, Optional
@@ -91,5 +91,6 @@ def plan_active_rebalancing(
         "target_sample_pool": target_sample_pool,
         "total_rebalancing_samples_planned": sum(d["allocated_sample_quota"] for d in targeted_directives),
         "targeted_directives": targeted_directives,
-        "expected_parity_score_post_rebalance": 0.95,
+        # Projected, not measured: no rebalance has run when this plan is produced.
+        "projected_parity_score_post_rebalance": 0.95,
     }

@@ -28,7 +28,7 @@ def generate_dbom_badge_svg(
     split_x = 65
     
     svg = f"""<svg xmlns="http://www.w3.org/2000/svg" width="{total_width}" height="28" viewBox="0 0 {total_width} 28" role="img" aria-label="{label}: {status_text}">
-  <title>{label}: {status_text} (DPDP Act Compliant)</title>
+  <title>{label}: {status_text}</title>
   <clipPath id="r">
     <rect width="{total_width}" height="28" rx="6" fill="#fff"/>
   </clipPath>

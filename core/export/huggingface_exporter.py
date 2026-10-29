@@ -118,7 +118,7 @@ print(dataset["train"][0])
 ```
 
 ## Quality & Safety Assurance
-- **DPDP Act Compliance**: Indian Statutory Identifiers (Aadhaar, PAN, GSTIN, UPI, Mobile) redacted.
+- **Statutory identifier handling**: redaction of Indian identifiers (Aadhaar, PAN, GSTIN, UPI, Mobile) is applied by the pipeline when configured; no DPDP Act compliance is claimed or verified.
 - **Cultural & Script Guardrails**: Prohibited casteist, communal slurs blocked and script conformity validated.
 - **Deduplication**: Filtered using MinHash LSH (threshold 0.85).
 
@@ -176,8 +176,8 @@ This adapter was trained exclusively on a verifiable dataset attested by RasoSyn
 | :--- | :--- |
 | **Certificate ID** | `{certificate_id or ('DBOM-' + merkle_root[:8])}` |
 | **Dataset Merkle Root** | `{merkle_root}` |
-| **Attestation Standard** | `RFC 6962 / NIST SP 800-106 (SHA-256)` |
-| **Integrity Guarantee** | `100% Deterministic Provenance` |
+| **Attestation Standard** | `SHA-256 Merkle root over dataset samples (custom construction - not RFC 6962)` |
+| **Integrity** | `Deterministic recomputation over identical samples` |
 """
 
     loss_block = ""

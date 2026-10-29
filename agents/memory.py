@@ -103,7 +103,7 @@ class KnowledgeFact:
 
 
 class VectorMemory:
-    """Vector-based semantic memory with embedding search."""
+    """Hash-bucket memory with pseudo-vector search (NOT semantic: vectors are MD5 hash bytes)."""
 
     def __init__(self, dimension: int = 384):
         self.dimension = dimension
@@ -152,7 +152,7 @@ class VectorMemory:
         memory_type: Optional[MemoryType] = None,
         min_importance: float = 0.0
     ) -> List[Tuple[MemoryEntry, float]]:
-        """Search for similar memories using embeddings."""
+        """Search for memories with similar hash pseudo-vectors (hash-bucket proximity, not semantic similarity)."""
         if query_embedding is None:
             query_embedding = await self._generate_embedding(query)
 
@@ -190,8 +190,7 @@ class VectorMemory:
         return entries[:top_k]
 
     async def _generate_embedding(self, content: Any) -> List[float]:
-        """Generate embedding for content (simplified)."""
-        # In production, use actual embedding model
+        """Derive an MD5 hash pseudo-vector (NOT a model embedding; cosine over hash bytes is not semantic similarity)."""
         content_str = json.dumps(content) if not isinstance(content, str) else content
         import hashlib
         hash_val = int(hashlib.md5(content_str.encode()).hexdigest(), 16)

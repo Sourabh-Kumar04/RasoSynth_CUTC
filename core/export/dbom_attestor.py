@@ -1,10 +1,12 @@
 """Cryptographic Data Bill of Materials (DBOM) & Provenance Attestor.
 
-Generates tamper-evident cryptographic provenance certificates and Data Nutrition Labels
-for enterprise compliance (EU AI Act, India DPDP Act 2023, ISO 42001):
-1. Deterministic Merkle tree SHA-256 root hashing over all dataset samples.
-2. Cryptographic verification to detect downstream data corruption or unauthorized tampering.
-3. Auditable Data Nutrition Label markdown generator.
+Generates Merkle-tree SHA-256 provenance records over dataset samples and
+renders them as Data Nutrition Labels. This is integrity provenance ONLY:
+it does not certify compliance with the EU AI Act, India DPDP Act 2023,
+ISO 42001, or any other regulation, and no label may claim otherwise.
+Compliance fields are fail-closed: anything not explicitly measured and
+passed in is reported as "not verified" / "not measured", never defaulted
+to certified, clean, or 0%.
 """
 
 import hashlib
@@ -71,7 +73,8 @@ def generate_dbom_attestation(
                     break
             pii_masked = not found_pii
         except Exception:
-            pii_masked = True
+            # Fail closed: a detector error means "unknown", never "clean".
+            pii_masked = None
 
     certificate_id = f"DBOM-{merkle_root[:12].upper()}"
 
@@ -86,11 +89,13 @@ def generate_dbom_attestation(
         "issued_at": now_iso,
         "merkle_root_hash": merkle_root,
         "compliance_audit": {
+            # Fail closed: unmeasured fields are None (rendered as
+            # "not verified" / "not measured"), never certified-by-default.
             "pii_masked": pii_masked,
-            "cultural_safety_certified": flags.get("cultural_safety_certified", True),
-            "benchmark_contamination_rate_pct": flags.get("contamination_rate_pct", 0.0),
-            "diversity_entropy": flags.get("diversity_entropy", 0.92),
-            "statutory_compliance_act": flags.get("statutory_compliance_act", "DPDP Act 2023 / IT Act"),
+            "cultural_safety_certified": flags.get("cultural_safety_certified"),
+            "benchmark_contamination_rate_pct": flags.get("contamination_rate_pct"),
+            "diversity_entropy": flags.get("diversity_entropy"),
+            "statutory_compliance_act": flags.get("statutory_compliance_act"),
         },
         "provenance": {
             "engine": "RasoSynthTune 2.0.0 Enterprise",
@@ -141,7 +146,7 @@ def generate_nutrition_label_markdown(dbom: Dict[str, Any]) -> str:
 > **Certificate ID**: `{dbom.get('certificate_id')}`  
 > **Merkle Root Hash**: `{dbom.get('merkle_root_hash')}`  
 > **Issued At**: `{dbom.get('issued_at')}`  
-> **Status**: ✅ **Cryptographically Sealed & Verified**
+> **Status**: Cryptographically Sealed (Merkle root recorded; re-verify against the samples to confirm)
 
 ---
 
@@ -158,14 +163,14 @@ def generate_nutrition_label_markdown(dbom: Dict[str, Any]) -> str:
 
 ---
 
-### 🛡️ Compliance & Safety Certification
+### Compliance & Safety (unverified unless explicitly measured)
 | Security Check | Status | Standard / Regulation |
 |:---|:---:|:---|
-| **PII Scrubbing** | {'✅ Verified Clean' if audit.get('pii_masked') else '⚠️ Flagged'} | Indian IT Act 2000 & Aadhaar Masking |
-| **Indic Cultural Safety** | {'✅ Certified Safe' if audit.get('cultural_safety_certified') else '⚠️ Flagged'} | Hate Speech & Communal Sensitivity Guardrails |
-| **Contamination Leakage** | `{audit.get('benchmark_contamination_rate_pct', 0.0)}%` | GSM8K, IndicGLUE, MMLU 0-Gram Audit |
-| **Topic Representation Entropy** | `{audit.get('diversity_entropy', 0.0)}` | Shannon Multi-Cluster Coverage |
-| **Statutory Compliance** | ✅ Enforced | {audit.get('statutory_compliance_act')} |
+| **PII Scrubbing** | {'Verified Clean' if audit.get('pii_masked') is True else 'Flagged' if audit.get('pii_masked') is False else 'Not verified'} | Indian IT Act 2000 & Aadhaar Masking (claimed framework only) |
+| **Indic Cultural Safety** | {'Certified Safe' if audit.get('cultural_safety_certified') is True else 'Flagged' if audit.get('cultural_safety_certified') is False else 'Not verified'} | Hate Speech & Communal Sensitivity Guardrails (claimed framework only) |
+| **Contamination Leakage** | {f"{audit.get('benchmark_contamination_rate_pct')}%" if audit.get('benchmark_contamination_rate_pct') is not None else 'Not measured'} | Canary spot-check only - not a leakage guarantee |
+| **Topic Representation Entropy** | {audit.get('diversity_entropy') if audit.get('diversity_entropy') is not None else 'Not measured'} | Shannon Multi-Cluster Coverage |
+| **Statutory Compliance** | Not verified | {audit.get('statutory_compliance_act') or 'No framework claimed'} |
 
 ---
 *Generated autonomously by RasoSynthTune Cryptographic DBOM Attestor.*

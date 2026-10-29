@@ -925,7 +925,7 @@ class APIClient {
         scenario_context: string
         prompt_directive: string
       }>
-      expected_parity_score_post_rebalance: number
+      projected_parity_score_post_rebalance: number
     }>('/tools/rebalance-dataset', {
       method: 'POST',
       body: JSON.stringify(payload),
