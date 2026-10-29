@@ -12,8 +12,57 @@ from enum import Enum
 import asyncio
 import json
 import uuid
-import pickle
 
+
+
+def _json_bytes(value) -> bytes:
+    """JSON-encode a stored value.
+
+    Replaces pickle for data written to Redis/files. Non-JSON-native values
+    are stringified (default=str), matching the existing DAG-checkpoint save
+    path; callers must therefore treat restored values as JSON data, not as
+    reconstructed Python objects. Stored pickle blobs from before this change
+    are NOT readable anymore (they fail JSON parsing and are treated as a
+    miss); cache/checkpoint entries are TTL'd and re-created on demand.
+    """
+    return json.dumps(value, default=str).encode()
+
+
+def _json_loads(data):
+    if isinstance(data, (bytes, bytearray)):
+        data = bytes(data)
+    return json.loads(data)
+
+
+def _pipeline_checkpoint_to_json(checkpoint: "PipelineCheckpoint") -> bytes:
+    return _json_bytes({
+        "checkpoint_id": checkpoint.checkpoint_id,
+        "pipeline_id": checkpoint.pipeline_id,
+        "stage": checkpoint.stage,
+        "step_index": checkpoint.step_index,
+        "checkpoint_type": checkpoint.checkpoint_type.value,
+        "created_at": checkpoint.created_at.isoformat(),
+        "expires_at": checkpoint.expires_at.isoformat(),
+        "data": checkpoint.data,
+        "artifacts": checkpoint.artifacts,
+        "metadata": checkpoint.metadata,
+    })
+
+
+def _pipeline_checkpoint_from_json(data) -> "PipelineCheckpoint":
+    parsed = _json_loads(data)
+    return PipelineCheckpoint(
+        checkpoint_id=parsed["checkpoint_id"],
+        pipeline_id=parsed.get("pipeline_id", ""),
+        stage=parsed["stage"],
+        step_index=parsed["step_index"],
+        checkpoint_type=CheckpointType(parsed["checkpoint_type"]),
+        created_at=datetime.fromisoformat(parsed["created_at"]),
+        expires_at=datetime.fromisoformat(parsed["expires_at"]),
+        data=parsed.get("data"),
+        artifacts=parsed.get("artifacts", {}),
+        metadata=parsed.get("metadata", {}),
+    )
 
 class CheckpointType(Enum):
     """Types of checkpoints."""
@@ -106,7 +155,7 @@ class DAGCheckpointManager:
         await self.redis.setex(
             result_key,
             self.default_ttl,
-            pickle.dumps(result)
+            _json_bytes(result)
         )
 
         return checkpoint_id
@@ -170,7 +219,7 @@ class DAGCheckpointManager:
             result_data = await self.redis.get(result_key)
             if result_data:
                 try:
-                    results[node_id] = pickle.loads(result_data)
+                    results[node_id] = _json_loads(result_data)
                 except Exception:
                     results[node_id] = None
 
@@ -312,7 +361,7 @@ class ResumableExecutionManager:
         await self.redis.setex(
             key,
             ttl_seconds or 604800,
-            pickle.dumps(checkpoint)
+            _pipeline_checkpoint_to_json(checkpoint)
         )
 
         # Track in list
@@ -365,7 +414,10 @@ class ResumableExecutionManager:
             keys.sort()
             data = await self.redis.get(keys[-1])
             if data:
-                return pickle.loads(data)
+                try:
+                    return _pipeline_checkpoint_from_json(data)
+                except Exception:
+                    return None
 
         return None
 
@@ -518,7 +570,7 @@ class CheckpointPruner:
             try:
                 data = await self.redis.get(key)
                 if data and key.decode().startswith("checkpoint:execution:"):
-                    checkpoint = pickle.loads(data)
+                    checkpoint = _pipeline_checkpoint_from_json(data)
                     ca = checkpoint.created_at if checkpoint.created_at.tzinfo is not None else checkpoint.created_at.replace(tzinfo=timezone.utc)
                     if ca < cutoff:
                         await self.redis.delete(key)

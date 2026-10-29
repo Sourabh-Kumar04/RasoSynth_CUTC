@@ -11,7 +11,6 @@ from datetime import datetime, timedelta, timezone
 from enum import Enum
 import asyncio
 import gzip
-import pickle
 import hashlib
 import json
 
@@ -118,7 +117,7 @@ class CompressionManager:
         if isinstance(data, str):
             data = data.encode()
         elif not isinstance(data, bytes):
-            data = pickle.dumps(data)
+            data = json.dumps(data, default=str).encode()
 
         original_size = len(data)
 
@@ -177,7 +176,10 @@ class CompressionManager:
 
     async def should_compress(self, data: Any) -> bool:
         """Determine if data should be compressed."""
-        size = len(pickle.dumps(data)) if not isinstance(data, (str, bytes)) else len(str(data))
+        try:
+            size = len(json.dumps(data, default=str).encode()) if not isinstance(data, (str, bytes)) else len(str(data))
+        except Exception:
+            size = len(str(data))
         return size >= self.min_size_bytes
 
     def get_stats(self) -> Dict[str, Any]:
@@ -410,7 +412,7 @@ class ChunkedStorageManager:
         if isinstance(data, str):
             data = data.encode()
         elif not isinstance(data, bytes):
-            data = pickle.dumps(data)
+            data = json.dumps(data, default=str).encode()
 
         total_chunks = (len(data) + self.chunk_size - 1) // self.chunk_size
 

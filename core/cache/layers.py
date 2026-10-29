@@ -11,7 +11,6 @@ from datetime import datetime, timezone
 from enum import Enum
 import asyncio
 import hashlib
-import pickle
 import gzip
 import os
 import json
@@ -213,8 +212,8 @@ class InMemoryCache:
     def _estimate_size(self, value: Any) -> int:
         """Estimate size of value."""
         try:
-            return len(pickle.dumps(value))
-        except:
+            return len(json.dumps(value, default=str).encode())
+        except Exception:
             return len(str(value).encode())
 
 
@@ -405,7 +404,7 @@ class PersistentCache:
             if self.compression != CompressionType.NONE:
                 data = await self._decompress(data)
 
-            return pickle.loads(data)
+            return json.loads(data)
         except Exception:
             return None
 
@@ -418,7 +417,7 @@ class PersistentCache:
     ) -> bool:
         """Set in persistent cache."""
         try:
-            data = pickle.dumps(value)
+            data = json.dumps(value, default=str).encode()
 
             if self.compression != CompressionType.NONE:
                 data = await self._compress(data)
