@@ -176,7 +176,17 @@ class TestServerIntegration:
     def test_auth_endpoints_registered(self):
         """Test auth endpoints are registered."""
         import api.server
-        routes = [r.path for r in api.server.app.routes]
+        def collect_paths(route_list):
+            paths = []
+            for route in route_list:
+                if hasattr(route, "path"):
+                    paths.append(route.path)
+                nested = getattr(route, "original_router", None)
+                if nested is not None:
+                    paths.extend(collect_paths(nested.routes))
+            return paths
+
+        routes = collect_paths(api.server.app.routes)
         assert "/auth/login" in routes
         assert "/auth/logout" in routes
         assert "/auth/me" in routes
