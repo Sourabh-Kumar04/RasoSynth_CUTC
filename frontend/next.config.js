@@ -5,12 +5,13 @@ const nextConfig = {
   reactStrictMode: true,
   output: "standalone",
   images: {
-    remotePatterns: [
-      {
-        protocol: 'https',
-        hostname: '**',
-      },
-    ],
+    // P0: the previous wildcard ('**') let Next.js optimise (and thereby
+    // proxy) images from ANY https host. No remote images are used anywhere
+    // in this frontend today — every image is served locally from public/
+    // (mascot layers, favicons) — so the allowlist is intentionally empty.
+    // Add a host here only when a real remote-image need appears, with the
+    // exact hostname (never '**'), and note why in the commit message.
+    remotePatterns: [],
   },
   experimental: {
     serverActions: {
