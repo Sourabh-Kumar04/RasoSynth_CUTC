@@ -34,7 +34,7 @@ from api.schemas import (
     DatasetConfig, DatasetGenerationRequest, WorkflowConfig, WorkflowStep,
     ValidationResult, FeasibilityResult, ExecutionPlan, JobStatus as JobStatusEnum,
     ConstraintReasoningEngine, SemanticValidator, WorkflowPlanner,
-    AsyncJobExecutor, ProgressTracker, APIMetrics, ValidationMetrics,
+    APIMetrics, ValidationMetrics,
 )
 
 from api.legacy_schemas import (

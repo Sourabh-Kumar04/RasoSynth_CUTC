@@ -158,7 +158,6 @@ from api.schemas.response import (
 # Import additional modules that server.py expects
 from api.validation.engine import ConstraintReasoningEngine, SemanticValidator
 from api.planning.planner import WorkflowPlanner
-from api.execution.executor import AsyncJobExecutor, ProgressTracker
 from api.observability.metrics import APIMetrics, ValidationMetrics
 
 # Operational compatibility schemas live in ``api.legacy_schemas``. Keeping
@@ -317,8 +316,6 @@ __all__ = [
     "ConstraintReasoningEngine",
     "SemanticValidator",
     "WorkflowPlanner",
-    "AsyncJobExecutor",
-    "ProgressTracker",
     "APIMetrics",
     "ValidationMetrics",
 
