@@ -123,7 +123,12 @@ class AutoResumeManager:
                     except (ValueError, TypeError):
                         pass
 
-            if current_status in ("running", "awaiting_review"):
+            if current_status == "awaiting_review":
+                # HITL gate enforcement: awaiting_review jobs require a valid checkpoint
+                # to restore pipeline state, and MUST NOT fall back to full restart (which
+                # would bypass the human gate). If no checkpoint is found, skip recovery.
+                return await self._recover_awaiting_review_job(job_id)
+            elif current_status == "running":
                 return await self._recover_running_job(job_id)
             elif current_status == "pending":
                 return await self._recover_pending_job(job_id)
@@ -132,6 +137,45 @@ class AutoResumeManager:
         except Exception as e:
             logger.error("AutoResume: Failed to recover job %s: %s", job_id, e, exc_info=True)
             return JobRecoveryState.FAILED
+
+    async def _recover_awaiting_review_job(self, job_id: str) -> str:
+        """Recover a job paused at the HITL human review gate.
+
+        Restores exclusively from a verified checkpoint. Never falls back to a full
+        restart from scratch, preventing bypass of the human approval gate.
+        """
+        if self._checkpoint_manager:
+            try:
+                checkpoint = None
+                for method_name in ("get_resume_checkpoint", "get_latest_checkpoint", "get_latest"):
+                    method = getattr(self._checkpoint_manager, method_name, None)
+                    if callable(method):
+                        candidate = await method(job_id)
+                        if candidate:
+                            is_valid, _ = self._validate_checkpoint(candidate)
+                            if is_valid:
+                                checkpoint = candidate
+                                break
+                            elif checkpoint is None:
+                                checkpoint = candidate
+
+                if checkpoint:
+                    is_valid, reason = self._validate_checkpoint(checkpoint)
+                    if is_valid:
+                        return await self._restore_from_checkpoint(job_id, checkpoint)
+                    else:
+                        logger.warning(
+                            "AutoResume: Checkpoint for awaiting_review job %s is invalid (%s) — skipping to preserve HITL gate",
+                            job_id, reason
+                        )
+            except Exception as e:
+                logger.warning("AutoResume: Checkpoint lookup failed for awaiting_review job %s: %s", job_id, e)
+
+        logger.warning(
+            "AutoResume: Job %s is awaiting_review with no valid checkpoint — preserving human gate (not restarting from scratch)",
+            job_id
+        )
+        return JobRecoveryState.SKIPPED
 
     async def _recover_running_job(self, job_id: str) -> str:
         """Recover a job that was running when the process died.

@@ -78,15 +78,26 @@ class ReviewService:
         duplicate_score: float = 0.0,
         diversity_score: float = 0.0,
         metadata: Optional[dict] = None,
+        owner: Optional[str] = None,
     ) -> dict:
         if dataset_id and hasattr(self.db, "get_review_item_for_job_sample"):
             existing = await self.db.get_review_item_for_job_sample(job_id, dataset_id)
             if existing is not None:
                 return existing.to_dict()
 
+        resolved_owner = owner or (metadata or {}).get("owner")
+        if not resolved_owner and job_id and self.db:
+            try:
+                j = await self.db.get_job(job_id)
+                if j and getattr(j, "owner", None):
+                    resolved_owner = j.owner
+            except Exception:
+                pass
+
         item = await self.db.create_review_item(dict(
             job_id=job_id,
             dataset_id=dataset_id,
+            owner=resolved_owner,
             instruction=instruction,
             response=response,
             source_url=source_url,
@@ -110,9 +121,10 @@ class ReviewService:
         job_id: Optional[str] = None,
         page: int = 1,
         page_size: int = 50,
+        owner: Optional[str] = None,
     ) -> dict:
         items, total = await self.db.list_review_items(
-            status=status, job_id=job_id, page=page, page_size=page_size
+            status=status, job_id=job_id, page=page, page_size=page_size, owner=owner
         )
         return {
             "items": [i.to_dict() for i in items],
@@ -225,13 +237,13 @@ class ReviewService:
     async def get_stats(self) -> dict:
         return await self.db.review_stats()
 
-    async def export_approved(self, job_id: Optional[str] = None) -> AsyncGenerator[str, None]:
-        """Yield JSONL lines of all approved items (optionally filtered by job)."""
+    async def export_approved(self, job_id: Optional[str] = None, owner: Optional[str] = None) -> AsyncGenerator[str, None]:
+        """Yield JSONL lines of all approved items (optionally filtered by job/owner)."""
         import json
         page = 1
         while True:
             items, total = await self.db.list_review_items(
-                status="approved", job_id=job_id, page=page, page_size=500
+                status="approved", job_id=job_id, page=page, page_size=500, owner=owner
             )
             for item in items:
                 d = item.to_dict()

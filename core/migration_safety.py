@@ -90,6 +90,12 @@ BUILTIN_MIGRATIONS: Dict[str, List[MigrationStep]] = {
         add_column("datasets", "compliance_summary", "TEXT"),
         add_column("datasets", "delivery_manifest_url", "VARCHAR(512)"),
     ],
+    "006_add_owner_columns": [
+        add_column("jobs", "owner", "VARCHAR(255)"),
+        add_column("datasets", "owner", "VARCHAR(255)"),
+        add_column("finetune_jobs", "owner", "VARCHAR(255)"),
+        add_column("review_queue", "owner", "VARCHAR(255)"),
+    ],
 }
 
 

@@ -13,7 +13,8 @@ CREATE TABLE IF NOT EXISTS jobs (
     samples_processed INTEGER DEFAULT 0,
     samples_generated INTEGER DEFAULT 0,
     cost_usd FLOAT DEFAULT 0.0,
-    error TEXT
+    error TEXT,
+    owner VARCHAR(255)
 );
 
 -- Datasets table
@@ -25,7 +26,8 @@ CREATE TABLE IF NOT EXISTS datasets (
     size INTEGER,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     metadata JSONB,
-    output_path VARCHAR(500)
+    output_path VARCHAR(500),
+    owner VARCHAR(255)
 );
 
 -- Samples table
@@ -158,7 +160,8 @@ CREATE TABLE IF NOT EXISTS finetune_jobs (
     created_at TIMESTAMP DEFAULT NOW(),
     started_at TIMESTAMP,
     completed_at TIMESTAMP,
-    updated_at TIMESTAMP DEFAULT NOW()
+    updated_at TIMESTAMP DEFAULT NOW(),
+    owner VARCHAR(255)
 );
 
 CREATE INDEX IF NOT EXISTS ix_finetune_jobs_status ON finetune_jobs(status);
@@ -187,7 +190,8 @@ CREATE TABLE IF NOT EXISTS review_queue (
     edited_response TEXT,
     review_version INTEGER DEFAULT 0,
     created_at TIMESTAMP DEFAULT NOW(),
-    updated_at TIMESTAMP DEFAULT NOW()
+    updated_at TIMESTAMP DEFAULT NOW(),
+    owner VARCHAR(255)
 );
 
 CREATE INDEX IF NOT EXISTS ix_review_queue_job_id ON review_queue(job_id);

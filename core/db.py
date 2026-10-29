@@ -55,6 +55,7 @@ class Job(Base):
     samples_filtered = Column(Integer, default=0)
     quality_score = Column(Float, nullable=True)
     merkle_root = Column(String, nullable=True)
+    owner = Column(String(255), nullable=True, index=True)
 
     datasets = relationship("Dataset", back_populates="job", cascade="all, delete-orphan", lazy="selectin")
 
@@ -71,6 +72,7 @@ class Job(Base):
             "current_stage": self.current_stage,
             "quality_score": q,
             "merkle_root": self.merkle_root or (self.datasets[0].metadata_.get("merkle_root_hash") if self.datasets and self.datasets[0].metadata_ else None),
+            "owner": getattr(self, "owner", None),
             "created_at": self.created_at.isoformat() if self.created_at else None,
             "updated_at": self.updated_at.isoformat() if self.updated_at else None,
         }
@@ -88,6 +90,7 @@ class Dataset(Base):
     created_at = Column(DateTime, default=utc_now)
     metadata_ = Column("metadata", JSON)
     output_path = Column(String)
+    owner = Column(String(255), nullable=True, index=True)
 
     job = relationship("Job", back_populates="datasets")
     samples = relationship("Sample", back_populates="dataset", cascade="all, delete-orphan")
@@ -310,6 +313,7 @@ class FineTuneJob(Base):
     error = Column(Text)
     output_path = Column(String(512))                         # local checkpoint dir
     hf_repo_url = Column(String(512))                         # HF Hub URL if pushed
+    owner = Column(String(255), nullable=True, index=True)
     # timing
     created_at = Column(DateTime, default=utc_now)
     started_at = Column(DateTime)
@@ -332,6 +336,7 @@ class FineTuneJob(Base):
             "error": self.error,
             "output_path": self.output_path,
             "hf_repo_url": self.hf_repo_url,
+            "owner": getattr(self, "owner", None),
             "created_at": self.created_at.isoformat() if self.created_at else None,
             "started_at": self.started_at.isoformat() if self.started_at else None,
             "completed_at": self.completed_at.isoformat() if self.completed_at else None,
@@ -365,6 +370,7 @@ class ReviewQueueItem(Base):
     edited_response = Column(Text)
     review_version = Column(Integer, default=0)
     extra_metadata = Column(JSON, default=dict)
+    owner = Column(String(255), nullable=True, index=True)
     # timestamps
     created_at = Column(DateTime, default=utc_now, index=True)
     updated_at = Column(DateTime, default=utc_now, onupdate=utc_now)
@@ -391,6 +397,7 @@ class ReviewQueueItem(Base):
             "edited_response": self.edited_response,
             "review_version": self.review_version,
             "metadata": self.extra_metadata or {},
+            "owner": getattr(self, "owner", None),
             "created_at": self.created_at.isoformat() if self.created_at else None,
             "updated_at": self.updated_at.isoformat() if self.updated_at else None,
         }
@@ -459,6 +466,7 @@ class DatabaseManager:
                     # "no such column: jobs.quality_score".
                     ("quality_score", "FLOAT"),
                     ("merkle_root", "VARCHAR"),
+                    ("owner", "VARCHAR(255)"),
                 ):
                     try:
                         await conn.execute(
@@ -466,6 +474,13 @@ class DatabaseManager:
                         )
                     except Exception:
                         pass  # Column already exists
+                for tbl in ("datasets", "finetune_jobs", "review_queue"):
+                    try:
+                        await conn.execute(
+                            text(f"ALTER TABLE {tbl} ADD COLUMN owner VARCHAR(255)")
+                        )
+                    except Exception:
+                        pass
             else:
                 await conn.execute(
                     text("ALTER TABLE jobs ADD COLUMN IF NOT EXISTS sources_discovered INTEGER DEFAULT 0")
@@ -481,6 +496,18 @@ class DatabaseManager:
                 )
                 await conn.execute(
                     text("ALTER TABLE jobs ADD COLUMN IF NOT EXISTS merkle_root VARCHAR")
+                )
+                await conn.execute(
+                    text("ALTER TABLE jobs ADD COLUMN IF NOT EXISTS owner VARCHAR(255)")
+                )
+                await conn.execute(
+                    text("ALTER TABLE datasets ADD COLUMN IF NOT EXISTS owner VARCHAR(255)")
+                )
+                await conn.execute(
+                    text("ALTER TABLE finetune_jobs ADD COLUMN IF NOT EXISTS owner VARCHAR(255)")
+                )
+                await conn.execute(
+                    text("ALTER TABLE review_queue ADD COLUMN IF NOT EXISTS owner VARCHAR(255)")
                 )
                 try:
                     await conn.execute(
@@ -499,6 +526,10 @@ class DatabaseManager:
 
             # ── Performance indexes for scale ─────────────────────────
             indexes = [
+                ("ix_jobs_owner", "jobs", "owner"),
+                ("ix_datasets_owner", "datasets", "owner"),
+                ("ix_finetune_jobs_owner", "finetune_jobs", "owner"),
+                ("ix_review_queue_owner", "review_queue", "owner"),
                 ("ix_jobs_status", "jobs", "status"),
                 ("ix_jobs_created_at", "jobs", "created_at"),
                 ("ix_datasets_job_id", "datasets", "job_id"),
@@ -550,11 +581,12 @@ class DatabaseManager:
                 await session.rollback()
                 raise e
 
-    async def create_job(self, config: dict) -> Job:
+    async def create_job(self, config: dict, owner: Optional[str] = None) -> Job:
         """Create a new job."""
         async with self.session_maker() as session:
             job_id = config.get("id") or str(uuid.uuid4())
-            job = Job(id=job_id, config=config, status=config.get("status", "pending"))
+            resolved_owner = owner or config.get("owner")
+            job = Job(id=job_id, config=config, status=config.get("status", "pending"), owner=resolved_owner)
             session.add(job)
             await self._commit_with_retry(session)
             _ = (job.id, job.status, job.created_at, job.updated_at, job.config, job.progress, job.current_stage)
@@ -584,13 +616,15 @@ class DatabaseManager:
                         setattr(job, key, value)
                 await self._commit_with_retry(session)
 
-    async def list_jobs(self, status: Optional[str] = None, limit: int = 100) -> list[Job]:
-        """List jobs with optional status filter."""
+    async def list_jobs(self, status: Optional[str] = None, limit: int = 100, owner: Optional[str] = None) -> list[Job]:
+        """List jobs with optional status and owner filters."""
         from sqlalchemy import select
         async with self.session_maker() as session:
             stmt = select(Job).order_by(Job.created_at.desc())
             if status:
                 stmt = stmt.where(Job.status == status)
+            if owner is not None:
+                stmt = stmt.where(Job.owner == owner)
             result = await session.execute(stmt.limit(limit))
             jobs = list(result.scalars().all())
             for j in jobs:
@@ -603,10 +637,18 @@ class DatabaseManager:
             await session.execute(delete(Job))
             await self._commit_with_retry(session)
 
-    async def create_dataset(self, job_id: str, name: str, type: str, size: int, metadata: dict, output_path: str) -> Dataset:
+    async def create_dataset(self, job_id: str, name: str, type: str, size: int, metadata: dict, output_path: str, owner: Optional[str] = None) -> Dataset:
         """Create a new dataset."""
         async with self.session_maker() as session:
             ds_id = str(uuid.uuid4())
+            resolved_owner = owner or (metadata or {}).get("owner")
+            if not resolved_owner and job_id:
+                try:
+                    parent_job = await session.get(Job, job_id)
+                    if parent_job and parent_job.owner:
+                        resolved_owner = parent_job.owner
+                except Exception:
+                    pass
             dataset = Dataset(
                 id=ds_id,
                 job_id=job_id,
@@ -614,7 +656,8 @@ class DatabaseManager:
                 type=type,
                 size=size,
                 metadata_=metadata,
-                output_path=output_path
+                output_path=output_path,
+                owner=resolved_owner,
             )
             session.add(dataset)
             await self._commit_with_retry(session)
@@ -664,13 +707,14 @@ class DatabaseManager:
             _ = record.id
             return record
 
-    async def list_datasets(self, limit: int = 100) -> list[Dataset]:
-        """List all datasets ordered by creation date."""
+    async def list_datasets(self, limit: int = 100, owner: Optional[str] = None) -> list[Dataset]:
+        """List all datasets ordered by creation date, optionally filtered by owner."""
         async with self.session_maker() as session:
             from sqlalchemy import select
-            result = await session.execute(
-                select(Dataset).order_by(Dataset.created_at.desc()).limit(limit)
-            )
+            stmt = select(Dataset).order_by(Dataset.created_at.desc())
+            if owner is not None:
+                stmt = stmt.where(Dataset.owner == owner)
+            result = await session.execute(stmt.limit(limit))
             datasets = list(result.scalars().all())
             for d in datasets:
                 _ = (d.id, d.job_id, d.name, d.type, d.size, d.created_at, d.output_path, d.metadata_)
@@ -914,12 +958,13 @@ class DatabaseManager:
                         setattr(fj, k, v)
                 await self._commit_with_retry(session)
 
-    async def list_finetune_jobs(self, limit: int = 100) -> list["FineTuneJob"]:
+    async def list_finetune_jobs(self, limit: int = 100, owner: Optional[str] = None) -> list["FineTuneJob"]:
         from sqlalchemy import select
         async with self.session_maker() as session:
-            result = await session.execute(
-                select(FineTuneJob).order_by(FineTuneJob.created_at.desc()).limit(limit)
-            )
+            stmt = select(FineTuneJob).order_by(FineTuneJob.created_at.desc())
+            if owner is not None:
+                stmt = stmt.where(FineTuneJob.owner == owner)
+            result = await session.execute(stmt.limit(limit))
             jobs = list(result.scalars().all())
             for j in jobs:
                 _ = j.id
@@ -970,6 +1015,7 @@ class DatabaseManager:
         job_id: Optional[str] = None,
         page: int = 1,
         page_size: int = 50,
+        owner: Optional[str] = None,
     ) -> tuple[list["ReviewQueueItem"], int]:
         """Return (items, total_count) with optional filters and pagination."""
         from sqlalchemy import select, func
@@ -979,6 +1025,8 @@ class DatabaseManager:
                 base_q = base_q.where(ReviewQueueItem.review_status == status)
             if job_id:
                 base_q = base_q.where(ReviewQueueItem.job_id == job_id)
+            if owner is not None:
+                base_q = base_q.where(ReviewQueueItem.owner == owner)
 
             count_result = await session.execute(
                 select(func.count()).select_from(base_q.subquery())
@@ -1099,9 +1147,9 @@ class AsyncDB:
 
         return cls(db_manager)
 
-    async def create_job(self, config: dict) -> dict:
+    async def create_job(self, config: dict, owner: Optional[str] = None) -> dict:
         """Create a new job and return its ID."""
-        job = await self.db.create_job(config)
+        job = await self.db.create_job(config, owner=owner)
         return {
             "id": getattr(job, "id", None) or config.get("id"),
             "status": getattr(job, "status", "pending"),
@@ -1139,6 +1187,7 @@ class AsyncDB:
             "metadata": meta,
             "cost_usd": job.cost_usd,
             "error": job.error,
+            "owner": getattr(job, "owner", None),
             "created_at": job.created_at.isoformat(),
             "updated_at": job.updated_at.isoformat(),
             "config": job.config,
@@ -1152,9 +1201,9 @@ class AsyncDB:
         """Update job fields safely accepting either a dict or keyword arguments."""
         await self.db.update_job(job_id, status_data, **kwargs)
 
-    async def list_jobs(self, status: Optional[str] = None, limit: int = 50, cursor: Optional[str] = None) -> list[dict]:
+    async def list_jobs(self, status: Optional[str] = None, limit: int = 50, cursor: Optional[str] = None, owner: Optional[str] = None) -> list[dict]:
         """List all jobs with complete configuration and domain metadata."""
-        jobs = await self.db.list_jobs(status=status, limit=limit)
+        jobs = await self.db.list_jobs(status=status, limit=limit, owner=owner)
         result = []
         for job in jobs:
             config = getattr(job, 'config', {}) or {}
@@ -1185,6 +1234,7 @@ class AsyncDB:
                 "metadata": meta,
                 "created_at": job.created_at,
                 "updated_at": getattr(job, 'updated_at', job.created_at),
+                "owner": getattr(job, 'owner', None),
                 "config": config,
                 "target_domain": config.get('target_domain') or getattr(job, 'target_domain', 'Custom'),
                 "dataset_type": config.get('dataset_type') or getattr(job, 'dataset_type', 'sft'),
@@ -1209,9 +1259,9 @@ class AsyncDB:
         """Get a job by ID."""
         return await self.db.get_job(job_id)
 
-    async def create_dataset(self, job_id: str, name: str, type: str, size: int, metadata: dict, output_path: str) -> dict:
+    async def create_dataset(self, job_id: str, name: str, type: str, size: int, metadata: dict, output_path: str, owner: Optional[str] = None) -> dict:
         """Create a new dataset and return its ID."""
-        dataset = await self.db.create_dataset(job_id, name, type, size, metadata, output_path)
+        dataset = await self.db.create_dataset(job_id, name, type, size, metadata, output_path, owner=owner)
         return {"id": dataset.id, "job_id": dataset.job_id}
 
     async def create_dataset_version(self, **kwargs) -> dict:
@@ -1259,9 +1309,9 @@ class AsyncDB:
     async def list_workflow_schedule_runs(self, schedule_id: str, limit: int = 100) -> list[dict]:
         return [record.to_dict() for record in await self.db.list_workflow_schedule_runs(schedule_id, limit)]
 
-    async def list_datasets(self, limit: int = 100) -> list[dict]:
+    async def list_datasets(self, limit: int = 100, owner: Optional[str] = None) -> list[dict]:
         """List all datasets ordered by creation date."""
-        datasets = await self.db.list_datasets(limit)
+        datasets = await self.db.list_datasets(limit, owner=owner)
         return [
             {
                 "id": ds.id,
@@ -1269,6 +1319,7 @@ class AsyncDB:
                 "name": ds.name,
                 "type": ds.type,
                 "size": ds.size,
+                "owner": getattr(ds, "owner", None),
                 "created_at": ds.created_at.isoformat() if ds.created_at else None,
                 "metadata": ds.metadata_,
                 "output_path": ds.output_path,
@@ -1287,6 +1338,7 @@ class AsyncDB:
             "name": ds.name,
             "type": ds.type,
             "size": ds.size,
+            "owner": getattr(ds, "owner", None),
             "created_at": ds.created_at.isoformat() if ds.created_at else None,
             "metadata": ds.metadata_,
             "output_path": ds.output_path,
@@ -1302,6 +1354,7 @@ class AsyncDB:
                 "name": ds.name,
                 "type": ds.type,
                 "size": ds.size,
+                "owner": getattr(ds, "owner", None),
                 "created_at": ds.created_at.isoformat() if ds.created_at else None,
                 "metadata": ds.metadata_,
                 "output_path": ds.output_path,
