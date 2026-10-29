@@ -481,11 +481,11 @@ export default function OrchestrationPage() {
                   <span className="px-2 py-0.5 rounded bg-[#f26625]/10 border border-[#f26625]/30 text-[#f26625] font-bold uppercase text-xs">
                     {selectedJob.config?.synthesis_mode || selectedJob.synthesis_mode || 'standard'}
                   </span>
-                  <span className="text-[#334155]">/</span>
+                  <span className="text-[#4a463f]">/</span>
                   <span className="text-[#a8a29e] text-xs">
                     Domain: <strong className="text-white font-normal">{selectedJob.target_domain || selectedJob.domain || selectedJob.dataset_name || 'General'}</strong>
                   </span>
-                  <span className="text-[#334155]">/</span>
+                  <span className="text-[#4a463f]">/</span>
                   <span className="text-[#d8d2c4] text-xs flex items-center gap-1">
                     <ShieldCheck className="w-3 h-3 text-[#f26625]" />
                     DBOM Attestation: Certified

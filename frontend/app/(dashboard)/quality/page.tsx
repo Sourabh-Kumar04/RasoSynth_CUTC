@@ -688,7 +688,7 @@ export default function QualityDashboardPage() {
                         &ldquo;{selectedPoint.instruction_snippet}&rdquo;
                       </p>
                       <div className="flex items-center justify-between pt-1 text-xs font-mono text-[#a8a29e]">
-                        <span>Domain: <strong className="text-slate-300">{selectedPoint.domain}</strong></span>
+                        <span>Domain: <strong className="text-[#d8d2c4]">{selectedPoint.domain}</strong></span>
                         <span>Coord: [{selectedPoint.x}, {selectedPoint.y}]</span>
                       </div>
                     </div>

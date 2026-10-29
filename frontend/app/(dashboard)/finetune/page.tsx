@@ -102,7 +102,7 @@ const STATUS_PILL: Record<FTJob['status'], string> = {
 const STATUS_STRIPE: Record<FTJob['status'], string> = {
   pending: 'border-l-amber-500', running: 'border-l-[#10b981]',
   completed: 'border-l-emerald-500', failed: 'border-l-rose-500',
-  cancelled: 'border-l-slate-400',
+  cancelled: 'border-l-[#a8a29e]',
 }
 
 function StatusPill({ status }: { status: FTJob['status'] }) {

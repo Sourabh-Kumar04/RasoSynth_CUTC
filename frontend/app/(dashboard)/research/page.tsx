@@ -693,7 +693,7 @@ export default function ResearchPage() {
                       {/* Benchmark Impact Indicator */}
                       <div className="pt-2 border-t border-[#1c1c28] flex items-center justify-between text-xs font-mono">
                         <span className="text-[#a8a29e] uppercase">Benchmark Impact:</span>
-                        <span className={clsx('font-bold px-1.5 py-0.5 rounded', isEnabled ? 'bg-emerald-950/60 text-emerald-400 border border-emerald-800/40' : 'bg-slate-900 text-[#a8a29e]')}>
+                        <span className={clsx('font-bold px-1.5 py-0.5 rounded', isEnabled ? 'bg-emerald-950/60 text-emerald-400 border border-emerald-800/40' : 'bg-[#1b1b18] text-[#a8a29e]')}>
                           {isEnabled ? h.impact : 'Inactive'}
                         </span>
                       </div>

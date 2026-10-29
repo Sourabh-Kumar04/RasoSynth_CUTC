@@ -32,9 +32,9 @@ const PROVIDERS_CONFIG = [
   { name: 'Together AI (DeepSeek R1)',    env: 'TOGETHER_API_KEY',  letter: 'TG', color: 'text-[#f26625] bg-[#f26625]/10 border-[#f26625]/30',       configured: true,  masked: '●●●●' },
   { name: 'HuggingFace Hub Token',        env: 'HF_TOKEN',          letter: 'HF', color: 'text-[#f59e0b] bg-[#f59e0b]/10 border-amber-500/30',   configured: true,  masked: '●●●●' },
   { name: 'Ollama (Local Engine)',        env: 'OLLAMA_BASE_URL',   letter: 'Ol', color: 'text-emerald-400 bg-emerald-500/10 border-emerald-500/30', configured: true, masked: 'http://localhost:11434' },
-  { name: 'NVIDIA NIM Microservices',     env: 'NVIDIA_API_KEY',    letter: 'N',  color: 'text-[#a8a29e] bg-slate-900 border-slate-700',        configured: false, masked: null },
-  { name: 'Anthropic Claude 3.5',         env: 'ANTHROPIC_API_KEY', letter: 'A',  color: 'text-[#a8a29e] bg-slate-900 border-slate-700',        configured: false, masked: null },
-  { name: 'OpenAI (GPT-4o)',              env: 'OPENAI_API_KEY',    letter: 'O',  color: 'text-[#a8a29e] bg-slate-900 border-slate-700',        configured: false, masked: null },
+  { name: 'NVIDIA NIM Microservices',     env: 'NVIDIA_API_KEY',    letter: 'N',  color: 'text-[#a8a29e] bg-[#1b1b18] border-[#4a463f]',        configured: false, masked: null },
+  { name: 'Anthropic Claude 3.5',         env: 'ANTHROPIC_API_KEY', letter: 'A',  color: 'text-[#a8a29e] bg-[#1b1b18] border-[#4a463f]',        configured: false, masked: null },
+  { name: 'OpenAI (GPT-4o)',              env: 'OPENAI_API_KEY',    letter: 'O',  color: 'text-[#a8a29e] bg-[#1b1b18] border-[#4a463f]',        configured: false, masked: null },
 ]
 
 const LIMITS_CONFIG = [
@@ -559,7 +559,7 @@ export default function SettingsPage() {
                         {configured ? (
                           <CheckCircle2 className="h-3.5 w-3.5 text-[#10b981]" />
                         ) : (
-                          <span className="w-1.5 h-1.5 rounded-full bg-slate-600 inline-block" />
+                          <span className="w-1.5 h-1.5 rounded-full bg-[#4a463f] inline-block" />
                         )}
                       </p>
                       <p className="text-xs text-[#a8a29e] font-mono">{env}</p>

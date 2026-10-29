@@ -53,8 +53,8 @@ export function SynthesisFlowDiagram() {
 
   return (
     <div className="w-full my-8 p-6 rounded-2xl bg-[#0a0a0f]/90 border border-[#272738] shadow-2xl relative overflow-hidden backdrop-blur-md">
-      {/* Background Aura */}
-      <div className="absolute -top-24 left-1/2 -translate-x-1/2 w-96 h-48 bg-[#f26625]/10 rounded-full blur-3xl pointer-events-none" />
+      {/* Background Accent */}
+      <div className="absolute -top-24 left-1/2 -translate-x-1/2 w-96 h-48 bg-[#f26625]/5 rounded-full pointer-events-none" />
 
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between pb-6 mb-6 border-b border-[#1c1c28] gap-3">

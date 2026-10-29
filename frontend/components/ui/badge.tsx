@@ -35,27 +35,27 @@ const statusColors = {
   healthy: 'bg-emerald-500',
   degraded: 'bg-amber-500',
   unhealthy: 'bg-rose-500',
-  disabled: 'bg-slate-400',
+  disabled: 'bg-[#a8a29e]',
   running: 'bg-emerald-500 animate-pulse',
   pending: 'bg-amber-500',
   completed: 'bg-emerald-600',
   failed: 'bg-rose-500',
-  cancelled: 'bg-slate-400',
+  cancelled: 'bg-[#a8a29e]',
 }
 
 // Status text colour matches the status dot: emerald = ok/running/done,
-// amber = degraded/pending, rose = failed/unhealthy, slate = off/cancelled.
+// amber = degraded/pending, rose = failed/unhealthy, stone = off/cancelled.
 // Orange (#f26625) is the action colour and is never a status colour.
 const statusTextColors: Record<string, string> = {
   healthy: 'text-emerald-400',
   degraded: 'text-amber-400',
   unhealthy: 'text-rose-400',
-  disabled: 'text-slate-400',
+  disabled: 'text-[#a8a29e]',
   running: 'text-emerald-400',
   pending: 'text-amber-400',
   completed: 'text-emerald-400',
   failed: 'text-rose-400',
-  cancelled: 'text-slate-400',
+  cancelled: 'text-[#a8a29e]',
 }
 
 const StatusBadge = ({
@@ -67,8 +67,8 @@ const StatusBadge = ({
   label?: string
   className?: string
 }) => {
-  const colorClass = statusColors[status as keyof typeof statusColors] || 'bg-slate-400'
-  const textClass = statusTextColors[status] || 'text-slate-400'
+  const colorClass = statusColors[status as keyof typeof statusColors] || 'bg-[#a8a29e]'
+  const textClass = statusTextColors[status] || 'text-[#a8a29e]'
 
   return (
     <div className={clsx('inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-sm bg-[#161622] border border-[#272738]', className)}>

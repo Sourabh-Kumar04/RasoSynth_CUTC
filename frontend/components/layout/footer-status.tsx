@@ -16,7 +16,7 @@ type HealthSnapshot = {
  * the observability page uses for its headline displayStatus: host pressure
  * (memory > 85% or 1m CPU load > 3.0) forces "degraded", otherwise the
  * health endpoint's status. While loading or on fetch failure the dot is
- * neutral slate — it never claims emerald "Active" without data.
+ * neutral stone — it never claims emerald "Active" without data.
  */
 export function FooterStatus() {
   const [snapshot, setSnapshot] = useState<HealthSnapshot | null>(null)
@@ -40,7 +40,7 @@ export function FooterStatus() {
   if (failed || snapshot === null) {
     return (
       <span className="flex items-center gap-1.5 px-2 py-0.5 rounded bg-[#12121a] border border-[#272738] text-xs text-zinc-300">
-        <span className="w-1.5 h-1.5 rounded-full bg-slate-400" />
+        <span className="w-1.5 h-1.5 rounded-full bg-[#a8a29e]" />
         <span>{failed ? 'System status unknown' : 'Checking system status…'}</span>
       </span>
     )

@@ -1428,7 +1428,7 @@ export default function DatasetsPage() {
                           <span className="text-amber-300 font-bold uppercase">{probe.category}</span>
                           <span className="text-[#a8a29e]">{probe.probe_id}</span>
                         </div>
-                        <p className="text-slate-200">{probe.instruction}</p>
+                        <p className="text-[#f5f2ea]">{probe.instruction}</p>
                         <p className="text-xs text-emerald-400">Expected: {probe.expected_behavior}</p>
                       </div>
                     ))}
@@ -1961,7 +1961,7 @@ export default function DatasetsPage() {
                   <p className="text-xs text-[#a8a29e]">Generating optimized training recipe...</p>
                 </div>
               ) : (
-                <pre className="p-4 rounded-md bg-[#0d0d14] border border-[#272738] text-slate-200 overflow-x-auto whitespace-pre font-mono text-xs leading-relaxed select-all">
+                <pre className="p-4 rounded-md bg-[#0d0d14] border border-[#272738] text-[#f5f2ea] overflow-x-auto whitespace-pre font-mono text-xs leading-relaxed select-all">
                   {recipeData?.content || 'No recipe generated.'}
                 </pre>
               )}
@@ -2115,7 +2115,7 @@ export default function DatasetsPage() {
                     <span className="text-xs text-[#a8a29e] uppercase font-bold block mb-1">
                       Data Nutrition Label Preview (DATA_NUTRITION_LABEL.md)
                     </span>
-                    <pre className="p-3 rounded-md bg-[#0a0a0f] border border-[#272738] text-slate-300 text-xs overflow-x-auto whitespace-pre-wrap max-h-48">
+                    <pre className="p-3 rounded-md bg-[#0a0a0f] border border-[#272738] text-[#d8d2c4] text-xs overflow-x-auto whitespace-pre-wrap max-h-48">
                       {dbomData?.nutrition_label_md || 'Generating label...'}
                     </pre>
                   </div>

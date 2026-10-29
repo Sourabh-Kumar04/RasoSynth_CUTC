@@ -10,7 +10,7 @@ const TONE: Record<
   ok: { dot: 'bg-emerald-400', text: 'text-emerald-400', border: 'border-emerald-500/30', bg: 'bg-emerald-500/10', Icon: CheckCircle2 },
   warn: { dot: 'bg-amber-400', text: 'text-amber-400', border: 'border-amber-500/30', bg: 'bg-amber-500/10', Icon: AlertTriangle },
   bad: { dot: 'bg-rose-400', text: 'text-rose-400', border: 'border-rose-500/30', bg: 'bg-rose-500/10', Icon: XCircle },
-  neutral: { dot: 'bg-slate-400', text: 'text-slate-300', border: 'border-[#272738]', bg: 'bg-[#161622]', Icon: Info },
+  neutral: { dot: 'bg-[#a8a29e]', text: 'text-[#d8d2c4]', border: 'border-[#272738]', bg: 'bg-[#161622]', Icon: Info },
 }
 
 export type StatusItem = {

@@ -1087,7 +1087,7 @@ function DetailPane({
                   <div className="flex items-center justify-between text-[#d8d2c4] font-bold">
                     <span>{tc.name}()</span>
                   </div>
-                  <pre className="text-xs text-slate-300 overflow-x-auto whitespace-pre">
+                  <pre className="text-xs text-[#d8d2c4] overflow-x-auto whitespace-pre">
                     {JSON.stringify(tc.arguments, null, 2)}
                   </pre>
                 </div>

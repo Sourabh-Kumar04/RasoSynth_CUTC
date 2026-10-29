@@ -29,7 +29,7 @@ export default function DashboardLayout({
                 <BrandLogo size={20} />
                 <span className="font-bold tracking-tight">RasoSynthTune</span>
               </Link>
-              <span className="text-[#334155] hidden sm:inline">|</span>
+              <span className="text-[#4a463f] hidden sm:inline">|</span>
               <FooterStatus />
               <span className="text-xs text-amber-400/90 hidden lg:inline">
                 (Demo Guard: $50 Cap · In-Memory Ring Logging)
@@ -54,7 +54,7 @@ export default function DashboardLayout({
               <Link href="/settings" className="hover:text-white transition-colors">
                 System Status
               </Link>
-              <span className="text-[#334155]">|</span>
+              <span className="text-[#4a463f]">|</span>
               <span className="text-[#a8a29e]">
                 Apache-2.0 License · Self-Hostable
               </span>
