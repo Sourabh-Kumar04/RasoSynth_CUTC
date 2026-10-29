@@ -554,22 +554,8 @@ export default function ZenPortalPage() {
           <span className="tracking-widest uppercase text-white font-semibold">
             {deploymentMode ? deploymentMode.toUpperCase() : "MODE UNKNOWN"}
           </span>
-          <span className="text-zinc-600">/</span>
-          <span className="text-zinc-400">Mode from backend /health</span>
         </motion.div>
 
-        {/* Subtle Aperture Tag */}
-        <motion.div
-          initial={{ opacity: 0, y: -10 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.6 }}
-          className="inline-flex items-center space-x-2 px-3.5 py-1 rounded-full bg-[#12121a]/90 border border-[#272738] text-xs font-mono text-zinc-400 mb-6 backdrop-blur-md shadow-sm"
-        >
-          <span className="w-1.5 h-1.5 rounded-full bg-[#f26625] animate-ping" />
-          <span className="tracking-widest uppercase text-white font-semibold">SYNTH_NEXUS // VERIFIED DBOM</span>
-          <span className="text-zinc-600">/</span>
-          <span className="text-zinc-400">Async Multiprocess · SHA-256 Sealed</span>
-        </motion.div>
 
         {/* Hero Title */}
         <motion.h1
@@ -591,8 +577,7 @@ export default function ZenPortalPage() {
           transition={{ duration: 0.7, delay: 0.2 }}
           className="mt-4 text-xs sm:text-sm text-zinc-400 text-center max-w-2xl font-sans"
         >
-          Pure reasoning trajectories, statutory grounded invariance, and cryptographically verified
-          Merkle DBOM provenance for frontier LLM fine-tuning.
+          Turn raw ideas into verified datasets and fine-tuned models.
         </motion.p>
 
         {/* Hero tagline + orange underline bar + shadcn CTAs */}
