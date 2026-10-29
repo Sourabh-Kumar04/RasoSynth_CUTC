@@ -43,7 +43,7 @@ services:
           memory: 128M
 
   qdrant:
-    image: qdrant/qdrant:latest
+    image: qdrant/qdrant:v1.14
     ports:
       - "127.0.0.1:6333:6333"
       - "127.0.0.1:6334:6334"
@@ -65,7 +65,9 @@ services:
       context: .
       dockerfile: Dockerfile
     ports:
-      - "8000:8000"
+      # Loopback-only: the nginx proxy reaches the app over the internal
+      # network. Only :80 on the proxy is the intended public surface.
+      - "127.0.0.1:8000:8000"
     env_file:
       - .env
     environment:
@@ -92,10 +94,9 @@ services:
           memory: 4G
         reservations:
           memory: 512M
-          devices:
-            - driver: nvidia
-              count: all
-              capabilities: [gpu]
+    # NOTE (P0): the NVIDIA GPU reservation was removed from the API service.
+    # Local GPU training must run via a dedicated GPU service/host; reserving
+    # all GPUs on the API container starved every other consumer.
     healthcheck:
       test: ["CMD-SHELL", "python -c 'import urllib.request; urllib.request.urlopen(\"http://localhost:8000/health\")'"]
       interval: 15s
@@ -182,9 +183,12 @@ services:
           memory: 512M
 
   flower:
-    image: mher/flower:latest
+    # NOTE (P0): Flower ships without authentication in this image, so it is
+    # intentionally NOT proxied by nginx (see nginx.conf) and is bound
+    # loopback-only: operators reach it via the host or a port-forward only.
+    image: mher/flower:2.0
     ports:
-      - "5555:5555"
+      - "127.0.0.1:5555:5555"
     env_file:
       - .env
     environment:
@@ -196,7 +200,7 @@ services:
       - monitoring
 
   proxy:
-    image: nginx:alpine
+    image: nginx:1.27-alpine
     ports:
       - "80:80"
     volumes:
