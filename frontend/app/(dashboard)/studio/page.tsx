@@ -465,9 +465,7 @@ function StudioContent() {
           <h1 className="text-2xl font-bold tracking-tight text-white font-display mb-1">
             Synthetic Dataset Studio
           </h1>
-          <p className="text-xs text-[#a8a29e]">
-            Curate and synthesize fine-tuning datasets with automated provenance and quality validation
-          </p>
+
         </div>
 
         <Button

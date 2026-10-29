@@ -229,9 +229,7 @@ export default function ProvidersPage() {
               AI Providers &amp; Failover
             </h1>
           </div>
-          <p className="text-xs text-[#a8a29e]">
-            Multi-provider health monitoring, token cost tracking, circuit breaker states &amp; live session migration
-          </p>
+
         </div>
         <Button variant="outline" size="sm" className="rounded-md border-[#272738] text-[#a8a29e] hover:text-white hover:bg-[#161622] font-mono text-xs" onClick={fetchAll} disabled={loading}>
           <RefreshCw className={clsx('h-3.5 w-3.5 mr-1 text-[#f26625]', loading && 'animate-spin')} />

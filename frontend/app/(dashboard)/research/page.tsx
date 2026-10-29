@@ -259,9 +259,7 @@ export default function ResearchPage() {
               Benchmarks &amp; Experiments
             </h1>
           </div>
-          <p className="text-xs text-[#a8a29e]">
-            Automated model evaluations, accuracy gain tracking, technique discovery &amp; inference efficiency
-          </p>
+
         </div>
         <div className="flex flex-col sm:flex-row items-end sm:items-center gap-2">
           <div className="text-right hidden sm:block">

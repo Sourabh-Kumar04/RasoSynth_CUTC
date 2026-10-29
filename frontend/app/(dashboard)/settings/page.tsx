@@ -186,9 +186,7 @@ export default function SettingsPage() {
               System Status &amp; Configuration
             </h1>
           </div>
-          <p className="text-xs text-[#a8a29e]">
-            Platform runtime configuration, API provider keys, ADR architecture standards &amp; resource boundaries
-          </p>
+
         </div>
         <div className="flex items-center gap-2">
           <span className="hidden sm:inline-flex items-center gap-1.5 px-2.5 py-1 rounded bg-[#161622] border border-[#272738] text-xs font-mono text-[#a8a29e]">

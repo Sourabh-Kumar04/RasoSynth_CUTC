@@ -553,9 +553,7 @@ export default function DatasetsPage() {
             </span>
             <h1 className="text-2xl font-bold tracking-tight text-white font-display">Data Library &amp; Exports</h1>
           </div>
-          <p className="text-xs text-[#a8a29e]">
-            Browse certified synthetic datasets, cryptographic provenance seals, and download production archives
-          </p>
+
         </div>
         <div className="flex items-center gap-2.5">
           <Button
@@ -744,7 +742,7 @@ export default function DatasetsPage() {
             <Mascot size="medium" className="mb-2" />
             <h3 className="text-lg font-bold text-white mb-2">No datasets yet</h3>
             <p className="text-xs text-[#a8a29e] mb-6 text-center max-w-md">
-              Describe the dataset you need in the Studio. Discover authentic source repositories, review grounded samples, and export to multi-destination targets.
+              Describe the dataset you need in the Studio.
             </p>
             <Button className="gap-2 bg-[#f26625] hover:bg-[#de581a] border border-[#ea580c] text-white rounded-md font-mono text-xs px-5 font-bold" onClick={() => router.push('/studio')}>
               <Plus className="h-4 w-4" />

@@ -178,9 +178,7 @@ export default function QualityDashboardPage() {
             Quality Inspector
           </h1>
         </div>
-        <p className="text-xs text-[#a8a29e] font-sans">
-          Automated AI evaluation, hallucination resistance scoring, semantic diversity, and benchmark decontamination
-        </p>
+
       </div>
 
       {/* Overview Cards */}

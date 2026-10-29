@@ -228,9 +228,7 @@ export default function OrchestrationPage() {
               Pipeline Execution Engine
             </h1>
           </div>
-          <p className="text-xs text-[#a8a29e]">
-            Real-time stage node telemetry, automated checkpoint recovery, and multi-agent synthesis workflows
-          </p>
+
         </div>
 
         <div className="flex items-center gap-3">
@@ -926,9 +924,7 @@ export default function OrchestrationPage() {
                   Self-Improving Autonomous Research Loop
                 </h3>
               </div>
-              <p className="text-xs text-[#a8a29e]">
-                Continuously reads arXiv publications, mines GitHub repos, and dynamically injects active heuristics into synthesis.
-              </p>
+
             </div>
 
             <Button

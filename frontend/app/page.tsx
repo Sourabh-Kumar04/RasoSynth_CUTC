@@ -805,9 +805,7 @@ export default function ZenPortalPage() {
           <h2 className="text-2xl sm:text-3xl font-bold text-white font-display">
             Autonomous 4-Stage Synthesis Pipeline
           </h2>
-          <p className="text-xs text-zinc-400 mt-2">
-            Non-linear state machine executing discovery, multi-engine cognitive loops, neural validation, and cryptographic attestation.
-          </p>
+
         </div>
 
         {/* Dynamic Vector Architecture Stream */}
@@ -832,7 +830,7 @@ export default function ZenPortalPage() {
               Data Bill of Materials (DBOM) &amp; Nutrition Labels
             </h2>
             <p className="text-xs text-zinc-400 mt-1 max-w-2xl">
-              Every synthesized batch is cryptographically anchored into a SHA-256 Merkle tree. Certificates attest to zero PII leakage and statutory fidelity.
+              Certificates attest to zero PII leakage and statutory fidelity.
             </p>
           </div>
 
@@ -1042,7 +1040,7 @@ export default function ZenPortalPage() {
             Rigorous Neural Quality Metrics
           </h2>
           <p className="text-xs text-zinc-400 mt-2">
-            Every sample is filtered against neural cosine embeddings and graded by our pure LLM Judge rubric before admission into the dataset. The figures in this section are reference values, not measured per-dataset results.
+            The figures in this section are reference values, not measured per-dataset results.
           </p>
         </div>
 
@@ -1097,9 +1095,7 @@ export default function ZenPortalPage() {
           <h2 className="text-2xl sm:text-3xl font-bold text-white font-display">
             Synthesize Directly via API or Python SDK
           </h2>
-          <p className="text-xs text-zinc-400 mt-2">
-            Trigger autonomous dataset pipelines programmatically from your training workflows and CI/CD runs.
-          </p>
+
         </div>
 
         {/* Code Terminal Box */}
@@ -1156,9 +1152,7 @@ export default function ZenPortalPage() {
                   Raso<span className="text-[#f26625]">Synth</span><span className="text-[#a8a29e] font-semibold">Tune</span>
                 </span>
               </div>
-              <p className="text-xs text-zinc-400 leading-relaxed font-sans">
-                Autonomous dataset synthesis and evaluation orchestration platform for frontier AI models.
-              </p>
+
               <div className="flex items-center gap-2 text-xs text-emerald-400">
                 <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
                 <span>Hybrid Standalone · Operational</span>

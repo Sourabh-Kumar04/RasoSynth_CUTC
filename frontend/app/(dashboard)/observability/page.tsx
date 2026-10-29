@@ -127,9 +127,7 @@ export default function ObservabilityPage() {
             </span>
             <h1 className="text-2xl font-bold tracking-tight text-white font-display">System Insights &amp; Telemetry</h1>
           </div>
-          <p className="text-xs text-[#a8a29e]">
-            Real-time pipeline metrics, provider latency, execution traces &amp; autonomous self-correction analytics
-          </p>
+
         </div>
         <div className="flex items-center gap-2">
           <div className="flex rounded-md border border-[#272738] bg-[#12121a] overflow-hidden p-0.5">
