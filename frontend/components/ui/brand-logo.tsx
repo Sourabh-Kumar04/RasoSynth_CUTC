@@ -11,10 +11,13 @@ export interface BrandLogoProps {
 
 // C1 Original: a flat dot-grid R on a 5x5 grid, viewBox 0 0 64 64,
 // coordinates 12, 22, 32, 42, 52 on both axes. Flat colours only.
-// The leg steps diagonally from (42,42) to the orange final point (52,52).
-// Small-size rule: at 40px or below the faint field dots are dropped and
-// the R dots are bolder, so the R stays readable in headers. The full C1
-// (field plus R) is kept at larger sizes. Dark variant is the default:
+// The leg steps diagonally from (42,42) to the orange final point (52,52)
+// at full size. At header size the final dot is pulled in to (49,49)
+// so it touches the leg dot instead of floating as a stray dot.
+// Small-size rule: at 44px or below the faint field dots are dropped and
+// the R dots are bolder (r4.9, so neighbouring dots ~touch at header size
+// instead of reading blocky/pixel-y), so the R stays crisp in headers.
+// The full C1 (field plus R, r3.6, final dot at (52,52)) is kept above 44px. Dark variant is the default:
 // R dots are paper on dark UI, field dots are dark stone. Light variant
 // inverts them. The final point is flat orange in both variants.
 const FIELD_DOTS: ReadonlyArray<readonly [number, number]> = [
@@ -43,8 +46,9 @@ export function BrandLogo({
 }: BrandLogoProps) {
   const rFill = variant === "light" ? "#1b1b18" : "#f5f2ea"
   const fieldFill = variant === "light" ? "#d8d2c4" : "#4a463f"
-  const small = size <= 40
-  const rRadius = small ? 4.4 : 3.6
+  const small = size <= 44
+  const rRadius = small ? 4.9 : 3.6
+  const finalDot: readonly [number, number] = small ? [49, 49] : [52, 52]
   return (
     <div className={"inline-flex items-center gap-2.5 " + className}>
       <svg
@@ -63,7 +67,7 @@ export function BrandLogo({
         {R_DOTS.map(([cx, cy]) => (
           <circle key={"r-" + cx + "-" + cy} cx={cx} cy={cy} r={rRadius} fill={rFill} />
         ))}
-        <circle cx={52} cy={52} r={rRadius} fill="#f26625" />
+        <circle cx={finalDot[0]} cy={finalDot[1]} r={rRadius} fill="#f26625" />
       </svg>
       {showWordmark && (
         <div className="flex items-center gap-1.5">

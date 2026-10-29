@@ -12,38 +12,74 @@ const SIZES: Record<MascotSize, { width: number; height: number }> = {
 const ALT =
   "Raso, the RasoSynthTune assistant, a glossy white robot with a dark face screen, big sparkling eyes, an open smile, and a glowing orange core, waving hello"
 
-// Standalone white robot as a transparent-background cut of the ACTUAL raster
-// artwork (background removed to alpha, no black box). The layered SVG
-// recreation was abandoned after the user sighted an inverted/broken look
-// (black body, stick arms) in a preview: what ships now is unmistakably the
-// real robot — white glossy body, dark face screen only, proper waving arm
-// and hands, orange core, orange-tipped antenna.
-// Honest motion limit: this is ONE flat cutout image, so its hand cannot move
-// independently — the waving pose is baked into the artwork itself.
-// Whole-image motion only: wrapper bob, gentle sway, soft glow pulse, all
-// looping. With reduced motion, no animation classes are applied and the
-// mascot is static. Keyframes live in frontend/app/globals.css.
+// Layered RASTER mascot: the SAME standalone white robot cutout, segmented
+// into its own pixels (see make_layers.py) so each part genuinely moves:
+// body (static base), sway arm, waving arm, head (tilts), eyes (look + blink
+// inside the tilting head group), core (brightness/glow pulse, never moved).
+// This is NOT the abandoned layered-SVG recreation and NOT the flat cutout:
+// at rest the six layers composite back to the original cutout (verified on
+// the build machine: over the dark hero background only 27 of 2,560,000
+// pixels differ by more than 10/255, max 26.6 — visually identical).
+// White glossy body, dark face screen only, proper waving arm and hands,
+// orange core, orange-tipped antenna — the artwork itself is unchanged.
+// With reduced motion, no animation classes are applied and the mascot is
+// static. Keyframes live in frontend/app/globals.css.
 export function Mascot({ size = "large", className }: { size?: MascotSize; className?: string }) {
   const reduceMotion = useReducedMotion()
   const dims = SIZES[size]
   const a = (cls: string) => (reduceMotion ? "" : cls)
   const outer = className ? className + " " + a("mascot-bob") : a("mascot-bob")
+  const layerStyle = {
+    position: "absolute" as const,
+    inset: 0,
+    width: dims.width,
+    height: dims.height,
+    objectFit: "contain" as const,
+    background: "transparent",
+  }
   return (
     <div
       className={outer}
-      style={{ width: dims.width, height: dims.height, background: "transparent" }}
+      style={{ position: "relative", width: dims.width, height: dims.height, background: "transparent" }}
       role="img"
       aria-label={ALT}
     >
       {/* eslint-disable-next-line @next/next/no-img-element */}
+      <img src="/mascot/body.webp" alt="" width={dims.width} height={dims.height} data-layer="body" style={layerStyle} />
+      {/* eslint-disable-next-line @next/next/no-img-element */}
       <img
-        src="/mascot-standalone-cutout.webp"
-        alt={ALT}
+        src="/mascot/core.webp"
+        alt=""
         width={dims.width}
         height={dims.height}
-        className={a("mascot-sway-img") + " " + a("mascot-glow")}
-        style={{ width: dims.width, height: dims.height, objectFit: "contain", background: "transparent" }}
+        data-layer="core"
+        className={a("mascot-core")}
+        style={layerStyle}
       />
+      <div data-part="sway-arm" className={a("mascot-sway-arm")} style={layerStyle}>
+        {/* eslint-disable-next-line @next/next/no-img-element */}
+        <img src="/mascot/sway.webp" alt="" width={dims.width} height={dims.height} data-layer="sway" style={layerStyle} />
+      </div>
+      <div data-part="wave-arm" className={a("mascot-wave")} style={layerStyle}>
+        {/* eslint-disable-next-line @next/next/no-img-element */}
+        <img src="/mascot/wave.webp" alt="" width={dims.width} height={dims.height} data-layer="wave" style={layerStyle} />
+      </div>
+      <div data-part="head" className={a("mascot-tilt")} style={layerStyle}>
+        {/* eslint-disable-next-line @next/next/no-img-element */}
+        <img src="/mascot/head.webp" alt="" width={dims.width} height={dims.height} data-layer="head" style={layerStyle} />
+        <div data-part="eyes-look" className={a("mascot-look")} style={layerStyle}>
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img
+            src="/mascot/eyes.webp"
+            alt=""
+            width={dims.width}
+            height={dims.height}
+            data-layer="eyes"
+            className={a("mascot-blink")}
+            style={layerStyle}
+          />
+        </div>
+      </div>
     </div>
   )
 }

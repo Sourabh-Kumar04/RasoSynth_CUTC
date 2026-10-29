@@ -258,11 +258,20 @@
    follows the alpha silhouette, so no box edge). The global reduced-motion
    rule in this file also disables these. */
 .mascot-bob { animation: mascot-bob 3s ease-in-out infinite; }
-.mascot-sway-img { animation: mascot-sway-img 3.6s ease-in-out infinite; transform-origin: 50% 90%; }
-.mascot-glow { animation: mascot-glow 2.4s ease-in-out infinite; }
+.mascot-wave { animation: mascot-wave 2.4s ease-in-out infinite; transform-origin: 31.5% 60%; }
+.mascot-sway-arm { animation: mascot-sway-arm 3s ease-in-out infinite; transform-origin: 66% 60%; }
+.mascot-tilt { animation: mascot-tilt 3.2s ease-in-out infinite; transform-origin: 54% 63%; }
+.mascot-look { animation: mascot-look 5s ease-in-out infinite; }
+.mascot-blink { animation: mascot-blink 4.8s ease-in-out infinite; transform-origin: 50% 42%; }
+.mascot-core { animation: mascot-core 2.4s ease-in-out infinite; }
 @keyframes mascot-bob { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-12px); } }
-@keyframes mascot-sway-img { 0%, 100% { transform: rotate(-2deg); } 50% { transform: rotate(2deg); } }
-@keyframes mascot-glow { 0%, 100% { filter: drop-shadow(0 0 0 rgba(242, 102, 37, 0)); } 50% { filter: drop-shadow(0 0 18px rgba(242, 102, 37, 0.45)); } }
+@keyframes mascot-wave { 0%, 100% { transform: rotate(-16deg); } 50% { transform: rotate(28deg); } }
+@keyframes mascot-sway-arm { 0%, 100% { transform: rotate(-6deg); } 50% { transform: rotate(6deg); } }
+@keyframes mascot-tilt { 0%, 100% { transform: rotate(-4deg); } 50% { transform: rotate(4deg); } }
+@keyframes mascot-look { 0%, 30%, 100% { transform: translateX(0); } 40%, 55% { transform: translateX(3px); } 70%, 85% { transform: translateX(-3px); } }
+@keyframes mascot-blink { 0%, 88%, 100% { transform: scaleY(1); } 92%, 94% { transform: scaleY(0.1); } }
+@keyframes mascot-core { 0%, 100% { filter: brightness(1) drop-shadow(0 0 0 rgba(242, 102, 37, 0)); } 50% { filter: brightness(1.25) drop-shadow(0 0 16px rgba(242, 102, 37, 0.55)); } }
 @media (prefers-reduced-motion: reduce) {
-  .mascot-bob, .mascot-sway-img, .mascot-glow { animation: none !important; }
+  .mascot-bob, .mascot-wave, .mascot-sway-arm, .mascot-tilt, .mascot-look, .mascot-blink, .mascot-core { animation: none !important; }
 }
+

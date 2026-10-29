@@ -86,7 +86,7 @@ export function TopNav() {
           {/* Logo & Brand */}
           <div className="flex items-center space-x-3 shrink-0">
             <Link href="/" className="flex items-center space-x-2.5 group">
-              <BrandLogo size={40} showWordmark wordmarkClassName="text-[17px]" />
+              <BrandLogo size={44} showWordmark wordmarkClassName="text-[17px]" />
             </Link>
           </div>
 
