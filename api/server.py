@@ -4401,7 +4401,7 @@ async def tool_evaluate_fidelity(request: dict = Body(...),
 async def tool_evaluate_rubric(request: dict = Body(...),
     current_user: User = Depends(get_current_user)):
     """Evaluate synthetic sample against 5-dimensional LLM-as-a-Judge quality rubric."""
-    from core.evaluation.llm_judge import evaluate_sample_rubric
+    from core.evaluation.heuristic_rubric import evaluate_sample_rubric
     inst = str(request.get("instruction", ""))
     resp = str(request.get("response", ""))
     ref = request.get("reference_context")

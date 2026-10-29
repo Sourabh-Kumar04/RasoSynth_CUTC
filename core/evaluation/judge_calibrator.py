@@ -1,16 +1,19 @@
-"""LLM Judge Calibration & Human Agreement Engine.
+"""Heuristic Rubric Calibration & Human Agreement Engine.
 
 Measures inter-annotator agreement (Cohen's Kappa), systematic bias,
-and calibration curves between automated LLM Judge evaluations and human reviewer decisions.
+and in-sample calibration curves between automated heuristic rubric evaluations and human reviewer decisions.
 """
 
-from typing import Any, Dict, List, Tuple
+from typing import Any, Dict, List, Optional, Tuple
 
 
-def compute_cohens_kappa(human_labels: List[int], judge_labels: List[int]) -> float:
-    """Compute Cohen's Kappa coefficient between binary human and judge decisions."""
+def compute_cohens_kappa(human_labels: List[int], judge_labels: List[int]) -> Optional[float]:
+    """Compute Cohen's Kappa coefficient between binary human and judge decisions.
+
+    Returns None for edge cases (empty lists, mismatched lengths, or constant-label degeneracy).
+    """
     if not human_labels or len(human_labels) != len(judge_labels):
-        return 0.0
+        return None
 
     n = len(human_labels)
     # Observed agreement
@@ -24,8 +27,9 @@ def compute_cohens_kappa(human_labels: List[int], judge_labels: List[int]) -> fl
     j0 = 1.0 - j1
 
     pe = (h1 * j1) + (h0 * j0)
+    # Edge case: constant labels yield pe >= 1.0 -> undefined / None
     if pe >= 1.0:
-        return 1.0
+        return None
 
     kappa = (po - pe) / (1.0 - pe)
     return round(max(-1.0, min(1.0, kappa)), 3)
@@ -35,11 +39,12 @@ def calibrate_judge_alignment(
     evaluations: List[Dict[str, Any]],
     default_threshold: float = 0.70,
 ) -> Dict[str, Any]:
-    """Analyze judge-human alignment, compute Kappa, detect bias, and find optimal threshold."""
+    """Analyze heuristic rubric-human alignment, compute Kappa, detect bias, and estimate in-sample optimal threshold."""
     if not evaluations:
         return {
+            "method": "heuristic_rubric",
             "total_pairs": 0,
-            "cohens_kappa": 0.0,
+            "cohens_kappa": None,
             "accuracy": 0.0,
             "bias_direction": "none",
             "optimal_threshold": default_threshold,
@@ -81,7 +86,7 @@ def calibrate_judge_alignment(
     else:
         bias = "unbiased_aligned"
 
-    # Search for optimal threshold that maximizes agreement
+    # Search for optimal threshold that maximizes agreement (in-sample estimate)
     best_thresh = default_threshold
     best_acc = matches / n
 
@@ -93,7 +98,9 @@ def calibrate_judge_alignment(
             best_thresh = test_t
 
     # Agreement strength classification (Landis & Koch standard)
-    if kappa >= 0.81:
+    if kappa is None:
+        strength = "undefined_constant_distribution"
+    elif kappa >= 0.81:
         strength = "almost_perfect"
     elif kappa >= 0.61:
         strength = "substantial"
@@ -105,6 +112,8 @@ def calibrate_judge_alignment(
         strength = "slight_or_poor"
 
     return {
+        "method": "heuristic_rubric",
+        "optimization_scope": "in_sample_estimate",
         "total_pairs": n,
         "cohens_kappa": kappa,
         "agreement_strength": strength,
@@ -114,5 +123,6 @@ def calibrate_judge_alignment(
         "judge_approval_rate_pct": round(j_approved_pct, 1),
         "current_threshold": default_threshold,
         "recommended_calibrated_threshold": best_thresh,
+        "in_sample_accuracy_gain_pct": round((best_acc - (matches / n)) * 100, 1),
         "potential_accuracy_gain_pct": round((best_acc - (matches / n)) * 100, 1),
     }

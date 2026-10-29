@@ -311,9 +311,10 @@ class TestWorkflow4QualityCurationAndBalancing:
             {"prediction": "18000", "reference": "18000"},
             {"prediction": "Mandatory Section 16 [1]", "reference": "Mandatory Section 16 [1]"},
         ]
-        report = evaluate_benchmark_split(pairs, benchmark_name="Unit Benchmark")
+        report = evaluate_benchmark_split(pairs, benchmark_name="Unit Benchmark", held_out=True)
         assert report["exact_match_pct"] == 100.0
         assert report["citation_accuracy_pct"] == 100.0
+        assert report["rating"] in ("production_ready", "frontier_exceptional")
 
 
 class TestWorkflow5PackagingAndDistribution:

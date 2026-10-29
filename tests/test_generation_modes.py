@@ -501,7 +501,7 @@ async def test_cot_reasoning_tool_calling_curriculum_and_hf_card():
         estimate_sample_complexity,
     )
     from core.export.huggingface_exporter import generate_hf_dataset_card
-    from core.evaluation.llm_judge import evaluate_sample_rubric
+    from core.evaluation.heuristic_rubric import evaluate_sample_rubric
 
     # 1. Test CoT Prompt Directive & Extraction
     directive_hi = build_cot_prompt_directive("hi")
@@ -580,18 +580,28 @@ async def test_cot_reasoning_tool_calling_curriculum_and_hf_card():
     assert "load_dataset" in card
     assert "42%" in card
 
-    # 5. Test LLM-as-a-Judge Multi-Dimensional Rubric
+    # 5. Test Heuristic Multi-Dimensional Rubric (formerly misnamed llm_judge)
     rubric_result = evaluate_sample_rubric(
         instruction="Aap ₹2,50,000 par 18% GST calculate karke bataiye kripya.",
         response="<thought>250000 * 0.18 = 45000</thought>Aapka ₹2,50,000 par 18% GST ₹45,000 hoga. Kul yog ₹2,95,000 banega.",
         language="hinglish",
         formality_register="formal",
     )
-    assert rubric_result["groundedness"] > 0.8
+    # When no reference context is given, groundedness is None and rating is capped at proficient
+    assert rubric_result["groundedness"] is None
     assert rubric_result["authenticity"] > 0.8
     assert rubric_result["domain_correctness"] > 0.8
     assert rubric_result["overall_score"] > 0.8
-    assert rubric_result["rating"] in ["excellent", "proficient"]
+    assert rubric_result["rating"] == "proficient"
+
+    # With reference context, groundedness is measured
+    rubric_with_ref = evaluate_sample_rubric(
+        instruction="Calculate GST",
+        response="Aapka GST ₹45,000 hoga",
+        reference_context="Total GST ₹45,000 calculated on base turnover.",
+        language="en",
+    )
+    assert rubric_with_ref["groundedness"] is not None
 
 
 def test_frontier_preference_adversarial_contamination_and_recipes():
@@ -1137,12 +1147,24 @@ def test_synthetic_benchmark_evaluator():
         {"prediction": "Section 80C allows Rs. 1.5 Lakhs [1]", "reference": "Section 80C allows Rs. 1.5 Lakhs [1]"},
         {"prediction": "Wrong answer", "reference": "Correct answer"},
     ]
-    report = evaluate_benchmark_split(pairs, benchmark_name="Tax QA Benchmark")
+    # Without held_out flag, ratings production_ready/frontier_exceptional are never awarded
+    report = evaluate_benchmark_split(pairs, benchmark_name="Tax QA Benchmark", held_out=False)
     assert report["total_samples"] == 3
     assert report["exact_match_pct"] >= 66.0
     assert report["mean_token_f1"] > 0.60
     assert report["citation_accuracy_pct"] == 100.0
-    assert report["rating"] in ("production_ready", "frontier_exceptional")
+    assert report["rating"] == "unverified_split_not_held_out"
+
+    # With held_out=True, ratings production_ready/frontier_exceptional are eligible
+    held_out_report = evaluate_benchmark_split(pairs, benchmark_name="Tax QA Benchmark", held_out=True)
+    assert held_out_report["rating"] in ("production_ready", "frontier_exceptional")
+
+    # When no citations exist in references, citation_accuracy_pct must be None
+    no_citation_pairs = [
+        {"prediction": "Rs. 18,000", "reference": "Rs. 18,000"},
+    ]
+    no_cit_report = evaluate_benchmark_split(no_citation_pairs, benchmark_name="No Citations")
+    assert no_cit_report["citation_accuracy_pct"] is None
 
 
 def test_streaming_dataset_sharder():

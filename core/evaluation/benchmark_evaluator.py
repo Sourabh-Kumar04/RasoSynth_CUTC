@@ -37,17 +37,28 @@ def evaluate_benchmark_split(
     evaluation_pairs: List[Dict[str, str]],
     benchmark_name: str = "Synthetic Indic QA",
     target_model: str = "Candidate LLM",
+    held_out: bool = False,
 ) -> Dict[str, Any]:
-    """Run comprehensive benchmark metrics across evaluation pairs."""
+    """Run comprehensive benchmark metrics across evaluation pairs.
+
+    Args:
+        evaluation_pairs: List of dicts with prediction, reference, and optional id.
+        benchmark_name: Name of benchmark split.
+        target_model: Candidate model under evaluation.
+        held_out: Whether the evaluation split is verified held-out.
+                  Ratings 'production_ready' and 'frontier_exceptional' are only
+                  awarded when held_out is True. Defaults to False.
+    """
     if not evaluation_pairs:
         return {
             "benchmark_name": benchmark_name,
             "target_model": target_model,
+            "held_out": held_out,
             "total_samples": 0,
             "exact_match_pct": 0.0,
             "mean_token_f1": 0.0,
             "mean_chrf_score": 0.0,
-            "citation_accuracy_pct": 0.0,
+            "citation_accuracy_pct": None,
             "rating": "no_data",
         }
 
@@ -92,21 +103,31 @@ def evaluate_benchmark_split(
     em_pct = round((em_count / n) * 100, 1)
     mean_f1 = round(sum(f1_scores) / n, 3)
     mean_chrf = round(sum(chrf_scores) / n, 2)
-    citation_acc = round((sum(citation_checks) / max(len(citation_checks), 1)) * 100, 1) if citation_checks else 100.0
+    # If no reference had citations, citation_accuracy_pct is None (never fake 100.0)
+    citation_acc = round((sum(citation_checks) / len(citation_checks)) * 100, 1) if citation_checks else None
 
     composite = (em_pct * 0.4) + (mean_f1 * 40) + (mean_chrf * 0.2)
-    if composite >= 85:
-        rating = "frontier_exceptional"
-    elif composite >= 70:
-        rating = "production_ready"
-    elif composite >= 50:
-        rating = "acceptable_requires_tuning"
+
+    # Only assign production_ready or frontier_exceptional when split is verified held-out
+    if held_out:
+        if composite >= 85:
+            rating = "frontier_exceptional"
+        elif composite >= 70:
+            rating = "production_ready"
+        elif composite >= 50:
+            rating = "acceptable_requires_tuning"
+        else:
+            rating = "suboptimal_hallucination_prone"
     else:
-        rating = "suboptimal_hallucination_prone"
+        if composite >= 50:
+            rating = "unverified_split_not_held_out"
+        else:
+            rating = "suboptimal_hallucination_prone"
 
     return {
         "benchmark_name": benchmark_name,
         "target_model": target_model,
+        "held_out": held_out,
         "total_samples": n,
         "exact_match_pct": em_pct,
         "mean_token_f1": mean_f1,
