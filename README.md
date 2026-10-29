@@ -106,7 +106,7 @@ building if dependency metadata has changed since the last lock.
 ### Python SDK
 
 ```python
-from rasosynth import RasoSynthClient
+from rasosynthtune import RasoSynthClient
 
 client = RasoSynthClient(api_key="YOUR_API_KEY")
 job = client.synthesize(
