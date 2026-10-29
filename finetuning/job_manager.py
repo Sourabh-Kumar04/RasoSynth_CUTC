@@ -46,6 +46,89 @@ if MAX_CONCURRENT_JOBS > 1 and not _cuda_available():
     )
 
 
+
+def _is_valid_job_id(job_id: str) -> bool:
+    """Job IDs are server-generated UUIDs. Anything else is rejected before
+    the value is used as a filesystem path (log files) or a DB key, so a
+    caller-supplied id can never traverse out of the log directory."""
+    if not isinstance(job_id, str):
+        return False
+    try:
+        return str(uuid.UUID(job_id)) == job_id.lower()
+    except (ValueError, AttributeError, TypeError):
+        return False
+
+
+def _scrub_job_dict(job: Optional[dict]) -> Optional[dict]:
+    """Strip secrets from a job dict before it leaves the manager.
+
+    The HF token is needed in memory while training runs, but it must never
+    be persisted in the job record nor returned by get_job/list_jobs (which
+    would expose it to any authenticated API caller, including for rows
+    written before this fix).
+    """
+    if not job:
+        return job
+    job = dict(job)
+    config = job.get("config")
+    if isinstance(config, dict) and "hf_token" in config:
+        config = dict(config)
+        config.pop("hf_token", None)
+        job["config"] = config
+    job.pop("hf_token", None)
+    return job
+
+
+def _webhook_allowed_and_safe(url: str) -> tuple[bool, str]:
+    """Validate a webhook URL before dispatch.
+
+    Returns (ok, reason). Checks, in order:
+    - scheme is http/https only;
+    - no embedded userinfo credentials;
+    - optional WEBHOOK_ALLOWED_HOSTS allowlist (exact host or parent domain);
+    - SSRF guard: the host must resolve, and every resolved address must be
+      public (private/loopback/link-local/multicast/reserved/unspecified are
+      rejected); DNS failure fails closed (no dispatch).
+    NOTE: the DNS check happens before connect, so a rebinding TOCTOU window
+    remains; it is accepted here because httpx connects by hostname. The
+    guard still blocks the common SSRF cases (literal private IPs, localhost
+    names, and metadata endpoints that resolve privately).
+    """
+    import ipaddress
+    import socket
+    from urllib.parse import urlparse
+
+    try:
+        parsed = urlparse(url)
+    except Exception:
+        return False, "unparsable URL"
+    if parsed.scheme not in ("http", "https"):
+        return False, f"disallowed scheme {parsed.scheme!r}"
+    host = (parsed.hostname or "").lower()
+    if not host:
+        return False, "missing host"
+    if parsed.username or parsed.password:
+        return False, "userinfo credentials in webhook URL are not allowed"
+    allowlist = [h.strip().lower() for h in os.getenv("WEBHOOK_ALLOWED_HOSTS", "").split(",") if h.strip()]
+    if allowlist and not any(host == entry or host.endswith("." + entry) for entry in allowlist):
+        return False, f"host {host} is not on WEBHOOK_ALLOWED_HOSTS"
+    try:
+        infos = socket.getaddrinfo(host, None)
+    except Exception:
+        return False, f"DNS resolution failed for {host}"
+    if not infos:
+        return False, f"DNS resolution returned nothing for {host}"
+    for info in infos:
+        try:
+            ip = ipaddress.ip_address(info[4][0])
+        except Exception:
+            return False, "unparsable resolved address"
+        if (ip.is_private or ip.is_loopback or ip.is_link_local or ip.is_multicast
+                or ip.is_reserved or ip.is_unspecified):
+            return False, f"host {host} resolves to non-public address {ip}"
+    return True, ""
+
+
 class FinetuneJobManager:
     """
     Singleton-style manager — one instance stored on app.state.ft_manager.
@@ -86,13 +169,17 @@ class FinetuneJobManager:
 
         total_epochs = ft_config.num_train_epochs if ft_config.max_steps <= 0 else 1
 
+        # Persist the config WITHOUT the HF token: the in-memory ft_config
+        # keeps it for training, but the DB record must never hold it.
+        persisted_config = ft_config.to_dict()
+        persisted_config.pop("hf_token", None)
         fj = await self.db.create_finetune_job({
             "id": job_id,
             "status": "pending",
             "base_model": ft_config.base_model,
             "output_model_name": ft_config.output_model_name or job_id,
             "dataset_id": ft_config.dataset_id or None,
-            "config": ft_config.to_dict(),
+            "config": persisted_config,
             "total_epochs": total_epochs,
         })
 
@@ -103,9 +190,12 @@ class FinetuneJobManager:
         self._tasks[job_id] = task
 
         logger.info("Fine-tune job %s created (model=%s)", job_id, ft_config.base_model)
-        return fj.to_dict()
+        return _scrub_job_dict(fj.to_dict())
 
     async def cancel_job(self, job_id: str) -> bool:
+        if not _is_valid_job_id(job_id):
+            logger.warning("Rejecting cancel for invalid job_id %r", job_id)
+            return False
         task = self._tasks.get(job_id)
         if task and not task.done():
             task.cancel()
@@ -116,13 +206,16 @@ class FinetuneJobManager:
         return False
 
     async def get_job(self, job_id: str) -> Optional[dict]:
+        if not _is_valid_job_id(job_id):
+            logger.warning("Rejecting get_job for invalid job_id %r", job_id)
+            return None
         fj: Optional[FineTuneJob] = await self.db.get_finetune_job(job_id)
-        return fj.to_dict() if fj else None
+        return _scrub_job_dict(fj.to_dict()) if fj else None
 
     async def list_jobs(self, limit: int = 100) -> list[dict]:
         """Return jobs directly from DB to prevent cross-worker cache staleness in multi-process uvicorn."""
         jobs = await self.db.list_finetune_jobs(limit=limit)
-        return [j.to_dict() for j in jobs]
+        return [_scrub_job_dict(j.to_dict()) for j in jobs]
 
     def _persist_log_event(self, job_id: str, event: dict) -> None:
         """Persist event to shared container disk so all Uvicorn worker processes can read it."""
@@ -138,6 +231,9 @@ class FinetuneJobManager:
 
     def get_logs(self, job_id: str, limit: int = 200) -> list[dict]:
         """Return last N log events from the in-memory ring buffer or shared worker disk cache."""
+        if not _is_valid_job_id(job_id):
+            logger.warning("Rejecting get_logs for invalid job_id %r", job_id)
+            return []
         buf = self._logs.get(job_id)
         if buf and len(buf) > 0:
             entries = list(buf)
@@ -162,6 +258,9 @@ class FinetuneJobManager:
 
     async def subscribe(self, job_id: str) -> AsyncGenerator[dict, None]:
         """Async generator of training events for a job (WebSocket use)."""
+        if not _is_valid_job_id(job_id):
+            logger.warning("Rejecting subscribe for invalid job_id %r", job_id)
+            return
         q: asyncio.Queue = asyncio.Queue(maxsize=512)
         self._subscribers.setdefault(job_id, []).append(q)
         try:
@@ -275,6 +374,10 @@ class FinetuneJobManager:
             return
 
         url = str(webhook_url).strip()
+        ok, reason = _webhook_allowed_and_safe(url)
+        if not ok:
+            logger.warning("Skipping webhook dispatch for job %s: %s", job_id, reason)
+            return
         base_model = config.base_model
         output_name = config.output_model_name or job_id
         target = config.execution_target
@@ -316,12 +419,30 @@ class FinetuneJobManager:
         }
 
         try:
+            import hashlib
+            import hmac
             import httpx
+            import json as _json
+            from urllib.parse import urlparse as _urlparse
+            headers = {}
+            signing_secret = os.getenv("WEBHOOK_SIGNING_SECRET", "")
+            if signing_secret:
+                digest = hmac.new(
+                    signing_secret.encode(),
+                    _json.dumps(payload, sort_keys=True, default=str).encode(),
+                    hashlib.sha256,
+                ).hexdigest()
+                headers["X-RasoSynth-Signature"] = f"sha256={digest}"
             async with httpx.AsyncClient(timeout=10.0) as client:
-                resp = await client.post(url, json=payload)
-                logger.info("Dispatched webhook for job %s to %s (status %s)", job_id, url, resp.status_code)
+                resp = await client.post(url, json=payload, headers=headers)
+                # Log the host only, never the full URL (it may carry query secrets).
+                logger.info(
+                    "Dispatched webhook for job %s to %s (status %s, signed=%s)",
+                    job_id, _urlparse(url).hostname, resp.status_code, bool(headers),
+                )
         except Exception as e:
-            logger.warning("Failed to dispatch webhook for job %s to %s: %s", job_id, url, e)
+            from urllib.parse import urlparse as _urlparse2
+            logger.warning("Failed to dispatch webhook for job %s to %s: %s", job_id, _urlparse2(url).hostname, e)
 
     async def _broadcast(self, job_id: str, event: dict):
         for q in list(self._subscribers.get(job_id, [])):
