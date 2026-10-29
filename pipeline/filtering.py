@@ -40,11 +40,11 @@ class FilteredSample:
     signal_score: float = 0.0
     statistical_score: float = 0.0
     semantic_score: float = 0.0
-    llm_judge_score: float = 0.0
+    llm_judge_score: Optional[float] = None
     compliance_score: float = 0.0  # 0.0 = fail, 1.0 = pass
     # Legacy scores (for backward compatibility)
-    quality_score: float = 0.0
-    relevance_score: float = 0.0
+    quality_score: Optional[float] = None
+    relevance_score: Optional[float] = None
     toxicity_score: float = 0.0
     hallucination_risk: float = 0.0
     uniqueness_score: float = 0.0
@@ -264,7 +264,7 @@ class FilteringPipeline:
             failed_dims.append("statistical")
         if semantic_score < thresholds.semantic:
             failed_dims.append("semantic")
-        if llm_judge_score < thresholds.reasoning:
+        if llm_judge_score is None or llm_judge_score < thresholds.reasoning:
             failed_dims.append("reasoning")
         if compliance_score < thresholds.grounding:
             failed_dims.append("compliance")
@@ -657,13 +657,14 @@ class FilteringPipeline:
             issues.append(f"embedding_failed: {str(e)[:50]}")
             return 0.4, issues
 
-    async def _llm_judge_quality(self, text: str, target_domain: str) -> tuple[float, list[str]]:
+    async def _llm_judge_quality(self, text: str, target_domain: str) -> tuple[Optional[float], list[str]]:
         """Layer 4: Real LLM-as-a-judge quality evaluation (no heuristics)."""
         issues = []
 
         if not self.router:
-            # If no router configured, return neutral score
-            return 0.5, issues
+            # If no router configured, return None and flag no_router
+            issues.append("no_router")
+            return None, issues
 
         if len(text.strip()) < 30:
             return 0.2, ["insufficient_text_length"]
@@ -676,11 +677,10 @@ class FilteringPipeline:
                     domain=target_domain or "general"
                 )
                 if judge_result and judge_result.provider == "fallback":
-                    # Fallback 0.5 is an unavailable evaluation, not a
-                    # measurement: keep the neutral value for threshold
-                    # plumbing but mark it so it is never read as a score.
+                    # Fallback evaluation is unmeasured: return None and flag fallback
+                    issues.append("no_router")
                     issues.append("llm_judge_fallback_unavailable")
-                    return 0.5, issues
+                    return None, issues
                 if judge_result and judge_result.overall > 0:
                     if judge_result.accuracy_score < 0.4:
                         issues.append("low_llm_factual_accuracy")
@@ -694,10 +694,12 @@ class FilteringPipeline:
                     return round(judge_result.overall, 4), issues
             except Exception as judge_err:
                 logger.warning(f"LLMJudge evaluation failed: {judge_err}")
+                issues.append("llm_judge_error")
                 issues.append(f"llm_judge_error: {str(judge_err)[:50]}")
-                return 0.4, issues
+                return None, issues
 
-        return 0.5, issues
+        issues.append("no_router")
+        return None, issues
 
     def redact_pii(self, text: str) -> str:
         """Redact PII under DPDP Act (India 2023/2026) and global privacy regulations."""
@@ -1213,7 +1215,7 @@ class FilteringPipeline:
         """Generate warnings for borderline cases."""
         warnings = []
 
-        if 0.3 < sample.quality_score < thresholds.quality:
+        if sample.quality_score is not None and 0.3 < sample.quality_score < thresholds.quality:
             warnings.append("quality_borderline")
 
         if sample.hallucination_risk > 0.5:
@@ -1256,7 +1258,7 @@ class FilteringPipeline:
         if sample.semantic_score < thresholds.semantic:
             sample.filter_reason = "semantic_quality_too_low"
             return True
-        if sample.llm_judge_score < thresholds.reasoning:
+        if sample.llm_judge_score is None or sample.llm_judge_score < thresholds.reasoning:
             sample.filter_reason = "llm_judge_quality_too_low"
             return True
         if sample.compliance_score < thresholds.grounding:
@@ -1283,7 +1285,7 @@ class FilteringPipeline:
         if sample.semantic_score >= thresholds.semantic:
             filters.append("semantic_pass")
 
-        if sample.llm_judge_score >= thresholds.reasoning:
+        if sample.llm_judge_score is not None and sample.llm_judge_score >= thresholds.reasoning:
             filters.append("llm_judge_pass")
 
         if sample.compliance_score >= thresholds.grounding:

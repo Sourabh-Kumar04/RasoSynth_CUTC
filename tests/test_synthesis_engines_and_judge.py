@@ -207,14 +207,14 @@ async def test_synthesis_engine_rag(mock_intent):
 
 @pytest.mark.asyncio
 async def test_filtering_llm_judge_pure_evaluation_and_semantic_cosine():
-    # Test without router: returns neutral score
+    # Test without router: returns None and flags no_router
     filter_pipe = FilteringPipeline(router=None, config={"dataset_type": "sft"})
     score, issues = await filter_pipe._llm_judge_quality(
         "Section 16(2) provides four cumulative conditions for ITC eligibility: tax invoice, receipt of goods, payment of tax, and return filing.",
         "taxation"
     )
-    assert score == 0.5
-    assert issues == []
+    assert score is None
+    assert "no_router" in issues
 
     # Test with router mock: verifies real LLMJudge is called and returned directly
     mock_router = MagicMock()

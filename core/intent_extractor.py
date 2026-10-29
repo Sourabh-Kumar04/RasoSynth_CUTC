@@ -8,6 +8,7 @@ from typing import List, Optional, Any
 
 from core.intent import IntentExtractionError, UserIntent
 from core.provider_router import ProviderRouter, TaskType
+from core.discipline_matrix import get_polysemy_anti_domains, anchor_query
 
 logger = logging.getLogger(__name__)
 
@@ -15,8 +16,8 @@ _MIN_CONFIDENCE = float(os.getenv("INTENT_MIN_CONFIDENCE", "0.6"))
 _MAX_QUERY_LEN = int(os.getenv("INTENT_MAX_QUERY_LEN", "200"))
 _MAX_ANTI_DOMAINS = int(os.getenv("INTENT_MAX_ANTI_DOMAINS", "30"))
 _CACHE_TTL = int(os.getenv("INTENT_CACHE_TTL", "3600"))
-# Default true so truncated/non-JSON LLM replies don't crash the pipeline
-_FALLBACK_ON_ERROR = os.getenv("INTENT_FALLBACK_ON_ERROR", "true").lower() == "true"
+# Default false so extraction failures are explicitly flagged or raised rather than silently masked as model intent
+_FALLBACK_ON_ERROR = os.getenv("INTENT_FALLBACK_ON_ERROR", "false").lower() == "true"
 
 _REQUIRED_FIELDS = {
     "primary_task", "domain", "modality", "anti_domains",
@@ -122,9 +123,9 @@ async def extract_intent(
             anti_domains=poly_anti,
             key_entities=[w for w in raw_input.split() if len(w) > 3],
             specialized_queries=anchored_queries,
-            constraints=[],
+            constraints=["keyword_fallback_intent"],
             output_format="jsonl",
-            confidence=0.85,
+            confidence=0.50,
             raw_input=raw_input,
         )
 
@@ -233,7 +234,6 @@ async def extract_intent(
         data["specialized_queries"] = fallback_queries
 
     # --- Post-process: clean up lists ---
-    from core.discipline_matrix import get_polysemy_anti_domains, anchor_query
     anti_domains = [a.lower().strip() for a in data.get("anti_domains", [])]
     auto_anti = get_polysemy_anti_domains(data.get("domain", ""), raw_input=raw_input)
     for term in auto_anti:

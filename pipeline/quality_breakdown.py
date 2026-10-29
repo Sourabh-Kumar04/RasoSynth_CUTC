@@ -53,7 +53,7 @@ class QualityScoreBreakdown:
     signal_score: float = 0.0
     statistical_score: float = 0.0
     semantic_score: float = 0.0
-    reasoning_score: float = 0.0
+    reasoning_score: Optional[float] = 0.0
     grounding_score: float = 0.0
     confidence: float = 1.0
     filter_passed: bool = True
@@ -64,20 +64,22 @@ class QualityScoreBreakdown:
             "signal": round(self.signal_score, 4),
             "statistical": round(self.statistical_score, 4),
             "semantic": round(self.semantic_score, 4),
-            "reasoning": round(self.reasoning_score, 4),
+            "reasoning": round(self.reasoning_score, 4) if self.reasoning_score is not None else None,
             "grounding": round(self.grounding_score, 4),
             "confidence": round(self.confidence, 4),
-            "final": round(compute_final_score(self), 4),
+            "final": round(compute_final_score(self), 4) if compute_final_score(self) is not None else None,
             "filter_passed": self.filter_passed,
             "failed": list(self.failed_dimensions),
         }
 
 
-def compute_final_score(breakdown: QualityScoreBreakdown) -> float:
+def compute_final_score(breakdown: QualityScoreBreakdown) -> Optional[float]:
     """Single authoritative formula for quality score.
 
-    _Always_ uses the same weighting, regardless of pass/fail.
+    Returns None if critical reasoning score is unmeasured/None.
     """
+    if breakdown.reasoning_score is None:
+        return None
     return (
         breakdown.signal_score * 0.10
         + breakdown.statistical_score * 0.15
