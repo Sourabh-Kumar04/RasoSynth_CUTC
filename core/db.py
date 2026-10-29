@@ -1067,7 +1067,7 @@ class AsyncDB:
 
         # Apply safe migrations
         try:
-            from db.migration_safety import SafeMigrationManager, BUILTIN_MIGRATIONS
+            from core.migration_safety import SafeMigrationManager, BUILTIN_MIGRATIONS
 
             migration_mgr = SafeMigrationManager(
                 session_factory=db_manager.session_maker,
