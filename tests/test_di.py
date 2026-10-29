@@ -42,8 +42,8 @@ class TestServiceContainer:
         container.register_singleton(int, factory)
 
         # Resolve twice
-        result1 = asyncio.get_event_loop().run_until_complete(container.resolve(int))
-        result2 = asyncio.get_event_loop().run_until_complete(container.resolve(int))
+        result1 = asyncio.run(container.resolve(int))
+        result2 = asyncio.run(container.resolve(int))
 
         assert call_count == 1  # Factory called only once
         assert result1 == result2 == 1
@@ -60,8 +60,8 @@ class TestServiceContainer:
         container.register(int, factory, ServiceLifetime.TRANSIENT)
 
         # Resolve twice
-        result1 = asyncio.get_event_loop().run_until_complete(container.resolve(int))
-        result2 = asyncio.get_event_loop().run_until_complete(container.resolve(int))
+        result1 = asyncio.run(container.resolve(int))
+        result2 = asyncio.run(container.resolve(int))
 
         assert call_count == 2  # Factory called twice
         assert result1 != result2
@@ -77,7 +77,7 @@ class TestServiceContainer:
         container.register_singleton(int, create_int)
         container.register_singleton(str, create_string, depends_on=[int])
 
-        result = asyncio.get_event_loop().run_until_complete(container.resolve(str))
+        result = asyncio.run(container.resolve(str))
         assert result == "value: 42"
 
     def test_circular_dependency_detection(self, container: ServiceContainer) -> None:
@@ -100,7 +100,7 @@ class TestServiceContainer:
     def test_unknown_service_resolution(self, container: ServiceContainer) -> None:
         """Test resolving unknown service raises error."""
         with pytest.raises(DependencyError):
-            asyncio.get_event_loop().run_until_complete(
+            asyncio.run(
                 container.resolve(type("Unknown", (), {}))
             )
 
