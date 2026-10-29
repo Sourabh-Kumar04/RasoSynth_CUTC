@@ -29,9 +29,9 @@ def test_finetune_config_custom_values():
     assert restored.num_train_epochs == custom.num_train_epochs
 
 
-def test_finetune_models_endpoint(test_client):
+def test_finetune_models_endpoint(test_client, auth_headers):
     """Test GET /api/finetune/models returns catalogue."""
-    resp = test_client.get("/api/finetune/models")
+    resp = test_client.get("/api/finetune/models", headers=auth_headers)
     assert resp.status_code == 200
     data = resp.json()
     assert "models" in data
@@ -41,7 +41,7 @@ def test_finetune_models_endpoint(test_client):
     assert "HuggingFaceTB/SmolLM2-1.7B-Instruct" in model_ids
 
 
-def test_finetune_jobs_list_endpoint(test_client):
+def test_finetune_jobs_list_endpoint(test_client, auth_headers):
     """Test GET /api/finetune/jobs returns paginated job listing."""
     from unittest.mock import AsyncMock, MagicMock
     from api.server import app
@@ -52,7 +52,7 @@ def test_finetune_jobs_list_endpoint(test_client):
     app.state.ft_manager = mock_mgr
 
     try:
-        resp = test_client.get("/api/finetune/jobs")
+        resp = test_client.get("/api/finetune/jobs", headers=auth_headers)
         assert resp.status_code == 200
         data = resp.json()
         assert "jobs" in data
@@ -64,7 +64,7 @@ def test_finetune_jobs_list_endpoint(test_client):
         app.state.ft_manager = orig_mgr
 
 
-def test_finetune_jobs_create_endpoint(test_client):
+def test_finetune_jobs_create_endpoint(test_client, auth_headers):
     """Test POST /api/finetune/jobs creates job and returns 201."""
     from unittest.mock import AsyncMock, MagicMock
     from api.server import app
@@ -80,7 +80,9 @@ def test_finetune_jobs_create_endpoint(test_client):
     try:
         csrf_resp = test_client.get("/auth/csrf-token")
         csrf_token = csrf_resp.json().get("csrf_token")
-        headers = {"X-CSRF-Token": csrf_token} if csrf_token else {}
+        headers = dict(auth_headers)
+        if csrf_token:
+            headers["X-CSRF-Token"] = csrf_token
 
         payload = {
             "dataset_path": "/tmp/dummy.jsonl",
@@ -104,22 +106,22 @@ async def test_finetune_job_manager_lifecycle():
     from finetuning.job_manager import FinetuneJobManager
 
     mock_db = MagicMock()
-    mock_db.create_finetune_job = AsyncMock(return_value=MagicMock(to_dict=lambda: {"id": "ft-123", "status": "pending"}))
+    mock_db.create_finetune_job = AsyncMock(return_value=MagicMock(to_dict=lambda: {"id": "12345678-1234-5678-1234-567812345678", "status": "pending"}))
     mock_db.update_finetune_job = AsyncMock()
-    mock_db.get_finetune_job = AsyncMock(return_value=MagicMock(to_dict=lambda: {"id": "ft-123", "status": "running"}))
-    mock_db.list_finetune_jobs = AsyncMock(return_value=[MagicMock(to_dict=lambda: {"id": "ft-123", "status": "running"})])
+    mock_db.get_finetune_job = AsyncMock(return_value=MagicMock(to_dict=lambda: {"id": "12345678-1234-5678-1234-567812345678", "status": "running"}))
+    mock_db.list_finetune_jobs = AsyncMock(return_value=[MagicMock(to_dict=lambda: {"id": "12345678-1234-5678-1234-567812345678", "status": "running"})])
 
     manager = FinetuneJobManager(mock_db)
     
     # Check initial list
     jobs = await manager.list_jobs()
     assert len(jobs) == 1
-    assert jobs[0]["id"] == "ft-123"
+    assert jobs[0]["id"] == "12345678-1234-5678-1234-567812345678"
 
     # Add log entry
-    buf = manager._logs.setdefault("ft-123", __import__("collections").deque(maxlen=100))
+    buf = manager._logs.setdefault("12345678-1234-5678-1234-567812345678", __import__("collections").deque(maxlen=100))
     buf.append({"type": "progress", "epoch": 1, "loss": 0.45})
-    logs = manager.get_logs("ft-123")
+    logs = manager.get_logs("12345678-1234-5678-1234-567812345678")
     assert len(logs) == 1
     assert logs[0]["loss"] == 0.45
 
@@ -266,7 +268,7 @@ async def test_finetune_cross_worker_logs_persistence(tmp_path):
     worker1 = FinetuneJobManager(db)
     worker2 = FinetuneJobManager(db)
 
-    job_id = f"worker-test-{uuid.uuid4()}"
+    job_id = str(uuid.uuid4())
     event = {"type": "progress", "progress": 42.5, "loss": 1.25}
 
     worker1._persist_log_event(job_id, event)
@@ -282,13 +284,18 @@ async def test_finetune_cross_worker_logs_persistence(tmp_path):
     await db.close()
 
 
-def test_finetune_gguf_export_and_download(test_client, tmp_path):
+def test_finetune_gguf_export_and_download(test_client, tmp_path, auth_headers):
     """Test 1-click GGUF export, GGUF binary download, and Ollama Modelfile endpoints."""
     from unittest.mock import AsyncMock, MagicMock
     from api.server import app
 
     out_dir = tmp_path / "finetune_out"
     out_dir.mkdir(parents=True, exist_ok=True)
+    # P0 honesty: export/download only serve real weights files (the old
+    # endpoints fabricated magic+zero files). Provide a test fixture file
+    # with GGUF magic and non-zero payload so the flow under test -- not
+    # the fabrication -- is exercised.
+    (out_dir / "model-q4_k_m.gguf").write_bytes(b"GGUF" + bytes(4) + b"\x01\x02\x03\x04" * 64)
     fake_job = {
         "id": "ft-gguf-test",
         "output_model_name": "gguf-test-model",
@@ -305,7 +312,9 @@ def test_finetune_gguf_export_and_download(test_client, tmp_path):
     try:
         csrf_resp = test_client.get("/auth/csrf-token")
         csrf_token = csrf_resp.json().get("csrf_token")
-        headers = {"X-CSRF-Token": csrf_token} if csrf_token else {}
+        headers = dict(auth_headers)
+        if csrf_token:
+            headers["X-CSRF-Token"] = csrf_token
 
         # 1. Trigger GGUF export
         export_res = test_client.post("/api/finetune/jobs/ft-gguf-test/export_gguf", headers=headers)
@@ -316,13 +325,13 @@ def test_finetune_gguf_export_and_download(test_client, tmp_path):
         assert "Ollama" in export_data["runtime_compatibility"]
 
         # 2. Test GGUF binary download
-        download_res = test_client.get("/api/finetune/jobs/ft-gguf-test/download_gguf")
+        download_res = test_client.get("/api/finetune/jobs/ft-gguf-test/download_gguf", headers=auth_headers)
         assert download_res.status_code == 200
         assert download_res.headers["content-type"] == "application/octet-stream"
         assert b"GGUF" in download_res.content
 
         # 3. Test Ollama Modelfile endpoint
-        modelfile_res = test_client.get("/api/finetune/jobs/ft-gguf-test/modelfile")
+        modelfile_res = test_client.get("/api/finetune/jobs/ft-gguf-test/modelfile", headers=auth_headers)
         assert modelfile_res.status_code == 200
         modelfile_text = modelfile_res.text
         assert "FROM ./gguf-test-model-q4_k_m.gguf" in modelfile_text

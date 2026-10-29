@@ -14,8 +14,19 @@ os.environ.setdefault(
     "JWT_SECRET",
     os.getenv("JWT_SECRET") or "K7m9pQ2vX5zL8wR1tY4uN6bC3jF0gH2sD5vA8mK1pQ9xZ4"
 )
-os.environ.setdefault("AUTH_DISABLED", "true")
+# Tests run with authentication ENFORCED (never AUTH_DISABLED): API tests
+# authenticate with real JWTs via the auth_headers fixtures below, and
+# negative tests assert that unauthenticated requests are rejected.
+# The test users below are test-only credentials for this process.
+os.environ["AUTH_DISABLED"] = "false"
+os.environ["ADMIN_USER"] = "testadmin:test-admin-pass-9f3k7x"
+os.environ["USER_USER"] = "testuser:test-user-pass-4m8q2z"
 os.environ.setdefault("AI_DATASET_ENVIRONMENT", "development")
+# Never let a developer machine .env with stale default postgres
+# credentials leak into tests: tests use the local database fallback.
+# The project .env file itself is untouched (gitignored).
+os.environ["POSTGRES_URL"] = ""
+os.environ["DATABASE_URL"] = ""
 
 
 # ============================================
@@ -68,6 +79,30 @@ async def db():
         await db.clear_all_jobs()
     except Exception:
         pass
+
+
+@pytest.fixture
+def auth_headers():
+    """Authorization headers for a test ADMIN user (real JWT, auth enforced).
+
+    The token is minted from the same AuthManager the app uses, so it
+    passes get_current_user exactly like a production login token.
+    """
+    from api.auth import UserRole, get_auth_manager
+
+    manager = get_auth_manager()
+    token = manager.create_token("admin-001", "testadmin", UserRole.ADMIN)
+    return {"Authorization": f"Bearer {token}"}
+
+
+@pytest.fixture
+def user_auth_headers():
+    """Authorization headers for a test USER user (real JWT, auth enforced)."""
+    from api.auth import UserRole, get_auth_manager
+
+    manager = get_auth_manager()
+    token = manager.create_token("user-001", "testuser", UserRole.USER)
+    return {"Authorization": f"Bearer {token}"}
 
 
 @pytest.fixture

@@ -132,9 +132,9 @@ class TestAPIEndpoints:
         assert resp.headers.get("X-XSS-Protection") == "1; mode=block"
         assert resp.headers.get("Strict-Transport-Security") == "max-age=31536000; includeSubDomains"
 
-    def test_datasets_endpoint_returns_list(self, test_client):
+    def test_datasets_endpoint_returns_list(self, test_client, auth_headers):
         """Test GET /datasets returns a dict with data key."""
-        resp = test_client.get("/datasets?limit=10")
+        resp = test_client.get("/datasets?limit=10", headers=auth_headers)
         if resp.status_code == 503:
             pytest.skip("Database service unavailable")
         assert resp.status_code == 200
@@ -159,16 +159,16 @@ class TestAPIEndpoints:
         assert data["type"] == "jsonl"
         assert data["size"] == 2
 
-    def test_datasets_nonexistent_returns_404(self, test_client):
+    def test_datasets_nonexistent_returns_404(self, test_client, auth_headers):
         """Test GET /datasets/{invalid_id} returns 404."""
-        resp = test_client.get("/datasets/nonexistent-id-123")
+        resp = test_client.get("/datasets/nonexistent-id-123", headers=auth_headers)
         if resp.status_code == 503:
             pytest.skip("Database service unavailable")
         assert resp.status_code == 404
 
-    def test_jobs_endpoint(self, test_client):
+    def test_jobs_endpoint(self, test_client, auth_headers):
         """Test GET /jobs returns job list."""
-        resp = test_client.get("/jobs?limit=10")
+        resp = test_client.get("/jobs?limit=10", headers=auth_headers)
         if resp.status_code == 503:
             pytest.skip("Database service unavailable")
         assert resp.status_code == 200

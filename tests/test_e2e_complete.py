@@ -41,10 +41,10 @@ class TestEndToEndSystem:
         assert "csrf_token" in csrf_data
         assert len(csrf_data["csrf_token"]) > 0
 
-    def test_e2e_provider_and_agent_discovery(self, test_client):
+    def test_e2e_provider_and_agent_discovery(self, test_client, auth_headers):
         """Verify provider routing endpoints and modular multi-agent discovery."""
         # 1. Provider discovery
-        resp = test_client.get("/providers")
+        resp = test_client.get("/providers", headers=auth_headers)
         assert resp.status_code == 200
         providers = resp.json()
         assert isinstance(providers, list)
@@ -52,18 +52,18 @@ class TestEndToEndSystem:
         assert "gemini" in provider_ids or "nim" in provider_ids or "openai" in provider_ids
 
         # 2. Granular provider metrics
-        resp_prov = test_client.get("/providers/gemini")
+        resp_prov = test_client.get("/providers/gemini", headers=auth_headers)
         if resp_prov.status_code == 200:
             p_data = resp_prov.json()
             assert "name" in p_data or "id" in p_data
 
-        resp_metrics = test_client.get("/providers/gemini/metrics")
+        resp_metrics = test_client.get("/providers/gemini/metrics", headers=auth_headers)
         if resp_metrics.status_code == 200:
             m_data = resp_metrics.json()
             assert "provider" in m_data or "total_requests" in m_data or "active" in m_data
 
         # 3. Multi-agent registry
-        resp_agents = test_client.get("/agents")
+        resp_agents = test_client.get("/agents", headers=auth_headers)
         assert resp_agents.status_code == 200
         agents_data = resp_agents.json()
         agents = agents_data.get("agents") if isinstance(agents_data, dict) else agents_data
@@ -73,12 +73,12 @@ class TestEndToEndSystem:
         assert any("Agent" in name for name in agent_names)
 
         # 4. Multi-agent stats
-        resp_agent_stats = test_client.get("/agents/stats")
+        resp_agent_stats = test_client.get("/agents/stats", headers=auth_headers)
         assert resp_agent_stats.status_code == 200
         stats = resp_agent_stats.json()
         assert "total_registrations" in stats or "agents" in stats
 
-    def test_e2e_distributed_tracing_and_telemetry(self, test_client):
+    def test_e2e_distributed_tracing_and_telemetry(self, test_client, auth_headers):
         """Verify distributed trace extraction, trace recording, and historical telemetry."""
         trace_id = "e2e-trace-test-456"
         corr_id = "e2e-corr-test-789"
@@ -94,7 +94,7 @@ class TestEndToEndSystem:
         assert resp.headers.get("x-correlation-id") == corr_id
 
         # Verify trace query endpoint
-        resp_traces = test_client.get("/traces")
+        resp_traces = test_client.get("/traces", headers=auth_headers)
         assert resp_traces.status_code == 200
         traces_data = resp_traces.json()
         traces = traces_data.get("traces") if isinstance(traces_data, dict) else traces_data
@@ -105,13 +105,13 @@ class TestEndToEndSystem:
         assert "duration_ms" in matched[0] or "duration" in matched[0]
 
         # Verify single trace lookup
-        resp_single = test_client.get(f"/traces/{trace_id}")
+        resp_single = test_client.get(f"/traces/{trace_id}", headers=auth_headers)
         assert resp_single.status_code == 200
         trace_detail = resp_single.json()
         assert trace_detail["trace_id"] == trace_id
 
         # Verify historical telemetry
-        resp_history = test_client.get("/metrics/history?range=1h")
+        resp_history = test_client.get("/metrics/history?range=1h", headers=auth_headers)
         assert resp_history.status_code == 200
         history_data = resp_history.json()
         assert "timestamps" in history_data
@@ -120,7 +120,7 @@ class TestEndToEndSystem:
         assert "cost" in history_data
 
     @pytest.mark.asyncio
-    async def test_e2e_dataset_and_multiformat_export(self, test_client, tmp_path):
+    async def test_e2e_dataset_and_multiformat_export(self, test_client, tmp_path, auth_headers):
         """Verify dataset creation, record querying, and multi-format exports."""
         import api.server as server_mod
         from core.db import AsyncDB
@@ -169,19 +169,19 @@ class TestEndToEndSystem:
             await test_db.create_samples(dataset["id"], sample_records)
 
             # 1. Query datasets
-            resp_datasets = test_client.get("/datasets")
+            resp_datasets = test_client.get("/datasets", headers=auth_headers)
             assert resp_datasets.status_code == 200
             ds_data = resp_datasets.json()
             ds_list = ds_data.get("data") if isinstance(ds_data, dict) else ds_data
             assert any(d["id"] == dataset["id"] for d in ds_list)
 
             # 2. Query dataset detail
-            resp_detail = test_client.get(f"/datasets/{dataset['id']}")
+            resp_detail = test_client.get(f"/datasets/{dataset['id']}", headers=auth_headers)
             assert resp_detail.status_code == 200
             assert resp_detail.json()["name"] == "e2e_multilingual_dataset"
 
             # 3. Query records
-            resp_records = test_client.get(f"/datasets/{dataset['id']}/records")
+            resp_records = test_client.get(f"/datasets/{dataset['id']}/records", headers=auth_headers)
             assert resp_records.status_code == 200
             records_data = resp_records.json()
             records = records_data.get("records") if isinstance(records_data, dict) else records_data
@@ -189,7 +189,8 @@ class TestEndToEndSystem:
 
             # 4. Multi-format export streaming / on-demand
             csrf_token = test_client.get("/auth/csrf-token").json()["csrf_token"]
-            post_headers = {"X-CSRF-Token": csrf_token}
+            post_headers = dict(auth_headers)
+            post_headers["X-CSRF-Token"] = csrf_token
 
             # JSONL
             resp_jsonl = test_client.post(f"/datasets/{dataset['id']}/export", json={"format": "jsonl"}, headers=post_headers)
@@ -251,7 +252,7 @@ class TestEndToEndSystem:
         # Grounded text should have lower or equal hallucination risk score than completely fabricated text
         assert result_grounded.hallucination_risk_score <= result_hallucinated.hallucination_risk_score
 
-    def test_e2e_human_review_workflow(self, test_client):
+    def test_e2e_human_review_workflow(self, test_client, auth_headers):
         """Verify human-in-the-loop review operations and queue querying."""
         # 1. Fetch CSRF token for review actions
         csrf_resp = test_client.get("/auth/csrf-token")
@@ -259,12 +260,12 @@ class TestEndToEndSystem:
         assert csrf_token is not None
 
         # 2. Query review queue (returns 200 or 503 if review service db connection skipped)
-        resp_queue = test_client.get("/api/review/queue")
+        resp_queue = test_client.get("/api/review/queue", headers=auth_headers)
         assert resp_queue.status_code in (200, 503)
         if resp_queue.status_code == 200:
             queue_data = resp_queue.json()
             assert isinstance(queue_data, (list, dict))
 
         # 3. Query review stats
-        resp_stats = test_client.get("/api/review/stats")
+        resp_stats = test_client.get("/api/review/stats", headers=auth_headers)
         assert resp_stats.status_code in (200, 503)
