@@ -2,6 +2,10 @@
 """
 Seed script to populate RasoSynthTune with realistic demo datasets,
 fine-tuning runs, and cryptographic DBOM certificates for offline presentations.
+
+Demo honesty: sample_count values below are the samples actually
+written by this script, not inflated totals, and no invented
+tokenizer-saving figure is emitted on the dataset cards.
 """
 
 import argparse
@@ -28,7 +32,7 @@ DEMO_DATASETS = [
         "job_id": "job-demo-tax-cot-01",
         "domain": "Finance & Indian Taxation",
         "synthesis_mode": "cot",
-        "sample_count": 5000,
+        "sample_count": 2,
         "language": "en",
         "script": "latin",
         "samples": [
@@ -46,7 +50,7 @@ DEMO_DATASETS = [
         "job_id": "job-demo-clinical-triage-02",
         "domain": "Emergency Medicine Triage",
         "synthesis_mode": "socratic",
-        "sample_count": 2500,
+        "sample_count": 1,
         "language": "en",
         "script": "latin",
         "samples": [
@@ -60,7 +64,7 @@ DEMO_DATASETS = [
         "job_id": "job-demo-agent-tool-03",
         "domain": "Autonomous Tool Calling",
         "synthesis_mode": "tool_calling",
-        "sample_count": 3000,
+        "sample_count": 1,
         "language": "en",
         "script": "latin",
         "samples": [
@@ -96,11 +100,12 @@ def seed_demo_artifacts(output_base: str = "outputs/demo_seed") -> Dict[str, Any
 
         # Write metadata.dbom.json
         dbom_file = d_dir / "metadata.dbom.json"
+        samples_written = len(item["samples"])
         dbom_data = {
             "job_id": item["job_id"],
             "domain": item["domain"],
             "synthesis_mode": item["synthesis_mode"],
-            "sample_count": item["sample_count"],
+            "sample_count": samples_written,
             "merkle_root_hash": merkle_root,
             "certificate_id": cert_id,
         }
@@ -111,7 +116,7 @@ def seed_demo_artifacts(output_base: str = "outputs/demo_seed") -> Dict[str, Any
         card_content = generate_hf_dataset_card(
             dataset_name=f"{item['domain'].replace(' ', '-')}-Instruct",
             domain=item["domain"],
-            sample_count=item["sample_count"],
+            sample_count=samples_written,
             language=item["language"],
             script_mode=item["script"],
             dataset_type="sft",
@@ -119,7 +124,6 @@ def seed_demo_artifacts(output_base: str = "outputs/demo_seed") -> Dict[str, Any
             has_dpo=False,
             has_tool_calling=(item["synthesis_mode"] == "tool_calling"),
             has_bitext=False,
-            tokenizer_savings_pct=22.5,
             synthesis_mode=item["synthesis_mode"],
             merkle_root=merkle_root,
             certificate_id=cert_id,
@@ -129,6 +133,7 @@ def seed_demo_artifacts(output_base: str = "outputs/demo_seed") -> Dict[str, Any
         summary.append({
             "job_id": item["job_id"],
             "domain": item["domain"],
+            "samples_written": samples_written,
             "merkle_root": merkle_root,
             "certificate_id": cert_id,
             "directory": str(d_dir),

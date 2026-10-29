@@ -3,6 +3,11 @@ Research Agents
 
 Multi-agent research swarm for continuous discovery,
 benchmarking, and improvement.
+
+NOTE: Every discover_findings() implementation below returns
+HARDCODED DEMO findings with placeholder source URLs (tagged
+metadata demo_data=True). They do not query live sources, and
+their scores must not be quoted as measured results.
 """
 
 from typing import Dict, List, Optional, Any
@@ -96,7 +101,8 @@ class PaperAnalysisAgent(ResearchAgent):
                 source_url=f"https://arxiv.org/abs/{source['title']}",
                 summary=source["summary"],
                 relevance_score=0.8,
-                implementation_complexity="medium"
+                implementation_complexity="medium",
+                metadata={"demo_data": True, "note": "Hardcoded demo finding; source_url is a placeholder, not a verified link."},
             )
             findings.append(finding)
             self.findings_count += 1
@@ -151,7 +157,8 @@ class BenchmarkAgent(ResearchAgent):
                 source_url="https://huggingface.co/llm-benchmarks",
                 summary=f"Performance: {bench['score']}, improvement: {bench['improvement']:.1%}",
                 relevance_score=bench["improvement"],
-                expected_impact={"quality_change": bench["improvement"]}
+                expected_impact={"quality_change": bench["improvement"]},
+                metadata={"demo_data": True, "note": "Hardcoded demo finding; source_url is a placeholder, not a verified link."},
             )
             findings.append(finding)
 
@@ -172,8 +179,11 @@ class BenchmarkAgent(ResearchAgent):
             "baseline_score": baseline_score,
             "variant_score": variant_score,
             "improvement_percent": ((variant_score - baseline_score) / baseline_score) * 100,
-            "statistically_significant": True,
-            "confidence_interval": [0.95, 0.99]
+            "statistically_significant": False,
+            "confidence_interval": None,
+            "method": "demo_formula",
+            "demo": True,
+            "note": "Demo formula output from caller-supplied scores; no statistical test is run.",
         }
 
 
@@ -210,7 +220,8 @@ class LLMEvaluationAgent(ResearchAgent):
                 expected_impact={
                     "quality_change": model["quality"] - 0.7,
                     "cost_change": model["cost"] - 0.1
-                }
+                },
+                metadata={"demo_data": True, "note": "Hardcoded demo finding; source_url is a placeholder, not a verified link."},
             )
             findings.append(finding)
 
@@ -231,7 +242,9 @@ class LLMEvaluationAgent(ResearchAgent):
                 "quality_score": 0.85,
                 "latency_ms": 500,
                 "cost_per_1k_tokens": 0.01,
-                "overall_score": 0.8
+                "overall_score": 0.8,
+                "demo": True,
+                "note": "Hardcoded demo row, not a measured model comparison.",
             })
 
         return sorted(results, key=lambda x: x["overall_score"], reverse=True)
@@ -266,7 +279,8 @@ class OCRResearchAgent(ResearchAgent):
                 source_url=f"https://github.com/ocr/{tech['name']}",
                 summary=f"Accuracy: {tech['accuracy']}, Features: multilingual={tech.get('multilingual', False)}",
                 relevance_score=tech["accuracy"] - 0.7,
-                expected_impact={"quality_change": tech["accuracy"] - 0.85}
+                expected_impact={"quality_change": tech["accuracy"] - 0.85},
+                metadata={"demo_data": True, "note": "Hardcoded demo finding; source_url is a placeholder, not a verified link."},
             )
             findings.append(finding)
 
@@ -275,6 +289,8 @@ class OCRResearchAgent(ResearchAgent):
     async def evaluate_ocr_pipeline(self, pipeline: Dict) -> Dict[str, Any]:
         """Evaluate an OCR pipeline."""
         return {
+            "demo": True,
+            "note": "Hardcoded demo pipeline figures, not a measured evaluation.",
             "accuracy": 0.92,
             "speed_fps": 5.0,
             "supported_languages": 50,
@@ -312,7 +328,8 @@ class RetrievalAgent(ResearchAgent):
                 source_url=f"https://rag.ai/{tech['name']}",
                 summary=f"Precision: {tech['precision']}, Recall: {tech.get('recall', 'N/A')}",
                 relevance_score=tech["precision"] - 0.7,
-                expected_impact={"quality_change": tech["precision"] - 0.8}
+                expected_impact={"quality_change": tech["precision"] - 0.8},
+                metadata={"demo_data": True, "note": "Hardcoded demo finding; source_url is a placeholder, not a verified link."},
             )
             findings.append(finding)
 
@@ -326,6 +343,8 @@ class RetrievalAgent(ResearchAgent):
         return {
             "methods": methods,
             "best_method": methods[0] if methods else "hybrid",
+            "demo": True,
+            "note": "Hardcoded demo scores, not a measured comparison.",
             "scores": {m: 0.85 for m in methods}
         }
 
@@ -359,7 +378,8 @@ class FilteringAgent(ResearchAgent):
                 source_url=f"https://filtering.ai/{method['name']}",
                 summary=f"Recall: {method.get('recall', 'N/A')}, Precision: {method.get('precision', 'N/A')}",
                 relevance_score=0.75,
-                expected_impact={"quality_change": 0.1}
+                expected_impact={"quality_change": 0.1},
+                metadata={"demo_data": True, "note": "Hardcoded demo finding; source_url is a placeholder, not a verified link."},
             )
             findings.append(finding)
 
@@ -395,7 +415,8 @@ class CostOptimizationAgent(ResearchAgent):
                 source_url=f"https://cost.ai/{tech['name']}",
                 summary=f"Savings: {tech.get('cost_savings', tech.get('throughput_gain', 'N/A'))}",
                 relevance_score=tech.get("cost_savings", 0.3),
-                expected_impact={"cost_change": -(tech.get("cost_savings", 0.1))}
+                expected_impact={"cost_change": -(tech.get("cost_savings", 0.1))},
+                metadata={"demo_data": True, "note": "Hardcoded demo finding; source_url is a placeholder, not a verified link."},
             )
             findings.append(finding)
 
@@ -404,6 +425,8 @@ class CostOptimizationAgent(ResearchAgent):
     async def analyze_cost_breakdown(self, pipeline: Dict) -> Dict[str, Any]:
         """Analyze cost breakdown for a pipeline."""
         return {
+            "demo": True,
+            "note": "Hardcoded demo cost split, not measured spend.",
             "api_calls": {"cost": 50, "percentage": 0.4},
             "compute": {"cost": 30, "percentage": 0.25},
             "storage": {"cost": 20, "percentage": 0.15},
@@ -444,7 +467,8 @@ class SafetyAgent(ResearchAgent):
                 source_url=f"https://safety.ai/{tech['name']}",
                 summary=f"Safety improvements: {tech.get('safety_score', tech.get('hallucination_reduction', 'N/A'))}",
                 relevance_score=0.85,
-                expected_impact={"safety_change": tech.get("safety_score", 0.1)}
+                expected_impact={"safety_change": tech.get("safety_score", 0.1)},
+                metadata={"demo_data": True, "note": "Hardcoded demo finding; source_url is a placeholder, not a verified link."},
             )
             findings.append(finding)
 
@@ -456,6 +480,8 @@ class SafetyAgent(ResearchAgent):
             "total_outputs": len(outputs),
             "high_risk_count": sum(1 for o in outputs if len(o) > 500),
             "avg_confidence": 0.85,
+            "demo": True,
+            "note": "Heuristic demo figure, not a measured risk evaluation.",
             "recommended_actions": [
                 "Enable factual grounding",
                 "Add consistency checks"
@@ -492,7 +518,8 @@ class SyntheticDataAgent(ResearchAgent):
                 source_url=f"https://synthetic.ai/{tech['name']}",
                 summary=f"Diversity: {tech['diversity']}, Quality: {tech['quality']}",
                 relevance_score=0.75,
-                expected_impact={"diversity_change": tech["diversity"] - 0.7}
+                expected_impact={"diversity_change": tech["diversity"] - 0.7},
+                metadata={"demo_data": True, "note": "Hardcoded demo finding; source_url is a placeholder, not a verified link."},
             )
             findings.append(finding)
 

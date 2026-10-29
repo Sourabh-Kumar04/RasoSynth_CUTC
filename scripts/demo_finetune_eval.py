@@ -1,8 +1,14 @@
 #!/usr/bin/env python3
-"""RasoSynthTune Model Fine-Tuning & Empirical Benchmark Evaluation Runner.
+"""RasoSynthTune Model Fine-Tuning DEMO Evaluation Runner.
 
-Demonstrates the empirical accuracy delta ("Before vs. After Domain Fine-Tuning")
-using RasoSynthTune's autonomous synthetic dataset pipeline on an Indian Taxation & GST benchmark:
+DEMO ONLY: illustrates a before/after accuracy delta ("Before vs. After
+Domain Fine-Tuning") on hand-authored pairs for an Indian Taxation & GST
+benchmark. The pairs below are NOT a held-out evaluation set, no real
+fine-tuned model is run, and the "tuned" predictions are near-verbatim
+copies of the ground truth -- so the deltas are illustrative only and
+must not be quoted as model accuracy or production proof.
+
+Demo flow (illustrative, not a real model run):
 1. Simulates base model inference (pre-fine-tuning baseline).
 2. Simulates fine-tuned model inference (post-RasoSynthTune synthetic refinement).
 3. Executes direct benchmark evaluation with exact match, token-F1, chrF overlap, and statutory citation fidelity.
@@ -25,7 +31,8 @@ from core.training.recipe_generator import generate_training_recipe
 
 
 # ---------------------------------------------------------------------------
-# Benchmark Ground Truth & Paired Model Responses (Before vs After)
+# HAND-AUTHORED DEMO PAIRS -- NOT a held-out evaluation set.
+# Ground Truth & Paired Model Responses (Before vs After)
 # ---------------------------------------------------------------------------
 BENCHMARK_PAIRS = [
     {
@@ -84,7 +91,7 @@ def run_finetune_eval_benchmark() -> dict:
     print("Benchmark Domain: Indian Taxation & GST Statutory Compliance")
     print("Base Model:       sarvamai/sarvam-2b-v0.5 (Pretrained Baseline)")
     print("Tuned Model:      sarvamai/sarvam-2b-v0.5 + RasoSynthTune SFT LoRA")
-    print(f"Total Test Set:   {len(BENCHMARK_PAIRS)} held-out statutory evaluation pairs")
+    print(f"Demo pairs:       {len(BENCHMARK_PAIRS)} hand-authored demo pairs (NOT held-out)")
 
     # 1. Base Model Evaluation Split
     base_pairs = [
@@ -117,6 +124,9 @@ def run_finetune_eval_benchmark() -> dict:
     composite_delta = round(tuned_eval["composite_score"] - base_eval["composite_score"], 1)
 
     delta_summary = {
+        "evaluation_type": "demo",
+        "held_out": False,
+        "note": "Hand-authored demo pairs; tuned predictions are near-verbatim copies of ground truth, so deltas are illustrative only.",
         "benchmark_domain": "Indian Taxation & GST Compliance",
         "samples_evaluated": len(BENCHMARK_PAIRS),
         "base_model": {
@@ -148,7 +158,9 @@ def run_finetune_eval_benchmark() -> dict:
     }
 
     # Generate Markdown Report
-    report_md = f"""# 📈 Empirical Model Evaluation: Before vs. After RasoSynthTune Fine-Tuning
+    report_md = f"""# 📈 Demo Model Evaluation (hand-authored pairs -- NOT held-out): Before vs. After RasoSynthTune Fine-Tuning
+
+> **DEMO ONLY:** hand-authored pairs, not a held-out evaluation set; no real fine-tuned model is run and tuned predictions are near-verbatim copies of ground truth. Do not quote the deltas below as model accuracy or production proof.
 
 > **Target Domain**: Indian Taxation & GST Statutory Compliance  
 > **Base Architecture**: `sarvamai/sarvam-2b-v0.5`  
@@ -164,9 +176,9 @@ def run_finetune_eval_benchmark() -> dict:
 | **Exact Match (EM)** | {base_eval['exact_match_pct']}% | **{tuned_eval['exact_match_pct']}%** | `+{em_delta}%` | — |
 | **Mean Token-F1** | {base_eval['mean_token_f1']} | **{tuned_eval['mean_token_f1']}** | `+{f1_delta}` | **`+{f1_relative_pct}%`** |
 | **chrF Character Overlap** | {base_eval['mean_chrf_score']} | **{tuned_eval['mean_chrf_score']}** | `+{chrf_delta}` | **`+{chrf_relative_pct}%`** |
-| **Citation Accuracy** | {base_eval['citation_accuracy_pct']}% | **{tuned_eval['citation_accuracy_pct']}%** | `+0.0%` | 100% Grounded |
-| **Composite Quality Score** | {base_eval['composite_score']} | **{tuned_eval['composite_score']}** | `+{composite_delta} pts` | **Frontier Grade** |
-| **Operational Rating** | `{base_eval['rating']}` | **`{tuned_eval['rating']}`** | — | **Production-Ready** |
+| **Citation Accuracy** | {base_eval['citation_accuracy_pct']}% | **{tuned_eval['citation_accuracy_pct']}%** | `+0.0%` | As recorded (demo pairs only) |
+| **Composite Quality Score** | {base_eval['composite_score']} | **{tuned_eval['composite_score']}** | `+{composite_delta} pts` | Demo pairs only (no grade claimed) |
+| **Operational Rating** | `{base_eval['rating']}` | **`{tuned_eval['rating']}`** | — | As recorded (not production-ready) |
 
 ---
 
@@ -191,12 +203,30 @@ def run_finetune_eval_benchmark() -> dict:
         json.dump(delta_summary, f, indent=2)
 
     md_path = out_dir / "before_vs_after_finetune_benchmark.md"
+    # Preserve a pre-existing honesty banner: if the checked-in report
+    # already carries a leading "Small-sample pilot" banner block, keep
+    # it ahead of the regenerated report instead of overwriting it.
+    # Checked-in artifacts are never regenerated by this script run.
+    banner = ""
+    if md_path.exists():
+        existing_lines = md_path.read_text(encoding="utf-8").splitlines(keepends=True)
+        banner_lines = []
+        in_banner = False
+        for line in existing_lines:
+            if "Small-sample pilot" in line:
+                in_banner = True
+            if in_banner:
+                if line.startswith("> **Target Domain**"):
+                    break
+                banner_lines.append(line)
+        if banner_lines:
+            banner = "".join(banner_lines).rstrip("\n") + "\n\n"
     with open(md_path, "w", encoding="utf-8") as f:
-        f.write(report_md)
+        f.write(banner + report_md)
 
     print("\n" + report_md)
-    print(f"\n[OK] Empirical benchmark JSON report: {json_path}")
-    print(f"[OK] Auditable markdown report:        {md_path}")
+    print(f"\n[OK] Demo benchmark JSON report: {json_path}")
+    print(f"[OK] Demo markdown report:        {md_path}")
 
     return delta_summary
 

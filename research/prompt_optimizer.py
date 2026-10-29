@@ -2,6 +2,11 @@
 
 Provides DSPy-style evaluation for prompt variations, measuring factual
 grounding, semantic quality, and task alignment across different domains.
+
+NOTE: PromptEvaluator scores below are SIMULATED heuristic values
+(base score plus random jitter, plus a simulated latency), not
+measured LLM output. run_prompt_optimization compares simulated
+scores only; do not quote its deltas as measured prompt gains.
 """
 import asyncio
 import logging
@@ -21,7 +26,8 @@ from pipeline.grounding import SourceMatcher
 
 logger = logging.getLogger(__name__)
 
-# Sample benchmark dataset for testing prompts
+# Sample (hand-written demo) benchmark dataset for testing prompts.
+# Not a held-out evaluation set.
 EVAL_DATASET = [
     {
         "domain": "medical",
@@ -51,8 +57,15 @@ class PromptEvaluator:
         self.source_matcher = SourceMatcher(router=router)
 
     async def evaluate_prompt(self, prompt_template: str, test_item: Dict[str, Any]) -> Dict[str, float]:
-        """Evaluate a single prompt variant on a test case."""
-        # Simulated run (if live LLM is not connected, fallback to realistic scores)
+        """Evaluate a single prompt variant on a test case.
+
+        SIMULATED: no LLM is called. Scores are heuristic base values
+        adjusted by prompt features plus random jitter, and latency is
+        a simulated number. Returned values must be labelled simulated
+        wherever they are reported.
+        """
+        # Simulated run: heuristic base scores plus random jitter;
+        # NOT measured LLM output (no model is called here).
         await asyncio.sleep(0.05)  # Simulate API latency
 
         # Prompt length and structure checks (best practices)
@@ -160,6 +173,7 @@ The quicksort algorithm uses divide-and-conquer. It picks an element as pivot an
     )
 
     print("Running Prompt Optimization Benchmarking...")
+    print("NOTE: scores below are SIMULATED heuristic+jitter values, not measured LLM runs.")
     comparison: BenchmarkComparison = await runner.run_comparison(config)
 
     # Output Results

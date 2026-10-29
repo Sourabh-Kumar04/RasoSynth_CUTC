@@ -3,6 +3,11 @@ Autonomous Research Loop
 
 The central orchestration for continuous research, benchmarking,
 experimentation, and self-improvement.
+
+NOTE: Benchmark and experiment outputs in this module are
+simulated-formula / scripted-demo illustrations (see
+_benchmark_finding and _run_single_experiment), not measured runs.
+Do not quote them as production results.
 """
 
 from typing import Dict, List, Optional, Any, Set, Callable
@@ -210,7 +215,12 @@ class ResearchLoop:
         return benchmarks
 
     async def _benchmark_finding(self, finding: ResearchFinding) -> BenchmarkResult:
-        """Benchmark a single finding."""
+        """Simulated-formula benchmark of a single finding.
+
+        Illustrative only: no model or workload is run. The baseline
+        is a fixed formula input, not a measurement, and the new score
+        is derived arithmetically from the finding relevance score.
+        """
         benchmark_id = f"bench_{finding.finding_id}"
 
         baseline_score = 0.7
@@ -225,7 +235,12 @@ class ResearchLoop:
             improvement_percent=improvement * 100,
             cost_change_percent=finding.expected_impact.get("cost_change", 0),
             execution_time_ms=finding.expected_impact.get("latency_change", 0),
-            quality_metrics=finding.expected_impact
+            quality_metrics=finding.expected_impact,
+            metadata={
+                "method": "simulated_formula",
+                "demo": True,
+                "note": "Illustrative formula output, not a measured benchmark run.",
+            },
         )
 
     async def _run_experiments(self) -> List[Improvement]:
@@ -243,13 +258,20 @@ class ResearchLoop:
         return improvements
 
     async def _run_single_experiment(self, experiment: Experiment) -> Dict[str, Any]:
-        """Run a single experiment."""
+        """Scripted demo experiment: no variant is actually run.
+
+        Returns fixed illustrative scores after a short sleep. The
+        winner, scores, and confidence are demo placeholders, not
+        measured experiment results.
+        """
         await asyncio.sleep(0.1)
 
         return {
             "winner": "variant_b",
             "scores": {"variant_a": 0.75, "variant_b": 0.82},
-            "confidence": 0.95
+            "confidence": 0.95,
+            "method": "scripted_demo",
+            "demo": True,
         }
 
     def _create_improvement(self, experiment: Experiment, result: Dict) -> Improvement:
@@ -262,7 +284,12 @@ class ResearchLoop:
             title=experiment.name,
             description=experiment.hypothesis,
             finding_id=experiment.experiment_id,
-            risk_level="medium"
+            risk_level="medium",
+            metadata={
+                "method": "scripted_demo",
+                "demo": True,
+                "note": "Derived from a scripted demo experiment, not a measured run.",
+            },
         )
 
         self._improvements[improvement_id] = improvement

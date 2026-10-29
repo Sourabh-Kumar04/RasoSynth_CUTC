@@ -58,7 +58,12 @@ class QualityBenchmark:
         return out
 
     async def benchmark_generation_quality(self, samples: Optional[list] = None) -> dict:
-        """Measure synthetic generation quality, semantic richness, and syntactic validity."""
+        """Measure lexical diversity and ChrF alignment on a corpus.
+
+        Default corpus: 4 hand-written DEMO EXEMPLARS, not production
+data and not a held-out set. Syntactic validity is NOT measured
+        by this benchmark (no such key is reported).
+        """
         from core.metrics.fidelity import compute_chrf_score
 
         eval_corpus = samples or [
@@ -109,6 +114,9 @@ class QualityBenchmark:
 
         return {
             "status": "completed",
+            "corpus_type": "demo_exemplar",
+            "demo": True,
+            "note": "Corpus is hand-written demo exemplars; figures describe that corpus only.",
             "samples_evaluated": len(eval_corpus),
             "lexical_diversity_distinct_1": round(distinct_1, 4),
             "lexical_diversity_distinct_2": round(distinct_2, 4),
@@ -116,7 +124,6 @@ class QualityBenchmark:
             "avg_response_length_chars": round(statistics.mean(resp_lengths), 1) if resp_lengths else 0,
             "expansion_ratio": round(avg_expansion_ratio, 2),
             "semantic_fidelity_chrf": round(statistics.mean(chrf_scores), 2) if chrf_scores else 0.0,
-            "syntactic_validity_rate_pct": 100.0,
         }
 
     async def benchmark_latency(self, iterations: int = 100) -> dict:
@@ -161,7 +168,12 @@ class QualityBenchmark:
         }
 
     async def benchmark_provider_quality(self) -> dict:
-        """Benchmark provider fallback resilience and schema parsing efficiency."""
+        """Benchmark schema parsing on one hardcoded JSON document.
+
+        The supported-provider list is static configuration, not a
+        live capability probe, and fallback resilience is NOT measured
+        here (reported as unknown).
+        """
         import json
         schema_test = json.dumps({
             "instruction": "Query test",
@@ -177,7 +189,7 @@ class QualityBenchmark:
             "status": "completed",
             "schema_parsing_success_rate_pct": 100.0 if "instruction" in parsed else 0.0,
             "avg_parse_latency_us": round(parse_latency_us, 2),
-            "fallback_resilience_rating": "99.9% (Multi-Provider Dynamic Cascading)",
+            "fallback_resilience_rating": "unknown (not measured)",
             "supported_providers": ["google_gemini", "nvidia_nim", "anthropic", "openai", "groq", "ollama", "unsloth"],
         }
 
@@ -256,8 +268,11 @@ class QualityBenchmark:
         }
 
     async def benchmark_cost_efficiency(self) -> dict:
-        """Calculate unit economics, token costs, and ROI vs. traditional human labeling."""
-        human_labeling_cost_per_pair_usd = 1.00  # Industry standard benchmark (Scale AI / Surge AI)
+        """Calculate an ILLUSTRATIVE cost projection from assumed unit
+        costs. Not measured spend, not a vendor quote, and not a
+        production ROI claim.
+        """
+        human_labeling_cost_per_pair_usd = 1.00  # Illustrative assumption, not a measured quote
         avg_tokens_per_sample = 350
 
         # Synthetic generation with RasoSynthTune cloud refinery
@@ -278,6 +293,8 @@ class QualityBenchmark:
 
         return {
             "status": "completed",
+            "cost_model": "illustrative_projection",
+            "note": "Illustrative projection from assumed unit costs, not measured spend.",
             "human_labeling_cost_per_sample_usd": human_labeling_cost_per_pair_usd,
             "rasosynth_cloud_cost_per_sample_usd": round(rasosynth_cloud_cost_per_pair_usd, 5),
             "rasosynth_local_gpu_cost_per_sample_usd": round(local_gpu_amortized_cost_per_pair_usd, 5),
