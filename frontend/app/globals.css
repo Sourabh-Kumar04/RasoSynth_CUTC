@@ -253,23 +253,15 @@
   }
 }
 
-/* Animated mascot: layered SVG motion for the hero robot. Whole-mascot bob,
-   waving hand, swaying hand, head tilt, eye blink, core pulse, antenna
-   bounce. The global reduced-motion rule in this file also disables these. */
-.mascot-bob { animation: mascot-bob 3s ease-in-out infinite; }
-.mascot-wave { animation: mascot-wave 2.4s ease-in-out infinite; transform-box: fill-box; transform-origin: 85% 88%; }
-.mascot-sway { animation: mascot-sway 3s ease-in-out infinite; transform-box: fill-box; transform-origin: 20% 15%; }
-.mascot-tilt { animation: mascot-tilt 3s ease-in-out infinite; transform-box: fill-box; transform-origin: 50% 95%; }
-.mascot-blink { animation: mascot-blink 4.8s ease-in-out infinite; transform-box: fill-box; transform-origin: 50% 50%; }
-.mascot-pulse { animation: mascot-pulse 2.4s ease-in-out infinite; transform-box: fill-box; transform-origin: 50% 50%; }
-.mascot-antenna { animation: mascot-antenna 3s ease-in-out infinite; transform-box: fill-box; transform-origin: 50% 100%; }
-@keyframes mascot-bob { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-12px); } }
-@keyframes mascot-wave { 0%, 100% { transform: rotate(-10deg); } 50% { transform: rotate(22deg); } }
-@keyframes mascot-sway { 0%, 100% { transform: rotate(0deg); } 50% { transform: rotate(-10deg); } }
-@keyframes mascot-tilt { 0%, 100% { transform: rotate(-2deg); } 50% { transform: rotate(2deg); } }
-@keyframes mascot-blink { 0%, 90%, 100% { transform: scaleY(1); } 93%, 96% { transform: scaleY(0.1); } }
-@keyframes mascot-pulse { 0%, 100% { transform: scale(1); opacity: 0.55; } 50% { transform: scale(1.18); opacity: 0.9; } }
-@keyframes mascot-antenna { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-4px); } }
+/* Animated mascot: flat-image motion for the standalone robot. Whole-image
+   only: bob, gentle sway, soft glow pulse. The global reduced-motion rule
+   in this file also disables these. */
+.mascot-float { animation: mascot-float 3s ease-in-out infinite; }
+.mascot-sway-img { animation: mascot-sway-img 3.6s ease-in-out infinite; transform-origin: 50% 90%; }
+.mascot-glow { animation: mascot-glow 2.4s ease-in-out infinite; }
+@keyframes mascot-float { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-12px); } }
+@keyframes mascot-sway-img { 0%, 100% { transform: rotate(-2deg); } 50% { transform: rotate(2deg); } }
+@keyframes mascot-glow { 0%, 100% { filter: drop-shadow(0 0 0 rgba(242, 102, 37, 0)); } 50% { filter: drop-shadow(0 0 18px rgba(242, 102, 37, 0.45)); } }
 @media (prefers-reduced-motion: reduce) {
-  .mascot-bob, .mascot-wave, .mascot-sway, .mascot-tilt, .mascot-blink, .mascot-pulse, .mascot-antenna { animation: none !important; }
+  .mascot-float, .mascot-sway-img, .mascot-glow { animation: none !important; }
 }
