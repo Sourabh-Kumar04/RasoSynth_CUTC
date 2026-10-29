@@ -130,7 +130,7 @@ export function OnboardingModal({ open, onOpenChange }: { open?: boolean; onOpen
         <div className="bg-[#161622] text-white p-6 relative border-b border-[#272738]">
           <button
             onClick={handleClose}
-            className="absolute top-4 right-4 text-[#94a3b8] hover:text-white transition-colors"
+            className="absolute top-4 right-4 text-[#a8a29e] hover:text-white transition-colors"
           >
             <X className="h-5 w-5" />
           </button>
@@ -146,12 +146,12 @@ export function OnboardingModal({ open, onOpenChange }: { open?: boolean; onOpen
               <h2 className="text-xl font-bold text-white tracking-tight">{step.title}</h2>
             </div>
           </div>
-          <p className="text-xs text-[#94a3b8] font-mono mt-1">{step.subtitle}</p>
+          <p className="text-xs text-[#a8a29e] font-mono mt-1">{step.subtitle}</p>
         </div>
 
         {/* Step Body Content */}
         <div className="p-6 space-y-5 flex-1 bg-[#12121a]">
-          <p className="text-xs text-[#94a3b8] leading-relaxed">{step.description}</p>
+          <p className="text-xs text-[#a8a29e] leading-relaxed">{step.description}</p>
 
           {/* Key Capabilities Bullet Points */}
           <div className="p-4 rounded-2xl bg-[#0a0a0f] border border-[#272738] space-y-2.5">
@@ -160,7 +160,7 @@ export function OnboardingModal({ open, onOpenChange }: { open?: boolean; onOpen
             </p>
             <div className="grid grid-cols-1 gap-2">
               {step.highlights.map((item, idx) => (
-                <div key={idx} className="flex items-start gap-2 text-xs text-[#f8fafc]">
+                <div key={idx} className="flex items-start gap-2 text-xs text-[#f5f2ea]">
                   <CheckCircle2 className="h-4 w-4 text-emerald-400 shrink-0 mt-0.5" />
                   <span>{item}</span>
                 </div>
@@ -175,7 +175,7 @@ export function OnboardingModal({ open, onOpenChange }: { open?: boolean; onOpen
                 key={idx}
                 onClick={() => setCurrentStep(idx)}
                 className={`h-2 rounded-full transition-all ${
-                  idx === currentStep ? 'w-8 bg-[#f26625]' : 'w-2 bg-[#3b3b52] hover:bg-[#64748b]'
+                  idx === currentStep ? 'w-8 bg-[#f26625]' : 'w-2 bg-[#3b3b52] hover:bg-[#a8a29e]'
                 }`}
               />
             ))}
@@ -188,7 +188,7 @@ export function OnboardingModal({ open, onOpenChange }: { open?: boolean; onOpen
             variant="ghost"
             size="sm"
             onClick={handleClose}
-            className="text-xs text-[#94a3b8] hover:text-[#f26625] rounded-full"
+            className="text-xs text-[#a8a29e] hover:text-[#f26625] rounded-full"
           >
             Skip Tour
           </Button>

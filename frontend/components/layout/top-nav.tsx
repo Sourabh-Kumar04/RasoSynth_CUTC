@@ -94,13 +94,13 @@ export function TopNav() {
           <div className="flex-1 max-w-md mx-2 hidden sm:block">
             <button
               onClick={() => setShowSearch(true)}
-              className="w-full flex items-center space-x-2 px-3.5 py-1.5 rounded-full bg-[#12121a]/80 hover:bg-[#161622] border border-[#272738] hover:border-[#f26625]/40 text-xs text-[#94a3b8] hover:text-zinc-200 transition-all justify-between group shadow-inner"
+              className="w-full flex items-center space-x-2 px-3.5 py-1.5 rounded-full bg-[#12121a]/80 hover:bg-[#161622] border border-[#272738] hover:border-[#f26625]/40 text-xs text-[#a8a29e] hover:text-zinc-200 transition-all justify-between group shadow-inner"
             >
               <div className="flex items-center space-x-2">
-                <Search className="w-3.5 h-3.5 text-[#94a3b8] group-hover:text-[#f26625] transition-colors" />
+                <Search className="w-3.5 h-3.5 text-[#a8a29e] group-hover:text-[#f26625] transition-colors" />
                 <span className="truncate">Search studio, presets, datasets...</span>
               </div>
-              <kbd className="px-1.5 py-0.5 rounded bg-[#161622] border border-[#272738] text-xs font-mono text-[#94a3b8] group-hover:text-white group-hover:border-[#3b3b52]">
+              <kbd className="px-1.5 py-0.5 rounded bg-[#161622] border border-[#272738] text-xs font-mono text-[#a8a29e] group-hover:text-white group-hover:border-[#3b3b52]">
                 ⌘K
               </kbd>
             </button>
@@ -119,7 +119,7 @@ export function TopNav() {
 
             <button
               onClick={() => setShowSearch(true)}
-              className="sm:hidden p-2 rounded-lg text-[#94a3b8] hover:text-white hover:bg-[#161622] border border-[#272738]"
+              className="sm:hidden p-2 rounded-lg text-[#a8a29e] hover:text-white hover:bg-[#161622] border border-[#272738]"
               title="Search"
             >
               <Search className="w-4 h-4" />
@@ -127,7 +127,7 @@ export function TopNav() {
 
             <Link
               href="/studio"
-              className="inline-flex items-center space-x-1.5 px-3 py-1.5 rounded-md bg-[#f26625] hover:bg-[#de581a] border border-[#ea580c] text-white text-xs font-mono font-bold transition-all active:scale-95 glow-yc shadow-sm"
+              className="inline-flex items-center space-x-1.5 px-3 py-1.5 rounded-md bg-[#f26625] hover:bg-[#de581a] border border-[#ea580c] text-white text-xs font-mono font-bold transition-all active:scale-95 shadow-sm"
             >
               <FlaskConical className="w-3.5 h-3.5 text-white" />
               <span>New Dataset</span>
@@ -141,7 +141,7 @@ export function TopNav() {
               aria-controls="mobile-nav-drawer"
               aria-label="Toggle site navigation"
               onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
-              className="lg:hidden p-1.5 rounded-lg text-[#94a3b8] hover:text-white hover:bg-[#161622] border border-[#272738]"
+              className="lg:hidden p-1.5 rounded-lg text-[#a8a29e] hover:text-white hover:bg-[#161622] border border-[#272738]"
             >
               {mobileMenuOpen ? <X className="w-5 h-5" /> : <Menu className="w-5 h-5 text-white" />}
             </button>
@@ -169,10 +169,10 @@ export function TopNav() {
                   onClick={() => setMobileMenuOpen(false)}
                   className={clsx(
                     'flex items-center space-x-2.5 px-3 py-2 rounded-md text-xs font-medium transition-colors',
-                    active ? 'bg-[#161622] text-[#f26625] border-l-2 border-[#f26625]' : 'text-[#94a3b8] hover:text-white hover:bg-[#161622]'
+                    active ? 'bg-[#161622] text-[#f26625] border-l-2 border-[#f26625]' : 'text-[#a8a29e] hover:text-white hover:bg-[#161622]'
                   )}
                 >
-                  <Icon className={clsx('w-4 h-4', active ? 'text-[#f26625]' : 'text-[#94a3b8]')} />
+                  <Icon className={clsx('w-4 h-4', active ? 'text-[#f26625]' : 'text-[#a8a29e]')} />
                   <span>{item.label}</span>
                 </Link>
               )

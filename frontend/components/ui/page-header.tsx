@@ -31,7 +31,7 @@ export function PageHeader({
             </span>
           </div>
           <h1 className="font-display text-2xl font-bold tracking-tight text-white">{title}</h1>
-          <p className="mt-1 text-sm text-[#94a3b8]">{purpose}</p>
+          <p className="mt-1 text-sm text-[#a8a29e]">{purpose}</p>
         </div>
         {action ? <div className="flex shrink-0 items-center gap-2">{action}</div> : null}
       </div>

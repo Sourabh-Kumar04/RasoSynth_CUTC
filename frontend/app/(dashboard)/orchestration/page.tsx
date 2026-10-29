@@ -242,7 +242,7 @@ export default function OrchestrationPage() {
               Pipeline Execution Engine
             </h1>
           </div>
-          <p className="text-xs text-[#94a3b8]">
+          <p className="text-xs text-[#a8a29e]">
             Real-time stage node telemetry, automated checkpoint recovery, and multi-agent synthesis workflows
           </p>
         </div>
@@ -261,7 +261,7 @@ export default function OrchestrationPage() {
           <Button
             onClick={fetchJobs}
             variant="outline"
-            className="border-[#272738] bg-[#12121a] hover:bg-[#161622] text-[#94a3b8] hover:text-white text-xs font-mono h-8 rounded-md"
+            className="border-[#272738] bg-[#12121a] hover:bg-[#161622] text-[#a8a29e] hover:text-white text-xs font-mono h-8 rounded-md"
           >
             <RefreshCw className="w-3.5 h-3.5 mr-1 text-[#f26625]" />
             Refresh
@@ -280,15 +280,15 @@ export default function OrchestrationPage() {
       {/* Tabs Navigation */}
       <Tabs value={activeTab} onValueChange={(v) => setActiveTab(v as any)} className="w-full space-y-6">
         <TabsList className="bg-[#161622] rounded-md border border-[#272738] p-1 flex flex-wrap gap-1 h-auto">
-          <TabsTrigger value="dag" className="rounded-sm text-xs font-mono flex items-center gap-1.5 data-[state=active]:bg-[#f26625] data-[state=active]:text-white data-[state=active]:glow-yc">
+          <TabsTrigger value="dag" className="rounded-sm text-xs font-mono flex items-center gap-1.5 data-[state=active]:bg-[#f26625] data-[state=active]:text-white data-[state=active]">
             <Workflow className="w-3.5 h-3.5" />
             Pipeline DAG Execution
           </TabsTrigger>
-          <TabsTrigger value="agents" className="rounded-sm text-xs font-mono flex items-center gap-1.5 data-[state=active]:bg-[#f26625] data-[state=active]:text-white data-[state=active]:glow-yc">
+          <TabsTrigger value="agents" className="rounded-sm text-xs font-mono flex items-center gap-1.5 data-[state=active]:bg-[#f26625] data-[state=active]:text-white data-[state=active]">
             <Users className="w-3.5 h-3.5" />
             Multi-Agent Society ({agents.length || 13})
           </TabsTrigger>
-          <TabsTrigger value="research" className="rounded-sm text-xs font-mono flex items-center gap-1.5 data-[state=active]:bg-[#f26625] data-[state=active]:text-white data-[state=active]:glow-yc">
+          <TabsTrigger value="research" className="rounded-sm text-xs font-mono flex items-center gap-1.5 data-[state=active]:bg-[#f26625] data-[state=active]:text-white data-[state=active]">
             <FlaskConical className="w-3.5 h-3.5" />
             Autonomous Research Loop
           </TabsTrigger>
@@ -305,15 +305,15 @@ export default function OrchestrationPage() {
                   Active Pipeline Execution DAG
                 </h3>
                 {selectedJob && (
-                  <span className="font-mono text-xs text-[#94a3b8]">
+                  <span className="font-mono text-xs text-[#a8a29e]">
                     [Job: <strong className="text-white">{selectedJob.id.slice(0, 8)}...</strong>]
                   </span>
                 )}
               </div>
 
               <div className="flex items-center space-x-3 text-xs font-mono">
-                <span className="text-[#94a3b8]">DAG LATENCY: <strong className="text-white">—</strong></span>
-                <span className="text-[#94a3b8]">CHECKPOINT: <strong className="text-[#10b981]">ckpt-latest</strong></span>
+                <span className="text-[#a8a29e]">DAG LATENCY: <strong className="text-white">—</strong></span>
+                <span className="text-[#a8a29e]">CHECKPOINT: <strong className="text-[#10b981]">ckpt-latest</strong></span>
                 <span className="text-[#10b981] flex items-center gap-1">
                   <span className="w-1.5 h-1.5 rounded-full bg-[#10b981] animate-pulse" />
                   SYNAPSE ACTIVE
@@ -348,7 +348,7 @@ export default function OrchestrationPage() {
                         className={clsx(
                           'w-40 p-3 rounded-md border transition-all cursor-pointer',
                           isCurrent
-                            ? 'bg-[#161622] border-[#f26625] shadow-sm glow-yc'
+                            ? 'bg-[#161622] border-[#f26625] shadow-sm'
                             : isPast
                             ? 'bg-[#12121a] border-[#10b981]/50'
                             : 'bg-[#0e0e13] border-[#272738] opacity-60'
@@ -360,11 +360,11 @@ export default function OrchestrationPage() {
                           </span>
                           <span className={clsx(
                             'w-2 h-2 rounded-full',
-                            isCurrent ? 'bg-[#10b981] animate-pulse' : isPast ? 'bg-[#10b981]' : 'bg-[#94a3b8]'
+                            isCurrent ? 'bg-[#10b981] animate-pulse' : isPast ? 'bg-[#10b981]' : 'bg-[#a8a29e]'
                           )} />
                         </div>
                         <h4 className="text-xs font-semibold text-white truncate">{stage.label}</h4>
-                        <p className="text-xs font-mono text-[#94a3b8] truncate">{stage.desc}</p>
+                        <p className="text-xs font-mono text-[#a8a29e] truncate">{stage.desc}</p>
                         
                         {hasFeedbackLoop && (
                           <div className="mt-1">
@@ -375,15 +375,15 @@ export default function OrchestrationPage() {
                         )}
 
                         <div className="mt-2 pt-1 border-t border-[#1c1c28] flex justify-between text-xs font-mono">
-                          <span className="text-[#94a3b8]">Status:</span>
-                          <span className={isCurrent ? 'text-[#10b981] font-semibold' : 'text-[#94a3b8]'}>
+                          <span className="text-[#a8a29e]">Status:</span>
+                          <span className={isCurrent ? 'text-[#10b981] font-semibold' : 'text-[#a8a29e]'}>
                             {liveNode?.status ? liveNode.status.toUpperCase() : isCurrent ? 'EXECUTING' : isPast ? 'PASSED' : 'PENDING'}
                           </span>
                         </div>
                       </motion.div>
 
                       {i < arr.length - 1 && (
-                        <div className="mx-2 text-[#94a3b8]">
+                        <div className="mx-2 text-[#a8a29e]">
                           <ChevronRight className="w-4 h-4 text-[#272738]" />
                         </div>
                       )}
@@ -395,14 +395,14 @@ export default function OrchestrationPage() {
 
             {/* Clicked DAG Node Inspector Drawer / Card */}
             {selectedStageNode && (
-              <div className="p-4 rounded-lg bg-[#0e0c18] border border-cyan-500/40 space-y-3 font-mono text-xs">
+              <div className="p-4 rounded-lg bg-[#0a0a0f] border border-[#f26625]/40 space-y-3 font-mono text-xs">
                 <div className="flex items-center justify-between pb-2 border-b border-[#1c1c28]">
                   <div className="flex items-center gap-2">
                     {(() => { const NodeIcon = selectedStageNode.icon; return <NodeIcon className="h-4 w-4" /> })()}
                     <span className="font-bold text-white uppercase tracking-wider">
                       Node {String(selectedStageNode.stepIndex).padStart(2, '0')}: {selectedStageNode.label}
                     </span>
-                    <Badge variant="outline" className="text-xs bg-cyan-950/60 text-cyan-300 border-cyan-800">
+                    <Badge variant="outline" className="text-xs bg-[#1b1b18]/60 text-[#d8d2c4] border-[#4a463f]">
                       {selectedStageNode.desc}
                     </Badge>
                   </div>
@@ -416,21 +416,21 @@ export default function OrchestrationPage() {
                   </button>
                 </div>
                 <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 text-xs">
-                  <div className="p-2.5 rounded bg-[#07060d] border border-cyan-950 space-y-1">
+                  <div className="p-2.5 rounded bg-[#0a0a0f] border border-[#4a463f] space-y-1">
                     <span className="text-zinc-500 text-xs uppercase block">Inputs / Invariants</span>
                     <p className="text-zinc-300">
                       Domain: <strong className="text-white">{selectedJob?.target_domain || 'Finance & Taxation'}</strong><br />
                       PII Guard: <span className="text-emerald-400">DPDP Active</span> · MinHash: &gt;0.85
                     </p>
                   </div>
-                  <div className="p-2.5 rounded bg-[#07060d] border border-cyan-950 space-y-1">
+                  <div className="p-2.5 rounded bg-[#0a0a0f] border border-[#4a463f] space-y-1">
                     <span className="text-zinc-500 text-xs uppercase block">Stage Outputs</span>
                     <p className="text-zinc-300">
-                      Artifact: <strong className="text-purple-300">Merkle Leaves / JSONL</strong><br />
+                      Artifact: <strong className="text-[#d8d2c4]">Merkle Leaves / JSONL</strong><br />
                       Status: <span className="text-emerald-400 font-semibold">{selectedStageNode.isCurrent ? 'Executing' : selectedStageNode.isPast ? 'Completed' : 'Queued'}</span>
                     </p>
                   </div>
-                  <div className="p-2.5 rounded bg-[#07060d] border border-cyan-950 space-y-1">
+                  <div className="p-2.5 rounded bg-[#0a0a0f] border border-[#4a463f] space-y-1">
                     <span className="text-zinc-500 text-xs uppercase block">Stage Telemetry</span>
                     <p className="text-zinc-300">
                       Est. Latency: <strong className="text-white">— (per-stage timing not yet measured)</strong><br />
@@ -446,23 +446,23 @@ export default function OrchestrationPage() {
               <div className="space-y-3 pt-3 border-t border-[#1c1c28]">
                 <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3 text-xs font-mono">
                   <div className="p-2 rounded bg-[#0a0a0f] border border-[#272738]">
-                    <span className="text-[#94a3b8] text-xs block">Current Stage</span>
+                    <span className="text-[#a8a29e] text-xs block">Current Stage</span>
                     <span className="text-white font-bold truncate block">{selectedJob.current_stage || 'constructing_dataset'}</span>
                   </div>
                   <div className="p-2 rounded bg-[#0a0a0f] border border-[#272738]">
-                    <span className="text-[#94a3b8] text-xs block">Samples Generated</span>
+                    <span className="text-[#a8a29e] text-xs block">Samples Generated</span>
                     <span className="text-[#10b981] font-bold">{selectedJob.samples_generated || 0}</span>
                   </div>
                   <div className="p-2 rounded bg-[#0a0a0f] border border-[#272738]">
-                    <span className="text-[#94a3b8] text-xs block">Total Cost Accrued (provider spend not attributed per job)</span>
+                    <span className="text-[#a8a29e] text-xs block">Total Cost Accrued (provider spend not attributed per job)</span>
                     <span className="text-[#f26625] font-bold">${(typeof selectedJob.cost_usd === 'number' ? selectedJob.cost_usd : 0.0).toFixed(3)}</span>
                   </div>
                   <div className="p-2 rounded bg-[#0a0a0f] border border-[#272738]">
-                    <span className="text-[#94a3b8] text-xs block">Pipeline Progress</span>
+                    <span className="text-[#a8a29e] text-xs block">Pipeline Progress</span>
                     <span className="text-white font-bold">{selectedJob.progress != null ? `${Math.round(selectedJob.progress * 100)}%` : '—'}</span>
                   </div>
                   <div className="p-2 rounded bg-[#0a0a0f] border border-[#272738]">
-                    <div className="flex items-center justify-between text-xs text-[#94a3b8]">
+                    <div className="flex items-center justify-between text-xs text-[#a8a29e]">
                       <span>Collision Defense</span>
                       <span className="text-[#10b981] text-xs font-bold">ACTIVE</span>
                     </div>
@@ -474,7 +474,7 @@ export default function OrchestrationPage() {
 
                 {/* Synthesis Cognitive Engine & Domain Telemetry */}
                 <div className="flex flex-wrap items-center gap-2.5 p-2.5 rounded bg-[#0a0a0f]/80 border border-[#272738] text-xs font-mono">
-                  <span className="text-[#94a3b8] text-xs uppercase font-bold flex items-center gap-1">
+                  <span className="text-[#a8a29e] text-xs uppercase font-bold flex items-center gap-1">
                     <Sparkles className="w-3.5 h-3.5 text-[#f26625]" />
                     Cognitive Engine:
                   </span>
@@ -482,19 +482,19 @@ export default function OrchestrationPage() {
                     {selectedJob.config?.synthesis_mode || selectedJob.synthesis_mode || 'standard'}
                   </span>
                   <span className="text-[#334155]">/</span>
-                  <span className="text-[#94a3b8] text-xs">
+                  <span className="text-[#a8a29e] text-xs">
                     Domain: <strong className="text-white font-normal">{selectedJob.target_domain || selectedJob.domain || selectedJob.dataset_name || 'General'}</strong>
                   </span>
                   <span className="text-[#334155]">/</span>
-                  <span className="text-purple-300 text-xs flex items-center gap-1">
-                    <ShieldCheck className="w-3 h-3 text-purple-400" />
+                  <span className="text-[#d8d2c4] text-xs flex items-center gap-1">
+                    <ShieldCheck className="w-3 h-3 text-[#f26625]" />
                     DBOM Attestation: Certified
                   </span>
                 </div>
 
                 {/* 1-Click Fine-Tuning Pipeline Handoff */}
                 {(selectedJob.status === 'completed' || selectedJob.progress >= 1 || (selectedJob.samples_generated && selectedJob.samples_generated > 0)) && (
-                  <div className="flex flex-wrap items-center justify-between gap-3 p-3 rounded bg-gradient-to-r from-[#161622] to-[#1a1520] border border-[#f26625]/40 text-xs font-mono">
+                  <div className="flex flex-wrap items-center justify-between gap-3 p-3 rounded bg-[#161622] border border-[#f26625]/40 text-xs font-mono">
                     <div className="space-y-0.5">
                       <div className="flex items-center gap-2 text-white font-bold">
                         <Cpu className="w-4 h-4 text-[#f26625]" />
@@ -503,7 +503,7 @@ export default function OrchestrationPage() {
                           {selectedJob.samples_generated || 0} Samples
                         </Badge>
                       </div>
-                      <p className="text-xs text-[#94a3b8]">
+                      <p className="text-xs text-[#a8a29e]">
                         DBOM Merkle root sealed. Dispatch directly into parameter-efficient fine-tuning with 1 click.
                       </p>
                     </div>
@@ -520,7 +520,7 @@ export default function OrchestrationPage() {
                 {/* Active Anti-Domains & Polysemy Exclusion Badges */}
                 {selectedJob.config?.anti_domains && selectedJob.config.anti_domains.length > 0 && (
                   <div className="flex flex-wrap items-center gap-1.5 p-2 rounded bg-[#0a0a0f]/60 border border-[#272738] text-xs font-mono">
-                    <span className="text-[#94a3b8] text-xs uppercase font-bold flex items-center gap-1 mr-1">
+                    <span className="text-[#a8a29e] text-xs uppercase font-bold flex items-center gap-1 mr-1">
                       <ShieldCheck className="w-3.5 h-3.5 text-[#10b981]" />
                       Active Collision Guards:
                     </span>
@@ -533,7 +533,7 @@ export default function OrchestrationPage() {
                       </span>
                     ))}
                     {selectedJob.config.anti_domains.length > 8 && (
-                      <span className="text-xs text-[#94a3b8]">
+                      <span className="text-xs text-[#a8a29e]">
                         +{selectedJob.config.anti_domains.length - 8} more
                       </span>
                     )}
@@ -545,13 +545,13 @@ export default function OrchestrationPage() {
             {/* Early Preview Samples & User Acceptance Gate */}
             {selectedJob && (selectedJob.status === 'awaiting_preview_approval' || selectedJob.current_stage === 'preview_acceptance' || (selectedJob.config?.preview_samples && selectedJob.config.preview_samples.length > 0)) && (
               <div className="pt-4 border-t border-[#1c1c28] space-y-3">
-                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 p-3.5 rounded-md bg-[#161622] border border-[#f26625]/40 glow-yc">
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 p-3.5 rounded-md bg-[#161622] border border-[#f26625]/40">
                   <div className="space-y-1">
                     <span className="text-xs font-mono font-bold uppercase tracking-wider text-[#f26625] flex items-center gap-1.5">
                       <Sparkles className="w-3.5 h-3.5 text-[#f26625]" />
                       Early Dataset Preview &amp; User Acceptance Gate
                     </span>
-                    <p className="text-xs text-[#94a3b8]">
+                    <p className="text-xs text-[#a8a29e]">
                       Review sample reasoning quality below. Accepting triggers full distributed synthesis, neural evaluation, and Merkle DBOM sealing.
                     </p>
                     <div className="flex flex-wrap items-center gap-3 pt-1 text-xs font-mono text-zinc-400">
@@ -633,7 +633,7 @@ export default function OrchestrationPage() {
                         {isEditing ? (
                           <div className="space-y-2 pt-1 border-t border-[#1c1c28]">
                             <div>
-                              <span className="text-[#94a3b8] block text-xs uppercase">Edit Instruction:</span>
+                              <span className="text-[#a8a29e] block text-xs uppercase">Edit Instruction:</span>
                               <textarea
                                 rows={2}
                                 value={currentInstruction}
@@ -648,7 +648,7 @@ export default function OrchestrationPage() {
                               />
                             </div>
                             <div>
-                              <span className="text-[#94a3b8] block text-xs uppercase">Edit Response:</span>
+                              <span className="text-[#a8a29e] block text-xs uppercase">Edit Response:</span>
                               <textarea
                                 rows={3}
                                 value={currentResponse}
@@ -667,7 +667,7 @@ export default function OrchestrationPage() {
                           <>
                             <div>
                               <div className="flex items-center justify-between">
-                                <span className="text-[#94a3b8] block text-xs uppercase">Instruction:</span>
+                                <span className="text-[#a8a29e] block text-xs uppercase">Instruction:</span>
                                 <button
                                   type="button"
                                   onClick={() => {
@@ -685,7 +685,7 @@ export default function OrchestrationPage() {
                             </div>
                             <div>
                               <div className="flex items-center justify-between">
-                                <span className="text-[#94a3b8] block text-xs uppercase">Response:</span>
+                                <span className="text-[#a8a29e] block text-xs uppercase">Response:</span>
                                 <button
                                   type="button"
                                   onClick={() => setExpandedSamples(prev => ({ ...prev, [idx]: !prev[idx] }))}
@@ -712,7 +712,7 @@ export default function OrchestrationPage() {
                     value={refinePrompt}
                     onChange={(e) => setRefinePrompt(e.target.value)}
                     placeholder={selectedJob.config?.target_domain ? `Refine prompt (currently: ${selectedJob.config.target_domain})...` : "Refine query / specification prompt..."}
-                    className="flex-1 bg-[#0a0a0f] border border-[#272738] rounded-md px-3 py-1.5 text-xs font-mono text-white placeholder:text-[#64748b] focus:outline-none focus:border-[#f26625]"
+                    className="flex-1 bg-[#0a0a0f] border border-[#272738] rounded-md px-3 py-1.5 text-xs font-mono text-white placeholder:text-[#a8a29e] focus:outline-none focus:border-[#f26625]"
                   />
                   <Button
                     size="sm"
@@ -737,7 +737,7 @@ export default function OrchestrationPage() {
                   All Orchestration Jobs
                 </h3>
               </div>
-              <span className="text-xs font-mono text-[#94a3b8]">
+              <span className="text-xs font-mono text-[#a8a29e]">
                 Showing {jobs.length} executions
               </span>
             </div>
@@ -745,7 +745,7 @@ export default function OrchestrationPage() {
             <div className="overflow-x-auto">
               <table className="w-full text-left text-xs font-mono">
                 <thead>
-                  <tr className="border-b border-[#1c1c28] text-[#94a3b8] text-xs uppercase">
+                  <tr className="border-b border-[#1c1c28] text-[#a8a29e] text-xs uppercase">
                     <th className="pb-2">Job ID</th>
                     <th className="pb-2">Target Domain / Source</th>
                     <th className="pb-2">Status</th>
@@ -767,7 +767,7 @@ export default function OrchestrationPage() {
                         )}
                       >
                         <td className="py-2.5 text-white font-bold">{job.id.slice(0, 8)}...</td>
-                        <td className="py-2.5 text-[#94a3b8] truncate max-w-[200px]">
+                        <td className="py-2.5 text-[#a8a29e] truncate max-w-[200px]">
                           {job.config?.target_domain || 'AI Kosh / General'}
                         </td>
                         <td className="py-2.5">
@@ -826,7 +826,7 @@ export default function OrchestrationPage() {
             <Card className="bg-[#12121a] border-[#272738] rounded-md card-shadow">
               <CardContent className="pt-4 pb-4 px-4 flex items-center justify-between">
                 <div>
-                  <p className="text-xs text-[#94a3b8] font-mono uppercase">Registered Agents</p>
+                  <p className="text-xs text-[#a8a29e] font-mono uppercase">Registered Agents</p>
                   <p className="text-2xl font-bold font-mono mt-0.5 text-white">{agents.length || 13}</p>
                 </div>
                 <div className="h-9 w-9 rounded-md flex items-center justify-center border border-[#272738] bg-[#161622] text-[#f26625]">
@@ -838,7 +838,7 @@ export default function OrchestrationPage() {
             <Card className="bg-[#12121a] border-[#272738] rounded-md card-shadow">
               <CardContent className="pt-4 pb-4 px-4 flex items-center justify-between">
                 <div>
-                  <p className="text-xs text-[#94a3b8] font-mono uppercase">Active Instances</p>
+                  <p className="text-xs text-[#a8a29e] font-mono uppercase">Active Instances</p>
                   <p className="text-2xl font-bold font-mono mt-0.5 text-[#10b981]">{agentStats?.active_instances ?? 5}</p>
                 </div>
                 <div className="h-9 w-9 rounded-md flex items-center justify-center border border-[#272738] bg-[#161622] text-[#10b981]">
@@ -850,7 +850,7 @@ export default function OrchestrationPage() {
             <Card className="bg-[#12121a] border-[#272738] rounded-md card-shadow">
               <CardContent className="pt-4 pb-4 px-4 flex items-center justify-between">
                 <div>
-                  <p className="text-xs text-[#94a3b8] font-mono uppercase">Architecture</p>
+                  <p className="text-xs text-[#a8a29e] font-mono uppercase">Architecture</p>
                   <p className="text-xs font-bold font-mono mt-1.5 text-white">LangGraph DAG</p>
                 </div>
                 <div className="h-9 w-9 rounded-md flex items-center justify-center border border-[#272738] bg-[#161622] text-[#f26625]">
@@ -862,7 +862,7 @@ export default function OrchestrationPage() {
             <Card className="bg-[#12121a] border-[#272738] rounded-md card-shadow">
               <CardContent className="pt-4 pb-4 px-4 flex items-center justify-between">
                 <div>
-                  <p className="text-xs text-[#94a3b8] font-mono uppercase">Society Status</p>
+                  <p className="text-xs text-[#a8a29e] font-mono uppercase">Society Status</p>
                   <p className="text-xs font-bold font-mono mt-1.5 text-[#10b981] flex items-center gap-1">
                     <span className="w-2 h-2 rounded-full bg-[#10b981] animate-pulse" />
                     ONLINE
@@ -901,7 +901,7 @@ export default function OrchestrationPage() {
                       </div>
                       <div className="min-w-0">
                         <h4 className="text-xs font-bold text-white truncate">{agent.name}</h4>
-                        <p className="text-xs font-mono text-[#94a3b8] uppercase">{agent.type}</p>
+                        <p className="text-xs font-mono text-[#a8a29e] uppercase">{agent.type}</p>
                       </div>
                     </div>
                     <span className="text-xs font-mono px-2 py-0.5 rounded-full bg-emerald-950/40 text-emerald-400 border border-emerald-500/30 font-bold shrink-0">
@@ -909,12 +909,12 @@ export default function OrchestrationPage() {
                     </span>
                   </div>
 
-                  <p className="text-xs text-[#94a3b8] leading-relaxed">
+                  <p className="text-xs text-[#a8a29e] leading-relaxed">
                     {agent.description}
                   </p>
 
                   <div className="pt-2 border-t border-[#1c1c28]">
-                    <p className="text-xs font-mono text-[#64748b] uppercase mb-1.5">Capabilities</p>
+                    <p className="text-xs font-mono text-[#a8a29e] uppercase mb-1.5">Capabilities</p>
                     <div className="flex flex-wrap gap-1.5">
                       {(agent.capabilities || []).map((cap: string) => (
                         <span key={cap} className="text-xs font-mono px-2 py-0.5 rounded bg-[#161622] text-[#f26625] border border-[#272738]">
@@ -940,7 +940,7 @@ export default function OrchestrationPage() {
                   Self-Improving Autonomous Research Loop
                 </h3>
               </div>
-              <p className="text-xs text-[#94a3b8]">
+              <p className="text-xs text-[#a8a29e]">
                 Continuously reads arXiv publications, mines GitHub repos, and dynamically injects active heuristics into synthesis.
               </p>
             </div>
@@ -969,20 +969,20 @@ export default function OrchestrationPage() {
                 { name: 'Self-Instruct Prompt Diversification', key: 'self_instruct', desc: 'Evolutionary instruction expansion and constraint deepening', metric: 'Depth Tier: 4', color: 'text-amber-400' },
                 { name: 'Evolutionary Prompt Mutation', key: 'evolutionary_prompting', desc: 'Multi-turn reasoning and domain-deepened constraint mutation', metric: 'Temp: 0.8', color: 'text-[#f26625]' },
                 { name: 'Cross-Lingual Indic Alignment', key: 'cross_lingual', desc: 'Bhashini corpus alignment, script normalization, and translation', metric: 'Indic 22 Languages', color: 'text-emerald-400' },
-                { name: 'AST Syntax Sandbox Verification', key: 'ocr_correction', desc: 'Python AST compile checking and execution sandboxing for code SFT', metric: 'AST AST-Checked', color: 'text-cyan-400' },
+                { name: 'AST Syntax Sandbox Verification', key: 'ocr_correction', desc: 'Python AST compile checking and execution sandboxing for code SFT', metric: 'AST AST-Checked', color: 'text-[#f26625]' },
               ].map(h => (
                 <Card key={h.key} className="bg-[#12121a] border-[#272738] rounded-md card-shadow">
                   <CardContent className="p-4 space-y-2">
                     <div className="flex items-center justify-between">
-                      <span className="text-xs font-mono text-[#94a3b8] uppercase">{h.key}</span>
+                      <span className="text-xs font-mono text-[#a8a29e] uppercase">{h.key}</span>
                       <span className={clsx('text-xs font-mono font-bold px-2 py-0.5 rounded-full bg-[#161622] border border-[#272738]', h.color)}>
                         ACTIVE
                       </span>
                     </div>
                     <h5 className="text-xs font-bold text-white">{h.name}</h5>
-                    <p className="text-xs text-[#94a3b8] leading-relaxed">{h.desc}</p>
+                    <p className="text-xs text-[#a8a29e] leading-relaxed">{h.desc}</p>
                     <div className="pt-2 border-t border-[#1c1c28] flex justify-between items-center text-xs font-mono">
-                      <span className="text-[#64748b]">Tuned Parameter</span>
+                      <span className="text-[#a8a29e]">Tuned Parameter</span>
                       <span className="font-bold text-white">{h.metric}</span>
                     </div>
                   </CardContent>
@@ -1002,7 +1002,7 @@ export default function OrchestrationPage() {
               </CardHeader>
               <CardContent className="p-4 space-y-2 text-xs font-mono">
                 {researchHistoryList.map((item: string, idx: number) => (
-                  <div key={idx} className="p-2.5 rounded-lg bg-[#0a0a0f] border border-[#272738] text-[#94a3b8] flex items-center gap-2">
+                  <div key={idx} className="p-2.5 rounded-lg bg-[#0a0a0f] border border-[#272738] text-[#a8a29e] flex items-center gap-2">
                     <Search className="w-3.5 h-3.5 text-[#f26625] shrink-0" />
                     <span className="truncate">{item}</span>
                   </div>

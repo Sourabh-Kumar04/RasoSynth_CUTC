@@ -27,14 +27,14 @@ const PROVIDERS_CONFIG = [
   { name: 'AI Kosh (IndiaAI / Bhashini)', env: 'AIKOSH_API_KEY',   letter: 'AK', color: 'text-[#10b981] bg-[#10b981]/10 border-emerald-500/30', configured: true,  masked: '●●●●' },
   { name: 'Google Gemini (1.5 / 2.0)',    env: 'GEMINI_API_KEY',    letter: 'G',  color: 'text-[#f26625] bg-[#f26625]/10 border-[#f26625]/30',  configured: true,  masked: '●●●●' },
   { name: 'Groq Cloud (Llama-3.3-70B)',   env: 'GROQ_API_KEY',      letter: 'Gr', color: 'text-[#f97316] bg-[#f97316]/10 border-orange-500/30', configured: true,  masked: '●●●●' },
-  { name: 'DeepSeek (R1 / V3)',           env: 'DEEPSEEK_API_KEY',  letter: 'DS', color: 'text-cyan-400 bg-cyan-500/10 border-cyan-500/30',     configured: true,  masked: '●●●●' },
-  { name: 'OpenRouter Aggregator',        env: 'OPENROUTER_API_KEY',letter: 'OR', color: 'text-purple-400 bg-purple-500/10 border-purple-500/30', configured: true,  masked: '●●●●' },
-  { name: 'Together AI (DeepSeek R1)',    env: 'TOGETHER_API_KEY',  letter: 'TG', color: 'text-blue-400 bg-blue-500/10 border-blue-500/30',       configured: true,  masked: '●●●●' },
+  { name: 'DeepSeek (R1 / V3)',           env: 'DEEPSEEK_API_KEY',  letter: 'DS', color: 'text-[#f26625] bg-[#f26625]/10 border-[#f26625]/30',     configured: true,  masked: '●●●●' },
+  { name: 'OpenRouter Aggregator',        env: 'OPENROUTER_API_KEY',letter: 'OR', color: 'text-[#f26625] bg-[#f26625]/10 border-[#f26625]/30', configured: true,  masked: '●●●●' },
+  { name: 'Together AI (DeepSeek R1)',    env: 'TOGETHER_API_KEY',  letter: 'TG', color: 'text-[#f26625] bg-[#f26625]/10 border-[#f26625]/30',       configured: true,  masked: '●●●●' },
   { name: 'HuggingFace Hub Token',        env: 'HF_TOKEN',          letter: 'HF', color: 'text-[#f59e0b] bg-[#f59e0b]/10 border-amber-500/30',   configured: true,  masked: '●●●●' },
   { name: 'Ollama (Local Engine)',        env: 'OLLAMA_BASE_URL',   letter: 'Ol', color: 'text-emerald-400 bg-emerald-500/10 border-emerald-500/30', configured: true, masked: 'http://localhost:11434' },
-  { name: 'NVIDIA NIM Microservices',     env: 'NVIDIA_API_KEY',    letter: 'N',  color: 'text-[#64748b] bg-slate-900 border-slate-700',        configured: false, masked: null },
-  { name: 'Anthropic Claude 3.5',         env: 'ANTHROPIC_API_KEY', letter: 'A',  color: 'text-[#64748b] bg-slate-900 border-slate-700',        configured: false, masked: null },
-  { name: 'OpenAI (GPT-4o)',              env: 'OPENAI_API_KEY',    letter: 'O',  color: 'text-[#64748b] bg-slate-900 border-slate-700',        configured: false, masked: null },
+  { name: 'NVIDIA NIM Microservices',     env: 'NVIDIA_API_KEY',    letter: 'N',  color: 'text-[#a8a29e] bg-slate-900 border-slate-700',        configured: false, masked: null },
+  { name: 'Anthropic Claude 3.5',         env: 'ANTHROPIC_API_KEY', letter: 'A',  color: 'text-[#a8a29e] bg-slate-900 border-slate-700',        configured: false, masked: null },
+  { name: 'OpenAI (GPT-4o)',              env: 'OPENAI_API_KEY',    letter: 'O',  color: 'text-[#a8a29e] bg-slate-900 border-slate-700',        configured: false, masked: null },
 ]
 
 const LIMITS_CONFIG = [
@@ -156,12 +156,12 @@ export default function SettingsPage() {
               System Status &amp; Configuration
             </h1>
           </div>
-          <p className="text-xs text-[#94a3b8]">
+          <p className="text-xs text-[#a8a29e]">
             Platform runtime configuration, API provider keys, ADR architecture standards &amp; resource boundaries
           </p>
         </div>
         <div className="flex items-center gap-2">
-          <span className="hidden sm:inline-flex items-center gap-1.5 px-2.5 py-1 rounded bg-[#161622] border border-[#272738] text-xs font-mono text-[#94a3b8]">
+          <span className="hidden sm:inline-flex items-center gap-1.5 px-2.5 py-1 rounded bg-[#161622] border border-[#272738] text-xs font-mono text-[#a8a29e]">
             <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
             Supabase Cloud Pooler (AWS SG)
           </span>
@@ -197,7 +197,7 @@ export default function SettingsPage() {
                 )}
               </p>
               {!loading && (
-                <p className="text-xs text-[#94a3b8] font-mono mt-1 flex flex-wrap items-center gap-3">
+                <p className="text-xs text-[#a8a29e] font-mono mt-1 flex flex-wrap items-center gap-3">
                   <span className="flex items-center gap-1.5"><StatusDot ok={dbOk !== false} />Database Engine</span>
                   <span className="flex items-center gap-1.5"><StatusDot ok={redisOk !== false} />Distributed Broker &amp; Cache</span>
                   <span className="flex items-center gap-1.5"><StatusDot ok={true} />Provider Hot-Switcher (ADR-001)</span>
@@ -207,7 +207,7 @@ export default function SettingsPage() {
             </div>
           </div>
           <a href={docsUrl} target="_blank" rel="noopener noreferrer">
-            <Button variant="outline" size="sm" className="h-7 text-xs rounded-md border-[#272738] text-[#94a3b8] hover:text-white hover:bg-[#161622] hover:border-[#3b3b52]">
+            <Button variant="outline" size="sm" className="h-7 text-xs rounded-md border-[#272738] text-[#a8a29e] hover:text-white hover:bg-[#161622] hover:border-[#3b3b52]">
               <ExternalLink className="h-3 w-3 mr-1 text-[#f26625]" />API Reference
             </Button>
           </a>
@@ -216,17 +216,17 @@ export default function SettingsPage() {
 
       <Tabs defaultValue="general">
         <TabsList className="bg-[#161622] rounded-md border border-[#272738] p-1 flex flex-wrap gap-1 h-auto">
-          <TabsTrigger value="general" className="rounded-sm text-xs font-mono data-[state=active]:bg-[#f26625] data-[state=active]:text-white data-[state=active]:glow-yc">General &amp; Engine</TabsTrigger>
-          <TabsTrigger value="compute" className="rounded-sm text-xs font-mono data-[state=active]:bg-[#f26625] data-[state=active]:text-white data-[state=active]:glow-yc flex items-center gap-1.5">
+          <TabsTrigger value="general" className="rounded-sm text-xs font-mono data-[state=active]:bg-[#f26625] data-[state=active]:text-white data-[state=active]">General &amp; Engine</TabsTrigger>
+          <TabsTrigger value="compute" className="rounded-sm text-xs font-mono data-[state=active]:bg-[#f26625] data-[state=active]:text-white data-[state=active] flex items-center gap-1.5">
             <Cloud className="w-3.5 h-3.5" />
             Cloud Compute &amp; GPUs
           </TabsTrigger>
-          <TabsTrigger value="providers" className="rounded-sm text-xs font-mono data-[state=active]:bg-[#f26625] data-[state=active]:text-white data-[state=active]:glow-yc">Providers</TabsTrigger>
-          <TabsTrigger value="delivery" className="rounded-sm text-xs font-mono data-[state=active]:bg-[#f26625] data-[state=active]:text-white data-[state=active]:glow-yc">Delivery (ADR-002)</TabsTrigger>
-          <TabsTrigger value="observability" className="rounded-sm text-xs font-mono data-[state=active]:bg-[#f26625] data-[state=active]:text-white data-[state=active]:glow-yc">Observability</TabsTrigger>
-          <TabsTrigger value="security" className="rounded-sm text-xs font-mono data-[state=active]:bg-[#f26625] data-[state=active]:text-white data-[state=active]:glow-yc">Security</TabsTrigger>
-          <TabsTrigger value="limits" className="rounded-sm text-xs font-mono data-[state=active]:bg-[#f26625] data-[state=active]:text-white data-[state=active]:glow-yc">Limits &amp; Caps</TabsTrigger>
-          <TabsTrigger value="hitl" className="rounded-sm text-xs font-mono data-[state=active]:bg-[#f26625] data-[state=active]:text-white data-[state=active]:glow-yc">HITL Gate</TabsTrigger>
+          <TabsTrigger value="providers" className="rounded-sm text-xs font-mono data-[state=active]:bg-[#f26625] data-[state=active]:text-white data-[state=active]">Providers</TabsTrigger>
+          <TabsTrigger value="delivery" className="rounded-sm text-xs font-mono data-[state=active]:bg-[#f26625] data-[state=active]:text-white data-[state=active]">Delivery (ADR-002)</TabsTrigger>
+          <TabsTrigger value="observability" className="rounded-sm text-xs font-mono data-[state=active]:bg-[#f26625] data-[state=active]:text-white data-[state=active]">Observability</TabsTrigger>
+          <TabsTrigger value="security" className="rounded-sm text-xs font-mono data-[state=active]:bg-[#f26625] data-[state=active]:text-white data-[state=active]">Security</TabsTrigger>
+          <TabsTrigger value="limits" className="rounded-sm text-xs font-mono data-[state=active]:bg-[#f26625] data-[state=active]:text-white data-[state=active]">Limits &amp; Caps</TabsTrigger>
+          <TabsTrigger value="hitl" className="rounded-sm text-xs font-mono data-[state=active]:bg-[#f26625] data-[state=active]:text-white data-[state=active]">HITL Gate</TabsTrigger>
         </TabsList>
 
         {/* General & Engine */}
@@ -234,7 +234,7 @@ export default function SettingsPage() {
           <Card className="bg-[#12121a] border-[#272738] rounded-md card-shadow">
             <CardHeader className="pb-3 border-b border-[#272738]">
               <CardTitle className="text-sm font-bold text-white">Infrastructure Architecture</CardTitle>
-              <CardDescription className="text-xs text-[#94a3b8]">Core platform storage engines, distributed queue brokers &amp; caching backends</CardDescription>
+              <CardDescription className="text-xs text-[#a8a29e]">Core platform storage engines, distributed queue brokers &amp; caching backends</CardDescription>
             </CardHeader>
             <CardContent className="p-0 divide-y divide-[#272738]">
               {[
@@ -269,7 +269,7 @@ export default function SettingsPage() {
                         {label}
                         <CheckCircle2 className="h-3.5 w-3.5 text-[#10b981]" />
                       </p>
-                      <p className="text-xs text-[#94a3b8] font-mono mt-0.5">{desc}</p>
+                      <p className="text-xs text-[#a8a29e] font-mono mt-0.5">{desc}</p>
                     </div>
                   </div>
                   <span className="text-xs font-mono font-bold px-2.5 py-0.5 rounded-md bg-emerald-950/40 text-[#10b981] border border-emerald-500/30">
@@ -283,7 +283,7 @@ export default function SettingsPage() {
           <Card className="bg-[#12121a] border-[#272738] rounded-md card-shadow">
             <CardHeader className="pb-3 border-b border-[#272738]">
               <CardTitle className="text-sm font-bold text-white">Source-Grounded Engine Standards</CardTitle>
-              <CardDescription className="text-xs text-[#94a3b8]">Enforcing authentic retrieval-grounded generation over hallucinated pure synthetic data</CardDescription>
+              <CardDescription className="text-xs text-[#a8a29e]">Enforcing authentic retrieval-grounded generation over hallucinated pure synthetic data</CardDescription>
             </CardHeader>
             <CardContent className="p-0 divide-y divide-[#272738]">
               {[
@@ -311,7 +311,7 @@ export default function SettingsPage() {
                 <div key={label} className="flex items-center justify-between px-5 py-3.5">
                   <div>
                     <p className="text-xs font-bold text-white">{label}</p>
-                    <p className="text-xs text-[#94a3b8] font-mono mt-0.5">{desc}</p>
+                    <p className="text-xs text-[#a8a29e] font-mono mt-0.5">{desc}</p>
                   </div>
                   <code className="text-xs font-mono bg-[#0a0a0f] px-2.5 py-0.5 rounded-md border border-[#272738] text-[#f26625] shrink-0 ml-4">
                     {val}
@@ -336,7 +336,7 @@ export default function SettingsPage() {
               <p className="text-white font-medium leading-relaxed font-sans text-xs">
                 <strong>Why does this guard exist?</strong> Pure synthetic text generated without reference seed documents frequently invents fictitious legal sections, fabricated statutory penalties, and hallucinated medical dosages.
               </p>
-              <p className="text-[#94a3b8] text-xs leading-relaxed">
+              <p className="text-[#a8a29e] text-xs leading-relaxed">
                 When enabled (<code>ALLOW_SEEDLESS_GENERATION=false</code>), the pipeline strictly requires an authoritative reference corpus (e.g., CGST Act PDFs, medical case studies, or validated codebases) before initiating LLM teacher-forcing. If seed retrieval fails or yields zero matches, generation is automatically halted rather than allowing the model to hallucinate unverified statutory claims from vacuum.
               </p>
             </CardContent>
@@ -351,7 +351,7 @@ export default function SettingsPage() {
                 <Cloud className="w-4 h-4 text-[#f26625]" />
                 Cloud GPU Compute Fabric &amp; Serverless Endpoints
               </CardTitle>
-              <CardDescription className="text-xs text-[#94a3b8]">
+              <CardDescription className="text-xs text-[#a8a29e]">
                 Configure external cloud GPU credentials for offloading QLoRA and SFT fine-tuning jobs (Modal Labs, RunPod Cloud, HuggingFace Hub)
               </CardDescription>
             </CardHeader>
@@ -366,7 +366,7 @@ export default function SettingsPage() {
                       Modal Serverless GPU Fabric (NVIDIA A10G / H100)
                       {computeConfig?.modal_configured && <CheckCircle2 className="h-3.5 w-3.5 text-[#10b981]" />}
                     </p>
-                    <p className="text-xs text-[#94a3b8] font-mono mt-0.5">
+                    <p className="text-xs text-[#a8a29e] font-mono mt-0.5">
                       MODAL_TOKEN_ID &amp; MODAL_TOKEN_SECRET — Serverless containerized training
                     </p>
                   </div>
@@ -383,7 +383,7 @@ export default function SettingsPage() {
 
               <div className="flex items-center justify-between px-5 py-3.5">
                 <div className="flex items-center gap-3.5">
-                  <div className="h-9 w-9 rounded-xl bg-[#161622] border border-[#272738] flex items-center justify-center font-mono font-bold text-xs text-purple-400">
+                  <div className="h-9 w-9 rounded-xl bg-[#161622] border border-[#272738] flex items-center justify-center font-mono font-bold text-xs text-[#f26625]">
                     RP
                   </div>
                   <div>
@@ -391,7 +391,7 @@ export default function SettingsPage() {
                       RunPod Cloud GPU Endpoints
                       {computeConfig?.runpod_configured && <CheckCircle2 className="h-3.5 w-3.5 text-[#10b981]" />}
                     </p>
-                    <p className="text-xs text-[#94a3b8] font-mono mt-0.5">
+                    <p className="text-xs text-[#a8a29e] font-mono mt-0.5">
                       RUNPOD_API_KEY — On-demand remote worker pods for high-throughput fine-tuning
                     </p>
                   </div>
@@ -416,7 +416,7 @@ export default function SettingsPage() {
                       Hugging Face Hub Token (Write / Model Upload)
                       {computeConfig?.hf_configured && <CheckCircle2 className="h-3.5 w-3.5 text-[#10b981]" />}
                     </p>
-                    <p className="text-xs text-[#94a3b8] font-mono mt-0.5">
+                    <p className="text-xs text-[#a8a29e] font-mono mt-0.5">
                       HF_TOKEN — Required for pushing trained LoRA weights &amp; dataset cards
                     </p>
                   </div>
@@ -440,7 +440,7 @@ export default function SettingsPage() {
                 <Key className="w-4 h-4 text-[#f26625]" />
                 Update Cloud Compute Credentials
               </CardTitle>
-              <CardDescription className="text-xs text-[#94a3b8]">
+              <CardDescription className="text-xs text-[#a8a29e]">
                 Credentials are saved to the active runtime environment and persisted for all subsequent cloud fine-tuning jobs.
               </CardDescription>
             </CardHeader>
@@ -539,7 +539,7 @@ export default function SettingsPage() {
               <div className="flex items-center justify-between">
                 <div>
                   <CardTitle className="text-sm font-bold text-white">Provider API Keys &amp; Gateway Integrations</CardTitle>
-                  <CardDescription className="text-xs text-[#94a3b8]">Environment key detection and failover routing readiness</CardDescription>
+                  <CardDescription className="text-xs text-[#a8a29e]">Environment key detection and failover routing readiness</CardDescription>
                 </div>
                 <Badge variant="outline" className="text-xs font-mono border-emerald-500/40 text-emerald-400 bg-emerald-950/20">
                   {PROVIDERS_CONFIG.filter(p => p.configured).length} / {PROVIDERS_CONFIG.length} Configured
@@ -562,7 +562,7 @@ export default function SettingsPage() {
                           <span className="w-1.5 h-1.5 rounded-full bg-slate-600 inline-block" />
                         )}
                       </p>
-                      <p className="text-xs text-[#94a3b8] font-mono">{env}</p>
+                      <p className="text-xs text-[#a8a29e] font-mono">{env}</p>
                     </div>
                   </div>
                   <span className={clsx(
@@ -584,7 +584,7 @@ export default function SettingsPage() {
           <Card className="bg-[#12121a] border-[#272738] rounded-md card-shadow">
             <CardHeader className="pb-3 border-b border-[#272738]">
               <CardTitle className="text-sm font-bold text-white">Multi-Destination Delivery &amp; Storage (ADR-002)</CardTitle>
-              <CardDescription className="text-xs text-[#94a3b8]">Centralized delivery adapters registered in ServiceContainer for S3, HuggingFace Hub, and Kaggle</CardDescription>
+              <CardDescription className="text-xs text-[#a8a29e]">Centralized delivery adapters registered in ServiceContainer for S3, HuggingFace Hub, and Kaggle</CardDescription>
             </CardHeader>
             <CardContent className="p-0 divide-y divide-[#272738]">
               {[
@@ -600,7 +600,7 @@ export default function SettingsPage() {
                     </div>
                     <div>
                       <p className="text-xs font-bold text-white">{label}</p>
-                      <p className="text-xs text-[#94a3b8]">{desc}</p>
+                      <p className="text-xs text-[#a8a29e]">{desc}</p>
                     </div>
                   </div>
                   <code className="text-xs font-mono bg-[#0a0a0f] px-2.5 py-0.5 rounded-md border border-[#272738] text-[#f26625]">{env}</code>
@@ -615,7 +615,7 @@ export default function SettingsPage() {
           <Card className="bg-[#12121a] border-[#272738] rounded-md card-shadow">
             <CardHeader className="pb-3 border-b border-[#272738]">
               <CardTitle className="text-sm font-bold text-white">Observability &amp; Distributed Tracing</CardTitle>
-              <CardDescription className="text-xs text-[#94a3b8]">LangSmith tracing v2, OpenTelemetry metrics, and correlation IDs</CardDescription>
+              <CardDescription className="text-xs text-[#a8a29e]">LangSmith tracing v2, OpenTelemetry metrics, and correlation IDs</CardDescription>
             </CardHeader>
             <CardContent className="p-0 divide-y divide-[#272738]">
               {[
@@ -627,7 +627,7 @@ export default function SettingsPage() {
                 <div key={label} className="flex items-center justify-between px-5 py-3.5">
                   <div>
                     <p className="text-xs font-bold text-white">{label}</p>
-                    <p className="text-xs text-[#94a3b8] font-mono mt-0.5">{desc}</p>
+                    <p className="text-xs text-[#a8a29e] font-mono mt-0.5">{desc}</p>
                   </div>
                   <code className="text-xs font-mono bg-[#0a0a0f] px-2.5 py-0.5 rounded-md border border-[#272738] text-[#f26625] shrink-0 ml-4">{env}</code>
                 </div>
@@ -641,7 +641,7 @@ export default function SettingsPage() {
           <Card className="bg-[#12121a] border-[#272738] rounded-md card-shadow">
             <CardHeader className="pb-3 border-b border-[#272738]">
               <CardTitle className="text-sm font-bold text-white">Security &amp; Cryptography Configuration</CardTitle>
-              <CardDescription className="text-xs text-[#94a3b8]">Cryptographic signatures, CSRF protection, and identity tokens</CardDescription>
+              <CardDescription className="text-xs text-[#a8a29e]">Cryptographic signatures, CSRF protection, and identity tokens</CardDescription>
             </CardHeader>
             <CardContent className="p-0 divide-y divide-[#272738]">
               {[
@@ -656,7 +656,7 @@ export default function SettingsPage() {
                     </div>
                     <div>
                       <p className="text-xs font-bold text-white">{label}</p>
-                      <p className="text-xs text-[#94a3b8]">{desc}</p>
+                      <p className="text-xs text-[#a8a29e]">{desc}</p>
                     </div>
                   </div>
                   <code className="text-xs font-mono bg-[#0a0a0f] px-2.5 py-0.5 rounded-md border border-[#272738] text-[#f26625]">{env}</code>
@@ -671,14 +671,14 @@ export default function SettingsPage() {
           <Card className="bg-[#12121a] border-[#272738] rounded-md card-shadow">
             <CardHeader className="pb-3 border-b border-[#272738]">
               <CardTitle className="text-sm font-bold text-white">System Resource Limits &amp; Rate Caps</CardTitle>
-              <CardDescription className="text-xs text-[#94a3b8]">Concurrency bounds, token quotas, and provider throttle limits</CardDescription>
+              <CardDescription className="text-xs text-[#a8a29e]">Concurrency bounds, token quotas, and provider throttle limits</CardDescription>
             </CardHeader>
             <CardContent className="p-0 divide-y divide-[#272738]">
               {LIMITS_CONFIG.map(({ label, env, desc }) => (
                 <div key={env} className="flex items-center justify-between px-5 py-3.5">
                   <div>
                     <p className="text-xs font-bold text-white">{label}</p>
-                    <p className="text-xs text-[#94a3b8]">{desc}</p>
+                    <p className="text-xs text-[#a8a29e]">{desc}</p>
                   </div>
                   <code className="text-xs font-mono bg-[#0a0a0f] px-2.5 py-0.5 rounded-md border border-[#272738] text-[#f26625] shrink-0 ml-4">{env}</code>
                 </div>
@@ -692,7 +692,7 @@ export default function SettingsPage() {
           <Card className="bg-[#12121a] border-[#272738] rounded-md card-shadow">
             <CardHeader className="pb-3 border-b border-[#272738]">
               <CardTitle className="text-sm font-bold text-white">Human-in-the-Loop (HITL) Quality Gate</CardTitle>
-              <CardDescription className="text-xs text-[#94a3b8]">Review gate policies, stratified sampling, and auto-resume timeouts</CardDescription>
+              <CardDescription className="text-xs text-[#a8a29e]">Review gate policies, stratified sampling, and auto-resume timeouts</CardDescription>
             </CardHeader>
             <CardContent className="p-0 divide-y divide-[#272738]">
               {[
@@ -704,7 +704,7 @@ export default function SettingsPage() {
                 <div key={env} className="flex items-center justify-between px-5 py-3.5">
                   <div>
                     <p className="text-xs font-bold text-white">{label}</p>
-                    <p className="text-xs text-[#94a3b8]">{desc}</p>
+                    <p className="text-xs text-[#a8a29e]">{desc}</p>
                   </div>
                   <code className="text-xs font-mono bg-[#0a0a0f] px-2.5 py-0.5 rounded-md border border-[#272738] text-[#f26625] shrink-0 ml-4">{env}</code>
                 </div>

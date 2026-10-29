@@ -79,7 +79,7 @@ export function GroundingDiffModal({
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 sm:p-6 bg-black/80 backdrop-blur-sm animate-fade-in">
       <div 
-        className="w-full max-w-6xl max-h-[92vh] flex flex-col rounded-xl border border-[#272738] bg-[#0c0c14] shadow-2xl overflow-hidden"
+        className="w-full max-w-6xl max-h-[92vh] flex flex-col rounded-xl border border-[#272738] bg-[#0a0a0f] shadow-2xl overflow-hidden"
         onClick={(e) => e.stopPropagation()}
       >
         {/* Modal Header */}
@@ -93,7 +93,7 @@ export function GroundingDiffModal({
                 <h2 className="text-sm font-bold text-white tracking-wide">
                   Source-to-Synthesis Grounding Diff
                 </h2>
-                <span className="font-mono text-xs px-2 py-0.5 rounded bg-[#161622] text-[#94a3b8] border border-[#272738]">
+                <span className="font-mono text-xs px-2 py-0.5 rounded bg-[#161622] text-[#a8a29e] border border-[#272738]">
                   ID: {item.id.slice(0, 8)}
                 </span>
                 <span className={clsx(
@@ -101,12 +101,12 @@ export function GroundingDiffModal({
                   item.review_status === 'approved' ? 'bg-emerald-950/40 text-emerald-400 border-emerald-500/40' :
                   item.review_status === 'rejected' ? 'bg-rose-950/40 text-rose-400 border-rose-500/40' :
                   item.review_status === 'flagged' ? 'bg-amber-950/40 text-amber-400 border-amber-500/40' :
-                  'bg-[#161622] text-[#94a3b8] border-[#272738]'
+                  'bg-[#161622] text-[#a8a29e] border-[#272738]'
                 )}>
                   {item.review_status}
                 </span>
               </div>
-              <p className="text-xs text-[#94a3b8] font-mono mt-0.5">
+              <p className="text-xs text-[#a8a29e] font-mono mt-0.5">
                 Job: <span className="text-white font-bold">{item.job_id.slice(0, 12)}</span> · Compare source grounding fidelity against synthesized cognitive reasoning
               </p>
             </div>
@@ -117,7 +117,7 @@ export function GroundingDiffModal({
               <button
                 className={clsx(
                   "px-2.5 py-1 text-xs font-mono rounded transition-colors",
-                  viewMode === 'split' ? "bg-[#161622] text-white font-bold" : "text-[#94a3b8] hover:text-white"
+                  viewMode === 'split' ? "bg-[#161622] text-white font-bold" : "text-[#a8a29e] hover:text-white"
                 )}
                 onClick={() => setViewMode('split')}
               >
@@ -141,7 +141,7 @@ export function GroundingDiffModal({
               variant="outline"
               size="sm"
               onClick={copyToClipboard}
-              className="h-8 border-[#272738] bg-[#0a0a0f] text-xs font-mono text-[#94a3b8] hover:text-white"
+              className="h-8 border-[#272738] bg-[#0a0a0f] text-xs font-mono text-[#a8a29e] hover:text-white"
             >
               {copied ? <Check className="h-3.5 w-3.5 mr-1 text-[#10b981]" /> : <Copy className="h-3.5 w-3.5 mr-1" />}
               {copied ? 'Copied' : 'Copy'}
@@ -151,7 +151,7 @@ export function GroundingDiffModal({
               variant="ghost"
               size="icon"
               onClick={onClose}
-              className="h-8 w-8 text-[#94a3b8] hover:text-white hover:bg-[#161622] rounded-md"
+              className="h-8 w-8 text-[#a8a29e] hover:text-white hover:bg-[#161622] rounded-md"
             >
               <X className="h-4 w-4" />
             </Button>
@@ -161,26 +161,26 @@ export function GroundingDiffModal({
         {/* Metrics Banner */}
         <div className="grid grid-cols-2 sm:grid-cols-5 gap-3 px-6 py-3 bg-[#09090f] border-b border-[#272738] text-xs font-mono">
           <div className="flex flex-col">
-            <span className="text-xs text-[#94a3b8] uppercase">Quality Score</span>
+            <span className="text-xs text-[#a8a29e] uppercase">Quality Score</span>
             <span className="text-sm font-bold text-emerald-400">{(item.quality_score * 100).toFixed(1)}%</span>
           </div>
           <div className="flex flex-col">
-            <span className="text-xs text-[#94a3b8] uppercase">Hallucination Risk</span>
+            <span className="text-xs text-[#a8a29e] uppercase">Hallucination Risk</span>
             <span className={clsx("text-sm font-bold", item.hallucination_risk < 0.15 ? "text-emerald-400" : "text-amber-400")}>
               {(item.hallucination_risk * 100).toFixed(1)}%
             </span>
           </div>
           <div className="flex flex-col">
-            <span className="text-xs text-[#94a3b8] uppercase">Expansion Ratio</span>
+            <span className="text-xs text-[#a8a29e] uppercase">Expansion Ratio</span>
             <span className="text-sm font-bold text-[#f26625]">{expansionRatio}x ({sourceWordCount}w → {responseWordCount}w)</span>
           </div>
           <div className="flex flex-col">
-            <span className="text-xs text-[#94a3b8] uppercase">Diversity Score</span>
-            <span className="text-sm font-bold text-cyan-400">{(item.diversity_score * 100).toFixed(1)}%</span>
+            <span className="text-xs text-[#a8a29e] uppercase">Diversity Score</span>
+            <span className="text-sm font-bold text-[#f26625]">{(item.diversity_score * 100).toFixed(1)}%</span>
           </div>
           <div className="flex flex-col">
-            <span className="text-xs text-[#94a3b8] uppercase">Engine Mode</span>
-            <span className="text-sm font-bold text-purple-300 truncate">
+            <span className="text-xs text-[#a8a29e] uppercase">Engine Mode</span>
+            <span className="text-sm font-bold text-[#d8d2c4] truncate">
               {item.metadata?.synthesis_mode || item.metadata?.engine || 'Cognitive CoT'}
             </span>
           </div>
@@ -237,13 +237,13 @@ export function GroundingDiffModal({
                       Raw Source Grounding
                     </h3>
                   </div>
-                  <span className="text-xs font-mono text-[#94a3b8]">
+                  <span className="text-xs font-mono text-[#a8a29e]">
                     {sourceWordCount} words · {rawSource.length} chars
                   </span>
                 </div>
 
                 {item.source_url && (
-                  <div className="flex items-center gap-1.5 text-xs font-mono text-[#94a3b8] bg-[#12121a] p-2 rounded border border-[#272738]">
+                  <div className="flex items-center gap-1.5 text-xs font-mono text-[#a8a29e] bg-[#12121a] p-2 rounded border border-[#272738]">
                     <span className="text-xs uppercase text-[#f26625] font-bold">URI:</span>
                     <a
                       href={item.source_url}
@@ -271,7 +271,7 @@ export function GroundingDiffModal({
                       Synthesized Output & Reasoning
                     </h3>
                   </div>
-                  <span className="text-xs font-mono text-[#94a3b8]">
+                  <span className="text-xs font-mono text-[#a8a29e]">
                     {responseWordCount} words · {item.response.length} chars
                   </span>
                 </div>
@@ -313,7 +313,7 @@ export function GroundingDiffModal({
 
         {/* Modal Footer / Direct Actions */}
         <div className="flex items-center justify-between px-6 py-3 border-t border-[#272738] bg-[#12121a]">
-          <div className="text-xs text-[#94a3b8] font-mono flex items-center gap-2">
+          <div className="text-xs text-[#a8a29e] font-mono flex items-center gap-2">
             <span>Press <kbd className="px-1.5 py-0.5 rounded bg-[#161622] text-white border border-[#272738] text-xs">ESC</kbd> to close</span>
           </div>
 
@@ -352,7 +352,7 @@ export function GroundingDiffModal({
               variant="outline"
               size="sm"
               onClick={onClose}
-              className="border-[#272738] text-[#94a3b8] hover:text-white hover:bg-[#161622] font-mono text-xs rounded-md"
+              className="border-[#272738] text-[#a8a29e] hover:text-white hover:bg-[#161622] font-mono text-xs rounded-md"
             >
               Close
             </Button>

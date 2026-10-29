@@ -107,7 +107,7 @@ export function TelemetryChart({
                 </span>
               )}
             </h3>
-            <p className="text-xs font-mono text-[#94a3b8]">
+            <p className="text-xs font-mono text-[#a8a29e]">
               Target: <span className="text-white font-bold">{targetPlatform.toUpperCase()}</span> · {gpuDeviceName}
             </p>
           </div>
@@ -124,7 +124,7 @@ export function TelemetryChart({
       </div>
 
       {/* Metrics & Cost Breakdown Strip */}
-      <div className="flex flex-wrap items-center justify-between gap-2 p-2.5 rounded-lg bg-[#07070b] border border-[#1f1f2e] text-xs font-mono text-[#94a3b8]">
+      <div className="flex flex-wrap items-center justify-between gap-2 p-2.5 rounded-lg bg-[#07070b] border border-[#1f1f2e] text-xs font-mono text-[#a8a29e]">
         <div className="flex items-center gap-3">
           <span>Train Loss: <strong className="text-white">{trainLoss !== null && trainLoss !== undefined ? trainLoss.toFixed(4) : latestLoss.toFixed(4)}</strong></span>
           <span className="text-zinc-700">·</span>
@@ -139,7 +139,7 @@ export function TelemetryChart({
 
       {/* SVG Loss Curve Canvas */}
       <div className="space-y-1.5">
-        <div className="flex items-center justify-between text-xs font-mono text-[#94a3b8] px-1">
+        <div className="flex items-center justify-between text-xs font-mono text-[#a8a29e] px-1">
           <span>Objective Loss: Cross-Entropy (Teacher Forcing)</span>
           <span>
             {hoveredIdx !== null ? (
@@ -159,10 +159,7 @@ export function TelemetryChart({
             onMouseLeave={() => setHoveredIdx(null)}
           >
             <defs>
-              <linearGradient id="lossGradient" x1="0" y1="0" x2="0" y2="1">
-                <stop offset="0%" stopColor="#10b981" stopOpacity="0.35" />
-                <stop offset="100%" stopColor="#10b981" stopOpacity="0.0" />
-              </linearGradient>
+              
             </defs>
 
             {/* Gridlines */}
@@ -171,16 +168,16 @@ export function TelemetryChart({
             <line x1={PAD_X} y1={SVG_H - PAD_Y} x2={SVG_W - PAD_X} y2={SVG_H - PAD_Y} stroke="#272738" />
 
             {/* Min / Max Labels */}
-            <text x={PAD_X - 6} y={PAD_Y + 4} fill="#64748b" fontSize="9" fontFamily="monospace" textAnchor="end">
+            <text x={PAD_X - 6} y={PAD_Y + 4} fill="#a8a29e" fontSize="9" fontFamily="monospace" textAnchor="end">
               {maxLoss.toFixed(2)}
             </text>
-            <text x={PAD_X - 6} y={SVG_H - PAD_Y + 3} fill="#64748b" fontSize="9" fontFamily="monospace" textAnchor="end">
+            <text x={PAD_X - 6} y={SVG_H - PAD_Y + 3} fill="#a8a29e" fontSize="9" fontFamily="monospace" textAnchor="end">
               {minLoss.toFixed(2)}
             </text>
 
             {/* Shaded Area */}
             {areaPolygonStr && (
-              <polygon points={areaPolygonStr} fill="url(#lossGradient)" />
+              <polygon points={areaPolygonStr} fill="#10b981" fillOpacity="0.15" />
             )}
 
             {/* Polyline */}
@@ -219,8 +216,8 @@ export function TelemetryChart({
         {/* VRAM Gauge */}
         <div className="rounded-lg bg-[#07070b] border border-[#1f1f2e] p-3 space-y-1.5">
           <div className="flex items-center justify-between text-xs font-mono">
-            <span className="text-[#94a3b8] flex items-center gap-1.5">
-              <Cpu className="h-3.5 w-3.5 text-purple-400" />
+            <span className="text-[#a8a29e] flex items-center gap-1.5">
+              <Cpu className="h-3.5 w-3.5 text-[#f26625]" />
               GPU VRAM Allocation
             </span>
             <span className="font-bold text-white">{vramUsedGb.toFixed(1)} / {vramTotalGb} GB</span>
@@ -229,12 +226,12 @@ export function TelemetryChart({
             <div
               className={clsx(
                 "h-full rounded-full transition-all duration-500",
-                vramPct > 85 ? "bg-amber-500" : "bg-purple-500"
+                vramPct > 85 ? "bg-amber-500" : "bg-[#f26625]"
               )}
               style={{ width: `${vramPct}%` }}
             />
           </div>
-          <div className="flex justify-between text-xs font-mono text-[#64748b]">
+          <div className="flex justify-between text-xs font-mono text-[#a8a29e]">
             <span>FlashAttention-2 Active</span>
             <span>{vramPct}% Peak</span>
           </div>
@@ -243,19 +240,19 @@ export function TelemetryChart({
         {/* Compute Load */}
         <div className="rounded-lg bg-[#07070b] border border-[#1f1f2e] p-3 space-y-1.5">
           <div className="flex items-center justify-between text-xs font-mono">
-            <span className="text-[#94a3b8] flex items-center gap-1.5">
-              <Gauge className="h-3.5 w-3.5 text-cyan-400" />
+            <span className="text-[#a8a29e] flex items-center gap-1.5">
+              <Gauge className="h-3.5 w-3.5 text-[#f26625]" />
               SM Streaming Cores
             </span>
-            <span className="font-bold text-cyan-300">{computeUtilPct}%</span>
+            <span className="font-bold text-[#d8d2c4]">{computeUtilPct}%</span>
           </div>
           <div className="h-2 w-full rounded-full bg-[#161622] overflow-hidden">
             <div
-              className="h-full rounded-full bg-cyan-500 transition-all duration-500"
+              className="h-full rounded-full bg-[#f26625] transition-all duration-500"
               style={{ width: `${computeUtilPct}%` }}
             />
           </div>
-          <div className="flex justify-between text-xs font-mono text-[#64748b]">
+          <div className="flex justify-between text-xs font-mono text-[#a8a29e]">
             <span>Tensor Cores BF16</span>
             <span>68°C Temp</span>
           </div>
@@ -264,13 +261,13 @@ export function TelemetryChart({
         {/* Throughput & Schedule */}
         <div className="rounded-lg bg-[#07070b] border border-[#1f1f2e] p-3 space-y-1">
           <div className="flex items-center justify-between text-xs font-mono">
-            <span className="text-[#94a3b8] flex items-center gap-1.5">
+            <span className="text-[#a8a29e] flex items-center gap-1.5">
               <Zap className="h-3.5 w-3.5 text-[#f26625]" />
               Throughput
             </span>
             <span className="font-bold text-[#f26625]">142.6 s/sec</span>
           </div>
-          <div className="text-xs font-mono text-[#94a3b8] pt-1">
+          <div className="text-xs font-mono text-[#a8a29e] pt-1">
             <span>Schedule: </span>
             <span className="text-white font-bold">Cosine Annealing + 10% Warmup</span>
           </div>

@@ -25,14 +25,14 @@ const styles = {
   success: 'border-[#f26625]/40 bg-[#12121a]/95 text-white shadow-[0_8px_30px_rgba(242,102,37,0.15)]',
   error: 'border-rose-500/40 bg-[#12121a]/95 text-white shadow-[0_8px_30px_rgba(244,63,94,0.15)]',
   warning: 'border-amber-500/40 bg-[#12121a]/95 text-white shadow-[0_8px_30px_rgba(245,158,11,0.15)]',
-  info: 'border-cyan-500/40 bg-[#12121a]/95 text-white shadow-[0_8px_30px_rgba(6,182,212,0.15)]',
+  info: 'border-[#f26625]/40 bg-[#12121a]/95 text-white shadow-[0_8px_30px_rgba(6,182,212,0.15)]',
 }
 
 const iconStyles = {
   success: 'text-[#f26625]',
   error: 'text-rose-400',
   warning: 'text-amber-400',
-  info: 'text-cyan-400',
+  info: 'text-[#f26625]',
 }
 
 export function Toaster() {
@@ -74,12 +74,12 @@ export function Toaster() {
             <div className="flex-1 space-y-0.5">
               <p className="text-xs font-bold text-white">{toast.title}</p>
               {toast.description && (
-                <p className="text-xs text-[#94a3b8]">{toast.description}</p>
+                <p className="text-xs text-[#a8a29e]">{toast.description}</p>
               )}
             </div>
             <button
               onClick={() => removeToast(toast.id)}
-              className="text-[#64748b] hover:text-white p-0.5"
+              className="text-[#a8a29e] hover:text-white p-0.5"
             >
               <X className="h-3.5 w-3.5" />
             </button>

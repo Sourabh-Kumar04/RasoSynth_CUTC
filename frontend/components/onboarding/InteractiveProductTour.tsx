@@ -160,14 +160,14 @@ export function InteractiveProductTour() {
         <div className="flex items-center gap-1">
           <button
             onClick={() => setIsExpanded(false)}
-            className="text-[#94a3b8] hover:text-white p-1 rounded-full hover:bg-[#12121a] transition-colors"
+            className="text-[#a8a29e] hover:text-white p-1 rounded-full hover:bg-[#12121a] transition-colors"
             title="Minimize Tour"
           >
             <Minimize2 className="h-3.5 w-3.5" />
           </button>
           <button
             onClick={handleDismiss}
-            className="text-[#94a3b8] hover:text-white p-1 rounded-full hover:bg-[#12121a] transition-colors"
+            className="text-[#a8a29e] hover:text-white p-1 rounded-full hover:bg-[#12121a] transition-colors"
             title="Dismiss Tour"
           >
             <X className="h-3.5 w-3.5" />
@@ -180,7 +180,7 @@ export function InteractiveProductTour() {
         <Badge variant="outline" className="text-xs font-mono rounded-full border-[#3b3b52] bg-[#0a0a0f] text-[#f26625]">
           {step.badgeText}
         </Badge>
-        <p className="text-xs text-[#94a3b8] leading-relaxed">{step.description}</p>
+        <p className="text-xs text-[#a8a29e] leading-relaxed">{step.description}</p>
 
         {/* Live Interactive Action Button */}
         <Button
@@ -201,7 +201,7 @@ export function InteractiveProductTour() {
               key={idx}
               onClick={() => setCurrentStepIndex(idx)}
               className={`h-1.5 rounded-full transition-all ${
-                idx === currentStepIndex ? 'w-5 bg-[#f26625]' : 'w-1.5 bg-[#3b3b52] hover:bg-[#64748b]'
+                idx === currentStepIndex ? 'w-5 bg-[#f26625]' : 'w-1.5 bg-[#3b3b52] hover:bg-[#a8a29e]'
               }`}
             />
           ))}

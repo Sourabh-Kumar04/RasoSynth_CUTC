@@ -125,7 +125,7 @@ export default function ObservabilityPage() {
             </span>
             <h1 className="text-2xl font-bold tracking-tight text-white font-display">System Insights &amp; Telemetry</h1>
           </div>
-          <p className="text-xs text-[#94a3b8]">
+          <p className="text-xs text-[#a8a29e]">
             Real-time pipeline metrics, provider latency, execution traces &amp; autonomous self-correction analytics
           </p>
         </div>
@@ -138,8 +138,8 @@ export default function ObservabilityPage() {
                 className={clsx(
                   'px-3 py-1 text-xs font-mono font-bold rounded-sm transition-colors',
                   timeRange === range.value
-                    ? 'bg-[#f26625] text-white shadow-xs glow-yc'
-                    : 'hover:bg-[#161622] text-[#94a3b8]'
+                    ? 'bg-[#f26625] text-white shadow-xs'
+                    : 'hover:bg-[#161622] text-[#a8a29e]'
                 )}
               >
                 {range.label}
@@ -149,7 +149,7 @@ export default function ObservabilityPage() {
           <Button
             variant="outline"
             size="sm"
-            className="gap-2 rounded-md border-[#272738] text-[#94a3b8] hover:text-white hover:bg-[#161622] font-mono text-xs"
+            className="gap-2 rounded-md border-[#272738] text-[#a8a29e] hover:text-white hover:bg-[#161622] font-mono text-xs"
             onClick={fetchData}
             disabled={loading}
           >
@@ -167,18 +167,18 @@ export default function ObservabilityPage() {
       <div className="flex flex-wrap items-center justify-between gap-3 p-3 rounded-md bg-[#12121a] border border-[#272738] font-mono text-xs">
         <div className="flex items-center gap-2 text-zinc-300">
           <Clock className="w-3.5 h-3.5 text-[#f26625]" />
-          <span className="text-xs uppercase text-[#94a3b8]">Time Window ({timeRange}) — reference values, not live telemetry:</span>
+          <span className="text-xs uppercase text-[#a8a29e]">Time Window ({timeRange}) — reference values, not live telemetry:</span>
           <span className="text-white font-bold">{TIME_RANGE_TRENDS[timeRange]?.throughput}</span>
         </div>
         <div className="flex items-center gap-4 text-xs">
           <div>
-            <span className="text-[#94a3b8] text-xs uppercase">Mean Latency: </span>
+            <span className="text-[#a8a29e] text-xs uppercase">Mean Latency: </span>
             <span className="text-emerald-400 font-bold">{TIME_RANGE_TRENDS[timeRange]?.latency}</span>
             <span className="text-xs text-zinc-500 ml-1">({TIME_RANGE_TRENDS[timeRange]?.delta})</span>
           </div>
           <div className="hidden sm:block text-zinc-700">·</div>
           <div>
-            <span className="text-[#94a3b8] text-xs uppercase">Error Rate: </span>
+            <span className="text-[#a8a29e] text-xs uppercase">Error Rate: </span>
             <span className="text-emerald-400 font-bold">{TIME_RANGE_TRENDS[timeRange]?.errors}</span>
           </div>
         </div>
@@ -193,7 +193,7 @@ export default function ObservabilityPage() {
               <p className="text-sm font-bold text-rose-200">Failed to load observability data</p>
               <p className="text-xs text-rose-400">{error}</p>
             </div>
-            <Button variant="outline" size="sm" className="rounded-md border-[#3b3b52] text-[#f8fafc] hover:bg-[#161622]" onClick={fetchData}>
+            <Button variant="outline" size="sm" className="rounded-md border-[#3b3b52] text-[#f5f2ea] hover:bg-[#161622]" onClick={fetchData}>
               Retry
             </Button>
           </CardContent>
@@ -206,7 +206,7 @@ export default function ObservabilityPage() {
           <CardContent className="p-4">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-xs text-[#94a3b8] font-mono uppercase tracking-wider">System Status</p>
+                <p className="text-xs text-[#a8a29e] font-mono uppercase tracking-wider">System Status</p>
                 <div className="flex items-center gap-1.5 mt-1">
                   <span className={`w-2 h-2 rounded-full animate-pulse ${hostPressureCritical ? 'bg-amber-400 shadow-[0_0_8px_rgba(251,191,36,0.8)]' : 'bg-emerald-400 shadow-[0_0_8px_rgba(16,185,129,0.8)]'}`} />
                   <p className="text-xl font-bold font-mono text-white capitalize">
@@ -228,7 +228,7 @@ export default function ObservabilityPage() {
           <CardContent className="p-4">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-xs text-[#94a3b8] font-mono uppercase tracking-wider">Primary Database</p>
+                <p className="text-xs text-[#a8a29e] font-mono uppercase tracking-wider">Primary Database</p>
                 <p className="text-xl font-bold font-mono text-[#10b981] mt-1">
                   {health?.database !== false ? (health?.database_engine === 'sqlite' ? 'SQLite' : 'PostgreSQL') : 'Disconnected'}
                 </p>
@@ -243,7 +243,7 @@ export default function ObservabilityPage() {
           <CardContent className="p-4">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-xs text-[#94a3b8] font-mono uppercase tracking-wider">Redis Cache &amp; Broker</p>
+                <p className="text-xs text-[#a8a29e] font-mono uppercase tracking-wider">Redis Cache &amp; Broker</p>
                 <p className="text-xl font-bold font-mono text-[#f26625] mt-1">
                   {health?.redis !== false ? 'Connected' : 'Standalone'}
                 </p>
@@ -259,7 +259,7 @@ export default function ObservabilityPage() {
             <div className="flex items-center justify-between">
               <div>
                 <div className="flex items-center gap-1.5 mb-0.5">
-                  <p className="text-xs text-[#94a3b8] font-mono uppercase tracking-wider">System Load &amp; RAM</p>
+                  <p className="text-xs text-[#a8a29e] font-mono uppercase tracking-wider">System Load &amp; RAM</p>
                   {((health?.system_metrics?.memory_used_percent ?? 45) > 85 || (health?.system_metrics?.cpu_load_1m ?? 0.1) > 3.0) ? (
                     <span className="text-xs font-mono px-1.5 py-0.2 rounded bg-rose-950/60 text-rose-400 border border-rose-800">Critical</span>
                   ) : ((health?.system_metrics?.memory_used_percent ?? 45) > 70 || (health?.system_metrics?.cpu_load_1m ?? 0.1) > 1.5) ? (
@@ -268,12 +268,12 @@ export default function ObservabilityPage() {
                     <span className="text-xs font-mono px-1.5 py-0.2 rounded bg-emerald-950/60 text-emerald-400 border border-emerald-800">Normal</span>
                   )}
                 </div>
-                <p className="text-xs font-bold font-mono text-cyan-400 mt-1">
+                <p className="text-xs font-bold font-mono text-[#f26625] mt-1">
                   Load: {health?.system_metrics?.cpu_load_1m ?? '0.12'} · RAM: {health?.system_metrics?.memory_used_percent ? `${health.system_metrics.memory_used_percent}%` : '42%'}
                 </p>
               </div>
-              <div className="h-10 w-10 rounded-md bg-cyan-500/10 border border-cyan-500/30 flex items-center justify-center transition-transform group-hover:scale-110">
-                <Activity className="h-5 w-5 text-cyan-400" />
+              <div className="h-10 w-10 rounded-md bg-[#f26625]/10 border border-[#f26625]/30 flex items-center justify-center transition-transform group-hover:scale-110">
+                <Activity className="h-5 w-5 text-[#f26625]" />
               </div>
             </div>
           </CardContent>
@@ -337,7 +337,7 @@ export default function ObservabilityPage() {
                 <Cpu className="h-4 w-4 text-[#f26625]" />
                 <div>
                   <CardTitle className="text-sm font-bold text-white">Standalone Multiprocess Pool &amp; Synthesis Fabric</CardTitle>
-                  <p className="text-xs font-mono text-[#94a3b8] mt-0.5">8 Container Worker Threads · Standalone Async Pool · PostgreSQL Asyncpg</p>
+                  <p className="text-xs font-mono text-[#a8a29e] mt-0.5">8 Container Worker Threads · Standalone Async Pool · PostgreSQL Asyncpg</p>
                 </div>
               </div>
               <span className="text-xs font-mono font-bold px-2.5 py-0.5 rounded-md bg-emerald-950/40 text-emerald-400 border border-emerald-500/30">
@@ -360,7 +360,7 @@ export default function ObservabilityPage() {
                 </div>
                 <div className="p-3 rounded-lg bg-[#0a0a0f] border border-[#272738]">
                   <span className="text-xs text-zinc-500 uppercase block">Rate Limiter Mode</span>
-                  <span className="text-purple-300 font-bold text-sm">
+                  <span className="text-[#d8d2c4] font-bold text-sm">
                     Redis Sliding Window
                   </span>
                 </div>
@@ -380,7 +380,7 @@ export default function ObservabilityPage() {
                 <div className="rounded-lg border border-[#272738] overflow-x-auto bg-[#0a0a0f]">
                   <table className="w-full text-left font-mono text-xs">
                     <thead>
-                      <tr className="border-b border-[#272738] bg-[#12121a] text-xs text-[#94a3b8] uppercase">
+                      <tr className="border-b border-[#272738] bg-[#12121a] text-xs text-[#a8a29e] uppercase">
                         <th className="py-2 px-3">Worker ID</th>
                         <th className="py-2 px-3">PID</th>
                         <th className="py-2 px-3">Engine Affinity</th>
@@ -401,7 +401,7 @@ export default function ObservabilityPage() {
                               {w.status}
                             </span>
                           </td>
-                          <td className="py-2 px-3 text-cyan-300">{w.rss}</td>
+                          <td className="py-2 px-3 text-[#d8d2c4]">{w.rss}</td>
                           <td className="py-2 px-3 text-zinc-400">{w.uptime}</td>
                         </tr>
                       ))}
@@ -437,30 +437,30 @@ export default function ObservabilityPage() {
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
             <Card className="border-[#272738] bg-[#12121a] rounded-md card-shadow">
               <CardContent className="p-4 space-y-1">
-                <span className="text-xs font-mono text-[#94a3b8] uppercase">Initial Draft Pass Rate</span>
+                <span className="text-xs font-mono text-[#a8a29e] uppercase">Initial Draft Pass Rate</span>
                 <p className="text-2xl font-bold font-mono text-amber-400">71.2%</p>
-                <p className="text-xs font-mono text-[#64748b]">Pre-criticism raw synthesis</p>
+                <p className="text-xs font-mono text-[#a8a29e]">Pre-criticism raw synthesis</p>
               </CardContent>
             </Card>
             <Card className="border-[#272738] bg-[#12121a] rounded-md card-shadow border-l-4 border-l-emerald-500">
               <CardContent className="p-4 space-y-1">
-                <span className="text-xs font-mono text-[#94a3b8] uppercase">Retry 1 Self-Correction</span>
+                <span className="text-xs font-mono text-[#a8a29e] uppercase">Retry 1 Self-Correction</span>
                 <p className="text-2xl font-bold font-mono text-emerald-400">94.8%</p>
                 <p className="text-xs font-mono text-emerald-500/80 font-bold">+23.6% recovery delta</p>
               </CardContent>
             </Card>
             <Card className="border-[#272738] bg-[#12121a] rounded-md card-shadow">
               <CardContent className="p-4 space-y-1">
-                <span className="text-xs font-mono text-[#94a3b8] uppercase">Consensus Gate Pass</span>
+                <span className="text-xs font-mono text-[#a8a29e] uppercase">Consensus Gate Pass</span>
                 <p className="text-2xl font-bold font-mono text-[#f26625]">99.2%</p>
-                <p className="text-xs font-mono text-[#64748b]">Final rubric consensus score</p>
+                <p className="text-xs font-mono text-[#a8a29e]">Final rubric consensus score</p>
               </CardContent>
             </Card>
             <Card className="border-[#272738] bg-[#12121a] rounded-md card-shadow">
               <CardContent className="p-4 space-y-1">
-                <span className="text-xs font-mono text-[#94a3b8] uppercase">Average Retry Overhead</span>
-                <p className="text-2xl font-bold font-mono text-cyan-400">+384ms</p>
-                <p className="text-xs font-mono text-[#64748b]">Async feedback latency</p>
+                <span className="text-xs font-mono text-[#a8a29e] uppercase">Average Retry Overhead</span>
+                <p className="text-2xl font-bold font-mono text-[#f26625]">+384ms</p>
+                <p className="text-xs font-mono text-[#a8a29e]">Async feedback latency</p>
               </CardContent>
             </Card>
           </div>
@@ -488,7 +488,7 @@ export default function ObservabilityPage() {
                   <div className="w-full bg-[#161622] h-2 rounded-full overflow-hidden">
                     <div className="h-full bg-[#f26625] rounded-full" style={{ width: `${item.pct * 2}%` }} />
                   </div>
-                  <p className="text-xs text-[#94a3b8] font-mono flex items-center gap-1">
+                  <p className="text-xs text-[#a8a29e] font-mono flex items-center gap-1">
                     <span className="text-[#10b981]">↳ Resolution:</span> {item.fix}
                   </p>
                 </div>
@@ -507,10 +507,10 @@ export default function ObservabilityPage() {
             <CardContent className="p-4">
               <div className="space-y-3 font-mono text-xs">
                 <div className="p-3 rounded-lg bg-[#0a0a0f] border border-[#272738] flex items-start gap-3">
-                  <span className="px-2 py-0.5 rounded bg-blue-950/40 text-blue-300 border border-blue-800 text-xs shrink-0">STEP 1: DRAFT</span>
+                  <span className="px-2 py-0.5 rounded bg-[#1b1b18]/40 text-[#d8d2c4] border border-[#4a463f] text-xs shrink-0">STEP 1: DRAFT</span>
                   <div>
                     <p className="text-white font-semibold">Initial Generator Output</p>
-                    <p className="text-[#94a3b8] text-xs mt-0.5">&ldquo;ITC can be claimed when invoice is uploaded.&rdquo;</p>
+                    <p className="text-[#a8a29e] text-xs mt-0.5">&ldquo;ITC can be claimed when invoice is uploaded.&rdquo;</p>
                   </div>
                 </div>
 
@@ -518,7 +518,7 @@ export default function ObservabilityPage() {
                   <span className="px-2 py-0.5 rounded bg-rose-950/40 text-rose-300 border border-rose-800 text-xs shrink-0">STEP 2: JUDGE</span>
                   <div>
                     <p className="text-rose-300 font-semibold">LLM Judge Score: 0.62 (REJECTED)</p>
-                    <p className="text-[#94a3b8] text-xs mt-0.5">Critique: Missing statutory citation of Section 16(2)(aa) CGST Act &amp; GSTR-2B match.</p>
+                    <p className="text-[#a8a29e] text-xs mt-0.5">Critique: Missing statutory citation of Section 16(2)(aa) CGST Act &amp; GSTR-2B match.</p>
                   </div>
                 </div>
 
@@ -526,7 +526,7 @@ export default function ObservabilityPage() {
                   <span className="px-2 py-0.5 rounded bg-amber-950/40 text-amber-300 border border-amber-800 text-xs shrink-0">STEP 3: RETRY</span>
                   <div>
                     <p className="text-amber-300 font-semibold">Contextual Reinjection</p>
-                    <p className="text-[#94a3b8] text-xs mt-0.5">Generator conditioned with feedback critique and statutory grounding context.</p>
+                    <p className="text-[#a8a29e] text-xs mt-0.5">Generator conditioned with feedback critique and statutory grounding context.</p>
                   </div>
                 </div>
 
@@ -556,13 +556,13 @@ export default function ObservabilityPage() {
               <CardContent className="p-4">
                 <div className="space-y-3">
                   <div className="p-3 border border-[#272738] bg-[#0a0a0f] rounded-xl flex items-center justify-between">
-                    <span className="text-xs text-[#94a3b8]">Overall Status</span>
+                    <span className="text-xs text-[#a8a29e]">Overall Status</span>
                     <span className="text-xs font-mono font-bold px-2.5 py-0.5 rounded-md bg-emerald-950/40 text-emerald-400 border border-emerald-500/30">
                       Healthy
                     </span>
                   </div>
                   <div className="p-3 border border-[#272738] bg-[#0a0a0f] rounded-xl flex items-center justify-between">
-                    <span className="text-xs text-[#94a3b8]">Last Updated</span>
+                    <span className="text-xs text-[#a8a29e]">Last Updated</span>
                     <span className="font-mono text-xs font-bold text-[#f26625]">
                       {new Date().toLocaleTimeString()}
                     </span>
@@ -588,8 +588,8 @@ export default function ObservabilityPage() {
                   </pre>
                 </ScrollArea>
               ) : (
-                <div className="p-12 text-center text-[#94a3b8] bg-[#0a0a0f] rounded-xl border border-[#272738]">
-                  <Activity className="h-10 w-10 mx-auto mb-3 text-[#64748b]" />
+                <div className="p-12 text-center text-[#a8a29e] bg-[#0a0a0f] rounded-xl border border-[#272738]">
+                  <Activity className="h-10 w-10 mx-auto mb-3 text-[#a8a29e]" />
                   <p className="text-xs font-mono font-bold text-[#f26625]">Metrics Ready</p>
                   <p className="text-xs font-mono mt-1">Metrics available at /metrics endpoint</p>
                 </div>
@@ -608,7 +608,7 @@ export default function ObservabilityPage() {
                     <Zap className="h-4 w-4 text-emerald-400" />
                     Indic Tokenizer Fertility &amp; Cost Compression Engine
                   </CardTitle>
-                  <p className="text-xs text-[#94a3b8] mt-0.5">
+                  <p className="text-xs text-[#a8a29e] mt-0.5">
                     Measuring token bloat (fertility ratio) and training cost reduction across Indic languages
                   </p>
                 </div>
@@ -620,25 +620,25 @@ export default function ObservabilityPage() {
             <CardContent className="p-4 space-y-4">
               <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
                 <div className="p-3 bg-[#0a0a0f] border border-[#272738] rounded-xl space-y-1">
-                  <span className="text-xs uppercase text-[#94a3b8] font-bold">Standard Llama-3 Fertility</span>
+                  <span className="text-xs uppercase text-[#a8a29e] font-bold">Standard Llama-3 Fertility</span>
                   <p className="text-xl font-bold text-rose-400">3.65 tok/word</p>
-                  <p className="text-xs text-[#64748b]">Byte fallback bloat on Devanagari &amp; Indic scripts</p>
+                  <p className="text-xs text-[#a8a29e]">Byte fallback bloat on Devanagari &amp; Indic scripts</p>
                 </div>
                 <div className="p-3 bg-[#0a0a0f] border border-[#272738] rounded-xl space-y-1">
-                  <span className="text-xs uppercase text-[#94a3b8] font-bold">Sarvam / Gemma-2 Fertility</span>
+                  <span className="text-xs uppercase text-[#a8a29e] font-bold">Sarvam / Gemma-2 Fertility</span>
                   <p className="text-xl font-bold text-[#10b981]">1.28 tok/word</p>
-                  <p className="text-xs text-[#64748b]">Optimized Devanagari subword vocabulary</p>
+                  <p className="text-xs text-[#a8a29e]">Optimized Devanagari subword vocabulary</p>
                 </div>
                 <div className="p-3 bg-[#0a0a0f] border border-[#272738] rounded-xl space-y-1">
-                  <span className="text-xs uppercase text-[#94a3b8] font-bold">Inference &amp; Fine-Tune Savings</span>
-                  <p className="text-xl font-bold text-cyan-300">~65% Less Compute</p>
-                  <p className="text-xs text-[#64748b]">Over 2.8x shorter sequence lengths at training time</p>
+                  <span className="text-xs uppercase text-[#a8a29e] font-bold">Inference &amp; Fine-Tune Savings</span>
+                  <p className="text-xl font-bold text-[#d8d2c4]">~65% Less Compute</p>
+                  <p className="text-xs text-[#a8a29e]">Over 2.8x shorter sequence lengths at training time</p>
                 </div>
               </div>
 
               {/* Language Benchmark Comparison Grid */}
               <div className="border border-[#272738] bg-[#0a0a0f] rounded-xl overflow-hidden">
-                <div className="grid grid-cols-5 p-2.5 bg-[#161622] text-xs uppercase font-bold text-[#94a3b8] border-b border-[#272738]">
+                <div className="grid grid-cols-5 p-2.5 bg-[#161622] text-xs uppercase font-bold text-[#a8a29e] border-b border-[#272738]">
                   <span>Language</span>
                   <span>Script</span>
                   <span>Llama-3 (t/w)</span>
@@ -655,7 +655,7 @@ export default function ObservabilityPage() {
                 ].map((row, idx) => (
                   <div key={idx} className="grid grid-cols-5 p-2.5 text-xs border-b border-[#1c1c28] last:border-0 hover:bg-[#12121a]">
                     <span className="font-bold text-white">{row.lang}</span>
-                    <span className="text-[#94a3b8]">{row.script}</span>
+                    <span className="text-[#a8a29e]">{row.script}</span>
                     <span className="text-rose-300 font-mono">{row.llama}</span>
                     <span className="text-emerald-400 font-mono font-bold">{row.sarvam}</span>
                     <span className="text-right text-[#10b981] font-bold font-mono">{row.savings}</span>
@@ -683,7 +683,7 @@ export default function ObservabilityPage() {
                     <CheckCircle2 className="h-4 w-4 text-[#10b981] mt-0.5 shrink-0" />
                     <div>
                       <h4 className="font-bold text-xs text-white">Input Validation &amp; Sanitization</h4>
-                      <p className="text-xs text-[#94a3b8]">
+                      <p className="text-xs text-[#a8a29e]">
                         All API inputs are strictly validated against JSON schema models and rate-limited.
                       </p>
                     </div>
@@ -692,7 +692,7 @@ export default function ObservabilityPage() {
                     <CheckCircle2 className="h-4 w-4 text-[#10b981] mt-0.5 shrink-0" />
                     <div>
                       <h4 className="font-bold text-xs text-white">JWT Token &amp; CSRF Protection</h4>
-                      <p className="text-xs text-[#94a3b8]">
+                      <p className="text-xs text-[#a8a29e]">
                         Secure token-based authorization with stateless HMAC CSRF protection across requests.
                       </p>
                     </div>
@@ -701,7 +701,7 @@ export default function ObservabilityPage() {
                     <CheckCircle2 className="h-4 w-4 text-[#10b981] mt-0.5 shrink-0" />
                     <div>
                       <h4 className="font-bold text-xs text-white">CORS &amp; Admission Control</h4>
-                      <p className="text-xs text-[#94a3b8]">
+                      <p className="text-xs text-[#a8a29e]">
                         Environment-controlled origins with backpressure admission limiting concurrent jobs.
                       </p>
                     </div>

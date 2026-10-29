@@ -229,11 +229,11 @@ export default function ProvidersPage() {
               AI Providers &amp; Failover
             </h1>
           </div>
-          <p className="text-xs text-[#94a3b8]">
+          <p className="text-xs text-[#a8a29e]">
             Multi-provider health monitoring, token cost tracking, circuit breaker states &amp; live session migration
           </p>
         </div>
-        <Button variant="outline" size="sm" className="rounded-md border-[#272738] text-[#94a3b8] hover:text-white hover:bg-[#161622] font-mono text-xs" onClick={fetchAll} disabled={loading}>
+        <Button variant="outline" size="sm" className="rounded-md border-[#272738] text-[#a8a29e] hover:text-white hover:bg-[#161622] font-mono text-xs" onClick={fetchAll} disabled={loading}>
           <RefreshCw className={clsx('h-3.5 w-3.5 mr-1 text-[#f26625]', loading && 'animate-spin')} />
           Refresh
         </Button>
@@ -252,7 +252,7 @@ export default function ProvidersPage() {
               <Card key={label} className="bg-[#12121a]/90 backdrop-blur-sm border-[#272738] rounded-xl card-shadow glow-card-hover group">
                 <CardContent className="pt-4 pb-4 px-4 flex items-center justify-between">
                   <div>
-                    <p className="text-xs text-[#94a3b8] font-mono uppercase tracking-wider">{label}</p>
+                    <p className="text-xs text-[#a8a29e] font-mono uppercase tracking-wider">{label}</p>
                     <p className={clsx('text-2xl font-bold font-mono mt-0.5 tnum tracking-tight', color)}>{value}</p>
                   </div>
                   <div className={clsx('h-9 w-9 rounded-lg flex items-center justify-center border border-white/5 transition-transform group-hover:scale-110', bg)}>
@@ -266,7 +266,7 @@ export default function ProvidersPage() {
           {/* Budget Cap Control Banner */}
           <div className="p-3.5 rounded-xl bg-[#12121a] border border-[#272738] flex flex-wrap items-center justify-between gap-3 text-xs font-mono">
             <div className="flex items-center gap-3">
-              <span className="text-[#94a3b8] uppercase text-xs font-bold">Demo Spending Cap:</span>
+              <span className="text-[#a8a29e] uppercase text-xs font-bold">Demo Spending Cap:</span>
               <div className="flex items-center gap-1.5">
                 <span className="text-white font-bold">${totalCost.toFixed(3)}</span>
                 <span className="text-zinc-500">/</span>
@@ -277,7 +277,7 @@ export default function ProvidersPage() {
               </div>
             </div>
             <div className="flex items-center gap-2">
-              <span className="text-xs text-[#94a3b8]">Adjust Cap:</span>
+              <span className="text-xs text-[#a8a29e]">Adjust Cap:</span>
               <input
                 type="number"
                 min={1}
@@ -294,21 +294,21 @@ export default function ProvidersPage() {
 
       <Tabs defaultValue="providers">
         <TabsList className="bg-[#161622] rounded-md border border-[#272738] p-1 flex flex-wrap gap-1 h-auto">
-          <TabsTrigger value="providers" className="rounded-sm text-xs font-mono data-[state=active]:bg-[#f26625] data-[state=active]:text-white data-[state=active]:glow-yc">Providers</TabsTrigger>
-          <TabsTrigger value="latency" className="rounded-sm text-xs font-mono data-[state=active]:bg-[#f26625] data-[state=active]:text-white data-[state=active]:glow-yc">Latency Profile</TabsTrigger>
-          <TabsTrigger value="circuit-breakers" className="rounded-sm text-xs font-mono data-[state=active]:bg-[#f26625] data-[state=active]:text-white data-[state=active]:glow-yc">Circuit Breakers</TabsTrigger>
-          <TabsTrigger value="failover" className="rounded-sm text-xs font-mono data-[state=active]:bg-[#f26625] data-[state=active]:text-white data-[state=active]:glow-yc">Failover &amp; Hot-Switch</TabsTrigger>
+          <TabsTrigger value="providers" className="rounded-sm text-xs font-mono data-[state=active]:bg-[#f26625] data-[state=active]:text-white data-[state=active]">Providers</TabsTrigger>
+          <TabsTrigger value="latency" className="rounded-sm text-xs font-mono data-[state=active]:bg-[#f26625] data-[state=active]:text-white data-[state=active]">Latency Profile</TabsTrigger>
+          <TabsTrigger value="circuit-breakers" className="rounded-sm text-xs font-mono data-[state=active]:bg-[#f26625] data-[state=active]:text-white data-[state=active]">Circuit Breakers</TabsTrigger>
+          <TabsTrigger value="failover" className="rounded-sm text-xs font-mono data-[state=active]:bg-[#f26625] data-[state=active]:text-white data-[state=active]">Failover &amp; Hot-Switch</TabsTrigger>
         </TabsList>
 
         {/* Providers tab */}
         <TabsContent value="providers" className="mt-4 space-y-3">
           {loading ? (
-            <div className="flex items-center justify-center py-20 text-[#94a3b8] font-mono text-xs gap-2">
+            <div className="flex items-center justify-center py-20 text-[#a8a29e] font-mono text-xs gap-2">
               <Loader2 className="h-5 w-5 animate-spin text-[#f26625]" /> Loading providers…
             </div>
           ) : providers.length === 0 ? (
-            <div className="flex flex-col items-center justify-center py-20 gap-3 text-[#94a3b8] bg-[#12121a] rounded-md border border-[#272738]">
-              <Server className="h-10 w-10 text-[#64748b]" />
+            <div className="flex flex-col items-center justify-center py-20 gap-3 text-[#a8a29e] bg-[#12121a] rounded-md border border-[#272738]">
+              <Server className="h-10 w-10 text-[#a8a29e]" />
               <p className="text-xs font-mono">No providers configured. Add API keys to <code className="bg-[#161622] text-[#f26625] px-1.5 py-0.5 rounded">.env</code></p>
               <Button variant="outline" size="sm" className="rounded-md border-[#3b3b52] text-[#f26625]" onClick={fetchAll}><RefreshCw className="h-3.5 w-3.5 mr-1" />Retry</Button>
             </div>
@@ -324,7 +324,7 @@ export default function ProvidersPage() {
                     <SelectItem value="unhealthy">Unhealthy</SelectItem>
                   </SelectContent>
                 </Select>
-                <span className="text-xs font-mono text-[#94a3b8]">{filtered.length} providers</span>
+                <span className="text-xs font-mono text-[#a8a29e]">{filtered.length} providers</span>
               </div>
 
               <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-4">
@@ -360,11 +360,11 @@ export default function ProvidersPage() {
 
                       <div className="grid grid-cols-2 gap-x-4 gap-y-1.5 text-xs bg-[#0a0a0f] p-3 rounded-xl border border-[#272738]">
                         <div className="flex justify-between">
-                          <span className="text-[#94a3b8] font-mono text-xs">Latency</span>
+                          <span className="text-[#a8a29e] font-mono text-xs">Latency</span>
                           <span className="font-mono text-xs font-bold text-[#f26625]">{p.latency_ms ? `${p.latency_ms}ms` : '—'}</span>
                         </div>
                         <div className="flex justify-between">
-                          <span className="text-[#94a3b8] font-mono text-xs">Success</span>
+                          <span className="text-[#a8a29e] font-mono text-xs">Success</span>
                           <span className="font-mono text-xs font-bold text-zinc-300">
                             {p.requests_today && p.requests_today > 0 && p.success_rate != null
                               ? `${(p.success_rate * 100).toFixed(1)}%`
@@ -374,11 +374,11 @@ export default function ProvidersPage() {
                           </span>
                         </div>
                         <div className="flex justify-between">
-                          <span className="text-[#94a3b8] font-mono text-xs">Requests</span>
+                          <span className="text-[#a8a29e] font-mono text-xs">Requests</span>
                           <span className="font-mono text-xs text-[#f26625]">{p.requests_today?.toLocaleString() ?? '—'}</span>
                         </div>
                         <div className="flex justify-between">
-                          <span className="text-[#94a3b8] font-mono text-xs">Cost today</span>
+                          <span className="text-[#a8a29e] font-mono text-xs">Cost today</span>
                           <span className="font-mono text-xs text-[#f26625]">{p.cost_today_usd != null ? `$${p.cost_today_usd.toFixed(4)}` : '—'}</span>
                         </div>
                       </div>
@@ -419,16 +419,16 @@ export default function ProvidersPage() {
             <CardHeader className="pb-3 border-b border-[#272738]"><CardTitle className="text-sm font-bold text-[#f26625]">Provider Latency (ms)</CardTitle></CardHeader>
             <CardContent className="p-4">
               {latencyData.length === 0 ? (
-                <div className="flex flex-col items-center justify-center h-48 text-[#94a3b8] font-mono gap-2 bg-[#0a0a0f] rounded-xl border border-[#272738]">
-                  <Clock className="h-8 w-8 text-[#64748b]" />
+                <div className="flex flex-col items-center justify-center h-48 text-[#a8a29e] font-mono gap-2 bg-[#0a0a0f] rounded-xl border border-[#272738]">
+                  <Clock className="h-8 w-8 text-[#a8a29e]" />
                   <p className="text-xs font-bold text-[#f26625]">No latency data — run a dataset job first</p>
                 </div>
               ) : (
                 <ResponsiveContainer width="100%" height={280}>
                   <BarChart data={latencyData} margin={{ top: 5, right: 10, left: 0, bottom: 5 }}>
                     <CartesianGrid strokeDasharray="3 3" stroke="#272738" />
-                    <XAxis dataKey="name" tick={{ fontSize: 10 }} stroke="#94a3b8" />
-                    <YAxis tick={{ fontSize: 10 }} stroke="#94a3b8" unit="ms" />
+                    <XAxis dataKey="name" tick={{ fontSize: 10 }} stroke="#a8a29e" />
+                    <YAxis tick={{ fontSize: 10 }} stroke="#a8a29e" unit="ms" />
                     <Tooltip
                       contentStyle={{ backgroundColor: '#FFFFFF', border: '1px solid #272738', borderRadius: 12, fontSize: 12 }}
                       formatter={(v: any) => [`${v}ms`, 'Latency']}
@@ -451,8 +451,8 @@ export default function ProvidersPage() {
             <CardHeader className="pb-3 border-b border-[#272738]"><CardTitle className="text-sm font-bold text-[#f26625]">Circuit Breaker States</CardTitle></CardHeader>
             <CardContent className="p-4">
               {Object.keys(circuitBreakers).length === 0 ? (
-                <div className="flex flex-col items-center justify-center h-32 text-[#94a3b8] font-mono gap-2 bg-[#0a0a0f] rounded-xl border border-[#272738]">
-                  <ShieldAlert className="h-8 w-8 text-[#64748b]" />
+                <div className="flex flex-col items-center justify-center h-32 text-[#a8a29e] font-mono gap-2 bg-[#0a0a0f] rounded-xl border border-[#272738]">
+                  <ShieldAlert className="h-8 w-8 text-[#a8a29e]" />
                   <p className="text-xs font-bold text-[#f26625]">No circuit breaker data available</p>
                 </div>
               ) : (
@@ -487,25 +487,25 @@ export default function ProvidersPage() {
                   <ArrowRightLeft className="h-4 w-4 text-[#f26625]" />
                   <CardTitle className="text-sm font-bold text-white">Manual Provider Hot-Switcher (ADR-001)</CardTitle>
                 </div>
-                <p className="text-xs text-[#94a3b8] mt-1 font-mono">
+                <p className="text-xs text-[#a8a29e] mt-1 font-mono">
                   Migrate an in-flight synthesis job to a target model provider with an atomic state checkpoint.
                 </p>
               </CardHeader>
               <CardContent className="p-4">
                 <form onSubmit={handleSwitchProvider} className="space-y-4">
                   <div>
-                    <label className="text-xs font-mono text-[#94a3b8] block mb-1">In-Flight Job ID</label>
+                    <label className="text-xs font-mono text-[#a8a29e] block mb-1">In-Flight Job ID</label>
                     <input
                       type="text"
                       placeholder="e.g. medical-sft-v1-verified or UUID"
                       value={switchJobId}
                       onChange={e => setSwitchJobId(e.target.value)}
-                      className="w-full h-9 px-3 rounded-lg bg-[#0a0a0f] border border-[#272738] text-xs font-mono text-white placeholder-[#64748b] focus:outline-none focus:border-[#f26625]"
+                      className="w-full h-9 px-3 rounded-lg bg-[#0a0a0f] border border-[#272738] text-xs font-mono text-white placeholder-[#a8a29e] focus:outline-none focus:border-[#f26625]"
                     />
                   </div>
 
                   <div>
-                    <label className="text-xs font-mono text-[#94a3b8] block mb-1">Target Provider</label>
+                    <label className="text-xs font-mono text-[#a8a29e] block mb-1">Target Provider</label>
                     <Select value={switchTargetProvider} onValueChange={setSwitchTargetProvider}>
                       <SelectTrigger className="w-full h-9 text-xs rounded-lg border-[#272738] bg-[#0a0a0f] text-white">
                         <SelectValue />
@@ -521,7 +521,7 @@ export default function ProvidersPage() {
                     </Select>
                   </div>
 
-                  <div className="flex items-center gap-2 text-xs font-mono text-[#94a3b8]">
+                  <div className="flex items-center gap-2 text-xs font-mono text-[#a8a29e]">
                     <input
                       type="checkbox"
                       id="ckpt-switch"
@@ -553,25 +553,25 @@ export default function ProvidersPage() {
                   <ShieldAlert className="h-4 w-4 text-amber-400" />
                   <CardTitle className="text-sm font-bold text-white">Trigger Automatic Failover Migration</CardTitle>
                 </div>
-                <p className="text-xs text-[#94a3b8] mt-1 font-mono">
+                <p className="text-xs text-[#a8a29e] mt-1 font-mono">
                   Simulate or trigger AutomaticFailoverEngine to cascade to the next healthiest provider.
                 </p>
               </CardHeader>
               <CardContent className="p-4">
                 <form onSubmit={handleTriggerFailover} className="space-y-4">
                   <div>
-                    <label className="text-xs font-mono text-[#94a3b8] block mb-1">Target Job ID</label>
+                    <label className="text-xs font-mono text-[#a8a29e] block mb-1">Target Job ID</label>
                     <input
                       type="text"
                       placeholder="e.g. medical-sft-v1-verified"
                       value={failoverJobId}
                       onChange={e => setFailoverJobId(e.target.value)}
-                      className="w-full h-9 px-3 rounded-lg bg-[#0a0a0f] border border-[#272738] text-xs font-mono text-white placeholder-[#64748b] focus:outline-none focus:border-amber-500"
+                      className="w-full h-9 px-3 rounded-lg bg-[#0a0a0f] border border-[#272738] text-xs font-mono text-white placeholder-[#a8a29e] focus:outline-none focus:border-amber-500"
                     />
                   </div>
 
                   <div>
-                    <label className="text-xs font-mono text-[#94a3b8] block mb-1">Failure Reason / Simulated Trigger</label>
+                    <label className="text-xs font-mono text-[#a8a29e] block mb-1">Failure Reason / Simulated Trigger</label>
                     <input
                       type="text"
                       value={failoverReason}
@@ -580,7 +580,7 @@ export default function ProvidersPage() {
                     />
                   </div>
 
-                  <div className="p-3 rounded-xl bg-[#0a0a0f] border border-[#272738] text-xs font-mono text-[#94a3b8] space-y-1">
+                  <div className="p-3 rounded-xl bg-[#0a0a0f] border border-[#272738] text-xs font-mono text-[#a8a29e] space-y-1">
                     <p className="text-white font-bold">Failover Protocol Rules:</p>
                     <p>• Circuit breaker updates automatically on repeated error triggers</p>
                     <p>• Intermediate constructed samples are saved to checkpoint storage</p>
@@ -610,7 +610,7 @@ export default function ProvidersPage() {
                   <History className="h-4 w-4 text-[#f26625]" />
                   Provider Migration &amp; Failover History
                 </CardTitle>
-                <p className="text-xs text-[#94a3b8] mt-0.5 font-mono">
+                <p className="text-xs text-[#a8a29e] mt-0.5 font-mono">
                   Recorded failovers and hot-switches with preserved checkpoint references
                 </p>
               </div>
@@ -620,7 +620,7 @@ export default function ProvidersPage() {
             </CardHeader>
             <CardContent className="p-4">
               {failoverHistory.length === 0 ? (
-                <div className="flex flex-col items-center justify-center py-10 text-[#94a3b8] font-mono gap-2 bg-[#0a0a0f] rounded-xl border border-[#272738]">
+                <div className="flex flex-col items-center justify-center py-10 text-[#a8a29e] font-mono gap-2 bg-[#0a0a0f] rounded-xl border border-[#272738]">
                   <CheckCircle2 className="h-7 w-7 text-emerald-400" />
                   <p className="text-xs text-white">Zero failover migrations recorded — all providers operating stably.</p>
                 </div>
@@ -628,7 +628,7 @@ export default function ProvidersPage() {
                 <div className="overflow-x-auto">
                   <table className="w-full text-left text-xs font-mono">
                     <thead>
-                      <tr className="border-b border-[#272738] text-[#94a3b8] text-xs uppercase">
+                      <tr className="border-b border-[#272738] text-[#a8a29e] text-xs uppercase">
                         <th className="pb-2">Migration ID</th>
                         <th className="pb-2">Job ID</th>
                         <th className="pb-2">Transition</th>
@@ -642,13 +642,13 @@ export default function ProvidersPage() {
                       {failoverHistory.map(m => (
                         <tr key={m.migration_id} className="hover:bg-[#161622]/50">
                           <td className="py-2.5 text-white font-bold">{m.migration_id.slice(0, 8)}...</td>
-                          <td className="py-2.5 text-[#94a3b8]">{m.job_id}</td>
+                          <td className="py-2.5 text-[#a8a29e]">{m.job_id}</td>
                           <td className="py-2.5">
                             <span className="text-rose-400 font-semibold">{m.from_provider}</span>
-                            <span className="text-[#94a3b8] mx-1.5">→</span>
+                            <span className="text-[#a8a29e] mx-1.5">→</span>
                             <span className="text-emerald-400 font-semibold">{m.to_provider}</span>
                           </td>
-                          <td className="py-2.5 text-[#94a3b8]">{m.failure_type || 'manual_switch'}</td>
+                          <td className="py-2.5 text-[#a8a29e]">{m.failure_type || 'manual_switch'}</td>
                           <td className="py-2.5 text-[#f26625]">{m.checkpoint_id || 'ckpt-auto'}</td>
                           <td className="py-2.5">
                             <span className={clsx(
@@ -658,7 +658,7 @@ export default function ProvidersPage() {
                               {m.success ? 'Success' : 'Failed'}
                             </span>
                           </td>
-                          <td className="py-2.5 text-right text-[#94a3b8]">
+                          <td className="py-2.5 text-right text-[#a8a29e]">
                             {new Date(m.timestamp).toLocaleTimeString()}
                           </td>
                         </tr>

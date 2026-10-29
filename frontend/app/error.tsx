@@ -22,7 +22,7 @@ export default function RootError({
         <AlertTriangle className="w-8 h-8" />
       </div>
       <h1 className="text-xl font-bold text-white mb-2">Platform Exception Encountered</h1>
-      <p className="text-xs text-[#94a3b8] max-w-md mb-6">
+      <p className="text-xs text-[#a8a29e] max-w-md mb-6">
         An unexpected error occurred while rendering this view. Your persisted data in PostgreSQL and active synthesis jobs remain unaffected.
       </p>
       {error.message && (

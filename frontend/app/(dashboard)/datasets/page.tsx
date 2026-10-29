@@ -551,7 +551,7 @@ export default function DatasetsPage() {
             </span>
             <h1 className="text-2xl font-bold tracking-tight text-white font-display">Data Library &amp; Exports</h1>
           </div>
-          <p className="text-xs text-[#94a3b8]">
+          <p className="text-xs text-[#a8a29e]">
             Browse certified synthetic datasets, cryptographic provenance seals, and download production archives
           </p>
         </div>
@@ -567,7 +567,7 @@ export default function DatasetsPage() {
           </Button>
           <Button
             size="sm"
-            className="gap-2 bg-[#f26625] hover:bg-[#de581a] border border-[#ea580c] text-white font-mono text-xs font-bold h-8 px-4 rounded-md shadow-sm glow-yc"
+            className="gap-2 bg-[#f26625] hover:bg-[#de581a] border border-[#ea580c] text-white font-mono text-xs font-bold h-8 px-4 rounded-md shadow-sm"
             onClick={() => router.push('/studio')}
           >
             <Plus className="h-3.5 w-3.5 text-white" />
@@ -594,10 +594,10 @@ export default function DatasetsPage() {
 
       {/* Loading State */}
       {isLoading && datasets.length === 0 && (
-        <Card className="border-[#272738] bg-[#12121a] rounded-md">
+        <Card className="border-[#272738] bg-[#12121a] bg-dot-grid rounded-md">
           <CardContent className="p-12 flex flex-col items-center justify-center">
             <Loader2 className="h-8 w-8 animate-spin text-[#f26625] mb-4" />
-            <p className="text-sm text-[#94a3b8] font-mono">Fetching active dataset jobs...</p>
+            <p className="text-sm text-[#a8a29e] font-mono">Fetching active dataset jobs...</p>
           </CardContent>
         </Card>
       )}
@@ -611,7 +611,7 @@ export default function DatasetsPage() {
                 <Database className="h-5 w-5 text-[#f26625]" />
               </div>
               <div>
-                <p className="text-xs text-[#94a3b8] font-mono uppercase tracking-wider">Total Datasets</p>
+                <p className="text-xs text-[#a8a29e] font-mono uppercase tracking-wider">Total Datasets</p>
                 <p className="text-2xl font-bold font-mono text-white mt-0.5">{datasets.length}</p>
               </div>
             </CardContent>
@@ -622,7 +622,7 @@ export default function DatasetsPage() {
                 <CheckCircle2 className="h-5 w-5 text-[#10b981]" />
               </div>
               <div>
-                <p className="text-xs text-[#94a3b8] font-mono uppercase tracking-wider">Validated &amp; Ready</p>
+                <p className="text-xs text-[#a8a29e] font-mono uppercase tracking-wider">Validated &amp; Ready</p>
                 <p className="text-2xl font-bold font-mono text-[#10b981] mt-0.5">
                   {datasets.filter((ds) => ds.validated).length}
                 </p>
@@ -635,7 +635,7 @@ export default function DatasetsPage() {
                 <Layers className="h-5 w-5 text-[#f26625]" />
               </div>
               <div>
-                <p className="text-xs text-[#94a3b8] font-mono uppercase tracking-wider">Total Records</p>
+                <p className="text-xs text-[#a8a29e] font-mono uppercase tracking-wider">Total Records</p>
                 <p className="text-2xl font-bold font-mono text-white mt-0.5">
                   {datasets.reduce((acc, ds) => acc + ds.records, 0).toLocaleString()}
                 </p>
@@ -648,7 +648,7 @@ export default function DatasetsPage() {
                 <AlertCircle className="h-5 w-5 text-amber-400" />
               </div>
               <div>
-                <p className="text-xs text-[#94a3b8] font-mono uppercase tracking-wider">Active In-Flight</p>
+                <p className="text-xs text-[#a8a29e] font-mono uppercase tracking-wider">Active In-Flight</p>
                 <p className="text-2xl font-bold font-mono text-amber-400 mt-0.5">
                   {datasets.filter((ds) => ds.status === 'processing').length}
                 </p>
@@ -661,12 +661,12 @@ export default function DatasetsPage() {
       {/* Filters Toolbar */}
       <div className="flex flex-wrap items-center gap-3">
         <div className="relative flex-1 min-w-[200px] max-w-sm">
-          <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 h-4 w-4 text-[#94a3b8]" />
+          <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 h-4 w-4 text-[#a8a29e]" />
           <Input
             placeholder="Search datasets by topic or ID..."
             value={search}
             onChange={(e) => setSearch(e.target.value)}
-            className="pl-10 rounded-md border-[#272738] bg-[#0a0a0f] text-white focus:border-[#f26625] placeholder:text-[#64748b] text-xs font-mono w-full"
+            className="pl-10 rounded-md border-[#272738] bg-[#0a0a0f] text-white focus:border-[#f26625] placeholder:text-[#a8a29e] text-xs font-mono w-full"
           />
         </div>
 
@@ -713,7 +713,7 @@ export default function DatasetsPage() {
             onClick={() => setViewMode('table')}
             className={clsx(
               "px-2.5 py-1 rounded text-xs transition-colors flex items-center gap-1.5 font-mono",
-              viewMode === 'table' ? "bg-[#161622] text-[#f26625] font-bold border border-[#272738]" : "text-[#94a3b8] hover:text-white"
+              viewMode === 'table' ? "bg-[#161622] text-[#f26625] font-bold border border-[#272738]" : "text-[#a8a29e] hover:text-white"
             )}
             title="Dense Table View"
           >
@@ -725,7 +725,7 @@ export default function DatasetsPage() {
             onClick={() => setViewMode('grid')}
             className={clsx(
               "px-2.5 py-1 rounded text-xs transition-colors flex items-center gap-1.5 font-mono",
-              viewMode === 'grid' ? "bg-[#161622] text-[#f26625] font-bold border border-[#272738]" : "text-[#94a3b8] hover:text-white"
+              viewMode === 'grid' ? "bg-[#161622] text-[#f26625] font-bold border border-[#272738]" : "text-[#a8a29e] hover:text-white"
             )}
             title="Repository Grid View"
           >
@@ -739,12 +739,12 @@ export default function DatasetsPage() {
       {!isLoading && datasets.length === 0 && !error && (
         <Card className="border-[#272738] bg-[#12121a] rounded-md">
           <CardContent className="p-12 flex flex-col items-center justify-center">
-            <Database className="h-12 w-12 text-[#64748b] mb-4" />
+            <Database className="h-12 w-12 text-[#a8a29e] mb-4" />
             <h3 className="text-lg font-bold text-white mb-2">No datasets yet</h3>
-            <p className="text-xs text-[#94a3b8] mb-6 text-center max-w-md">
+            <p className="text-xs text-[#a8a29e] mb-6 text-center max-w-md">
               Describe the dataset you need in the Studio. Discover authentic source repositories, review grounded samples, and export to multi-destination targets.
             </p>
-            <Button className="gap-2 bg-[#f26625] hover:bg-[#de581a] border border-[#ea580c] text-white rounded-md font-mono text-xs px-5 font-bold glow-yc" onClick={() => router.push('/studio')}>
+            <Button className="gap-2 bg-[#f26625] hover:bg-[#de581a] border border-[#ea580c] text-white rounded-md font-mono text-xs px-5 font-bold" onClick={() => router.push('/studio')}>
               <Plus className="h-4 w-4" />
               Create Your First Dataset
             </Button>
@@ -759,29 +759,29 @@ export default function DatasetsPage() {
             <Table className="table-fixed w-full min-w-[950px]">
               <TableHeader className="bg-[#0a0a0f]">
                 <TableRow className="border-b border-[#272738]">
-                  <TableHead className="w-10 text-[#94a3b8] px-3">
+                  <TableHead className="w-10 text-[#a8a29e] px-3">
                     <button
                       type="button"
                       onClick={toggleSelectAll}
-                      className="cursor-pointer text-[#94a3b8] hover:text-white flex items-center justify-center"
+                      className="cursor-pointer text-[#a8a29e] hover:text-white flex items-center justify-center"
                       title="Select all"
                     >
                       {selectedDatasetIds.size > 0 && selectedDatasetIds.size === filteredDatasets.length ? (
                         <CheckSquare className="h-4 w-4 text-[#10b981]" />
                       ) : (
-                        <Square className="h-4 w-4 text-[#64748b]" />
+                        <Square className="h-4 w-4 text-[#a8a29e]" />
                       )}
                     </button>
                   </TableHead>
-                  <TableHead className="w-[320px] text-[#94a3b8] font-mono uppercase text-xs">Dataset Repository</TableHead>
-                  <TableHead className="w-[105px] text-[#94a3b8] font-mono uppercase text-xs">Modality</TableHead>
-                  <TableHead className="w-[95px] text-[#94a3b8] font-mono uppercase text-xs">Format</TableHead>
-                  <TableHead className="w-[85px] text-right text-[#94a3b8] font-mono uppercase text-xs">Est. Size</TableHead>
-                  <TableHead className="w-[85px] text-right text-[#94a3b8] font-mono uppercase text-xs">Samples</TableHead>
-                  <TableHead className="w-[110px] text-[#94a3b8] font-mono uppercase text-xs">Quality</TableHead>
-                  <TableHead className="w-[110px] text-[#94a3b8] font-mono uppercase text-xs">Status</TableHead>
-                  <TableHead className="w-[75px] text-center text-[#94a3b8] font-mono uppercase text-xs">Audit</TableHead>
-                  <TableHead className="w-[230px] text-right text-[#94a3b8] font-mono uppercase text-xs">Actions</TableHead>
+                  <TableHead className="w-[320px] text-[#a8a29e] font-mono uppercase text-xs">Dataset Repository</TableHead>
+                  <TableHead className="w-[105px] text-[#a8a29e] font-mono uppercase text-xs">Modality</TableHead>
+                  <TableHead className="w-[95px] text-[#a8a29e] font-mono uppercase text-xs">Format</TableHead>
+                  <TableHead className="w-[85px] text-right text-[#a8a29e] font-mono uppercase text-xs">Est. Size</TableHead>
+                  <TableHead className="w-[85px] text-right text-[#a8a29e] font-mono uppercase text-xs">Samples</TableHead>
+                  <TableHead className="w-[110px] text-[#a8a29e] font-mono uppercase text-xs">Quality</TableHead>
+                  <TableHead className="w-[110px] text-[#a8a29e] font-mono uppercase text-xs">Status</TableHead>
+                  <TableHead className="w-[75px] text-center text-[#a8a29e] font-mono uppercase text-xs">Audit</TableHead>
+                  <TableHead className="w-[230px] text-right text-[#a8a29e] font-mono uppercase text-xs">Actions</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody className="divide-y divide-[#272738]">
@@ -801,13 +801,13 @@ export default function DatasetsPage() {
                         <button
                           type="button"
                           onClick={() => toggleSelectDataset(dataset.id)}
-                          className="cursor-pointer text-[#94a3b8] hover:text-white flex items-center justify-center"
+                          className="cursor-pointer text-[#a8a29e] hover:text-white flex items-center justify-center"
                           title="Select dataset"
                         >
                           {selectedDatasetIds.has(dataset.id) ? (
                             <CheckSquare className="h-4 w-4 text-[#10b981]" />
                           ) : (
-                            <Square className="h-4 w-4 text-[#64748b]" />
+                            <Square className="h-4 w-4 text-[#a8a29e]" />
                           )}
                         </button>
                       </TableCell>
@@ -821,7 +821,7 @@ export default function DatasetsPage() {
                             <p className="font-semibold text-xs text-white truncate hover:text-[#f26625] transition-colors" title={dataset.name}>
                               {dataset.name}
                             </p>
-                            <p className="text-xs text-[#94a3b8] font-mono mt-0.5">
+                            <p className="text-xs text-[#a8a29e] font-mono mt-0.5">
                               {dataset.created} · {dataset.records.toLocaleString()} records
                             </p>
                           </div>
@@ -830,8 +830,8 @@ export default function DatasetsPage() {
 
                       <TableCell className="w-[105px]">
                         <div className="flex items-center gap-1.5">
-                          <ModalityIcon className="h-3.5 w-3.5 text-[#94a3b8]" />
-                          <span className="text-xs text-[#94a3b8] capitalize">{dataset.modality}</span>
+                          <ModalityIcon className="h-3.5 w-3.5 text-[#a8a29e]" />
+                          <span className="text-xs text-[#a8a29e] capitalize">{dataset.modality}</span>
                         </div>
                       </TableCell>
 
@@ -848,7 +848,7 @@ export default function DatasetsPage() {
                         </div>
                       </TableCell>
 
-                      <TableCell className="w-[85px] text-right font-mono text-xs text-[#94a3b8]">
+                      <TableCell className="w-[85px] text-right font-mono text-xs text-[#a8a29e]">
                         {dataset.size}
                       </TableCell>
 
@@ -863,7 +863,7 @@ export default function DatasetsPage() {
                             <span className="text-xs font-mono text-[#10b981] font-bold">{dataset.quality}%</span>
                           </div>
                         ) : (
-                          <span className="text-xs font-mono text-[#94a3b8]">—</span>
+                          <span className="text-xs font-mono text-[#a8a29e]">—</span>
                         )}
                       </TableCell>
 
@@ -963,7 +963,7 @@ export default function DatasetsPage() {
                           <Button
                             variant="ghost"
                             size="icon"
-                            className="h-7 w-7 rounded-md text-[#94a3b8] hover:text-white hover:bg-[#161622]"
+                            className="h-7 w-7 rounded-md text-[#a8a29e] hover:text-white hover:bg-[#161622]"
                             onClick={() => setSelectedDataset(dataset.id)}
                             title="Inspect dataset"
                           >
@@ -1012,10 +1012,10 @@ export default function DatasetsPage() {
                         <Database className="h-4 w-4 text-[#f26625]" />
                       </div>
                       <div>
-                        <span className="text-xs font-mono px-1.5 py-0.5 rounded bg-[#0a0a0f] border border-[#272738] text-[#94a3b8] uppercase font-bold">
+                        <span className="text-xs font-mono px-1.5 py-0.5 rounded bg-[#0a0a0f] border border-[#272738] text-[#a8a29e] uppercase font-bold">
                           {dataset.modality}
                         </span>
-                        <span className="text-xs font-mono text-[#64748b] ml-1.5 uppercase">
+                        <span className="text-xs font-mono text-[#a8a29e] ml-1.5 uppercase">
                           .{dataset.format}
                         </span>
                       </div>
@@ -1063,7 +1063,7 @@ export default function DatasetsPage() {
                     <h3 className="text-sm font-bold text-white group-hover:text-[#f26625] transition-colors leading-snug line-clamp-1" title={dataset.name}>
                       {dataset.name}
                     </h3>
-                    <p className="text-xs text-[#94a3b8] font-mono mt-1">
+                    <p className="text-xs text-[#a8a29e] font-mono mt-1">
                       {dataset.created} · {dataset.records.toLocaleString()} records
                     </p>
                   </div>
@@ -1072,25 +1072,25 @@ export default function DatasetsPage() {
                 <CardContent className="p-4 pt-1 space-y-3">
                   <div className="grid grid-cols-3 gap-2 p-2 rounded-md bg-[#0a0a0f] border border-[#272738] text-center font-mono">
                     <div>
-                      <p className="text-xs text-[#64748b] uppercase">Samples</p>
+                      <p className="text-xs text-[#a8a29e] uppercase">Samples</p>
                       <p className="text-xs font-bold text-white mt-0.5">{dataset.records.toLocaleString()}</p>
                     </div>
                     <div>
-                      <p className="text-xs text-[#64748b] uppercase">Size</p>
-                      <p className="text-xs font-bold text-[#94a3b8] mt-0.5">{dataset.size}</p>
+                      <p className="text-xs text-[#a8a29e] uppercase">Size</p>
+                      <p className="text-xs font-bold text-[#a8a29e] mt-0.5">{dataset.size}</p>
                     </div>
                     <div>
-                      <p className="text-xs text-[#64748b] uppercase">Quality</p>
+                      <p className="text-xs text-[#a8a29e] uppercase">Quality</p>
                       <p className="text-xs font-bold text-[#10b981] mt-0.5">{dataset.quality}%</p>
                     </div>
                   </div>
 
-                  <div className="flex items-center justify-between text-xs font-mono text-[#64748b] pt-0.5">
-                    <span className="flex items-center gap-1 text-purple-300">
-                      <ShieldCheck className="h-3 w-3 text-purple-400" />
+                  <div className="flex items-center justify-between text-xs font-mono text-[#a8a29e] pt-0.5">
+                    <span className="flex items-center gap-1 text-[#d8d2c4]">
+                      <ShieldCheck className="h-3 w-3 text-[#f26625]" />
                       {dataset.certificate_id || `DBOM-${dataset.id.slice(0, 8).toUpperCase()}`}
                     </span>
-                    <span className="text-[#64748b] truncate max-w-[110px]">
+                    <span className="text-[#a8a29e] truncate max-w-[110px]">
                       {dataset.merkle_root ? dataset.merkle_root.slice(0, 16) + '...' : dataset.id.slice(0, 8)}
                     </span>
                   </div>
@@ -1133,7 +1133,7 @@ export default function DatasetsPage() {
                     <Button
                       size="sm"
                       variant="ghost"
-                      className="h-7 w-7 p-0 rounded-md text-[#94a3b8] hover:text-white hover:bg-[#161622]"
+                      className="h-7 w-7 p-0 rounded-md text-[#a8a29e] hover:text-white hover:bg-[#161622]"
                       onClick={() => setSelectedDataset(dataset.id)}
                       title="Inspect dataset"
                     >
@@ -1159,7 +1159,7 @@ export default function DatasetsPage() {
 
       {/* Floating Multi-Dataset Batch Exporter HUD */}
       {selectedDatasetIds.size > 0 && (
-        <div className="fixed bottom-6 left-1/2 -translate-x-1/2 z-50 flex items-center gap-3 bg-[#0c0c14]/95 border border-[#272738] rounded-full px-5 py-2.5 shadow-2xl backdrop-blur-md animate-fade-in font-mono text-xs">
+        <div className="fixed bottom-6 left-1/2 -translate-x-1/2 z-50 flex items-center gap-3 bg-[#0a0a0f]/95 border border-[#272738] rounded-full px-5 py-2.5 shadow-2xl backdrop-blur-md animate-fade-in font-mono text-xs">
           <span className="font-bold text-white flex items-center gap-1.5">
             <span className="w-2 h-2 rounded-full bg-[#f26625] animate-pulse" />
             {selectedDatasetIds.size} dataset{selectedDatasetIds.size > 1 ? 's' : ''} selected
@@ -1187,7 +1187,7 @@ export default function DatasetsPage() {
           <button
             type="button"
             onClick={() => setSelectedDatasetIds(new Set())}
-            className="text-[#64748b] hover:text-white p-1 rounded-full cursor-pointer ml-1"
+            className="text-[#a8a29e] hover:text-white p-1 rounded-full cursor-pointer ml-1"
             title="Clear Selection"
           >
             <X className="h-3.5 w-3.5" />
@@ -1203,11 +1203,11 @@ export default function DatasetsPage() {
               <div className="flex items-center gap-2">
                 <Database className="h-4 w-4 text-[#f26625]" />
                 <CardTitle className="text-base font-bold text-white">{selected.name}</CardTitle>
-                <span className="text-xs font-mono px-2 py-0.5 rounded-md bg-[#0a0a0f] border border-[#272738] text-[#94a3b8]">
+                <span className="text-xs font-mono px-2 py-0.5 rounded-md bg-[#0a0a0f] border border-[#272738] text-[#a8a29e]">
                   ID: {selected.id}
                 </span>
               </div>
-              <Button variant="ghost" size="sm" className="rounded-md text-[#94a3b8] hover:text-white hover:bg-[#161622]" onClick={() => setSelectedDataset(null)}>
+              <Button variant="ghost" size="sm" className="rounded-md text-[#a8a29e] hover:text-white hover:bg-[#161622]" onClick={() => setSelectedDataset(null)}>
                 <X className="h-4 w-4" />
               </Button>
             </div>
@@ -1215,12 +1215,12 @@ export default function DatasetsPage() {
           <CardContent className="p-6 space-y-5">
             {/* Full specification prompt — moved out of list rows, shown here on row click. */}
             <div className="rounded-md border border-[#272738] bg-[#0a0a0f] p-3">
-              <p className="text-xs font-mono font-bold uppercase tracking-wider text-[#94a3b8]">Specification prompt</p>
+              <p className="text-xs font-mono font-bold uppercase tracking-wider text-[#a8a29e]">Specification prompt</p>
               <p className="mt-1 text-sm text-zinc-200 leading-relaxed">{selected.description || 'Not recorded'}</p>
             </div>
             {/* Pipeline Stage Breadcrumbs */}
             <div className="space-y-2">
-              <p className="text-xs font-mono text-[#94a3b8] uppercase tracking-wider">Pipeline Lifecycle Stage</p>
+              <p className="text-xs font-mono text-[#a8a29e] uppercase tracking-wider">Pipeline Lifecycle Stage</p>
               <div className="flex items-center gap-1 overflow-x-auto pb-1">
                 {PIPELINE_STAGES.map((stage, index) => {
                   const currentStageIndex = PIPELINE_STAGES.findIndex(
@@ -1236,8 +1236,8 @@ export default function DatasetsPage() {
                         className={clsx(
                           'flex items-center justify-center w-7 h-7 rounded-md text-xs font-medium',
                           isCompleted && 'bg-emerald-950/40 text-[#10b981] border border-emerald-500/30',
-                          isCurrent && selected.status !== 'ready' ? 'bg-[#f26625] text-white' : 'bg-[#161622] text-[#94a3b8] border border-[#272738]',
-                          !isCompleted && !isCurrent && 'bg-[#0a0a0f] text-[#64748b] border border-[#272738]'
+                          isCurrent && selected.status !== 'ready' ? 'bg-[#f26625] text-white' : 'bg-[#161622] text-[#a8a29e] border border-[#272738]',
+                          !isCompleted && !isCurrent && 'bg-[#0a0a0f] text-[#a8a29e] border border-[#272738]'
                         )}
                       >
                         {isCompleted ? <Check className="h-3.5 w-3.5" /> : <StageIcon className="h-3.5 w-3.5" />}
@@ -1259,19 +1259,19 @@ export default function DatasetsPage() {
             {/* Quick Metrics Grid */}
             <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 p-3 bg-[#0a0a0f] rounded-md border border-[#272738]">
               <div>
-                <p className="text-xs text-[#94a3b8] font-mono uppercase">Quality Score</p>
+                <p className="text-xs text-[#a8a29e] font-mono uppercase">Quality Score</p>
                 <p className="text-base font-mono font-bold text-[#10b981] mt-0.5">{Math.round(selected.quality)}%</p>
               </div>
               <div>
-                <p className="text-xs text-[#94a3b8] font-mono uppercase">Samples</p>
+                <p className="text-xs text-[#a8a29e] font-mono uppercase">Samples</p>
                 <p className="text-base font-mono font-bold text-white mt-0.5">{selected.records.toLocaleString()}</p>
               </div>
               <div>
-                <p className="text-xs text-[#94a3b8] font-mono uppercase">Created Date</p>
-                <p className="text-xs font-mono text-[#94a3b8] mt-1">{selected.created}</p>
+                <p className="text-xs text-[#a8a29e] font-mono uppercase">Created Date</p>
+                <p className="text-xs font-mono text-[#a8a29e] mt-1">{selected.created}</p>
               </div>
               <div>
-                <p className="text-xs text-[#94a3b8] font-mono uppercase">Delivery Spec</p>
+                <p className="text-xs text-[#a8a29e] font-mono uppercase">Delivery Spec</p>
                 <p className="text-xs font-mono text-[#f26625] mt-1">ADR-002 Compliant</p>
               </div>
             </div>
@@ -1282,33 +1282,33 @@ export default function DatasetsPage() {
                 <p className="text-xs font-bold font-mono uppercase tracking-wider text-white">
                   Provenance &amp; Quality Audit Trail
                 </p>
-                {summaryLoading && <Loader2 className="h-4 w-4 animate-spin text-[#94a3b8]" />}
+                {summaryLoading && <Loader2 className="h-4 w-4 animate-spin text-[#a8a29e]" />}
               </div>
 
               {datasetSummary && (
                 <>
                   <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
                     <div className="rounded-md border border-[#272738] bg-[#0a0a0f] p-3">
-                      <p className="text-xs uppercase font-mono text-[#94a3b8]">Final Samples</p>
+                      <p className="text-xs uppercase font-mono text-[#a8a29e]">Final Samples</p>
                       <p className="text-lg font-bold font-mono text-white mt-0.5">{datasetSummary.sample_count ?? 0}</p>
                     </div>
                     <div className="rounded-md border border-[#272738] bg-[#0a0a0f] p-3">
-                      <p className="text-xs uppercase font-mono text-[#94a3b8]">Mean Quality</p>
+                      <p className="text-xs uppercase font-mono text-[#a8a29e]">Mean Quality</p>
                       <p className="text-lg font-bold font-mono text-[#10b981] mt-0.5">
                         {datasetSummary.quality?.mean == null ? '—' : `${Math.round(datasetSummary.quality.mean * 100)}%`}
                       </p>
                     </div>
                     <div className="rounded-md border border-[#272738] bg-[#0a0a0f] p-3">
-                      <p className="text-xs uppercase font-mono text-[#94a3b8]">HITL Review Coverage</p>
+                      <p className="text-xs uppercase font-mono text-[#a8a29e]">HITL Review Coverage</p>
                       <p className="text-lg font-bold font-mono text-[#f26625] mt-0.5">
                         {datasetSummary.human_review?.enabled ? `${datasetSummary.human_review.total} items` : 'Stratified Auto'}
                       </p>
                       {datasetSummary.human_review?.enabled && (
-                        <p className="mt-1 text-xs text-[#94a3b8] font-mono">{datasetSummary.human_review.requested_percentage}% requested</p>
+                        <p className="mt-1 text-xs text-[#a8a29e] font-mono">{datasetSummary.human_review.requested_percentage}% requested</p>
                       )}
                     </div>
                     <div className="rounded-md border border-[#272738] bg-[#0a0a0f] p-3">
-                      <p className="text-xs uppercase font-mono text-[#94a3b8]">Balance Removals</p>
+                      <p className="text-xs uppercase font-mono text-[#a8a29e]">Balance Removals</p>
                       <p className="text-lg font-bold font-mono text-white mt-0.5">{datasetSummary.balance_report?.samples_removed ?? 0}</p>
                     </div>
                   </div>
@@ -1324,7 +1324,7 @@ export default function DatasetsPage() {
                       <summary className="cursor-pointer text-xs font-bold text-white hover:text-[#f26625] transition-colors">
                         Inspect Detailed Grounding Provenance
                       </summary>
-                      <div className="mt-3 space-y-2 text-xs text-[#94a3b8]">
+                      <div className="mt-3 space-y-2 text-xs text-[#a8a29e]">
                         <p><span className="font-semibold text-white">Specification Prompt:</span> {datasetSummary.provenance.user_query || 'Not recorded'}</p>
                         {datasetSummary.provenance.improved_query && (
                           <p><span className="font-semibold text-white">Refined Query:</span> {datasetSummary.provenance.improved_query}</p>
@@ -1362,7 +1362,7 @@ export default function DatasetsPage() {
                   <p className="text-xs font-bold font-mono uppercase tracking-wider text-white">
                     Post-Training Safeguards &amp; Contamination Audit
                   </p>
-                  <p className="text-xs text-[#94a3b8]">
+                  <p className="text-xs text-[#a8a29e]">
                     Verify zero test-set leakage against IndicGLUE/MMLU and evaluate statutory adversarial resilience
                   </p>
                 </div>
@@ -1405,7 +1405,7 @@ export default function DatasetsPage() {
                     <span className="text-white font-bold">
                       {contaminationReport.status === 'clean' ? '0% Benchmark Leakage' : `${contaminationReport.contamination_rate_pct}% Leakage Flagged`}
                     </span>
-                    <span className="text-xs text-[#94a3b8]">
+                    <span className="text-xs text-[#a8a29e]">
                       ({contaminationReport.total_samples_audited} samples audited against IndicGLUE, MMLU, GSM8K)
                     </span>
                   </div>
@@ -1418,7 +1418,7 @@ export default function DatasetsPage() {
               {adversarialProbes && (
                 <div className="p-3 bg-[#0a0a0f] border border-[#272738] rounded-md space-y-2 font-mono text-xs">
                   <div className="flex items-center justify-between pb-1 border-b border-[#1c1c28]">
-                    <span className="text-[#94a3b8] text-xs uppercase font-bold">Generated Adversarial Safety Probes</span>
+                    <span className="text-[#a8a29e] text-xs uppercase font-bold">Generated Adversarial Safety Probes</span>
                     <span className="text-amber-400 text-xs">{adversarialProbes.length} stress tests synthesized</span>
                   </div>
                   <div className="space-y-1.5 max-h-36 overflow-y-auto">
@@ -1426,7 +1426,7 @@ export default function DatasetsPage() {
                       <div key={idx} className="p-2 rounded bg-[#12121a] border border-[#1c1c28] text-xs space-y-1">
                         <div className="flex items-center justify-between text-xs">
                           <span className="text-amber-300 font-bold uppercase">{probe.category}</span>
-                          <span className="text-[#94a3b8]">{probe.probe_id}</span>
+                          <span className="text-[#a8a29e]">{probe.probe_id}</span>
                         </div>
                         <p className="text-slate-200">{probe.instruction}</p>
                         <p className="text-xs text-emerald-400">Expected: {probe.expected_behavior}</p>
@@ -1444,14 +1444,14 @@ export default function DatasetsPage() {
                   Sample Record Inspection (First 10 records)
                 </p>
                 {records.length > 0 && (
-                  <span className="text-xs text-[#94a3b8] font-mono">{records.length} records loaded</span>
+                  <span className="text-xs text-[#a8a29e] font-mono">{records.length} records loaded</span>
                 )}
               </div>
 
               {recordsLoading ? (
                 <div className="p-8 flex items-center justify-center bg-[#0a0a0f] rounded-md border border-[#272738]">
                   <Loader2 className="h-5 w-5 animate-spin text-[#f26625] mr-2" />
-                  <span className="text-xs text-[#94a3b8] font-mono">Loading preview records...</span>
+                  <span className="text-xs text-[#a8a29e] font-mono">Loading preview records...</span>
                 </div>
               ) : recordsError ? (
                 <div className="p-4 bg-rose-950/20 rounded-md border border-rose-500/30 text-xs text-rose-300">
@@ -1465,7 +1465,7 @@ export default function DatasetsPage() {
                         <Loader2 className="h-4 w-4 animate-spin text-[#f26625]" />
                         <span>Pipeline In-Flight (Stage: {selected?.current_stage || 'processing'})</span>
                       </div>
-                      <p className="text-[#94a3b8] max-w-md mx-auto">
+                      <p className="text-[#a8a29e] max-w-md mx-auto">
                         Synthesized {selected?.records || 0} samples ({selected?.quality || 0}% progress).
                         Full verified records and cryptographic DBOM manifest will become available as soon as packaging &amp; export completes.
                       </p>
@@ -1478,11 +1478,11 @@ export default function DatasetsPage() {
                 <div className="max-h-[360px] overflow-y-auto space-y-3 rounded-md border border-[#272738] bg-[#0a0a0f] p-3">
                   {records.map((rec, i) => (
                     <div key={i} className="p-3.5 bg-[#12121a] rounded-md border border-[#272738] text-xs space-y-2">
-                      <div className="flex items-center justify-between text-xs text-[#94a3b8] font-mono">
+                      <div className="flex items-center justify-between text-xs text-[#a8a29e] font-mono">
                         <span className="text-[#10b981] font-semibold">Record #{i + 1}</span>
                         <div className="flex items-center gap-1.5 flex-wrap">
                           {rec.metadata?.language && (
-                            <Badge variant="outline" className="text-xs px-1.5 py-0 font-mono rounded-md border-[#272738] text-purple-300">
+                            <Badge variant="outline" className="text-xs px-1.5 py-0 font-mono rounded-md border-[#272738] text-[#d8d2c4]">
                               {rec.metadata.language}
                             </Badge>
                           )}
@@ -1543,7 +1543,7 @@ export default function DatasetsPage() {
                             )}
                           </div>
                           <div className="bg-[#0a0a0f] p-2.5 rounded-lg text-xs font-sans space-y-1 border border-[#272738]">
-                            <p className="text-[#94a3b8] font-mono text-xs"><span className="text-white font-medium">Prompt:</span> {rec.metadata.parallel_en.instruction}</p>
+                            <p className="text-[#a8a29e] font-mono text-xs"><span className="text-white font-medium">Prompt:</span> {rec.metadata.parallel_en.instruction}</p>
                             <p className="text-[#f1f5f9]"><span className="text-white font-mono text-xs font-medium">Response:</span> {rec.metadata.parallel_en.response}</p>
                           </div>
                         </div>
@@ -1563,7 +1563,7 @@ export default function DatasetsPage() {
             {selected.status === 'ready' && (
               <div className="pt-4 flex flex-wrap items-center justify-between gap-3 border-t border-[#272738]">
                 <div className="flex items-center gap-2">
-                  <span className="text-xs text-[#94a3b8] font-mono">Format:</span>
+                  <span className="text-xs text-[#a8a29e] font-mono">Format:</span>
                   <Select
                     value={downloadFormat[selected.id] || 'jsonl'}
                     onValueChange={(val) =>
@@ -1614,22 +1614,22 @@ export default function DatasetsPage() {
                   <Button
                     variant="outline"
                     size="sm"
-                    className="gap-2 border-[#272738] text-cyan-300 hover:text-white hover:bg-[#161622] rounded-md px-4 font-mono text-xs"
+                    className="gap-2 border-[#272738] text-[#d8d2c4] hover:text-white hover:bg-[#161622] rounded-md px-4 font-mono text-xs"
                     onClick={() => handleOpenRecipeModal(selected.id)}
                     title="Generate Fine-Tuning Scripts (Unsloth / Axolotl / LLaMA-Factory)"
                   >
-                    <Terminal className="h-3.5 w-3.5 text-cyan-400" />
+                    <Terminal className="h-3.5 w-3.5 text-[#f26625]" />
                     Training Recipe
                   </Button>
 
                   <Button
                     variant="outline"
                     size="sm"
-                    className="gap-2 border-[#272738] text-purple-300 hover:text-white hover:bg-[#161622] rounded-md px-4 font-mono text-xs"
+                    className="gap-2 border-[#272738] text-[#d8d2c4] hover:text-white hover:bg-[#161622] rounded-md px-4 font-mono text-xs"
                     onClick={() => handleViewDbom(selected.id, selected.name)}
                     title="Cryptographic Data Bill of Materials & Provenance Label"
                   >
-                    <ShieldCheck className="h-3.5 w-3.5 text-purple-400" />
+                    <ShieldCheck className="h-3.5 w-3.5 text-[#f26625]" />
                     DBOM Attestation
                   </Button>
 
@@ -1659,7 +1659,7 @@ export default function DatasetsPage() {
 
                   <Button
                     size="sm"
-                    className="gap-2 bg-[#f26625] hover:bg-[#de581a] text-white rounded-md px-5 font-mono text-xs font-semibold shadow-sm glow-yc"
+                    className="gap-2 bg-[#f26625] hover:bg-[#de581a] text-white rounded-md px-5 font-mono text-xs font-semibold shadow-sm"
                     disabled={downloadingIds.has(selected.id) || selected.records === 0}
                     onClick={() =>
                       handleDownload(selected.id, downloadFormat[selected.id] || 'jsonl')
@@ -1701,7 +1701,7 @@ export default function DatasetsPage() {
                       Hub Compliant
                     </Badge>
                   </h3>
-                  <p className="text-xs text-[#94a3b8]">
+                  <p className="text-xs text-[#a8a29e]">
                     Generated YAML frontmatter &amp; dataset documentation for {hfCardDomain}
                   </p>
                 </div>
@@ -1731,7 +1731,7 @@ export default function DatasetsPage() {
                   size="icon"
                   variant="ghost"
                   onClick={() => setHfCardModalOpen(false)}
-                  className="h-8 w-8 rounded-md text-[#94a3b8] hover:text-white hover:bg-[#1a1a26]"
+                  className="h-8 w-8 rounded-md text-[#a8a29e] hover:text-white hover:bg-[#1a1a26]"
                 >
                   <X className="h-4 w-4" />
                 </Button>
@@ -1743,7 +1743,7 @@ export default function DatasetsPage() {
               {hfCardLoading ? (
                 <div className="flex flex-col items-center justify-center py-16 space-y-3">
                   <Loader2 className="h-8 w-8 animate-spin text-[#f26625]" />
-                  <p className="text-xs text-[#94a3b8]">Synthesizing Hugging Face Card with YAML frontmatter...</p>
+                  <p className="text-xs text-[#a8a29e]">Synthesizing Hugging Face Card with YAML frontmatter...</p>
                 </div>
               ) : (
                 <pre className="p-4 rounded-md bg-[#0d0d14] border border-[#272738] text-[#e2e8f0] overflow-x-auto whitespace-pre-wrap leading-relaxed select-all">
@@ -1754,14 +1754,14 @@ export default function DatasetsPage() {
 
             {/* Modal Footer */}
             <div className="px-5 py-3 border-t border-[#272738] bg-[#0e0e14] flex items-center justify-between">
-              <span className="text-xs text-[#64748b] font-mono">
+              <span className="text-xs text-[#a8a29e] font-mono">
                 Ready for direct upload to Hugging Face Hub (huggingface.co/datasets)
               </span>
               <Button
                 size="sm"
                 variant="ghost"
                 onClick={() => setHfCardModalOpen(false)}
-                className="text-xs font-mono text-[#94a3b8] hover:text-white"
+                className="text-xs font-mono text-[#a8a29e] hover:text-white"
               >
                 Close
               </Button>
@@ -1780,7 +1780,7 @@ export default function DatasetsPage() {
                 <UploadCloud className="h-4 w-4 text-[#10b981]" />
                 <h3 className="text-sm font-bold text-white">Publish to Hugging Face Hub</h3>
               </div>
-              <Button size="icon" variant="ghost" onClick={() => setHfPublishModalOpen(false)} className="h-8 w-8 text-[#94a3b8] hover:text-white">
+              <Button size="icon" variant="ghost" onClick={() => setHfPublishModalOpen(false)} className="h-8 w-8 text-[#a8a29e] hover:text-white">
                 <X className="h-4 w-4" />
               </Button>
             </div>
@@ -1788,7 +1788,7 @@ export default function DatasetsPage() {
             {/* Body */}
             <div className="p-5 space-y-4 text-xs">
               <div>
-                <label className="text-xs text-[#94a3b8] uppercase block mb-1">Target Repository ID (username/dataset-name)</label>
+                <label className="text-xs text-[#a8a29e] uppercase block mb-1">Target Repository ID (username/dataset-name)</label>
                 <Input
                   value={hfRepoId}
                   onChange={(e) => setHfRepoId(e.target.value)}
@@ -1798,7 +1798,7 @@ export default function DatasetsPage() {
               </div>
 
               <div>
-                <label className="text-xs text-[#94a3b8] uppercase block mb-1">HF User Access Token (Write permission)</label>
+                <label className="text-xs text-[#a8a29e] uppercase block mb-1">HF User Access Token (Write permission)</label>
                 <Input
                   type="password"
                   value={hfToken}
@@ -1830,7 +1830,7 @@ export default function DatasetsPage() {
                     <CheckCircle2 className="h-4 w-4 text-[#10b981]" />
                     Dataset Published Successfully!
                   </div>
-                  <p className="text-xs text-[#94a3b8]">Uploaded {hfPublishResult.sample_count} samples and README dataset card.</p>
+                  <p className="text-xs text-[#a8a29e]">Uploaded {hfPublishResult.sample_count} samples and README dataset card.</p>
                   <a
                     href={hfPublishResult.repo_url}
                     target="_blank"
@@ -1845,7 +1845,7 @@ export default function DatasetsPage() {
 
             {/* Footer */}
             <div className="px-5 py-3 border-t border-[#272738] bg-[#0e0e14] flex items-center justify-end gap-2">
-              <Button size="sm" variant="ghost" onClick={() => setHfPublishModalOpen(false)} className="text-xs text-[#94a3b8]">
+              <Button size="sm" variant="ghost" onClick={() => setHfPublishModalOpen(false)} className="text-xs text-[#a8a29e]">
                 Cancel
               </Button>
               <Button
@@ -1878,12 +1878,12 @@ export default function DatasetsPage() {
             {/* Header */}
             <div className="flex items-center justify-between px-5 py-4 border-b border-[#272738] bg-[#0e0e14]">
               <div className="flex items-center gap-2.5">
-                <div className="p-1.5 rounded-lg bg-cyan-950/40 border border-cyan-800">
-                  <Terminal className="h-4 w-4 text-cyan-400" />
+                <div className="p-1.5 rounded-lg bg-[#1b1b18]/40 border border-[#4a463f]">
+                  <Terminal className="h-4 w-4 text-[#f26625]" />
                 </div>
                 <div>
                   <h3 className="text-sm font-bold text-white">Fine-Tuning Recipe &amp; Launch Scripts</h3>
-                  <p className="text-xs text-[#94a3b8]">Production configurations matching dataset format and base tokenizer</p>
+                  <p className="text-xs text-[#a8a29e]">Production configurations matching dataset format and base tokenizer</p>
                 </div>
               </div>
 
@@ -1900,10 +1900,10 @@ export default function DatasetsPage() {
                   }}
                   className="h-8 gap-1 text-xs border-[#272738] bg-[#161622] text-white hover:bg-[#20202e]"
                 >
-                  {recipeCopied ? <Check className="h-3.5 w-3.5 text-[#10b981]" /> : <Copy className="h-3.5 w-3.5 text-cyan-400" />}
+                  {recipeCopied ? <Check className="h-3.5 w-3.5 text-[#10b981]" /> : <Copy className="h-3.5 w-3.5 text-[#f26625]" />}
                   {recipeCopied ? 'Copied Script!' : 'Copy Script'}
                 </Button>
-                <Button size="icon" variant="ghost" onClick={() => setRecipeModalOpen(false)} className="h-8 w-8 text-[#94a3b8] hover:text-white">
+                <Button size="icon" variant="ghost" onClick={() => setRecipeModalOpen(false)} className="h-8 w-8 text-[#a8a29e] hover:text-white">
                   <X className="h-4 w-4" />
                 </Button>
               </div>
@@ -1912,7 +1912,7 @@ export default function DatasetsPage() {
             {/* Controls Bar */}
             <div className="flex flex-wrap items-center justify-between gap-3 px-5 py-3 border-b border-[#272738] bg-[#0a0a0f]">
               <div className="flex items-center gap-2">
-                <span className="text-xs text-[#94a3b8]">Framework:</span>
+                <span className="text-xs text-[#a8a29e]">Framework:</span>
                 {(['unsloth', 'axolotl', 'llamafactory'] as const).map((fw) => (
                   <button
                     key={fw}
@@ -1923,8 +1923,8 @@ export default function DatasetsPage() {
                     className={clsx(
                       'px-2.5 py-1 rounded text-xs transition-colors',
                       recipeFramework === fw
-                        ? 'bg-cyan-950/80 text-cyan-300 border border-cyan-700/60 font-bold'
-                        : 'text-[#94a3b8] hover:text-white bg-[#12121a] border border-[#272738]'
+                        ? 'bg-[#1b1b18]/80 text-[#d8d2c4] border border-[#4a463f]/60 font-bold'
+                        : 'text-[#a8a29e] hover:text-white bg-[#12121a] border border-[#272738]'
                     )}
                   >
                     {fw === 'unsloth' ? 'Unsloth (2x Fast)' : fw === 'axolotl' ? 'Axolotl YAML' : 'LLaMA-Factory'}
@@ -1934,8 +1934,8 @@ export default function DatasetsPage() {
 
               {recipeData?.launch_command && (
                 <div className="flex items-center gap-1.5 text-xs">
-                  <span className="text-[#94a3b8]">Command:</span>
-                  <code className="px-2 py-0.5 rounded bg-[#161622] text-cyan-300 text-xs border border-[#272738]">
+                  <span className="text-[#a8a29e]">Command:</span>
+                  <code className="px-2 py-0.5 rounded bg-[#161622] text-[#d8d2c4] text-xs border border-[#272738]">
                     {recipeData.launch_command}
                   </code>
                   <button
@@ -1944,7 +1944,7 @@ export default function DatasetsPage() {
                       setRecipeCmdCopied(true)
                       setTimeout(() => setRecipeCmdCopied(false), 2000)
                     }}
-                    className="p-1 hover:text-white text-[#94a3b8]"
+                    className="p-1 hover:text-white text-[#a8a29e]"
                     title="Copy launch command"
                   >
                     {recipeCmdCopied ? <Check className="h-3 w-3 text-[#10b981]" /> : <Copy className="h-3 w-3" />}
@@ -1957,8 +1957,8 @@ export default function DatasetsPage() {
             <div className="p-5 overflow-y-auto flex-1 text-xs bg-[#0a0a0f]">
               {recipeLoading ? (
                 <div className="flex flex-col items-center justify-center py-16 space-y-3">
-                  <Loader2 className="h-8 w-8 animate-spin text-cyan-400" />
-                  <p className="text-xs text-[#94a3b8]">Generating optimized training recipe...</p>
+                  <Loader2 className="h-8 w-8 animate-spin text-[#f26625]" />
+                  <p className="text-xs text-[#a8a29e]">Generating optimized training recipe...</p>
                 </div>
               ) : (
                 <pre className="p-4 rounded-md bg-[#0d0d14] border border-[#272738] text-slate-200 overflow-x-auto whitespace-pre font-mono text-xs leading-relaxed select-all">
@@ -1969,10 +1969,10 @@ export default function DatasetsPage() {
 
             {/* Footer */}
             <div className="px-5 py-3 border-t border-[#272738] bg-[#0e0e14] flex items-center justify-between">
-              <span className="text-xs text-[#64748b]">
+              <span className="text-xs text-[#a8a29e]">
                 Save as {recipeData?.filename || 'training_script'} in your training workspace.
               </span>
-              <Button size="sm" variant="ghost" onClick={() => setRecipeModalOpen(false)} className="text-xs text-[#94a3b8] hover:text-white">
+              <Button size="sm" variant="ghost" onClick={() => setRecipeModalOpen(false)} className="text-xs text-[#a8a29e] hover:text-white">
                 Close
               </Button>
             </div>
@@ -1987,13 +1987,13 @@ export default function DatasetsPage() {
             {/* Header */}
             <div className="flex items-center justify-between px-6 py-4 border-b border-[#272738] bg-[#0e0e14]">
               <div className="flex items-center gap-2.5">
-                <ShieldCheck className="h-5 w-5 text-purple-400" />
+                <ShieldCheck className="h-5 w-5 text-[#f26625]" />
                 <div>
                   <h3 className="text-sm font-bold text-white">Cryptographic Data Bill of Materials (DBOM)</h3>
-                  <p className="text-xs text-[#94a3b8]">Tamper-evident Merkle root provenance &amp; Data Nutrition Label</p>
+                  <p className="text-xs text-[#a8a29e]">Tamper-evident Merkle root provenance &amp; Data Nutrition Label</p>
                 </div>
               </div>
-              <Button size="icon" variant="ghost" onClick={() => setDbomModalOpen(false)} className="h-8 w-8 text-[#94a3b8] hover:text-white">
+              <Button size="icon" variant="ghost" onClick={() => setDbomModalOpen(false)} className="h-8 w-8 text-[#a8a29e] hover:text-white">
                 <X className="h-4 w-4" />
               </Button>
             </div>
@@ -2002,8 +2002,8 @@ export default function DatasetsPage() {
             <div className="p-6 space-y-4 max-h-[75vh] overflow-y-auto text-xs">
               {dbomLoading ? (
                 <div className="flex flex-col items-center justify-center py-16 space-y-3">
-                  <Loader2 className="h-8 w-8 animate-spin text-purple-400" />
-                  <p className="text-xs text-[#94a3b8]">Computing SHA-256 Merkle tree leaves &amp; generating DBOM...</p>
+                  <Loader2 className="h-8 w-8 animate-spin text-[#f26625]" />
+                  <p className="text-xs text-[#a8a29e]">Computing SHA-256 Merkle tree leaves &amp; generating DBOM...</p>
                 </div>
               ) : dbomError ? (
                 <div className="p-4 rounded-md bg-red-950/40 border border-red-800 text-red-300 text-xs">DBOM unavailable: the attestation could not be loaded from the API. No certificate, root, or compliance claim is shown.</div>
@@ -2013,21 +2013,21 @@ export default function DatasetsPage() {
                   <div className="p-3.5 rounded-md bg-[#0a0a0f] border border-[#272738] space-y-2">
                     <div className="flex items-center justify-between">
                       <div className="flex items-center gap-2">
-                        <span className="text-xs text-[#94a3b8] uppercase font-bold">Attestation Certificate</span>
+                        <span className="text-xs text-[#a8a29e] uppercase font-bold">Attestation Certificate</span>
                         {dbomData?.dbom?.synthesis_mode && (
-                          <Badge variant="secondary" className="text-xs bg-purple-950/80 text-purple-300 border border-purple-500/30 uppercase font-mono px-1.5 py-0">
+                          <Badge variant="secondary" className="text-xs bg-[#1b1b18]/80 text-[#d8d2c4] border border-[#f26625]/30 uppercase font-mono px-1.5 py-0">
                             Mode: {dbomData.dbom.synthesis_mode}
                           </Badge>
                         )}
                       </div>
-                      <Badge variant="outline" className="text-xs border-purple-800 text-purple-300 bg-purple-950/60 font-mono">
+                      <Badge variant="outline" className="text-xs border-[#4a463f] text-[#d8d2c4] bg-[#1b1b18]/60 font-mono">
                         {dbomData?.dbom?.certificate_id || 'DBOM-VERIFIED'}
                       </Badge>
                     </div>
                     <div>
-                      <span className="text-xs text-[#64748b] block mb-1">SHA-256 Merkle Root:</span>
+                      <span className="text-xs text-[#a8a29e] block mb-1">SHA-256 Merkle Root:</span>
                       <div className="flex items-center justify-between bg-[#161622] p-2 rounded-lg border border-[#272738]">
-                        <code className="text-xs text-purple-300 break-all select-all">
+                        <code className="text-xs text-[#d8d2c4] break-all select-all">
                           {dbomData?.dbom?.merkle_root_hash || 'Computing...'}
                         </code>
                         <Button
@@ -2038,7 +2038,7 @@ export default function DatasetsPage() {
                             setDbomCopied(true)
                             setTimeout(() => setDbomCopied(false), 2000)
                           }}
-                          className="h-6 w-6 ml-2 shrink-0 text-[#94a3b8] hover:text-white"
+                          className="h-6 w-6 ml-2 shrink-0 text-[#a8a29e] hover:text-white"
                         >
                           {dbomCopied ? <Check className="h-3 w-3 text-emerald-400" /> : <Copy className="h-3 w-3" />}
                         </Button>
@@ -2049,20 +2049,20 @@ export default function DatasetsPage() {
                   {/* Compliance Matrix */}
                   <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5">
                     <div className="p-2.5 rounded-md bg-[#0a0a0f] border border-[#272738]">
-                      <span className="text-xs text-[#94a3b8] uppercase block">PII Scrubbing</span>
+                      <span className="text-xs text-[#a8a29e] uppercase block">PII Scrubbing</span>
                       <span className="text-xs font-bold text-emerald-400 mt-1 flex items-center gap-1"><CheckCircle2 className="h-3.5 w-3.5" />Certified Clean</span>
                     </div>
                     <div className="p-2.5 rounded-md bg-[#0a0a0f] border border-[#272738]">
-                      <span className="text-xs text-[#94a3b8] uppercase block">Cultural Safety</span>
+                      <span className="text-xs text-[#a8a29e] uppercase block">Cultural Safety</span>
                       <span className="text-xs font-bold text-emerald-400 mt-1 flex items-center gap-1"><CheckCircle2 className="h-3.5 w-3.5" />Indian IT Act</span>
                     </div>
                     <div className="p-2.5 rounded-md bg-[#0a0a0f] border border-[#272738]">
-                      <span className="text-xs text-[#94a3b8] uppercase block">Contamination</span>
-                      <span className="text-xs font-bold text-cyan-400 mt-1 block">0.0% Leakage</span>
+                      <span className="text-xs text-[#a8a29e] uppercase block">Contamination</span>
+                      <span className="text-xs font-bold text-[#f26625] mt-1 block">0.0% Leakage</span>
                     </div>
                     <div className="p-2.5 rounded-md bg-[#0a0a0f] border border-[#272738]">
-                      <span className="text-xs text-[#94a3b8] uppercase block">Topic Entropy</span>
-                      <span className="text-xs font-bold text-purple-300 mt-1 block">
+                      <span className="text-xs text-[#a8a29e] uppercase block">Topic Entropy</span>
+                      <span className="text-xs font-bold text-[#d8d2c4] mt-1 block">
                         {Math.round((dbomData?.dbom?.compliance_audit?.diversity_entropy || 0.94) * 100)}% Parity
                       </span>
                     </div>
@@ -2072,7 +2072,7 @@ export default function DatasetsPage() {
                   <div className="p-3.5 rounded-md bg-[#161622] border border-[#3b3b52] flex flex-col sm:flex-row items-center justify-between gap-3">
                     <div>
                       <p className="text-xs font-bold text-white">Cryptographic Tamper Check</p>
-                      <p className="text-xs text-[#94a3b8]">Verify all dataset sample hashes against root</p>
+                      <p className="text-xs text-[#a8a29e]">Verify all dataset sample hashes against root</p>
                     </div>
                     <Button
                       size="sm"
@@ -2080,7 +2080,7 @@ export default function DatasetsPage() {
                       disabled={dbomVerifyLoading}
                       className="bg-[#272738] hover:bg-[#3b3b52] text-white text-xs font-mono h-7 gap-1.5"
                     >
-                      {dbomVerifyLoading ? <Loader2 className="h-3 w-3 animate-spin" /> : <ShieldCheck className="h-3 w-3 text-purple-400" />}
+                      {dbomVerifyLoading ? <Loader2 className="h-3 w-3 animate-spin" /> : <ShieldCheck className="h-3 w-3 text-[#f26625]" />}
                       {dbomVerifyLoading ? 'Verifying...' : 'Verify Cryptographic Root'}
                     </Button>
                   </div>
@@ -2112,7 +2112,7 @@ export default function DatasetsPage() {
 
                   {/* Nutrition Label Preview */}
                   <div>
-                    <span className="text-xs text-[#94a3b8] uppercase font-bold block mb-1">
+                    <span className="text-xs text-[#a8a29e] uppercase font-bold block mb-1">
                       Data Nutrition Label Preview (DATA_NUTRITION_LABEL.md)
                     </span>
                     <pre className="p-3 rounded-md bg-[#0a0a0f] border border-[#272738] text-slate-300 text-xs overflow-x-auto whitespace-pre-wrap max-h-48">
@@ -2125,7 +2125,7 @@ export default function DatasetsPage() {
 
             {/* Footer */}
             <div className="px-6 py-3 border-t border-[#272738] bg-[#0e0e14] flex items-center justify-between">
-              <span className="text-xs text-[#64748b]">
+              <span className="text-xs text-[#a8a29e]">
                 Compliant with EU AI Act &amp; India DPDP Act 2023
               </span>
               <div className="flex items-center gap-2">
@@ -2158,11 +2158,11 @@ export default function DatasetsPage() {
                     a.download = `dbom-${dbomData.job_id || 'dataset'}.json`
                     a.click()
                   }}
-                  className="text-xs font-mono border-[#272738] text-purple-300 hover:text-white"
+                  className="text-xs font-mono border-[#272738] text-[#d8d2c4] hover:text-white"
                 >
                   Download dbom.json
                 </Button>
-                <Button size="sm" variant="ghost" onClick={() => setDbomModalOpen(false)} className="text-xs font-mono text-[#94a3b8] hover:text-white">
+                <Button size="sm" variant="ghost" onClick={() => setDbomModalOpen(false)} className="text-xs font-mono text-[#a8a29e] hover:text-white">
                   Close
                 </Button>
               </div>

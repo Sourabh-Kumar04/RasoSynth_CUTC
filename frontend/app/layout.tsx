@@ -24,7 +24,7 @@ export default function RootLayout({
 }) {
   return (
     <html lang="en" className="dark">
-      <body className="font-sans antialiased bg-[#0a0a0f] text-[#f8fafc]">
+      <body className="font-sans antialiased bg-[#0a0a0f] text-[#f5f2ea]">
         <Providers>
           <MockModeBanner />
           {children}

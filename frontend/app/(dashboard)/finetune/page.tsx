@@ -73,7 +73,7 @@ function useToast() {
 // ── Sparkline ─────────────────────────────────────────────────────────────────
 
 function LossSparkline({ data }: { data: number[] }) {
-  if (data.length < 2) return <span className="text-xs text-[#94a3b8]">—</span>
+  if (data.length < 2) return <span className="text-xs text-[#a8a29e]">—</span>
   const W = 80, H = 28, PAD = 2
   const min = Math.min(...data), max = Math.max(...data), range = max - min || 1
   const pts = data.map((v, i) => {
@@ -96,7 +96,7 @@ const STATUS_PILL: Record<FTJob['status'], string> = {
   running:   'bg-emerald-950/40 text-[#10b981] border-emerald-500/40',
   completed: 'bg-emerald-950/30 text-emerald-400 border-emerald-500/40',
   failed:    'bg-rose-950/30 text-rose-400 border-rose-500/40',
-  cancelled: 'bg-[#161622] text-[#94a3b8] border-[#272738]',
+  cancelled: 'bg-[#161622] text-[#a8a29e] border-[#272738]',
 }
 
 const STATUS_STRIPE: Record<FTJob['status'], string> = {
@@ -138,8 +138,8 @@ function Section({
       >
         <span className="text-xs font-bold text-white font-mono uppercase">{title}</span>
         {open
-          ? <ChevronUp className="h-3.5 w-3.5 text-[#94a3b8]" />
-          : <ChevronDown className="h-3.5 w-3.5 text-[#94a3b8]" />}
+          ? <ChevronUp className="h-3.5 w-3.5 text-[#a8a29e]" />
+          : <ChevronDown className="h-3.5 w-3.5 text-[#a8a29e]" />}
       </button>
       {open && <div className="px-4 py-3 space-y-3">{children}</div>}
     </div>
@@ -150,12 +150,12 @@ function Section({
 
 const LOG_COLOR: Record<string, string> = {
   error: 'text-rose-400 font-bold', completed: 'text-emerald-400 font-bold', pushed: 'text-emerald-400',
-  progress: 'text-emerald-400', eval: 'text-amber-300', saved: 'text-cyan-400',
-  started: 'text-emerald-400 font-bold', checkpoint: 'text-amber-400', cancelled: 'text-[#94a3b8]',
+  progress: 'text-emerald-400', eval: 'text-amber-300', saved: 'text-[#f26625]',
+  started: 'text-emerald-400 font-bold', checkpoint: 'text-amber-400', cancelled: 'text-[#a8a29e]',
 }
 
 function LogRow({ line }: { line: LogLine }) {
-  const color = LOG_COLOR[line.type] ?? 'text-[#94a3b8]'
+  const color = LOG_COLOR[line.type] ?? 'text-[#a8a29e]'
   let text: string
   switch (line.type) {
     case 'progress':   text = `epoch ${line.epoch}  step ${line.step}  loss=${line.loss}  (${line.progress}%)`; break
@@ -173,7 +173,7 @@ function LogRow({ line }: { line: LogLine }) {
   }
   return (
     <div className={clsx('leading-5 font-mono text-xs', color)}>
-      <span className="text-[#64748b] select-none">
+      <span className="text-[#a8a29e] select-none">
         [{line.timestamp?.slice(11, 19)}]{' '}
       </span>
       {text}
@@ -301,7 +301,7 @@ function DetailPane({ job, logs, lossHistory, onCancel, onCopy, onReconnect, log
 
           {lossHistory.length > 1 && (
             <div className="flex items-center gap-3 bg-[#0a0a0f] rounded-md px-3 py-2 border border-[#272738]">
-              <span className="text-xs text-[#94a3b8] font-mono shrink-0">Loss</span>
+              <span className="text-xs text-[#a8a29e] font-mono shrink-0">Loss</span>
               <LossSparkline data={lossHistory} />
               <span className="text-xs font-mono text-[#10b981] font-bold shrink-0">
                 {lossHistory[lossHistory.length - 1]?.toFixed(4)}
@@ -310,23 +310,23 @@ function DetailPane({ job, logs, lossHistory, onCancel, onCopy, onReconnect, log
           )}
 
           <div className="grid grid-cols-2 gap-x-4 gap-y-1.5 text-xs">
-            <div><span className="text-[#94a3b8]">Model </span><span className="font-bold text-white font-mono">{job.base_model}</span></div>
-            <div><span className="text-[#94a3b8]">Epochs </span>
+            <div><span className="text-[#a8a29e]">Model </span><span className="font-bold text-white font-mono">{job.base_model}</span></div>
+            <div><span className="text-[#a8a29e]">Epochs </span>
               <span className="font-mono font-bold text-[#10b981]">{job.current_epoch}/{job.total_epochs}</span>
             </div>
-            <div><span className="text-[#94a3b8]">Train loss </span>
+            <div><span className="text-[#a8a29e]">Train loss </span>
               <span className="font-mono text-white">{job.train_loss?.toFixed(4) ?? '—'}</span>
             </div>
-            <div><span className="text-[#94a3b8]">Eval loss </span>
+            <div><span className="text-[#a8a29e]">Eval loss </span>
               <span className="font-mono text-white">{job.eval_loss?.toFixed(4) ?? '—'}</span>
             </div>
-            <div><span className="text-[#94a3b8]">Started </span><span className="text-white font-mono">{fmtDate(job.started_at)}</span></div>
-            <div><span className="text-[#94a3b8]">Done </span><span className="text-white font-mono">{fmtDate(job.completed_at)}</span></div>
+            <div><span className="text-[#a8a29e]">Started </span><span className="text-white font-mono">{fmtDate(job.started_at)}</span></div>
+            <div><span className="text-[#a8a29e]">Done </span><span className="text-white font-mono">{fmtDate(job.completed_at)}</span></div>
           </div>
 
           {/* Run Alias & Custom Notes */}
           <div className="pt-2 border-t border-[#1c1c28] space-y-2">
-            <div className="flex items-center justify-between text-xs font-mono uppercase text-[#94a3b8]">
+            <div className="flex items-center justify-between text-xs font-mono uppercase text-[#a8a29e]">
               <span>Run Name &amp; Notes</span>
               <span className="text-zinc-500">Persistent Metadata</span>
             </div>
@@ -373,7 +373,7 @@ function DetailPane({ job, logs, lossHistory, onCancel, onCopy, onReconnect, log
               <code className="text-xs font-mono bg-[#0a0a0f] text-[#f26625] px-2 py-0.5 rounded-md border border-[#272738] truncate max-w-[260px]">
                 {job.output_path}
               </code>
-              <Button variant="ghost" size="icon" className="h-6 w-6 shrink-0 rounded-md text-[#94a3b8] hover:text-white"
+              <Button variant="ghost" size="icon" className="h-6 w-6 shrink-0 rounded-md text-[#a8a29e] hover:text-white"
                 onClick={() => onCopy(job.output_path!)}>
                 <Copy className="h-3 w-3" />
               </Button>
@@ -407,7 +407,7 @@ function DetailPane({ job, logs, lossHistory, onCancel, onCopy, onReconnect, log
             </div>
           </CardHeader>
           <CardContent className="p-4 space-y-3">
-            <p className="text-xs text-[#94a3b8]">
+            <p className="text-xs text-[#a8a29e]">
               {job.is_simulated || job.weights_are_placeholders || job.execution_mode === 'simulated'
                 ? 'This run used a simulated execution path. Packaged adapter/GGUF files are demo placeholders, not GPU-trained model weights.'
                 : 'Training converged successfully. Weights, adapter parameters, and cryptographic DBOM verification seals have been compiled into self-contained deployable artifacts.'}
@@ -430,25 +430,25 @@ function DetailPane({ job, logs, lossHistory, onCancel, onCopy, onReconnect, log
                 onClick={handleExportGGUF}
                 className="border-[#272738] bg-[#0a0a0f] hover:bg-[#161622] text-white text-xs font-mono font-bold h-9 rounded-md flex items-center justify-center gap-2"
               >
-                {ggufLoading ? <Loader2 className="w-3.5 h-3.5 animate-spin text-[#f26625]" /> : <Cpu className="w-3.5 h-3.5 text-cyan-400" />}
+                {ggufLoading ? <Loader2 className="w-3.5 h-3.5 animate-spin text-[#f26625]" /> : <Cpu className="w-3.5 h-3.5 text-[#f26625]" />}
                 {ggufData ? 'GGUF Q4_K_M Ready' : 'Export GGUF (Ollama/LM Studio)'}
               </Button>
             </div>
 
             {ggufData && (
-              <div className="p-3 rounded-md bg-[#0a0a0f] border border-cyan-500/30 text-xs font-mono space-y-2.5">
+              <div className="p-3 rounded-md bg-[#0a0a0f] border border-[#f26625]/30 text-xs font-mono space-y-2.5">
                 <div className="flex flex-wrap items-center justify-between gap-2">
                   <div className="flex items-center gap-2">
-                    <span className="px-2 py-0.5 rounded bg-cyan-950/60 border border-cyan-500/40 text-cyan-300 font-bold text-xs">
+                    <span className="px-2 py-0.5 rounded bg-[#1b1b18]/60 border border-[#f26625]/40 text-[#d8d2c4] font-bold text-xs">
                       {ggufData.format}
                     </span>
-                    <span className="text-[#94a3b8] text-xs">{ggufData.file_size_mb} MB</span>
+                    <span className="text-[#a8a29e] text-xs">{ggufData.file_size_mb} MB</span>
                   </div>
                   <div className="flex items-center gap-1.5">
                     <Button
                       size="sm"
                       onClick={() => window.open(api.getFineTuneGGUFDownloadUrl(job.id), '_blank')}
-                      className="h-7 text-xs bg-cyan-600 hover:bg-cyan-500 text-white font-bold flex items-center gap-1 shadow-sm"
+                      className="h-7 text-xs bg-[#f26625] hover:bg-[#f26625] text-white font-bold flex items-center gap-1 shadow-sm"
                     >
                       <Download className="w-3 h-3" />
                       Download .gguf
@@ -456,7 +456,7 @@ function DetailPane({ job, logs, lossHistory, onCancel, onCopy, onReconnect, log
                     <Button
                       size="sm"
                       variant="outline"
-                      className="h-7 text-xs border-[#272738] bg-[#12121a] text-cyan-300 hover:text-white"
+                      className="h-7 text-xs border-[#272738] bg-[#12121a] text-[#d8d2c4] hover:text-white"
                       onClick={() => onCopy(ggufData.gguf_path)}
                     >
                       Copy Path
@@ -466,7 +466,7 @@ function DetailPane({ job, logs, lossHistory, onCancel, onCopy, onReconnect, log
 
                 {/* Platform & Runtime Compatibility Badges */}
                 <div className="flex flex-wrap items-center gap-1.5 pt-1 border-t border-[#1f1f2e] text-xs">
-                  <span className="text-[#94a3b8]">Target Runtimes:</span>
+                  <span className="text-[#a8a29e]">Target Runtimes:</span>
                   <span className="px-1.5 py-0.5 rounded bg-[#161622] border border-[#272738] text-zinc-300 flex items-center gap-1">
                     <Bot className="h-3 w-3" />Ollama
                   </span>
@@ -486,7 +486,7 @@ function DetailPane({ job, logs, lossHistory, onCancel, onCopy, onReconnect, log
                   <button
                     type="button"
                     onClick={handleFetchModelfile}
-                    className="text-cyan-400 hover:text-cyan-300 underline decoration-dotted flex items-center gap-1"
+                    className="text-[#f26625] hover:text-[#d8d2c4] underline decoration-dotted flex items-center gap-1"
                   >
                     <FileCode2 className="w-3.5 h-3.5" />
                     {modelfileOpen ? 'Hide Modelfile' : 'Inspect Ollama Modelfile'}
@@ -507,7 +507,7 @@ function DetailPane({ job, logs, lossHistory, onCancel, onCopy, onReconnect, log
                 </div>
 
                 {modelfileOpen && (
-                  <div className="p-2.5 bg-[#08080c] border border-[#272738] rounded max-h-36 overflow-y-auto text-xs font-mono text-[#94a3b8] whitespace-pre-wrap">
+                  <div className="p-2.5 bg-[#08080c] border border-[#272738] rounded max-h-36 overflow-y-auto text-xs font-mono text-[#a8a29e] whitespace-pre-wrap">
                     {modelfileText || 'Generating Modelfile...'}
                   </div>
                 )}
@@ -519,7 +519,7 @@ function DetailPane({ job, logs, lossHistory, onCancel, onCopy, onReconnect, log
               <button
                 type="button"
                 onClick={handleFetchModelCard}
-                className="text-[#94a3b8] hover:text-white flex items-center gap-1.5 transition-colors underline decoration-dotted"
+                className="text-[#a8a29e] hover:text-white flex items-center gap-1.5 transition-colors underline decoration-dotted"
               >
                 <FileText className="w-3.5 h-3.5 text-amber-400" />
                 {cardOpen ? 'Hide Model Card' : 'Inspect HF Model Card & DBOM Seal'}
@@ -540,7 +540,7 @@ function DetailPane({ job, logs, lossHistory, onCancel, onCopy, onReconnect, log
             </div>
 
             {cardOpen && (
-              <div className="mt-2 p-3 bg-[#0a0a0f] border border-[#272738] rounded-md max-h-48 overflow-y-auto text-xs font-mono text-[#94a3b8] whitespace-pre-wrap">
+              <div className="mt-2 p-3 bg-[#0a0a0f] border border-[#272738] rounded-md max-h-48 overflow-y-auto text-xs font-mono text-[#a8a29e] whitespace-pre-wrap">
                 {cardLoading ? 'Generating verified model card...' : cardText}
               </div>
             )}
@@ -574,7 +574,7 @@ function DetailPane({ job, logs, lossHistory, onCancel, onCopy, onReconnect, log
           <ScrollArea className="h-52 sm:h-64 rounded-md bg-[#0a0a0f] border border-[#272738]">
             <div className="p-3 space-y-0.5">
               {logs.length === 0
-                ? <p className="text-xs text-[#94a3b8] font-mono">
+                ? <p className="text-xs text-[#a8a29e] font-mono">
                     {job.status === 'running' ? 'Waiting for events…' : 'No log stream recorded for this run — logs stream here while a job is running.'}
                   </p>
                 : logs.map((line, i) => <LogRow key={i} line={line} />)
@@ -1176,7 +1176,7 @@ function FineTuneContent() {
           <span className="font-bold text-sm text-white truncate">
             {selectedJob?.output_model_name || selectedJob?.id.slice(0, 12)}
           </span>
-          <Button variant="ghost" size="icon" className="h-7 w-7 rounded-full text-[#94a3b8] hover:text-white"
+          <Button variant="ghost" size="icon" className="h-7 w-7 rounded-full text-[#a8a29e] hover:text-white"
             onClick={() => setMobileSheet(false)}>
             <X className="h-4 w-4" />
           </Button>
@@ -1203,7 +1203,7 @@ function FineTuneContent() {
               Model Training Studio
             </h1>
           </div>
-          <p className="text-xs text-[#94a3b8]">
+          <p className="text-xs text-[#a8a29e]">
             Accelerated QLoRA training and parameter optimization with automated weights delivery
           </p>
         </div>
@@ -1215,7 +1215,7 @@ function FineTuneContent() {
           <Button
             variant={tab === 'jobs' ? 'default' : 'outline'}
             size="sm"
-            className={clsx('rounded-md text-xs font-mono font-medium', tab === 'jobs' ? 'bg-[#f26625] text-white hover:bg-[#de581a] border border-[#ea580c] glow-yc' : 'border-[#272738] text-[#94a3b8] hover:text-white hover:bg-[#161622]')}
+            className={clsx('rounded-md text-xs font-mono font-medium', tab === 'jobs' ? 'bg-[#f26625] text-white hover:bg-[#de581a] border border-[#ea580c]' : 'border-[#272738] text-[#a8a29e] hover:text-white hover:bg-[#161622]')}
             onClick={() => setTab('jobs')}
           >
             <List className="h-3.5 w-3.5 mr-1" />Training Runs ({jobs.length})
@@ -1223,7 +1223,7 @@ function FineTuneContent() {
           <Button
             variant={tab === 'new' ? 'default' : 'outline'}
             size="sm"
-            className={clsx('rounded-md text-xs font-mono font-medium', tab === 'new' ? 'bg-[#f26625] text-white hover:bg-[#de581a] border border-[#ea580c] glow-yc' : 'border-[#272738] text-[#94a3b8] hover:text-white hover:bg-[#161622]')}
+            className={clsx('rounded-md text-xs font-mono font-medium', tab === 'new' ? 'bg-[#f26625] text-white hover:bg-[#de581a] border border-[#ea580c]' : 'border-[#272738] text-[#a8a29e] hover:text-white hover:bg-[#161622]')}
             onClick={() => setTab('new')}
           >
             <Plus className="h-3.5 w-3.5 mr-1" />Train New Model
@@ -1244,7 +1244,7 @@ function FineTuneContent() {
           <Card key={key} className={clsx('border-l-4 bg-[#12121a]/90 backdrop-blur-sm border-[#272738] rounded-md card-shadow glow-card-hover group', stripe)}>
             <CardContent className="pt-4 pb-4 px-4 flex items-center justify-between">
               <div>
-                <p className="text-xs text-[#94a3b8] font-mono uppercase tracking-wider">{label}</p>
+                <p className="text-xs text-[#a8a29e] font-mono uppercase tracking-wider">{label}</p>
                 <p className={clsx('text-2xl font-bold font-mono mt-0.5 tnum tracking-tight', color)}>{counts[key]}</p>
               </div>
               <div className={clsx('w-9 h-9 rounded-md flex items-center justify-center border border-white/5 transition-transform group-hover:scale-110', bg)}>
@@ -1301,13 +1301,13 @@ function FineTuneContent() {
 
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                   <div>
-                    <label className="text-xs mb-1 block font-bold font-mono uppercase text-[#94a3b8]">JSONL file path</label>
+                    <label className="text-xs mb-1 block font-bold font-mono uppercase text-[#a8a29e]">JSONL file path</label>
                     <Input placeholder="outputs/my-dataset.jsonl" className="rounded-md border-[#272738] bg-[#0a0a0f] text-white focus:border-[#f26625] text-xs font-mono"
                       value={form.dataset_path}
                       onChange={e => f('dataset_path', e.target.value)} />
                   </div>
                   <div>
-                    <label className="text-xs mb-1 block font-bold font-mono uppercase text-[#94a3b8]">Or Dataset ID (from DB)</label>
+                    <label className="text-xs mb-1 block font-bold font-mono uppercase text-[#a8a29e]">Or Dataset ID (from DB)</label>
                     <Input placeholder="17487774-1b8e-..." className="rounded-md border-[#272738] bg-[#0a0a0f] text-white focus:border-[#f26625] text-xs font-mono"
                       value={form.dataset_id}
                       onChange={e => f('dataset_id', e.target.value)} />
@@ -1318,7 +1318,7 @@ function FineTuneContent() {
               <Section title="Base Model">
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                   <div>
-                    <label className="text-xs mb-1 block font-bold font-mono uppercase text-[#94a3b8]">Model Architecture</label>
+                    <label className="text-xs mb-1 block font-bold font-mono uppercase text-[#a8a29e]">Model Architecture</label>
                     <Select value={form.base_model}
                       onValueChange={v => f('base_model', v)}>
                       <SelectTrigger className="rounded-md border-[#272738] bg-[#0a0a0f] text-white text-xs font-mono"><SelectValue /></SelectTrigger>
@@ -1338,13 +1338,13 @@ function FineTuneContent() {
                     />
                   </div>
                   <div>
-                    <label className="text-xs mb-1 block font-bold font-mono uppercase text-[#94a3b8]">Output model tag</label>
+                    <label className="text-xs mb-1 block font-bold font-mono uppercase text-[#a8a29e]">Output model tag</label>
                     <Input placeholder="my-finetuned-model" className="rounded-md border-[#272738] bg-[#0a0a0f] text-white focus:border-[#f26625] text-xs font-mono"
                       value={form.output_model_name}
                       onChange={e => f('output_model_name', e.target.value)} />
                   </div>
                   <div>
-                    <label className="text-xs mb-1 block font-bold font-mono uppercase text-[#94a3b8]">Chat template</label>
+                    <label className="text-xs mb-1 block font-bold font-mono uppercase text-[#a8a29e]">Chat template</label>
                     <Select value={form.chat_template}
                       onValueChange={v => f('chat_template', v)}>
                       <SelectTrigger className="rounded-md border-[#272738] bg-[#0a0a0f] text-white text-xs font-mono"><SelectValue /></SelectTrigger>
@@ -1358,7 +1358,7 @@ function FineTuneContent() {
                     </Select>
                   </div>
                   <div>
-                    <label className="text-xs mb-1 block font-bold font-mono uppercase text-[#94a3b8]">Hardware Acceleration Engine</label>
+                    <label className="text-xs mb-1 block font-bold font-mono uppercase text-[#a8a29e]">Hardware Acceleration Engine</label>
                     <Select value={form.execution_target}
                       onValueChange={v => f('execution_target', v)}>
                       <SelectTrigger className="rounded-md border-[#272738] bg-[#0a0a0f] text-white text-xs font-mono"><SelectValue /></SelectTrigger>
@@ -1377,7 +1377,7 @@ function FineTuneContent() {
                       const downloadUrl = signedStreamUrl || `${apiBase}/jobs/${dsId}/download`
 
                       return (
-                        <div className="mt-2.5 p-3.5 rounded-lg bg-[#14141f] border border-[#f26625]/40 space-y-2.5 font-mono text-xs">
+                        <div className="mt-2.5 p-3.5 rounded-lg bg-[#12121a] border border-[#f26625]/40 space-y-2.5 font-mono text-xs">
                           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-[#272738] pb-2">
                             <div>
                               <div className="text-white font-bold flex items-center gap-1.5">
@@ -1506,7 +1506,7 @@ LORA_ALPHA = ${form.lora_alpha}`}
 
                             <div className="p-3 rounded bg-[#0a0a0f] border border-[#272738] space-y-2 text-xs font-mono leading-relaxed">
                               <div className="flex items-start gap-2 border-b border-[#1c1c2b] pb-2">
-                                <span className="px-1.5 py-0.5 text-xs font-bold rounded bg-blue-500/15 text-blue-400 shrink-0">
+                                <span className="px-1.5 py-0.5 text-xs font-bold rounded bg-[#f26625]/15 text-[#f26625] shrink-0">
                                   Cell 1 [GPU & Setup]
                                 </span>
                                 <div className="text-zinc-300">
@@ -1515,7 +1515,7 @@ LORA_ALPHA = ${form.lora_alpha}`}
                               </div>
 
                               <div className="flex items-start gap-2 border-b border-[#1c1c2b] pb-2">
-                                <span className="px-1.5 py-0.5 text-xs font-bold rounded bg-purple-500/15 text-purple-400 shrink-0">
+                                <span className="px-1.5 py-0.5 text-xs font-bold rounded bg-[#f26625]/15 text-[#f26625] shrink-0">
                                   Cell 2 [Data Stream]
                                 </span>
                                 <div className="text-zinc-300">
@@ -1560,7 +1560,7 @@ LORA_ALPHA = ${form.lora_alpha}`}
                     { key: 'lora_alpha',                  label: 'LoRA alpha',    tip: 'LoRA scaling (usually 2× rank)',    int: true  },
                   ] as const).map(({ key, label, tip, int: isInt }) => (
                     <div key={key}>
-                      <label className="text-xs mb-1 block font-bold font-mono uppercase text-[#94a3b8]" title={tip}>
+                      <label className="text-xs mb-1 block font-bold font-mono uppercase text-[#a8a29e]" title={tip}>
                         {label}
                       </label>
                       <Input
@@ -1587,7 +1587,7 @@ LORA_ALPHA = ${form.lora_alpha}`}
                         checked={form[key] as boolean}
                         onCheckedChange={v => f(key, v)}
                       />
-                      <label htmlFor={key} className="text-xs text-[#94a3b8] cursor-pointer">
+                      <label htmlFor={key} className="text-xs text-[#a8a29e] cursor-pointer">
                         {label}
                       </label>
                     </div>
@@ -1599,20 +1599,20 @@ LORA_ALPHA = ${form.lora_alpha}`}
                 <div className="flex items-center gap-2 mb-2">
                   <Switch id="push_hub" checked={form.push_to_hub}
                     onCheckedChange={v => f('push_to_hub', v)} />
-                  <label htmlFor="push_hub" className="text-xs text-[#94a3b8] cursor-pointer">
+                  <label htmlFor="push_hub" className="text-xs text-[#a8a29e] cursor-pointer">
                     Push adapter weights to Hugging Face Hub after training
                   </label>
                 </div>
                 {form.push_to_hub && (
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                     <div>
-                      <label className="text-xs mb-1 block font-bold font-mono uppercase text-[#94a3b8]">HF Token</label>
+                      <label className="text-xs mb-1 block font-bold font-mono uppercase text-[#a8a29e]">HF Token</label>
                       <Input type="password" placeholder="hf_..." className="rounded-md border-[#272738] bg-[#0a0a0f] text-white focus:border-[#f26625] text-xs font-mono"
                         value={form.hf_token}
                         onChange={e => f('hf_token', e.target.value)} />
                     </div>
                     <div>
-                      <label className="text-xs mb-1 block font-bold font-mono uppercase text-[#94a3b8]">Org / Namespace (optional)</label>
+                      <label className="text-xs mb-1 block font-bold font-mono uppercase text-[#a8a29e]">Org / Namespace (optional)</label>
                       <Input placeholder="my-org" className="rounded-md border-[#272738] bg-[#0a0a0f] text-white focus:border-[#f26625] text-xs font-mono"
                         value={form.hf_org}
                         onChange={e => f('hf_org', e.target.value)} />
@@ -1623,7 +1623,7 @@ LORA_ALPHA = ${form.lora_alpha}`}
 
               <Section title="Webhooks & Notifications (Optional)" defaultOpen={false}>
                 <div>
-                  <label className="text-xs mb-1 block font-bold font-mono uppercase text-[#94a3b8]">
+                  <label className="text-xs mb-1 block font-bold font-mono uppercase text-[#a8a29e]">
                     Webhook URL (Discord / Slack / Generic HTTP)
                   </label>
                   <Input
@@ -1632,7 +1632,7 @@ LORA_ALPHA = ${form.lora_alpha}`}
                     value={form.webhook_url}
                     onChange={e => f('webhook_url', e.target.value)}
                   />
-                  <p className="text-xs text-[#64748b] mt-1 font-mono">
+                  <p className="text-xs text-[#a8a29e] mt-1 font-mono">
                     Dispatches asynchronous status alerts, training loss, and artifact download links upon job completion or failure.
                   </p>
                 </div>
@@ -1641,7 +1641,7 @@ LORA_ALPHA = ${form.lora_alpha}`}
               <Button
                 type="submit"
                 disabled={submitting}
-                className="w-full bg-[#f26625] hover:bg-[#de581a] border border-[#ea580c] text-white rounded-md font-mono text-xs font-bold h-9 shadow-sm glow-yc flex items-center justify-center gap-2 transition-colors"
+                className="w-full bg-[#f26625] hover:bg-[#de581a] border border-[#ea580c] text-white rounded-md font-mono text-xs font-bold h-9 shadow-sm flex items-center justify-center gap-2 transition-colors"
               >
                 {submitting ? (
                   <><Loader2 className="h-4 w-4 animate-spin text-white mr-2" />Starting Accelerated Training…</>
@@ -1667,8 +1667,8 @@ LORA_ALPHA = ${form.lora_alpha}`}
                     <div className="w-14 h-14 rounded-lg bg-[#161622] border border-[#272738] flex items-center justify-center">
                       <Cpu className="h-7 w-7 text-[#f26625]" />
                     </div>
-                    <p className="text-xs text-[#94a3b8] font-mono">No fine-tuning sessions recorded</p>
-                    <Button size="sm" className="bg-[#f26625] hover:bg-[#de581a] border border-[#ea580c] text-white rounded-md font-mono text-xs glow-yc" onClick={() => setTab('new')}>
+                    <p className="text-xs text-[#a8a29e] font-mono">No fine-tuning sessions recorded</p>
+                    <Button size="sm" className="bg-[#f26625] hover:bg-[#de581a] border border-[#ea580c] text-white rounded-md font-mono text-xs" onClick={() => setTab('new')}>
                       <Plus className="h-3.5 w-3.5 mr-1 text-white" />Create first job
                     </Button>
                   </div>
@@ -1690,7 +1690,7 @@ LORA_ALPHA = ${form.lora_alpha}`}
                         <p className="text-xs font-bold text-white truncate">
                           {job.output_model_name || job.id.slice(0, 8)}
                         </p>
-                        <p className="text-xs text-[#94a3b8] font-mono truncate mt-0.5">
+                        <p className="text-xs text-[#a8a29e] font-mono truncate mt-0.5">
                           {job.base_model}
                         </p>
                       </div>
@@ -1699,12 +1699,12 @@ LORA_ALPHA = ${form.lora_alpha}`}
                     {job.status === 'running' && (
                       <div className="mt-2 space-y-1">
                         <Progress value={job.progress ?? 0} className="h-1.5 bg-[#0a0a0f]" />
-                        <p className="text-xs font-mono text-[#94a3b8]">
+                        <p className="text-xs font-mono text-[#a8a29e]">
                           {(job.progress ?? 0).toFixed(0)}% · epoch {job.current_epoch}/{job.total_epochs}
                         </p>
                       </div>
                     )}
-                    <p className="text-xs font-mono text-[#64748b] mt-1.5">
+                    <p className="text-xs font-mono text-[#a8a29e] mt-1.5">
                       {fmtDate(job.created_at)}
                     </p>
                   </div>
@@ -1724,8 +1724,8 @@ LORA_ALPHA = ${form.lora_alpha}`}
               )
               : (
                 <div className="flex flex-col items-center justify-center h-full min-h-[420px] border border-dashed border-[#272738] bg-[#12121a] rounded-md gap-3">
-                  <Cpu className="h-10 w-10 text-[#64748b]" />
-                  <p className="text-xs text-[#94a3b8] font-mono">
+                  <Cpu className="h-10 w-10 text-[#a8a29e]" />
+                  <p className="text-xs text-[#a8a29e] font-mono">
                     Select a job to view details &amp; live training telemetry
                   </p>
                 </div>

@@ -11,12 +11,7 @@ export default function DashboardLayout({
   children: React.ReactNode
 }) {
   return (
-    <div className="relative min-h-screen bg-[#0a0a0f] text-[#f8fafc] flex flex-col font-sans antialiased bg-dot-grid selection:bg-[#f26625]/30 selection:text-white">
-      {/* Ambient Lighting Gradient Beam */}
-      <div 
-        aria-hidden="true" 
-        className="pointer-events-none fixed inset-x-0 top-0 h-[480px] bg-[radial-gradient(ellipse_80%_60%_at_50%_-15%,rgba(242,102,37,0.12),rgba(99,102,241,0.04)_45%,transparent_75%)] z-0"
-      />
+    <div className="relative min-h-screen bg-[#0a0a0f] text-[#f5f2ea] flex flex-col font-sans antialiased bg-dot-grid selection:bg-[#f26625]/30 selection:text-white">
       
       <div className="relative z-10 flex flex-col min-h-screen">
         <TopNav />
@@ -26,7 +21,7 @@ export default function DashboardLayout({
         </main>
 
         {/* Global App Shell Footer */}
-        <footer className="w-full border-t border-[#1f1f2e] bg-[#08080d]/90 backdrop-blur-md mt-auto py-5 px-4 sm:px-8 text-xs font-mono text-[#94a3b8]">
+        <footer className="w-full border-t border-[#1f1f2e] bg-[#08080d]/90 backdrop-blur-md mt-auto py-5 px-4 sm:px-8 text-xs font-mono text-[#a8a29e]">
           <div className="max-w-[1600px] mx-auto flex flex-col md:flex-row items-center justify-between gap-4">
             {/* Left: Brand Identity & Honesty Note */}
             <div className="flex flex-wrap items-center gap-3 text-center md:text-left">
@@ -60,7 +55,7 @@ export default function DashboardLayout({
                 System Status
               </Link>
               <span className="text-[#334155]">|</span>
-              <span className="text-[#64748b]">
+              <span className="text-[#a8a29e]">
                 Apache-2.0 License · Self-Hostable
               </span>
             </div>

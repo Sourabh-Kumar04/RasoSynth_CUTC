@@ -43,8 +43,8 @@ const STAGES: FlowStage[] = [
     title: 'DBOM Attestation',
     subtitle: 'SHA-256 Merkle Root · HF & GGUF',
     metric: '100% Cryptographic Proof',
-    icon: <ShieldCheck className="w-4 h-4 text-purple-400" />,
-    color: '#a855f7',
+    icon: <ShieldCheck className="w-4 h-4 text-[#f26625]" />,
+    color: '#f26625',
   },
 ]
 
@@ -52,7 +52,7 @@ export function SynthesisFlowDiagram() {
   const [activeStage, setActiveStage] = useState<string>('synthesize')
 
   return (
-    <div className="w-full my-8 p-6 rounded-2xl bg-[#0c0c14]/90 border border-[#272738] shadow-2xl relative overflow-hidden backdrop-blur-md">
+    <div className="w-full my-8 p-6 rounded-2xl bg-[#0a0a0f]/90 border border-[#272738] shadow-2xl relative overflow-hidden backdrop-blur-md">
       {/* Background Aura */}
       <div className="absolute -top-24 left-1/2 -translate-x-1/2 w-96 h-48 bg-[#f26625]/10 rounded-full blur-3xl pointer-events-none" />
 
@@ -82,17 +82,7 @@ export function SynthesisFlowDiagram() {
           className="min-w-[800px] w-full h-auto select-none"
         >
           <defs>
-            <linearGradient id="flow-line-grad" x1="0%" y1="0%" x2="100%" y2="0%">
-              <stop offset="0%" stopColor="#f26625" />
-              <stop offset="35%" stopColor="#fb923c" />
-              <stop offset="70%" stopColor="#10b981" />
-              <stop offset="100%" stopColor="#a855f7" />
-            </linearGradient>
 
-            <filter id="glow-filter" x="-20%" y="-20%" width="140%" height="140%">
-              <feGaussianBlur stdDeviation="2" result="blur" />
-              <feComposite in="SourceGraphic" in2="blur" operator="over" />
-            </filter>
           </defs>
 
           {/* Main Transit Pipeline Highway */}
@@ -112,7 +102,7 @@ export function SynthesisFlowDiagram() {
             y1="60"
             x2="840"
             y2="60"
-            stroke="url(#flow-line-grad)"
+            stroke="#f26625"
             strokeWidth="2.5"
             strokeDasharray="8 6"
             strokeLinecap="round"
@@ -121,7 +111,7 @@ export function SynthesisFlowDiagram() {
 
           {/* Node 1: Extract (cx: 110) */}
           <g className="cursor-pointer" onClick={() => setActiveStage('extract')}>
-            <circle cx="110" cy="60" r="26" fill="#12121a" stroke="#f26625" strokeWidth="2" filter="url(#glow-filter)" />
+            <circle cx="110" cy="60" r="26" fill="#12121a" stroke="#f26625" strokeWidth="2" />
             <circle cx="110" cy="60" r="6" fill="#f26625" />
             <text x="110" y="104" textAnchor="middle" fill="#ffffff" fontSize="11" fontFamily="monospace" fontWeight="bold">01. INGEST</text>
           </g>
@@ -131,7 +121,7 @@ export function SynthesisFlowDiagram() {
 
           {/* Node 2: Synthesize (cx: 350) */}
           <g className="cursor-pointer" onClick={() => setActiveStage('synthesize')}>
-            <circle cx="350" cy="60" r="28" fill="#12121a" stroke="#fb923c" strokeWidth="2.5" filter="url(#glow-filter)" />
+            <circle cx="350" cy="60" r="28" fill="#12121a" stroke="#fb923c" strokeWidth="2.5" />
             <circle cx="350" cy="60" r="7" fill="#fb923c" />
             <text x="350" y="104" textAnchor="middle" fill="#ffffff" fontSize="11" fontFamily="monospace" fontWeight="bold">02. SYNTHESIZE</text>
           </g>
@@ -141,18 +131,18 @@ export function SynthesisFlowDiagram() {
 
           {/* Node 3: Quality Judge (cx: 590) */}
           <g className="cursor-pointer" onClick={() => setActiveStage('judge')}>
-            <circle cx="590" cy="60" r="26" fill="#12121a" stroke="#10b981" strokeWidth="2" filter="url(#glow-filter)" />
+            <circle cx="590" cy="60" r="26" fill="#12121a" stroke="#10b981" strokeWidth="2" />
             <circle cx="590" cy="60" r="6" fill="#10b981" />
             <text x="590" y="104" textAnchor="middle" fill="#ffffff" fontSize="11" fontFamily="monospace" fontWeight="bold">03. EVALUATE</text>
           </g>
 
           {/* Flow Indicator 3 -> 4 */}
-          <polygon points="750,56 760,60 750,64" fill="#a855f7" />
+          <polygon points="750,56 760,60 750,64" fill="#f26625" />
 
           {/* Node 4: DBOM Attestation (cx: 810) */}
           <g className="cursor-pointer" onClick={() => setActiveStage('attest')}>
-            <circle cx="810" cy="60" r="26" fill="#12121a" stroke="#a855f7" strokeWidth="2" filter="url(#glow-filter)" />
-            <circle cx="810" cy="60" r="6" fill="#a855f7" />
+            <circle cx="810" cy="60" r="26" fill="#12121a" stroke="#f26625" strokeWidth="2" />
+            <circle cx="810" cy="60" r="6" fill="#f26625" />
             <text x="810" y="104" textAnchor="middle" fill="#ffffff" fontSize="11" fontFamily="monospace" fontWeight="bold">04. ATTEST</text>
           </g>
         </svg>

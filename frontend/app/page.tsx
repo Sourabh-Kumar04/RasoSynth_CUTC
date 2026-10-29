@@ -342,12 +342,12 @@ export default function ZenPortalPage() {
   return (
     <div
       ref={canvasRef}
-      className="relative min-h-screen bg-[#0a0a0f] text-[#f8fafc] overflow-hidden selection:bg-[#f26625]/30 selection:text-white font-sans"
+      className="relative min-h-screen bg-[#0a0a0f] text-[#f5f2ea] overflow-hidden selection:bg-[#f26625]/30 selection:text-white font-sans"
     >
       {/* GSAP Fluid Aura Field */}
       <div
         ref={auraRef}
-        className="pointer-events-none absolute -top-0 -left-0 w-[500px] h-[500px] rounded-full bg-[radial-gradient(circle,rgba(242,102,37,0.1)_0%,rgba(242,102,37,0.02)_40%,transparent_70%)] blur-3xl z-0"
+        className="pointer-events-none absolute -top-0 -left-0 w-[500px] h-[500px] rounded-full bg-[#f26625]/5 z-0"
       />
 
       {/* Subtle Spatial Dot Grid (negative space backdrop) */}
@@ -362,7 +362,7 @@ export default function ZenPortalPage() {
             <BrandLogo size={32} />
             <div className="flex flex-col">
               <span className="font-display text-sm font-bold tracking-tight text-white">
-                Raso<span className="bg-gradient-to-r from-[#f26625] via-[#ff8238] to-[#f59e0b] bg-clip-text text-transparent">Synth</span><span className="text-[#94a3b8] font-semibold">Tune</span>
+                Raso<span className="text-[#f26625]">Synth</span><span className="text-[#a8a29e] font-semibold">Tune</span>
               </span>
               <span className="text-xs font-mono text-zinc-400 uppercase tracking-widest">
                 Sovereign Synthesis Hub
@@ -552,7 +552,7 @@ export default function ZenPortalPage() {
           className="text-3xl sm:text-5xl lg:text-6xl font-extrabold tracking-tight text-center text-white font-display max-w-4xl leading-[1.15]"
         >
           Autonomous Dataset <br className="hidden sm:inline" />
-          <span className="bg-gradient-to-r from-white via-zinc-200 to-[#f26625] bg-clip-text text-transparent">
+          <span className="text-[#f26625]">
             Synthesis &amp; Alignment.
           </span>
         </motion.h1>
@@ -679,7 +679,7 @@ export default function ZenPortalPage() {
           </Link>
           <span className="text-zinc-700">·</span>
           <Link href="/review" className="flex items-center gap-2 hover:text-zinc-300 transition-colors group">
-            <Lock className="w-3.5 h-3.5 text-purple-400" />
+            <Lock className="w-3.5 h-3.5 text-[#f26625]" />
             <span>DBOM Proofs: <strong className="text-zinc-200 font-normal group-hover:text-white">SHA-256 Merkle Sealed</strong></span>
           </Link>
           <span className="text-zinc-700">·</span>
@@ -822,7 +822,7 @@ export default function ZenPortalPage() {
       <section id="dbom" className="relative z-10 max-w-6xl mx-auto px-6 py-20 border-t border-[#1c1c28]">
         <div className="mb-10 flex flex-col sm:flex-row sm:items-end justify-between gap-4">
           <div>
-            <div className="flex items-center space-x-2 text-xs font-mono uppercase tracking-widest text-purple-400 mb-1">
+            <div className="flex items-center space-x-2 text-xs font-mono uppercase tracking-widest text-[#f26625] mb-1">
               <ShieldCheck className="w-3.5 h-3.5" />
               <span>Cryptographic Provenance Guarantee</span>
             </div>
@@ -848,7 +848,7 @@ export default function ZenPortalPage() {
             </button>
             <Link
               href="/review"
-              className="text-xs font-mono text-purple-400 hover:text-purple-300 flex items-center space-x-1"
+              className="text-xs font-mono text-[#f26625] hover:text-[#d8d2c4] flex items-center space-x-1"
             >
               <span>Verify Certificates</span>
               <ExternalLink className="w-3 h-3" />
@@ -863,9 +863,9 @@ export default function ZenPortalPage() {
               initial={{ opacity: 0, y: 10 }}
               animate={{ opacity: 1, y: 0 }}
               exit={{ opacity: 0, y: 10 }}
-              className="mb-8 p-5 rounded-xl border border-purple-500/40 bg-[#0e0c18] font-mono text-xs text-zinc-300 space-y-4"
+              className="mb-8 p-5 rounded-xl border border-[#f26625]/40 bg-[#0a0a0f] font-mono text-xs text-zinc-300 space-y-4"
             >
-              <div className="flex items-center justify-between border-b border-purple-900/40 pb-3">
+              <div className="flex items-center justify-between border-b border-[#4a463f]/40 pb-3">
                 <div className="flex items-center gap-2">
                   <ShieldCheck className="w-4 h-4 text-[#f26625]" />
                   <span className="font-bold text-white uppercase tracking-wider">
@@ -883,32 +883,32 @@ export default function ZenPortalPage() {
               </div>
 
               <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                <div className="p-3 rounded-lg bg-[#07060d] border border-purple-900/30 space-y-1.5">
+                <div className="p-3 rounded-lg bg-[#0a0a0f] border border-[#4a463f]/30 space-y-1.5">
                   <span className="text-xs text-[#f26625] font-bold">STEP 1: Export Payload</span>
                   <p className="text-xs text-zinc-400 font-sans">
                     Download the raw certified JSONL samples from the dataset library.
                   </p>
-                  <code className="text-xs text-purple-300 block bg-[#12101e] p-1.5 rounded overflow-x-auto">
+                  <code className="text-xs text-[#d8d2c4] block bg-[#12121a] p-1.5 rounded overflow-x-auto">
                     curl -s https://rasosynthtune.vercel.app/api/export -o samples.jsonl
                   </code>
                 </div>
 
-                <div className="p-3 rounded-lg bg-[#07060d] border border-purple-900/30 space-y-1.5">
-                  <span className="text-xs text-purple-400 font-bold">STEP 2: Compute SHA-256</span>
+                <div className="p-3 rounded-lg bg-[#0a0a0f] border border-[#4a463f]/30 space-y-1.5">
+                  <span className="text-xs text-[#f26625] font-bold">STEP 2: Compute SHA-256</span>
                   <p className="text-xs text-zinc-400 font-sans">
                     Run native standard SHA-256 on your local machine to obtain leaf digests.
                   </p>
-                  <code className="text-xs text-purple-300 block bg-[#12101e] p-1.5 rounded overflow-x-auto">
+                  <code className="text-xs text-[#d8d2c4] block bg-[#12121a] p-1.5 rounded overflow-x-auto">
                     python3 -c &quot;import hashlib; print(hashlib.sha256(open(&apos;samples.jsonl&apos;,&apos;rb&apos;).read()).hexdigest())&quot;
                   </code>
                 </div>
 
-                <div className="p-3 rounded-lg bg-[#07060d] border border-purple-900/30 space-y-1.5">
+                <div className="p-3 rounded-lg bg-[#0a0a0f] border border-[#4a463f]/30 space-y-1.5">
                   <span className="text-xs text-emerald-400 font-bold">STEP 3: Fold Merkle Parent</span>
                   <p className="text-xs text-zinc-400 font-sans">
                     Pairwise hash siblings: H(Leaf0 || Leaf1). Example 64-hex root (illustrative):
                   </p>
-                  <code className="text-xs text-emerald-300 block bg-[#12101e] p-1.5 rounded overflow-x-auto truncate">
+                  <code className="text-xs text-emerald-300 block bg-[#12121a] p-1.5 rounded overflow-x-auto truncate">
                     9b87df7a3982f6e9b418a096c429712a5542a1ef248f27af3b028da3d91cf972
                   </code>
                 </div>
@@ -938,7 +938,7 @@ export default function ZenPortalPage() {
                   {isRecomputing ? (
                     <div className="w-3 h-3 border-2 border-white border-t-transparent rounded-full animate-spin" />
                   ) : (
-                    <Zap className="w-3 h-3 text-purple-300" />
+                    <Zap className="w-3 h-3 text-[#d8d2c4]" />
                   )}
                   <span>{recomputedRoot ? 'Re-run Demo' : 'Run 2-Sample Demo'}</span>
                 </button>
@@ -972,10 +972,10 @@ export default function ZenPortalPage() {
           </div>
 
           {/* Right Column: Digital Data Nutrition Label Card */}
-          <div className="lg:col-span-5 p-5 rounded-xl border border-[#272738] bg-[#0c0c14] space-y-4">
+          <div className="lg:col-span-5 p-5 rounded-xl border border-[#272738] bg-[#0a0a0f] space-y-4">
             <div className="flex items-center justify-between pb-3 border-b border-[#1c1c28]">
               <div className="flex items-center gap-2">
-                <FileText className="w-4 h-4 text-purple-400" />
+                <FileText className="w-4 h-4 text-[#f26625]" />
                 <span className="text-xs font-mono font-bold text-white uppercase tracking-wider">
                   Data Nutrition Facts (Reference Example)
                 </span>
@@ -1045,7 +1045,7 @@ export default function ZenPortalPage() {
         </div>
 
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-          <div className="p-5 rounded-xl border border-[#272738] bg-[#0c0c14] space-y-2">
+          <div className="p-5 rounded-xl border border-[#272738] bg-[#0a0a0f] space-y-2">
             <span className="text-xs font-mono text-zinc-500 uppercase">Reasoning Depth</span>
             <div className="text-2xl font-bold text-white font-mono">+48.2%</div>
             <p className="text-xs text-zinc-400">Cognitive multi-step reasoning steps vs generic web crawling.</p>
@@ -1054,7 +1054,7 @@ export default function ZenPortalPage() {
             </div>
           </div>
 
-          <div className="p-5 rounded-xl border border-[#272738] bg-[#0c0c14] space-y-2">
+          <div className="p-5 rounded-xl border border-[#272738] bg-[#0a0a0f] space-y-2">
             <span className="text-xs font-mono text-zinc-500 uppercase">Statutory Grounding</span>
             <div className="text-2xl font-bold text-emerald-400 font-mono">99.4%</div>
             <p className="text-xs text-zinc-400">Verified statutory and circular citations with zero hallucination.</p>
@@ -1063,21 +1063,21 @@ export default function ZenPortalPage() {
             </div>
           </div>
 
-          <div className="p-5 rounded-xl border border-[#272738] bg-[#0c0c14] space-y-2">
+          <div className="p-5 rounded-xl border border-[#272738] bg-[#0a0a0f] space-y-2">
             <span className="text-xs font-mono text-zinc-500 uppercase">Script Fidelity</span>
-            <div className="text-2xl font-bold text-purple-400 font-mono">99.8%</div>
+            <div className="text-2xl font-bold text-[#f26625] font-mono">99.8%</div>
             <p className="text-xs text-zinc-400">Zero Romanized transliteration leakage on native Indic corpora.</p>
             <div className="w-full bg-[#1c1c28] h-1.5 rounded-full overflow-hidden mt-3">
-              <div className="bg-purple-400 h-full rounded-full" style={{ width: '99.8%' }} />
+              <div className="bg-[#f26625] h-full rounded-full" style={{ width: '99.8%' }} />
             </div>
           </div>
 
-          <div className="p-5 rounded-xl border border-[#272738] bg-[#0c0c14] space-y-2">
+          <div className="p-5 rounded-xl border border-[#272738] bg-[#0a0a0f] space-y-2">
             <span className="text-xs font-mono text-zinc-500 uppercase">Deduplication Distance</span>
-            <div className="text-2xl font-bold text-cyan-400 font-mono">0.85</div>
+            <div className="text-2xl font-bold text-[#f26625] font-mono">0.85</div>
             <p className="text-xs text-zinc-400">Cosine similarity threshold eliminating redundant synthetic tokens.</p>
             <div className="w-full bg-[#1c1c28] h-1.5 rounded-full overflow-hidden mt-3">
-              <div className="bg-cyan-400 h-full rounded-full" style={{ width: '85%' }} />
+              <div className="bg-[#f26625] h-full rounded-full" style={{ width: '85%' }} />
             </div>
           </div>
         </div>
@@ -1151,7 +1151,7 @@ export default function ZenPortalPage() {
               <div className="flex items-center space-x-2">
                 <BrandLogo size={24} />
                 <span className="font-display font-bold text-white text-sm tracking-tight">
-                  Raso<span className="bg-gradient-to-r from-[#f26625] via-[#ff8238] to-[#f59e0b] bg-clip-text text-transparent">Synth</span><span className="text-[#94a3b8] font-semibold">Tune</span>
+                  Raso<span className="text-[#f26625]">Synth</span><span className="text-[#a8a29e] font-semibold">Tune</span>
                 </span>
               </div>
               <p className="text-xs text-zinc-400 leading-relaxed font-sans">

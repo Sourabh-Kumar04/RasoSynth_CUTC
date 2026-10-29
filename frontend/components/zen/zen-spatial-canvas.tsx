@@ -88,17 +88,17 @@ export function ZenSpatialCanvas({
             : 'border-[#272738]/60 bg-[#08080c]'
         }`}
       >
-        {/* GSAP Radial Glow Aura */}
+        {/* GSAP Cursor Spotlight */}
         <div
           ref={auraRef}
-          className="pointer-events-none absolute -top-0 -left-0 w-[350px] h-[350px] rounded-full bg-[radial-gradient(circle,rgba(242,102,37,0.12)_0%,transparent_70%)] blur-2xl"
+          className="pointer-events-none absolute -top-0 -left-0 w-[350px] h-[350px] rounded-full bg-[#f26625]/5"
         />
 
         {/* Subtle Micro-Grid Backdrop */}
         <div className="absolute inset-0 bg-dot-grid opacity-25 pointer-events-none" />
 
         {/* Aperture Controls Bar */}
-        <div className="relative z-10 flex items-center justify-end px-5 py-2.5 border-b border-[#1c1c28]/60 backdrop-blur-sm text-xs font-mono text-[#64748b]">
+        <div className="relative z-10 flex items-center justify-end px-5 py-2.5 border-b border-[#1c1c28]/60 backdrop-blur-sm text-xs font-mono text-[#a8a29e]">
           <div className="flex items-center gap-2">
             <button
               type="button"

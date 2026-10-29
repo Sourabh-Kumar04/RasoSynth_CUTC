@@ -31,10 +31,10 @@ interface CheckpointPanelProps {
 }
 
 const stageColors: Record<string, string> = {
-  discovery: 'bg-blue-500',
+  discovery: 'bg-[#d8d2c4]',
   extraction: 'bg-green-500',
   filtering: 'bg-yellow-500',
-  construction: 'bg-purple-500',
+  construction: 'bg-[#fb923c]',
   export: 'bg-orange-500',
   completed: 'bg-emerald-500',
 }

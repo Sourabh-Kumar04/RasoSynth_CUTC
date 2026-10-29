@@ -41,7 +41,7 @@ export function StatusStrip({ items, className }: { items: StatusItem[]; classNa
             <span className={clsx('h-2 w-2 shrink-0 rounded-full', t.dot)} aria-hidden="true" />
             <Icon className="h-3.5 w-3.5 shrink-0" />
             {item.label}
-            {item.qualifier ? <span className="font-sans font-normal text-[#94a3b8]">{item.qualifier}</span> : null}
+            {item.qualifier ? <span className="font-sans font-normal text-[#a8a29e]">{item.qualifier}</span> : null}
           </span>
         )
       })}

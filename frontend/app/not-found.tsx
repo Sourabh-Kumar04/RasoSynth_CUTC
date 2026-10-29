@@ -11,7 +11,7 @@ export default function NotFound() {
         HTTP 404 · Route Not Found
       </span>
       <h1 className="text-2xl font-bold text-white mb-2">Endpoint or Resource Does Not Exist</h1>
-      <p className="text-xs text-[#94a3b8] max-w-md mb-8">
+      <p className="text-xs text-[#a8a29e] max-w-md mb-8">
         The requested studio route, dataset artifact, or model checkpoint could not be found on this deployment.
       </p>
 
@@ -38,7 +38,7 @@ export default function NotFound() {
             variant="outline"
             className="border-[#272738] bg-[#12121a] hover:bg-[#161622] text-white text-xs font-mono h-9 px-4 rounded-md flex items-center gap-2"
           >
-            <Database className="w-3.5 h-3.5 text-cyan-400" />
+            <Database className="w-3.5 h-3.5 text-[#f26625]" />
             Data Library
           </Button>
         </Link>

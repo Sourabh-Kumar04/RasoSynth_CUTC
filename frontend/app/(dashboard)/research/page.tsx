@@ -90,7 +90,7 @@ const DEFAULT_HEURISTICS: HeuristicDef[] = [
     desc: 'Python AST syntax parsing, sandbox compilation, and error recovery for coding datasets.',
     impact: '100% Code Executability',
     params: { ast_check: true, sandbox_timeout_sec: 5 },
-    color: 'text-cyan-400'
+    color: 'text-[#f26625]'
   },
   {
     key: 'curriculum_learning',
@@ -269,20 +269,20 @@ export default function ResearchPage() {
               Benchmarks &amp; Experiments
             </h1>
           </div>
-          <p className="text-xs text-[#94a3b8]">
+          <p className="text-xs text-[#a8a29e]">
             Automated model evaluations, accuracy gain tracking, technique discovery &amp; inference efficiency
           </p>
         </div>
         <div className="flex flex-col sm:flex-row items-end sm:items-center gap-2">
           <div className="text-right hidden sm:block">
-            <p className="text-xs font-mono text-[#64748b]">Auto-Curriculum Evaluation</p>
-            <p className="text-xs font-mono text-cyan-400">DeepSeek-R1 / Gemini 1.5 · ~45s</p>
+            <p className="text-xs font-mono text-[#a8a29e]">Auto-Curriculum Evaluation</p>
+            <p className="text-xs font-mono text-[#f26625]">DeepSeek-R1 / Gemini 1.5 · ~45s</p>
           </div>
           <div className="flex gap-2">
             <Button
               variant="default"
               size="sm"
-              className="bg-[#f26625] hover:bg-[#de581a] border border-[#ea580c] text-white rounded-md font-mono text-xs font-bold glow-yc gap-1.5"
+              className="bg-[#f26625] hover:bg-[#de581a] border border-[#ea580c] text-white rounded-md font-mono text-xs font-bold gap-1.5"
               onClick={handleTrigger}
               disabled={triggering}
               title="Runs Auto-Curriculum Benchmark Evaluation on DeepSeek-R1 / Gemini 1.5 (~45s)"
@@ -290,7 +290,7 @@ export default function ResearchPage() {
               {triggering ? <Loader2 className="h-3.5 w-3.5 animate-spin text-white" /> : <Play className="h-3.5 w-3.5 text-white fill-current" />}
               {triggering ? 'Running Sweep (~45s)...' : 'Run Research Sweep'}
             </Button>
-            <Button variant="outline" size="sm" className="rounded-md border-[#272738] text-[#94a3b8] hover:text-white hover:bg-[#161622] font-mono text-xs" onClick={fetchAll} disabled={loading}>
+            <Button variant="outline" size="sm" className="rounded-md border-[#272738] text-[#a8a29e] hover:text-white hover:bg-[#161622] font-mono text-xs" onClick={fetchAll} disabled={loading}>
               <RefreshCw className={clsx('h-3.5 w-3.5 mr-1 text-[#f26625]', loading && 'animate-spin')} />
               Refresh
             </Button>
@@ -314,7 +314,7 @@ export default function ResearchPage() {
           <Card className="bg-[#12121a]/90 backdrop-blur-sm border-[#272738] rounded-md card-shadow glow-card-hover group">
             <CardContent className="pt-4 pb-4 px-4 flex items-center justify-between">
               <div>
-                <p className="text-xs text-[#94a3b8] font-mono uppercase tracking-wider">Engine Status</p>
+                <p className="text-xs text-[#a8a29e] font-mono uppercase tracking-wider">Engine Status</p>
                 <div className="flex items-center gap-1.5 mt-1">
                   <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse shadow-[0_0_8px_rgba(16,185,129,0.8)]" />
                   <p className="text-xl font-bold font-mono capitalize text-white">
@@ -332,27 +332,27 @@ export default function ResearchPage() {
           <Card className="bg-[#12121a]/90 backdrop-blur-sm border-[#272738] rounded-md card-shadow glow-card-hover group">
             <CardContent className="pt-4 pb-4 px-4 flex items-center justify-between">
               <div>
-                <p className="text-xs text-[#94a3b8] font-mono uppercase tracking-wider">Last Run Cycle</p>
-                <p className="text-base font-bold font-mono text-cyan-400 mt-1">
+                <p className="text-xs text-[#a8a29e] font-mono uppercase tracking-wider">Last Run Cycle</p>
+                <p className="text-base font-bold font-mono text-[#f26625] mt-1">
                   {lastRunMeta?.timestamp ?? 'No run recorded yet'}
                 </p>
-                <p className="text-xs text-[#64748b] font-mono mt-0.5">
+                <p className="text-xs text-[#a8a29e] font-mono mt-0.5">
                   {lastRunMeta ? `${lastRunMeta.duration} · ${lastRunMeta.status}` : 'No run recorded yet'}
                 </p>
               </div>
-              <div className="h-9 w-9 rounded-md bg-cyan-500/10 border border-cyan-500/30 flex items-center justify-center transition-transform group-hover:scale-110">
-                <Clock className="h-4.5 w-4.5 text-cyan-400" />
+              <div className="h-9 w-9 rounded-md bg-[#f26625]/10 border border-[#f26625]/30 flex items-center justify-center transition-transform group-hover:scale-110">
+                <Clock className="h-4.5 w-4.5 text-[#f26625]" />
               </div>
             </CardContent>
           </Card>
           <Card className="bg-[#12121a]/90 backdrop-blur-sm border-[#272738] rounded-md card-shadow glow-card-hover group">
             <CardContent className="pt-4 pb-4 px-4 flex items-center justify-between">
               <div>
-                <p className="text-xs text-[#94a3b8] font-mono uppercase tracking-wider">Active Techniques</p>
+                <p className="text-xs text-[#a8a29e] font-mono uppercase tracking-wider">Active Techniques</p>
                 <p className="text-xl font-bold font-mono text-[#10b981] mt-1">
                   {activeTechniquesCount} / {DEFAULT_HEURISTICS.length} Active
                 </p>
-                <p className="text-xs text-[#64748b] font-mono mt-0.5">
+                <p className="text-xs text-[#a8a29e] font-mono mt-0.5">
                   4 Core Synthesis Strategies
                 </p>
               </div>
@@ -369,37 +369,37 @@ export default function ResearchPage() {
         <div className="p-3 rounded-md bg-[#0a0a0f] border border-[#272738] flex flex-wrap items-center justify-between gap-2 text-xs font-mono">
           <div className="flex items-center gap-2">
             <Cpu className="h-3.5 w-3.5 text-[#f26625]" />
-            <span className="text-[#94a3b8]">Last Sweep Result:</span>
+            <span className="text-[#a8a29e]">Last Sweep Result:</span>
             <span className="text-white font-bold">{lastRunMeta.benchmark}</span>
           </div>
           <div className="flex items-center gap-3 text-xs">
-            <span className="text-cyan-400 font-semibold">{lastRunMeta.model}</span>
-            <span className="text-[#64748b]">|</span>
+            <span className="text-[#f26625] font-semibold">{lastRunMeta.model}</span>
+            <span className="text-[#a8a29e]">|</span>
             <span className="text-emerald-400 font-bold">{lastRunMeta.status} ({lastRunMeta.duration})</span>
           </div>
         </div>
       )}
 
       {loading ? (
-        <div className="flex items-center justify-center py-20 text-[#94a3b8] font-mono text-xs gap-2">
+        <div className="flex items-center justify-center py-20 text-[#a8a29e] font-mono text-xs gap-2">
           <Loader2 className="h-5 w-5 animate-spin text-[#f26625]" /> Loading research data…
         </div>
       ) : (
         <Tabs defaultValue="heuristics">
           <TabsList className="bg-[#161622] rounded-md border border-[#272738] p-1 h-auto flex flex-wrap gap-1">
-            <TabsTrigger value="heuristics" className="rounded-sm text-xs font-mono data-[state=active]:bg-[#f26625] data-[state=active]:text-white data-[state=active]:glow-yc">
+            <TabsTrigger value="heuristics" className="rounded-sm text-xs font-mono data-[state=active]:bg-[#f26625] data-[state=active]:text-white data-[state=active]">
               Active Heuristics ({activeTechniquesCount}/{DEFAULT_HEURISTICS.length})
             </TabsTrigger>
-            <TabsTrigger value="benchmarks" className="rounded-sm text-xs font-mono data-[state=active]:bg-[#f26625] data-[state=active]:text-white data-[state=active]:glow-yc">
+            <TabsTrigger value="benchmarks" className="rounded-sm text-xs font-mono data-[state=active]:bg-[#f26625] data-[state=active]:text-white data-[state=active]">
               Quality Benchmarks &amp; ROI
             </TabsTrigger>
-            <TabsTrigger value="overview" className="rounded-sm text-xs font-mono data-[state=active]:bg-[#f26625] data-[state=active]:text-white data-[state=active]:glow-yc">
+            <TabsTrigger value="overview" className="rounded-sm text-xs font-mono data-[state=active]:bg-[#f26625] data-[state=active]:text-white data-[state=active]">
               Overview
             </TabsTrigger>
-            <TabsTrigger value="techniques" className="rounded-sm text-xs font-mono data-[state=active]:bg-[#f26625] data-[state=active]:text-white data-[state=active]:glow-yc">
+            <TabsTrigger value="techniques" className="rounded-sm text-xs font-mono data-[state=active]:bg-[#f26625] data-[state=active]:text-white data-[state=active]">
               Synthesized Techniques ({cachedTechniques.length})
             </TabsTrigger>
-            <TabsTrigger value="history" className="rounded-sm text-xs font-mono data-[state=active]:bg-[#f26625] data-[state=active]:text-white data-[state=active]:glow-yc">
+            <TabsTrigger value="history" className="rounded-sm text-xs font-mono data-[state=active]:bg-[#f26625] data-[state=active]:text-white data-[state=active]">
               Audit Trail ({history.length})
             </TabsTrigger>
           </TabsList>
@@ -412,7 +412,7 @@ export default function ResearchPage() {
                   <Gauge className="h-4 w-4 text-[#f26625]" />
                   Empirical Refinery &amp; Performance Benchmarks
                 </h3>
-                <p className="text-xs text-[#94a3b8] mt-0.5">
+                <p className="text-xs text-[#a8a29e] mt-0.5">
                   Audits generation entropy, Merkle hashing throughput, schema compliance, and unit economic savings.
                 </p>
               </div>
@@ -442,11 +442,11 @@ export default function ResearchPage() {
               <Card className="bg-[#12121a] border-[#272738] rounded-md">
                 <CardContent className="pt-4 pb-4 px-4 flex items-center justify-between">
                   <div>
-                    <p className="text-xs text-[#94a3b8] font-mono uppercase">Lexical Diversity (D-2)</p>
+                    <p className="text-xs text-[#a8a29e] font-mono uppercase">Lexical Diversity (D-2)</p>
                     <p className="text-xl font-bold font-mono text-emerald-400 mt-0.5">
                       {benchmarks?.results?.benchmark_generation_quality?.lexical_diversity_distinct_2 ?? '0.9831'}
                     </p>
-                    <span className="text-xs text-[#64748b] font-mono">+15.6% vs raw crawls</span>
+                    <span className="text-xs text-[#a8a29e] font-mono">+15.6% vs raw crawls</span>
                   </div>
                   <div className="h-9 w-9 rounded-xl bg-[#161622] border border-[#3b3b52] flex items-center justify-center">
                     <Sparkles className="h-4.5 w-4.5 text-emerald-400" />
@@ -457,13 +457,13 @@ export default function ResearchPage() {
               <Card className="bg-[#12121a] border-[#272738] rounded-md">
                 <CardContent className="pt-4 pb-4 px-4 flex items-center justify-between">
                   <div>
-                    <p className="text-xs text-[#94a3b8] font-mono uppercase">Processing Throughput</p>
+                    <p className="text-xs text-[#a8a29e] font-mono uppercase">Processing Throughput</p>
                     <p className="text-xl font-bold font-mono text-[#f26625] mt-0.5">
                       {benchmarks?.results?.benchmark_latency?.throughput_samples_per_sec
                         ? `${Math.round(benchmarks.results.benchmark_latency.throughput_samples_per_sec).toLocaleString()} /s`
                         : '302,570 /s'}
                     </p>
-                    <span className="text-xs text-[#64748b] font-mono">
+                    <span className="text-xs text-[#a8a29e] font-mono">
                       p50: {benchmarks?.results?.benchmark_latency?.p50_latency_per_sample_us ?? '3.3'} μs/rec
                     </span>
                   </div>
@@ -476,14 +476,14 @@ export default function ResearchPage() {
               <Card className="bg-[#12121a] border-[#272738] rounded-md">
                 <CardContent className="pt-4 pb-4 px-4 flex items-center justify-between">
                   <div>
-                    <p className="text-xs text-[#94a3b8] font-mono uppercase">Schema Accuracy</p>
-                    <p className="text-xl font-bold font-mono text-cyan-400 mt-0.5">
+                    <p className="text-xs text-[#a8a29e] font-mono uppercase">Schema Accuracy</p>
+                    <p className="text-xl font-bold font-mono text-[#f26625] mt-0.5">
                       {benchmarks?.results?.benchmark_provider_quality?.schema_parsing_success_rate_pct != null ? `${benchmarks.results.benchmark_provider_quality.schema_parsing_success_rate_pct}%` : '—'}
                     </p>
-                    <span className="text-xs text-[#64748b] font-mono">Zero formatting collapse</span>
+                    <span className="text-xs text-[#a8a29e] font-mono">Zero formatting collapse</span>
                   </div>
                   <div className="h-9 w-9 rounded-xl bg-[#161622] border border-[#3b3b52] flex items-center justify-center">
-                    <ShieldCheck className="h-4.5 w-4.5 text-cyan-400" />
+                    <ShieldCheck className="h-4.5 w-4.5 text-[#f26625]" />
                   </div>
                 </CardContent>
               </Card>
@@ -491,11 +491,11 @@ export default function ResearchPage() {
               <Card className="bg-[#12121a] border-[#272738] rounded-md">
                 <CardContent className="pt-4 pb-4 px-4 flex items-center justify-between">
                   <div>
-                    <p className="text-xs text-[#94a3b8] font-mono uppercase">Cost Reduction vs Human</p>
+                    <p className="text-xs text-[#a8a29e] font-mono uppercase">Cost Reduction vs Human</p>
                     <p className="text-xl font-bold font-mono text-amber-400 mt-0.5">
                       {benchmarks?.results?.benchmark_cost_efficiency?.cost_reduction_pct ?? '99.95'}%
                     </p>
-                    <span className="text-xs text-[#64748b] font-mono">
+                    <span className="text-xs text-[#a8a29e] font-mono">
                       {benchmarks?.results?.benchmark_cost_efficiency?.roi_cost_efficiency_multiple ?? '1904x cheaper'}
                     </span>
                   </div>
@@ -518,25 +518,25 @@ export default function ResearchPage() {
                 </CardHeader>
                 <CardContent className="p-0 divide-y divide-[#272738] text-xs font-mono">
                   <div className="flex justify-between px-4 py-3">
-                    <span className="text-[#94a3b8]">SHA-256 Leaf Hashing Latency</span>
+                    <span className="text-[#a8a29e]">SHA-256 Leaf Hashing Latency</span>
                     <span className="text-white font-bold">
                       {benchmarks?.results?.benchmark_latency?.sample_hashing_latency_ms ?? '0.281'} ms / 100 recs
                     </span>
                   </div>
                   <div className="flex justify-between px-4 py-3">
-                    <span className="text-[#94a3b8]">Merkle Tree Root Construction</span>
+                    <span className="text-[#a8a29e]">Merkle Tree Root Construction</span>
                     <span className="text-white font-bold">
                       {benchmarks?.results?.benchmark_latency?.merkle_tree_latency_ms ?? '0.048'} ms / 100 recs
                     </span>
                   </div>
                   <div className="flex justify-between px-4 py-3">
-                    <span className="text-[#94a3b8]">Deduplication Hash Lookup</span>
+                    <span className="text-[#a8a29e]">Deduplication Hash Lookup</span>
                     <span className="text-white font-bold">
                       {benchmarks?.results?.benchmark_latency?.dedup_lookup_latency_ms ?? '0.002'} ms
                     </span>
                   </div>
                   <div className="flex justify-between px-4 py-3">
-                    <span className="text-[#94a3b8]">Multi-Provider Fallback Cascade</span>
+                    <span className="text-[#a8a29e]">Multi-Provider Fallback Cascade</span>
                     <span className="text-emerald-400 font-bold">
                       {benchmarks?.results?.benchmark_provider_quality?.fallback_resilience_rating ?? '99.9% Dynamic Fallback'}
                     </span>
@@ -554,15 +554,15 @@ export default function ResearchPage() {
                 </CardHeader>
                 <CardContent className="p-0 divide-y divide-[#272738] text-xs font-mono">
                   <div className="flex justify-between px-4 py-3">
-                    <span className="text-[#94a3b8]">Human Labeling (Scale AI baseline)</span>
+                    <span className="text-[#a8a29e]">Human Labeling (Scale AI baseline)</span>
                     <span className="text-rose-400 font-bold">$100,000.00 USD</span>
                   </div>
                   <div className="flex justify-between px-4 py-3">
-                    <span className="text-[#94a3b8]">RasoSynth Cloud Refinery</span>
-                    <span className="text-cyan-400 font-bold">$52.50 USD</span>
+                    <span className="text-[#a8a29e]">RasoSynth Cloud Refinery</span>
+                    <span className="text-[#f26625] font-bold">$52.50 USD</span>
                   </div>
                   <div className="flex justify-between px-4 py-3">
-                    <span className="text-[#94a3b8]">RasoSynth Local Air-Gapped (vLLM)</span>
+                    <span className="text-[#a8a29e]">RasoSynth Local Air-Gapped (vLLM)</span>
                     <span className="text-emerald-400 font-bold">$40.00 USD</span>
                   </div>
                   <div className="flex justify-between px-4 py-3 bg-emerald-950/20">
@@ -586,43 +586,43 @@ export default function ResearchPage() {
                 <CardContent className="p-4 space-y-4">
                   <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 text-center">
                     <div className="p-3 bg-[#0d0d14] rounded-xl border border-[#272738]">
-                      <p className="text-xs font-mono text-[#94a3b8] uppercase">chrF Score</p>
-                      <p className="text-xs font-mono text-[#64748b] mt-0.5 line-through">14.80</p>
+                      <p className="text-xs font-mono text-[#a8a29e] uppercase">chrF Score</p>
+                      <p className="text-xs font-mono text-[#a8a29e] mt-0.5 line-through">14.80</p>
                       <p className="text-lg font-bold font-mono text-emerald-400">94.33</p>
                       <span className="text-xs font-mono text-emerald-400/90 font-bold">+537.4% Relative</span>
                     </div>
                     <div className="p-3 bg-[#0d0d14] rounded-xl border border-[#272738]">
-                      <p className="text-xs font-mono text-[#94a3b8] uppercase">Token F1</p>
-                      <p className="text-xs font-mono text-[#64748b] mt-0.5 line-through">0.191</p>
-                      <p className="text-lg font-bold font-mono text-cyan-400">0.739</p>
-                      <span className="text-xs font-mono text-cyan-400/90 font-bold">+286.9% Relative</span>
+                      <p className="text-xs font-mono text-[#a8a29e] uppercase">Token F1</p>
+                      <p className="text-xs font-mono text-[#a8a29e] mt-0.5 line-through">0.191</p>
+                      <p className="text-lg font-bold font-mono text-[#f26625]">0.739</p>
+                      <span className="text-xs font-mono text-[#f26625]/90 font-bold">+286.9% Relative</span>
                     </div>
                     <div className="p-3 bg-[#0d0d14] rounded-xl border border-[#272738]">
-                      <p className="text-xs font-mono text-[#94a3b8] uppercase">Exact Match</p>
-                      <p className="text-xs font-mono text-[#64748b] mt-0.5 line-through">0.0%</p>
+                      <p className="text-xs font-mono text-[#a8a29e] uppercase">Exact Match</p>
+                      <p className="text-xs font-mono text-[#a8a29e] mt-0.5 line-through">0.0%</p>
                       <p className="text-lg font-bold font-mono text-[#f26625]">40.0%</p>
                       <span className="text-xs font-mono text-[#f26625]/90 font-bold">+40.0% Absolute</span>
                     </div>
                     <div className="p-3 bg-[#0d0d14] rounded-xl border border-[#272738]">
-                      <p className="text-xs font-mono text-[#94a3b8] uppercase">Citation Fidelity</p>
-                      <p className="text-xs font-mono text-[#64748b] mt-0.5">Grounded</p>
+                      <p className="text-xs font-mono text-[#a8a29e] uppercase">Citation Fidelity</p>
+                      <p className="text-xs font-mono text-[#a8a29e] mt-0.5">Grounded</p>
                       <p className="text-lg font-bold font-mono text-emerald-400">100.0%</p>
                       <span className="text-xs font-mono text-emerald-400/90 font-bold">CGST Act Grounded</span>
                     </div>
                   </div>
 
                   <div className="p-3 bg-[#0d0d14] rounded-xl border border-[#272738] text-xs font-mono space-y-2">
-                    <div className="flex justify-between items-center text-[#94a3b8]">
+                    <div className="flex justify-between items-center text-[#a8a29e]">
                       <span>Baseline Architecture:</span>
                       <span className="text-white font-semibold">{evalBenchmark?.base_model?.name ?? 'sarvamai/sarvam-2b-v0.5 (Pretrained Baseline)'}</span>
                     </div>
-                    <div className="flex justify-between items-center text-[#94a3b8]">
+                    <div className="flex justify-between items-center text-[#a8a29e]">
                       <span>Fine-Tuned Adapter:</span>
                       <span className="text-emerald-400 font-semibold">{evalBenchmark?.tuned_model?.name ?? 'sarvamai/sarvam-2b-v0.5 + RasoSynthTune SFT LoRA'}</span>
                     </div>
-                    <div className="flex justify-between items-center text-[#94a3b8]">
+                    <div className="flex justify-between items-center text-[#a8a29e]">
                       <span>Statutory Domain:</span>
-                      <span className="text-cyan-400 font-semibold">{evalBenchmark?.benchmark_domain ?? 'Indian Taxation & GST Compliance'}</span>
+                      <span className="text-[#f26625] font-semibold">{evalBenchmark?.benchmark_domain ?? 'Indian Taxation & GST Compliance'}</span>
                     </div>
                   </div>
                 </CardContent>
@@ -633,8 +633,8 @@ export default function ResearchPage() {
           {/* Active Heuristics with Enable/Disable Toggles & Plain Explanations */}
           <TabsContent value="heuristics" className="mt-4 space-y-4">
             <div className="p-3 rounded-md bg-[#0a0a0f] border border-[#272738] flex flex-col sm:flex-row sm:items-center justify-between gap-2 text-xs font-mono">
-              <span className="text-[#94a3b8] flex items-center gap-1.5">
-                <Info className="h-3.5 w-3.5 text-cyan-400" />
+              <span className="text-[#a8a29e] flex items-center gap-1.5">
+                <Info className="h-3.5 w-3.5 text-[#f26625]" />
                 Toggle heuristics on or off to inspect their benchmark impact on synthesis quality and reasoning depth.
               </span>
               <span className="text-emerald-400 font-bold">
@@ -655,7 +655,7 @@ export default function ResearchPage() {
                   >
                     <CardContent className="p-4 space-y-3">
                       <div className="flex items-center justify-between">
-                        <span className="text-xs font-mono text-[#94a3b8] uppercase">{h.key}</span>
+                        <span className="text-xs font-mono text-[#a8a29e] uppercase">{h.key}</span>
                         <div className="flex items-center gap-2">
                           <button
                             type="button"
@@ -668,8 +668,8 @@ export default function ResearchPage() {
                                 Enabled
                               </span>
                             ) : (
-                              <span className="flex items-center gap-1 text-[#64748b]">
-                                <ToggleLeft className="h-5 w-5 text-[#64748b]" />
+                              <span className="flex items-center gap-1 text-[#a8a29e]">
+                                <ToggleLeft className="h-5 w-5 text-[#a8a29e]" />
                                 Bypassed
                               </span>
                             )}
@@ -687,23 +687,23 @@ export default function ResearchPage() {
                             {h.plain}
                           </p>
                         </div>
-                        <p className="text-xs text-[#94a3b8] mt-1 leading-relaxed font-mono">{h.desc}</p>
+                        <p className="text-xs text-[#a8a29e] mt-1 leading-relaxed font-mono">{h.desc}</p>
                       </div>
 
                       {/* Benchmark Impact Indicator */}
                       <div className="pt-2 border-t border-[#1c1c28] flex items-center justify-between text-xs font-mono">
-                        <span className="text-[#64748b] uppercase">Benchmark Impact:</span>
-                        <span className={clsx('font-bold px-1.5 py-0.5 rounded', isEnabled ? 'bg-emerald-950/60 text-emerald-400 border border-emerald-800/40' : 'bg-slate-900 text-[#64748b]')}>
+                        <span className="text-[#a8a29e] uppercase">Benchmark Impact:</span>
+                        <span className={clsx('font-bold px-1.5 py-0.5 rounded', isEnabled ? 'bg-emerald-950/60 text-emerald-400 border border-emerald-800/40' : 'bg-slate-900 text-[#a8a29e]')}>
                           {isEnabled ? h.impact : 'Inactive'}
                         </span>
                       </div>
 
                       <div className="pt-2 border-t border-[#1c1c28]">
-                        <p className="text-xs font-mono text-[#64748b] uppercase mb-1">Parameters</p>
+                        <p className="text-xs font-mono text-[#a8a29e] uppercase mb-1">Parameters</p>
                         <div className="bg-[#0a0a0f] p-2 rounded-lg border border-[#272738] font-mono text-xs text-white">
                           {Object.entries(h.params).map(([pk, pv]) => (
                             <div key={pk} className="flex justify-between">
-                              <span className="text-[#94a3b8]">{pk}:</span>
+                              <span className="text-[#a8a29e]">{pk}:</span>
                               <span className="font-bold">{String(pv)}</span>
                             </div>
                           ))}
@@ -750,17 +750,17 @@ export default function ResearchPage() {
                     <div className="flex items-center gap-3.5">
                       <div className={clsx('h-9 w-9 rounded-xl flex items-center justify-center border border-[#3b3b52]',
                         ok ? 'bg-[#161622]' : 'bg-[#0a0a0f]')}>
-                        <Icon className={clsx('h-4.5 w-4.5', ok ? 'text-[#f26625]' : 'text-[#64748b]')} />
+                        <Icon className={clsx('h-4.5 w-4.5', ok ? 'text-[#f26625]' : 'text-[#a8a29e]')} />
                       </div>
                       <div>
                         <p className="text-xs font-bold text-white">{label}</p>
-                        <p className="text-xs text-[#94a3b8] mt-0.5">{desc}</p>
+                        <p className="text-xs text-[#a8a29e] mt-0.5">{desc}</p>
                       </div>
                     </div>
                     <span className={clsx(
                       'text-xs font-mono px-2.5 py-0.5 rounded-md border font-bold',
                       ok ? 'bg-emerald-950/40 text-emerald-400 border-emerald-500/30'
-                         : 'bg-[#161622] text-[#94a3b8] border-[#3b3b52]',
+                         : 'bg-[#161622] text-[#a8a29e] border-[#3b3b52]',
                     )}>{badge}</span>
                   </div>
                 ))}
@@ -778,7 +778,7 @@ export default function ResearchPage() {
               </CardHeader>
               <CardContent className="p-0 divide-y divide-[#272738]">
                 {cachedTechniques.length === 0 && (
-                  <p className="px-5 py-6 text-xs font-mono text-[#94a3b8]">
+                  <p className="px-5 py-6 text-xs font-mono text-[#a8a29e]">
                     No synthesized techniques cached yet — run a research sweep to generate them.
                   </p>
                 )}
@@ -807,7 +807,7 @@ export default function ResearchPage() {
                 {history.map((entry, i) => (
                   <div key={i} className="flex items-center gap-3 px-5 py-3.5">
                     <Clock className="h-4 w-4 text-[#f26625] shrink-0" />
-                    <span className="text-xs font-mono text-[#94a3b8]">{entry}</span>
+                    <span className="text-xs font-mono text-[#a8a29e]">{entry}</span>
                   </div>
                 ))}
               </CardContent>

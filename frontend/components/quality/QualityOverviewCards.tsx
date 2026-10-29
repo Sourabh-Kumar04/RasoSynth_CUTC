@@ -36,7 +36,7 @@ export default function QualityOverviewCards() {
 
   if (loading) {
     return (
-      <div className="flex items-center gap-2 p-4 text-[#94a3b8] font-mono text-xs">
+      <div className="flex items-center gap-2 p-4 text-[#a8a29e] font-mono text-xs">
         <Loader2 className="h-4 w-4 animate-spin text-[#f26625]" /> Loading quality overview telemetry…
       </div>
     );
@@ -44,7 +44,7 @@ export default function QualityOverviewCards() {
 
   if (loadError) {
     return (
-      <div className="p-4 text-[#94a3b8] font-mono text-xs border border-[#272738] rounded-md bg-[#12121a]">
+      <div className="p-4 text-[#a8a29e] font-mono text-xs border border-[#272738] rounded-md bg-[#12121a]">
         Quality overview unavailable — live metrics could not be loaded.
       </div>
     );
@@ -108,15 +108,15 @@ export default function QualityOverviewCards() {
         {cards.map(({ label, sub, value, color, icon: Icon, badge }) => (
           <div key={label} className="flex-1 px-4 py-3 flex flex-col justify-between">
             <div className="flex items-center justify-between mb-1.5">
-              <span className="text-xs font-mono text-[#94a3b8] uppercase tracking-wider font-bold truncate">{label}</span>
-              <Icon className="h-3.5 w-3.5 text-[#64748b] shrink-0" />
+              <span className="text-xs font-mono text-[#a8a29e] uppercase tracking-wider font-bold truncate">{label}</span>
+              <Icon className="h-3.5 w-3.5 text-[#a8a29e] shrink-0" />
             </div>
             <div className="my-1">
               <p className={`text-2xl font-bold font-mono tracking-tight ${color}`}>{value}</p>
-              <p className="text-xs text-[#64748b] font-mono">{sub}</p>
+              <p className="text-xs text-[#a8a29e] font-mono">{sub}</p>
             </div>
             <div className="pt-2 border-t border-[#1a1a26] mt-1">
-              <span className="text-xs font-mono text-[#94a3b8] bg-[#0a0a0f] px-1.5 py-0.5 rounded border border-[#272738]">
+              <span className="text-xs font-mono text-[#a8a29e] bg-[#0a0a0f] px-1.5 py-0.5 rounded border border-[#272738]">
                 {badge}
               </span>
             </div>
@@ -124,7 +124,7 @@ export default function QualityOverviewCards() {
         ))}
       </div>
       {!data?.is_live && (
-        <p className="text-xs font-mono text-[#64748b] text-right">
+        <p className="text-xs font-mono text-[#a8a29e] text-right">
           Telemetry mode: Calibrated Reference Baseline (Live metrics sync when continuous generator jobs run)
         </p>
       )}

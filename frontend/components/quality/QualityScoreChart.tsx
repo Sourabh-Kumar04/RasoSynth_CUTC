@@ -35,7 +35,7 @@ export default function QualityScoreChart() {
 
   if (loading) {
     return (
-      <div className="bg-[#12121a] rounded-md border border-[#272738] p-6 flex items-center gap-2 text-[#94a3b8] font-mono text-xs card-shadow">
+      <div className="bg-[#12121a] rounded-md border border-[#272738] p-6 flex items-center gap-2 text-[#a8a29e] font-mono text-xs card-shadow">
         <Loader2 className="h-4 w-4 animate-spin text-[#f26625]" /> Loading distribution telemetry…
       </div>
     );
@@ -43,7 +43,7 @@ export default function QualityScoreChart() {
 
   if (!data) {
     return (
-      <div className="bg-[#12121a] rounded-md border border-[#272738] p-6 text-[#94a3b8] font-mono text-xs card-shadow">
+      <div className="bg-[#12121a] rounded-md border border-[#272738] p-6 text-[#a8a29e] font-mono text-xs card-shadow">
         No verified quality distribution available — live metrics could not be loaded.
       </div>
     );
@@ -79,7 +79,7 @@ export default function QualityScoreChart() {
           )}
         </div>
 
-        <p className="text-xs text-[#94a3b8] font-mono mb-4">
+        <p className="text-xs text-[#a8a29e] font-mono mb-4">
           Decile frequency histogram across instruction adherence and MT-bench rubric scores.
         </p>
 
@@ -110,14 +110,14 @@ export default function QualityScoreChart() {
           </div>
 
           {/* X-axis labels */}
-          <div className="flex justify-between items-center text-xs font-mono text-[#64748b] px-1 pt-1.5">
+          <div className="flex justify-between items-center text-xs font-mono text-[#a8a29e] px-1 pt-1.5">
             <span>0% (Poor)</span>
             <span>50% (Acceptable)</span>
             <span>100% (Gold Standard)</span>
           </div>
         </div>
 
-        <div className="flex items-center justify-between text-xs font-mono text-[#94a3b8] my-3 p-2 bg-[#0a0a0f] rounded border border-[#1a1a24]">
+        <div className="flex items-center justify-between text-xs font-mono text-[#a8a29e] my-3 p-2 bg-[#0a0a0f] rounded border border-[#1a1a24]">
           <span>
             Sample Mean: <strong className="text-[#10b981]">{(mean * 100).toFixed(1)}%</strong>
           </span>
@@ -137,7 +137,7 @@ export default function QualityScoreChart() {
         ].map(({ label, value, color }) => (
           <div key={label} className="bg-[#0a0a0f] rounded p-2 border border-[#272738]">
             <p className={`text-sm font-bold ${color}`}>{value}</p>
-            <p className="text-[#94a3b8] text-xs uppercase mt-0.5 truncate">{label}</p>
+            <p className="text-[#a8a29e] text-xs uppercase mt-0.5 truncate">{label}</p>
           </div>
         ))}
       </div>

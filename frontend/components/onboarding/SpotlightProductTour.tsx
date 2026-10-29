@@ -329,15 +329,15 @@ export function SpotlightProductTour() {
             {/* Monochromatic Header Styled Don't Show Again Button */}
             <button
               onClick={handleNeverShowAgain}
-              className="text-xs font-mono text-[#94a3b8] hover:text-white flex items-center gap-1 bg-[#12121a] px-2.5 py-1 rounded-full border border-[#3b3b52] transition-colors"
+              className="text-xs font-mono text-[#a8a29e] hover:text-white flex items-center gap-1 bg-[#12121a] px-2.5 py-1 rounded-full border border-[#3b3b52] transition-colors"
               title="Don't show interactive tour automatically on reload"
             >
-              <EyeOff className="h-3 w-3 text-[#94a3b8]" />
+              <EyeOff className="h-3 w-3 text-[#a8a29e]" />
               <span>Don't show again</span>
             </button>
             <button
               onClick={handleComplete}
-              className="text-[#94a3b8] hover:text-white p-1 rounded-full hover:bg-[#12121a] transition-colors"
+              className="text-[#a8a29e] hover:text-white p-1 rounded-full hover:bg-[#12121a] transition-colors"
               title="Close Tour"
             >
               <X className="h-4 w-4" />
@@ -351,10 +351,10 @@ export function SpotlightProductTour() {
             <Badge variant="outline" className="text-xs font-mono rounded-full border-[#3b3b52] bg-[#0a0a0f] text-[#f26625]">
               {step.badgeText}
             </Badge>
-            <span className="text-xs font-mono text-[#94a3b8] truncate max-w-[200px]">{step.subtitle}</span>
+            <span className="text-xs font-mono text-[#a8a29e] truncate max-w-[200px]">{step.subtitle}</span>
           </div>
 
-          <p className="text-xs text-[#94a3b8] leading-relaxed">{step.description}</p>
+          <p className="text-xs text-[#a8a29e] leading-relaxed">{step.description}</p>
         </div>
 
         {/* Footer Controls */}
@@ -366,7 +366,7 @@ export function SpotlightProductTour() {
                 key={idx}
                 onClick={() => updateStepIndex(idx)}
                 className={`h-2 rounded-full transition-all ${
-                  idx === currentStepIndex ? 'w-5 bg-[#f26625]' : 'w-1.5 bg-[#3b3b52] hover:bg-[#64748b]'
+                  idx === currentStepIndex ? 'w-5 bg-[#f26625]' : 'w-1.5 bg-[#3b3b52] hover:bg-[#a8a29e]'
                 }`}
               />
             ))}

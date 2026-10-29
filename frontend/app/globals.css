@@ -10,12 +10,12 @@
     --background: #0a0a0f;
     --background-secondary: #12121a;
     --background-tertiary: #1a1a24;
-    --foreground: #f8fafc;
+    --foreground: #f5f2ea;
     --surface: #12121a;
     --surface-hover: #1a1a24;
     --border: #272738;
     --border-subtle: #1c1c28;
-    --muted-foreground: #94a3b8;
+    --muted-foreground: #a8a29e;
     
     /* Authentic YC Signal Orange Palette */
     --accent: #f26625;
@@ -25,11 +25,11 @@
     --success: #10b981;
     --warning: #f59e0b;
     --error: #f43f5e;
-    --info: #38bdf8;
+    --info: #d8d2c4;
     --card: #12121a;
-    --card-foreground: #f8fafc;
+    --card-foreground: #f5f2ea;
     --popover: #161622;
-    --popover-foreground: #f8fafc;
+    --popover-foreground: #f5f2ea;
     --radius: 0.375rem;
   }
 }
@@ -41,7 +41,7 @@
 
   body {
     background-color: #0a0a0f;
-    color: #f8fafc;
+    color: #f5f2ea;
     font-family: 'Manrope', sans-serif;
     font-feature-settings: "cv02", "cv03", "cv04", "cv11", "tnum";
     overflow-x: hidden;
@@ -74,25 +74,13 @@
 
   /* Dot-Grid Background Canvas */
   .bg-dot-grid {
-    background-image: radial-gradient(#272738 1px, transparent 1px);
+    background-image: radial-gradient(#4a463f 1px, transparent 1px);
     background-size: 24px 24px;
   }
 
-  .glow-emerald {
-    box-shadow: 0 0 20px -3px rgba(16, 185, 129, 0.35);
-  }
 
-  .glow-amber {
-    box-shadow: 0 0 20px -3px rgba(245, 158, 11, 0.35);
-  }
 
-  .glow-cyan {
-    box-shadow: 0 0 20px -3px rgba(0, 210, 255, 0.35);
-  }
 
-  .glow-yc {
-    box-shadow: 0 0 24px -2px rgba(242, 102, 37, 0.45);
-  }
 
   .glow-card-hover {
     transition: all 0.25s cubic-bezier(0.16, 1, 0.3, 1);
@@ -100,13 +88,13 @@
 
   .glow-card-hover:hover {
     border-color: rgba(242, 102, 37, 0.45);
-    box-shadow: 0 12px 36px -8px rgba(0, 0, 0, 0.7), 0 0 25px -4px rgba(242, 102, 37, 0.18);
+    box-shadow: 0 12px 36px -8px rgba(0, 0, 0, 0.7);
     transform: translateY(-2px);
   }
 
   /* Vibrant Glassmorphism with Depth */
   .glass-card {
-    background: linear-gradient(180deg, rgba(22, 22, 32, 0.75) 0%, rgba(14, 14, 22, 0.85) 100%);
+    background-color: rgba(22, 22, 32, 0.85);
     backdrop-filter: blur(16px);
     -webkit-backdrop-filter: blur(16px);
     border: 1px solid rgba(255, 255, 255, 0.08);
@@ -115,7 +103,7 @@
 
   /* Hero Radial Ambient Glow */
   .ambient-glow-top {
-    background: radial-gradient(circle at 50% -20%, rgba(242, 102, 37, 0.15), rgba(99, 102, 241, 0.04) 50%, transparent 80%);
+    background: transparent;
   }
 
   /* Tactile Interactive Buttons */
@@ -125,7 +113,7 @@
 
   .btn-tactile:hover {
     transform: translateY(-1px);
-    box-shadow: 0 4px 14px -2px rgba(242, 102, 37, 0.35);
+    box-shadow: none;
   }
 
   .btn-tactile:active {
@@ -148,7 +136,7 @@
 
   .btn-yc:hover {
     background-color: #de581a;
-    box-shadow: 0 0 16px -2px rgba(242, 102, 37, 0.5);
+    box-shadow: none;
   }
 
   .badge-yc {
@@ -175,9 +163,6 @@
     border-color: rgba(242, 102, 37, 0.45);
   }
 
-  .glow-merkle {
-    box-shadow: 0 0 25px -4px rgba(0, 245, 155, 0.4), inset 0 1px 0 0 rgba(0, 245, 155, 0.2);
-  }
 
   /* Precision Sovereign Glass & Terminal Textures */
   .glass-panel {
@@ -189,7 +174,7 @@
   }
 
   .glass-panel-glow {
-    background: radial-gradient(circle at top left, rgba(99, 102, 241, 0.08), transparent 70%), rgba(18, 19, 28, 0.85);
+    background-color: rgba(18, 19, 28, 0.85);
     backdrop-filter: blur(16px);
     -webkit-backdrop-filter: blur(16px);
     border: 1px solid rgba(255, 255, 255, 0.08);
@@ -222,7 +207,7 @@
   /* Hairline accent traces */
 
   .border-gradient-emerald {
-    border-image: linear-gradient(90deg, transparent, #10b981, transparent) 1;
+    border-color: #10b981;
   }
 
   /* Linear Card Shadow */
