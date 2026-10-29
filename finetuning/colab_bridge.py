@@ -1,10 +1,12 @@
 """
-Automated Cloud Acceleration Engine (Colab Bridge).
+Simulated fine-tune demo bridge (Colab Bridge) — DEMO ONLY.
 
-Provides headless, zero-setup GPU fine-tuning execution. Handles dataset ingestion,
-QLoRA adapter weight synthesis, loss curve convergence, checkpointing, and packaging
-into downloadable model artifacts (.safetensors, .zip, GGUF, Hugging Face Model Card)
-while abstracting all low-level infrastructure away from the end user.
+This module does NOT train anything. It emits progress events and placeholder
+artifact files so the fine-tune UI/demo flow can be exercised without a GPU.
+It must never present its outputs as training results: it emits no losses
+(formula losses were removed), no GPU telemetry, and no loadable weights,
+and its model card carries no DBOM seal/certificate. Real training lives in
+execution_target=local (finetuning/trainer.py).
 """
 
 from __future__ import annotations
@@ -24,25 +26,12 @@ from core.export.huggingface_exporter import generate_hf_model_card
 logger = logging.getLogger(__name__)
 
 
-@dataclass
-class TrainingMetricsSnapshot:
-    epoch: int
-    step: int
-    total_steps: int
-    train_loss: float
-    eval_loss: float
-    gpu_utilization_pct: float
-    gpu_vram_used_gb: float
-    gpu_vram_total_gb: float
-    tokens_per_sec: float
-    progress: float
-
 
 class ColabBridgeTrainer:
     """
-    Headless Cloud GPU Trainer.
-    Dispatches and manages fine-tuning runs using accelerated cloud runtime,
-    streaming telemetry and producing complete deployable PEFT/LoRA weight artifacts.
+    Simulated demo trainer (NOT a GPU trainer).
+    Emits labelled simulated progress and placeholder artifacts only; see the
+    module docstring. Use execution_target=local for real PEFT/Unsloth training.
     """
 
     def __init__(self, config: Any, output_dir: Path):
@@ -56,12 +45,14 @@ class ColabBridgeTrainer:
         put_event: Callable[[Dict[str, Any]], None],
     ) -> Path:
         """
-        Executes fine-tuning with simulated or bridged GPU acceleration,
-        generating model weights, adapters, GGUF export, and DBOM attestation.
+        Simulated demo run: emits labelled progress events and placeholder
+        artifacts. No GPU training happens here and no losses are measured.
         """
         put_event({
             "type": "info",
-            "message": "Initializing Cloud GPU Acceleration runtime (NVIDIA High-Memory Instance)..."
+            "execution_mode": "simulated",
+            "is_simulated": True,
+            "message": "SIMULATED run: no GPU training takes place; progress below is illustrative only."
         })
         time.sleep(0.3)
 
@@ -73,7 +64,9 @@ class ColabBridgeTrainer:
 
         put_event({
             "type": "info",
-            "message": f"Loaded base architecture '{base_model}' with 4-bit NormalFloat4 (NF4) quantization."
+            "execution_mode": "simulated",
+            "is_simulated": True,
+            "message": f"SIMULATED run: base architecture '{base_model}' noted for the demo only; no weights are trained or quantised."
         })
         time.sleep(0.2)
 
@@ -84,42 +77,15 @@ class ColabBridgeTrainer:
             "message": f"Injected LoRA adapters into target projections: q_proj, k_proj, v_proj, o_proj (r={getattr(self.config, 'lora_r', 16)}, alpha={getattr(self.config, 'lora_alpha', 32)}). Execution Mode: Simulated Container Pool."
         })
 
-        # Telemetry convergence progression deterministically parameterized by dataset & config
-        import hashlib
-        dataset_id = str(getattr(self.config, "dataset_id", "") or "default_dataset")
-        job_id = str(getattr(self.config, "job_id", "") or getattr(self.config, "id", "") or dataset_id)
-        model_name = str(getattr(self.config, "output_model_name", "") or base_model)
-        seed_hash = hashlib.sha256(f"{dataset_id}:{model_name}:{total_epochs}".encode("utf-8")).hexdigest()
-        seed_val = int(seed_hash[:8], 16)
-
-        # Unique initial & target losses seeded per dataset to prevent identical cross-run loss curves
-        initial_loss = round(1.68 + (seed_val % 500) / 1000.0, 4)
-        final_target_loss = round(0.18 + ((seed_val >> 8) % 280) / 1000.0, 4)
-
+        # P0: no formula losses and no fictional GPU telemetry are emitted.
+        # Progress events carry step/progress only; a simulated run has no
+        # measured loss, utilisation, VRAM, or throughput to report.
         current_step = 0
-        loss_history = []
 
         for epoch in range(1, total_epochs + 1):
-            epoch_loss = initial_loss - ((initial_loss - final_target_loss) * (epoch / total_epochs) * 0.9)
             for s in range(1, steps_per_epoch + 1):
                 current_step += 1
                 progress = min(1.0, current_step / total_steps)
-                decay = (1.0 - progress) ** 1.3
-                step_loss = final_target_loss + (initial_loss - final_target_loss) * decay
-                loss_history.append(round(step_loss, 4))
-
-                metrics = TrainingMetricsSnapshot(
-                    epoch=epoch,
-                    step=current_step,
-                    total_steps=total_steps,
-                    train_loss=round(step_loss, 4),
-                    eval_loss=round(step_loss * 1.04, 4),
-                    gpu_utilization_pct=94.5,
-                    gpu_vram_used_gb=13.8,
-                    gpu_vram_total_gb=16.0,
-                    tokens_per_sec=1640.0,
-                    progress=round(progress * 100, 1),
-                )
 
                 if s == 1 or s == steps_per_epoch or s % max(1, steps_per_epoch // 2) == 0:
                     put_event({
@@ -128,12 +94,7 @@ class ColabBridgeTrainer:
                         "is_simulated": True,
                         "epoch": epoch,
                         "step": current_step,
-                        "loss": metrics.train_loss,
-                        "eval_loss": metrics.eval_loss,
-                        "progress": metrics.progress,
-                        "gpu_utilization": metrics.gpu_utilization_pct,
-                        "vram_gb": metrics.gpu_vram_used_gb,
-                        "tokens_sec": metrics.tokens_per_sec,
+                        "progress": round(progress * 100, 1),
                     })
                     time.sleep(0.1)
 
@@ -142,7 +103,7 @@ class ColabBridgeTrainer:
                 "execution_mode": "simulated",
                 "is_simulated": True,
                 "epoch": epoch,
-                "eval_loss": round(epoch_loss * 1.03, 4),
+                "message": "Simulated eval checkpoint (no loss measured).",
             })
 
         # Compute content-bound Merkle root from real dataset samples if present
@@ -166,24 +127,23 @@ class ColabBridgeTrainer:
         # No samples -> no root. Never substitute sha256 of the dataset ID/path.
         # (computed_root stays None and the card omits the DBOM block.)
 
-        final_loss = loss_history[-1] if loss_history else final_target_loss
-        final_eval = round(final_loss * 1.04, 4)
-        # A seal over a missing root is not a provenance seal; omit it.
-        model_seal = hashlib.sha256(f"{job_id}:{computed_root}:{final_loss}:{final_eval}".encode("utf-8")).hexdigest() if computed_root else None
-
-        # Save model artifacts in output directory
+        # Save placeholder artifacts in output directory. Every path is named
+        # as a placeholder so a placeholder can never be mistaken for (or
+        # loaded as) trained weights. The dataset Merkle root below, when
+        # present, attests ONLY to the input dataset samples — never to this
+        # simulated run — so no seal/certificate is attached to it.
         model_name = getattr(self.config, "output_model_name", "") or "fine-tuned-model"
-        job_artifacts_dir = self.output_dir / "model_weights"
+        job_artifacts_dir = self.output_dir / "model_weights_placeholder"
         job_artifacts_dir.mkdir(parents=True, exist_ok=True)
 
-        self._write_model_files(job_artifacts_dir, base_model, loss_history, computed_root, model_seal)
+        self._write_model_files(job_artifacts_dir, base_model, computed_root)
 
-        # Create downloadable zip archive
-        zip_path = self.output_dir / "finetuned_model_lora.zip"
+        # Create downloadable zip archive of placeholders
+        zip_path = self.output_dir / "finetuned_model_lora_PLACEHOLDER.zip"
         self._package_zip(job_artifacts_dir, zip_path)
 
         # Create GGUF export placeholder
-        gguf_path = self.output_dir / f"{model_name}-q4_k_m.gguf"
+        gguf_path = self.output_dir / f"{model_name}-q4_k_m.gguf.PLACEHOLDER"
         self._create_gguf_export(gguf_path, base_model)
 
         put_event({
@@ -194,21 +154,24 @@ class ColabBridgeTrainer:
             "output_path": str(job_artifacts_dir),
             "download_zip": str(zip_path),
             "gguf_path": str(gguf_path),
-            "final_train_loss": final_loss,
-            "eval_loss": final_eval,
             "merkle_root": computed_root,
-            "model_seal": model_seal,
             "message": (
-                "SIMULATED fine-tune completed. Loss curves and adapter/GGUF files are "
-                "demo placeholders — not GPU-trained weights. Use execution_target=local "
-                "for real PEFT/Unsloth training."
+                "SIMULATED fine-tune completed. No losses were measured and no "
+                "weights were trained; adapter/GGUF files are demo placeholders. "
+                "Use execution_target=local for real PEFT/Unsloth training."
             ),
         })
 
         return job_artifacts_dir
 
-    def _write_model_files(self, target_dir: Path, base_model: str, loss_history: List[float], merkle_root: str, model_seal: str):
-        """Generate PEFT LoRA adapter files and DBOM Hugging Face Model Card."""
+    def _write_model_files(self, target_dir: Path, base_model: str, merkle_root: str):
+        """Write PLACEHOLDER adapter files and a demo model card (no training).
+
+        The card reports no losses (none were measured) and carries no DBOM
+        seal or certificate: a simulated run must never be sealed as if its
+        losses/weights were attested. A dataset Merkle root, when computed
+        from real input samples, is disclosed as input-data provenance only.
+        """
         adapter_config = {
             "base_model_name_or_path": base_model,
             "bias": "none",
@@ -229,8 +192,17 @@ class ColabBridgeTrainer:
         with open(target_dir / "adapter_config.json", "w") as f:
             json.dump(adapter_config, f, indent=2)
 
-        # Mock / Real weights file
-        safetensors_path = target_dir / "adapter_model.safetensors"
+        # Placeholder weights file. The .PLACEHOLDER suffix keeps it from
+        # being loaded as a safetensors file; the bytes are a header plus
+        # zeroes, not trained tensors.
+        safetensors_path = target_dir / "adapter_model.safetensors.PLACEHOLDER"
+        with open(target_dir / "PLACEHOLDER.txt", "w") as f:
+            f.write(
+                "PLACEHOLDER — DEMO ONLY\n"
+                "These files are not trained weights. They exist so the demo "
+                "download/preview flow can be exercised without a GPU. Do not "
+                "load, publish, or evaluate them as a fine-tuned model.\n"
+            )
         with open(safetensors_path, "wb") as f:
             # Header representation of safetensors
             header = json.dumps({"__metadata__": {"format": "pt", "lora": "peft"}}).encode("utf-8")
@@ -249,14 +221,11 @@ class ColabBridgeTrainer:
         with open(target_dir / "tokenizer_config.json", "w") as f:
             json.dump(tokenizer_cfg, f, indent=2)
 
-        # Generate HF Model Card with DBOM Merkle verification proof
+        # Demo model card: no losses (none measured), no DBOM seal/certificate.
+        # The exporter omits None losses. The dataset root, when present, is
+        # disclosed below as input-data provenance only.
         model_name = getattr(self.config, "output_model_name", "fine-tuned-model")
         dataset_name = getattr(self.config, "dataset_id", "rasosynth-curated-dataset") or "rasosynth-curated-dataset"
-        # No simulated steps ran -> no losses to report; never default to
-        # 0.3870 or derive eval = train * 1.04. The exporter omits None losses.
-        final_train_loss = loss_history[-1] if loss_history else None
-        eval_history = getattr(self, "eval_loss_history", []) or []
-        final_eval_loss = eval_history[-1] if eval_history else None
         sample_count = int(getattr(self.config, "sample_count", None) or getattr(self.config, "dataset_size", 100) or 100)
 
         model_card = generate_hf_model_card(
@@ -268,16 +237,22 @@ class ColabBridgeTrainer:
             learning_rate=getattr(self.config, "learning_rate", 2e-4),
             lora_r=getattr(self.config, "lora_r", 16),
             lora_alpha=getattr(self.config, "lora_alpha", 32),
-            train_loss=final_train_loss,
-            eval_loss=final_eval_loss,
-            merkle_root=merkle_root,
-            certificate_id=f"DBOM-{merkle_root[:12].upper()}" if merkle_root else None,
+            train_loss=None,
+            eval_loss=None,
+            merkle_root=None,
+            certificate_id=None,
         )
-        # Append honest simulation disclosure and model seal to model card
-        seal_line = f"**DBOM Provenance Seal**: `{model_seal}`\n" if model_seal else ""
-        model_card += f"\n\n---\n{seal_line}**Execution Mode**: Simulated (Accelerated Container Pool) — loss curves and adapter/GGUF files are demo placeholders, not GPU-trained weights.\n"
-        with open(target_dir / "README.md", "w") as f:
-            f.write(model_card)
+        disclosure = (
+            "\n\n---\n"
+            "**Execution Mode**: SIMULATED demo — no training ran, no losses were "
+            "measured, and the adapter/GGUF files are placeholders, not trained weights.\n"
+        )
+        if merkle_root:
+            disclosure += (
+                f"**Input dataset Merkle root** (input samples only, NOT a training "
+                f"attestation): `{merkle_root}`\n"
+            )
+        model_card += disclosure
         with open(target_dir / "README.md", "w") as f:
             f.write(model_card)
 
@@ -291,7 +266,10 @@ class ColabBridgeTrainer:
                     zipf.write(file_path, arcname)
 
     def _create_gguf_export(self, gguf_path: Path, base_model: str):
-        """Create a quantized GGUF format container for instant local execution."""
+        """Create a GGUF placeholder file (magic + zeroes, NOT a quantised model).
+
+        Callers pass a *.PLACEHOLDER path so the file cannot be loaded as GGUF.
+        """
         with open(gguf_path, "wb") as f:
             magic = b"GGUF\x03\x00\x00\x00"  # GGUF v3 magic header
             f.write(magic)
