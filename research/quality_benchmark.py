@@ -32,12 +32,19 @@ class QualityBenchmark:
         self.config = config or {}
         self.results = BenchmarkResults()
 
-    async def run_all(self) -> dict:
-        """Run all benchmarks and store each result."""
+    async def run_all(self, sample_size: Optional[int] = None) -> dict:
+        """Run all benchmarks and store each result.
+
+        sample_size (from the CLI --sample-size flag) sets the latency
+        benchmark's iteration count and is recorded in the output. It does
+        NOT inflate the generation-quality corpus: that benchmark still
+        reports exactly the exemplars it evaluated.
+        """
+        latency_iterations = sample_size or self.config.get("sample_size") or 100
         result = await self.benchmark_generation_quality()
         self.results.add("benchmark_generation_quality", result)
 
-        result = await self.benchmark_latency()
+        result = await self.benchmark_latency(iterations=latency_iterations)
         self.results.add("benchmark_latency", result)
 
         result = await self.benchmark_provider_quality()
@@ -46,7 +53,9 @@ class QualityBenchmark:
         result = await self.benchmark_cost_efficiency()
         self.results.add("benchmark_cost_efficiency", result)
 
-        return self.results.to_dict()
+        out = self.results.to_dict()
+        out["sample_size"] = sample_size or self.config.get("sample_size") or 100
+        return out
 
     async def benchmark_generation_quality(self, samples: Optional[list] = None) -> dict:
         """Measure synthetic generation quality, semantic richness, and syntactic validity."""

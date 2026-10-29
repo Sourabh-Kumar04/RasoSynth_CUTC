@@ -24,7 +24,14 @@ if str(PROJECT_ROOT) not in sys.path:
     sys.path.insert(0, str(PROJECT_ROOT))
 
 
-# Built-in high-quality seed exemplar bank for offline and autonomous generation
+# Built-in seed exemplar bank for offline and autonomous generation.
+# PROVENANCE (P0 honesty): these are hand-written exemplars, NOT sourced
+# measurements. The statutory figures inside them (e.g. the 5-crore
+# e-invoicing threshold, Rs 20/50-per-day late fees, the 180-day ITC payment
+# rule) carry NO date and NO source circular/notification in this file, and
+# must NOT be quoted as current law. Verify every statutory figure against
+# the current CBIC notifications / CGST Act text before production use. The
+# generate command prints this warning on every run (see handle_generate).
 BUILTIN_SEED_BANK: Dict[str, List[Dict[str, str]]] = {
     "taxation": [
         {
@@ -114,6 +121,9 @@ def _load_samples_from_file(file_path: Path) -> List[Dict[str, Any]]:
 
 def handle_generate(args: argparse.Namespace) -> int:
     """Execute dataset generation with DBOM attestation."""
+    if args.size < 1:
+        print(f"[ERROR] --size must be >= 1 (got {args.size}); refusing to emit an empty dataset.", file=sys.stderr)
+        return 1
     from core.export.dbom_attestor import (
         generate_dbom_attestation,
         generate_nutrition_label_markdown,
@@ -128,6 +138,12 @@ def handle_generate(args: argparse.Namespace) -> int:
     print(f"Mode:         {args.mode}")
     print(f"Format:       {args.format}")
     print(f"Engine:       {getattr(args, 'engine', 'synthetic')}")
+    if getattr(args, 'engine', 'synthetic') not in ("vllm", "ollama"):
+        print("Provenance:   TEMPLATE/SEED output — samples are built from the")
+        print("              built-in seed bank (BUILTIN_SEED_BANK), not from live")
+        print("              model generation or measured data. Statutory figures")
+        print("              in seed text are unsourced/undated: verify against")
+        print("              current CBIC notifications before production use.")
     print(f"Output Dir:   {args.output_dir}")
 
     output_dir = Path(args.output_dir)
@@ -161,7 +177,6 @@ def handle_generate(args: argparse.Namespace) -> int:
             item_copy = {
                 "instruction": mask_indian_pii(inst, replacement_mode="redact"),
                 "response": mask_indian_pii(resp, replacement_mode="redact"),
-                "quality_score": round(0.92 + (i % 8) * 0.009, 3),
                 "domain": args.domain,
                 "mode": args.mode,
                 "engine": engine_choice,
@@ -179,7 +194,6 @@ def handle_generate(args: argparse.Namespace) -> int:
             # PII check & auto-masking
             item_copy["instruction"] = mask_indian_pii(item_copy["instruction"], replacement_mode="redact")
             item_copy["response"] = mask_indian_pii(item_copy["response"], replacement_mode="redact")
-            item_copy["quality_score"] = round(0.90 + (i % 10) * 0.008, 3)
             item_copy["domain"] = args.domain
             item_copy["mode"] = args.mode
             samples.append(item_copy)
@@ -205,9 +219,12 @@ def handle_generate(args: argparse.Namespace) -> int:
             table = pa.Table.from_pylist(samples)
             pq.write_table(table, str(primary_file))
         except ImportError:
-            with open(primary_file, "w", encoding="utf-8") as f:
-                for s in samples:
-                    f.write(json.dumps(s) + "\n")
+            # Fail, do NOT write JSONL into a .parquet file: a .parquet file
+            # that is not Parquet corrupts every downstream reader silently.
+            print("[ERROR] --format parquet requires pyarrow, which is not installed. "
+                  "Install pyarrow or choose --format jsonl/csv. No file was written.",
+                  file=sys.stderr)
+            return 1
 
     print(f"\n[OK] Synthesized {len(samples)} samples to: {primary_file}")
 
@@ -217,7 +234,9 @@ def handle_generate(args: argparse.Namespace) -> int:
             dataset_name=base_name,
             samples=samples,
             domain=args.domain,
-            compliance_flags={"pii_masked": True, "contamination_free": True},
+            # No compliance flags are stamped: this path runs no contamination
+            # check, and PII masking is applied but not verified, so claiming
+            # pii_masked/contamination_free would be fabrication.
         )
         dbom_file = output_dir / f"{base_name}.dbom.json"
         with open(dbom_file, "w", encoding="utf-8") as f:
@@ -341,8 +360,11 @@ def handle_benchmark(args: argparse.Namespace) -> int:
     print("  RasoSynthTune: Audited Quality & Enterprise Benchmark")
     print("=" * 70)
 
-    bench = QualityBenchmark()
-    results = asyncio.run(bench.run_all())
+    if args.sample_size < 1:
+        print(f"[ERROR] --sample-size must be >= 1 (got {args.sample_size}).", file=sys.stderr)
+        return 1
+    bench = QualityBenchmark(config={"sample_size": args.sample_size})
+    results = asyncio.run(bench.run_all(sample_size=args.sample_size))
 
     if args.json:
         print(json.dumps(results, indent=2))
