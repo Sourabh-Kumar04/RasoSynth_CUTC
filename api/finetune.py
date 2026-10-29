@@ -27,6 +27,7 @@ from fastapi.responses import FileResponse, PlainTextResponse
 from pydantic import BaseModel, Field, model_validator
 
 from finetuning.trainer import SUPPORTED_MODELS
+from api.auth import User, get_auth_manager, get_current_user
 
 logger = logging.getLogger(__name__)
 router = APIRouter(prefix="/api/finetune", tags=["finetune"])
@@ -95,7 +96,7 @@ def _db(request: Request):
 # ── Endpoints ─────────────────────────────────────────────────────────────────
 
 @router.get("/models")
-async def list_supported_models():
+async def list_supported_models(current_user: User = Depends(get_current_user)):
     return {"models": SUPPORTED_MODELS}
 
 
@@ -105,7 +106,8 @@ async def create_finetune_job(
     request: Request,
     manager=Depends(_manager),
     db=Depends(_db),
-):
+
+    current_user: User = Depends(get_current_user)):
     payload = body.model_dump()
 
     # Preferred path: resolve an immutable version. This prevents a training
@@ -223,7 +225,8 @@ async def list_finetune_jobs(
     limit: int = Query(50, ge=1, le=500),
     offset: int = Query(0, ge=0),
     manager=Depends(_manager),
-):
+
+    current_user: User = Depends(get_current_user)):
     all_jobs = await manager.list_jobs(limit=1000)
     paged = all_jobs[offset : offset + limit]
     return {
@@ -236,7 +239,8 @@ async def list_finetune_jobs(
 
 
 @router.get("/jobs/{job_id}")
-async def get_finetune_job(job_id: str, manager=Depends(_manager)):
+async def get_finetune_job(job_id: str, manager=Depends(_manager),
+    current_user: User = Depends(get_current_user)):
     job = await manager.get_job(job_id)
     if job is None:
         raise HTTPException(status_code=404, detail="Fine-tune job not found")
@@ -244,7 +248,8 @@ async def get_finetune_job(job_id: str, manager=Depends(_manager)):
 
 
 @router.delete("/jobs/{job_id}")
-async def cancel_finetune_job(job_id: str, manager=Depends(_manager)):
+async def cancel_finetune_job(job_id: str, manager=Depends(_manager),
+    current_user: User = Depends(get_current_user)):
     if not await manager.cancel_job(job_id):
         raise HTTPException(status_code=404, detail="Job not found or already completed")
     return {"status": "cancelled", "job_id": job_id}
@@ -255,7 +260,8 @@ async def get_finetune_logs(
     job_id: str,
     limit: int = Query(200, ge=1, le=500),
     manager=Depends(_manager),
-):
+
+    current_user: User = Depends(get_current_user)):
     """Return the last N training log events from the in-memory ring buffer."""
     return {"job_id": job_id, "logs": manager.get_logs(job_id, limit=limit)}
 
@@ -269,6 +275,25 @@ async def stream_finetune_job(websocket: WebSocket, job_id: str):
     manager = getattr(websocket.app.state, "ft_manager", None)
     if manager is None:
         await websocket.close(code=1011)
+        return
+
+    # Authenticate before accept: Bearer header or ?token= query parameter.
+    _ws_token = None
+    _ws_auth = websocket.headers.get("authorization", "")
+    if _ws_auth.startswith("Bearer "):
+        _ws_token = _ws_auth[7:].strip()
+    if not _ws_token:
+        _ws_token = websocket.query_params.get("token")
+    _ws_user = None
+    if _ws_token:
+        try:
+            _auth_mgr = get_auth_manager()
+            _token_data = _auth_mgr.verify_token(_ws_token)
+            _ws_user = _auth_mgr.get_user(_token_data.username)
+        except Exception:
+            _ws_user = None
+    if _ws_user is None:
+        await websocket.close(code=4401)
         return
 
     await websocket.accept()
@@ -289,7 +314,8 @@ async def stream_finetune_job(websocket: WebSocket, job_id: str):
 
 
 @router.get("/jobs/{job_id}/download")
-async def download_finetuned_model(job_id: str, manager=Depends(_manager)):
+async def download_finetuned_model(job_id: str, manager=Depends(_manager),
+    current_user: User = Depends(get_current_user)):
     """Download zipped fine-tuned LoRA adapter weights and model artifacts."""
     job = await manager.get_job(job_id)
     if job is None:
@@ -330,7 +356,8 @@ async def download_finetuned_model(job_id: str, manager=Depends(_manager)):
 
 
 @router.get("/jobs/{job_id}/model_card")
-async def get_model_card(job_id: str, manager=Depends(_manager)):
+async def get_model_card(job_id: str, manager=Depends(_manager),
+    current_user: User = Depends(get_current_user)):
     """Return Hugging Face Model Card with DBOM Merkle verification proof."""
     job = await manager.get_job(job_id)
     if job is None:
@@ -427,7 +454,8 @@ async def get_model_card(job_id: str, manager=Depends(_manager)):
 
 
 @router.post("/jobs/{job_id}/export_gguf")
-async def export_gguf_quantization(job_id: str, manager=Depends(_manager)):
+async def export_gguf_quantization(job_id: str, manager=Depends(_manager),
+    current_user: User = Depends(get_current_user)):
     """Generate 4-bit GGUF quantization (Q4_K_M) for edge and local LM deployment."""
     job = await manager.get_job(job_id)
     if job is None:
@@ -451,7 +479,8 @@ async def export_gguf_quantization(job_id: str, manager=Depends(_manager)):
 
 
 @router.get("/jobs/{job_id}/download_gguf")
-async def download_gguf_file(job_id: str, manager=Depends(_manager)):
+async def download_gguf_file(job_id: str, manager=Depends(_manager),
+    current_user: User = Depends(get_current_user)):
     """Download quantized GGUF binary for edge/local LM deployment (Ollama / LM Studio)."""
     job = await manager.get_job(job_id)
     if job is None:
@@ -474,7 +503,8 @@ async def download_gguf_file(job_id: str, manager=Depends(_manager)):
 
 
 @router.get("/jobs/{job_id}/modelfile")
-async def get_ollama_modelfile(job_id: str, manager=Depends(_manager)):
+async def get_ollama_modelfile(job_id: str, manager=Depends(_manager),
+    current_user: User = Depends(get_current_user)):
     """Generate an Ollama-compatible Modelfile with optimal chat prompt template and stopping criteria."""
     job = await manager.get_job(job_id)
     if job is None:

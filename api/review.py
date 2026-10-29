@@ -11,6 +11,7 @@ from __future__ import annotations
 from typing import Optional
 
 from fastapi import APIRouter, Depends, HTTPException, Query, Request
+from api.auth import User, UserRole, get_current_user, require_role
 from fastapi.responses import StreamingResponse
 from pydantic import BaseModel
 
@@ -42,7 +43,9 @@ class SubmitRequest(BaseModel):
 
 
 class ReviewAction(BaseModel):
-    reviewer: str
+    # Accepted for client compatibility but IGNORED: reviewer identity is taken
+    # from the auth token (current_user.username) in every handler below.
+    reviewer: str = ""
     notes: str = ""
 
 
@@ -53,7 +56,8 @@ class EditAction(ReviewAction):
 
 class BulkAction(BaseModel):
     filters: dict
-    reviewer: str
+    # Ignored: reviewer identity is taken from the auth token (see ReviewAction).
+    reviewer: str = ""
     reason: str = ""
 
 
@@ -66,7 +70,8 @@ async def list_queue(
     page: int = Query(1, ge=1),
     page_size: int = Query(50, ge=1, le=500),
     svc=Depends(_svc),
-):
+
+    current_user: User = Depends(get_current_user)):
     return await svc.get_queue(status=status, job_id=job_id, page=page, page_size=page_size)
 
 
@@ -74,7 +79,8 @@ async def list_queue(
 async def export_approved(
     job_id: Optional[str] = Query(None, description="Filter by dataset job ID"),
     svc=Depends(_svc),
-):
+
+    current_user: User = Depends(get_current_user)):
     """
     Stream all approved review items as a JSONL file suitable for fine-tuning.
     Each line: {"instruction": ..., "response": ..., "input": "", ...}
@@ -91,7 +97,8 @@ async def export_approved(
 
 
 @router.get("/queue/{item_id}")
-async def get_item(item_id: str, svc=Depends(_svc)):
+async def get_item(item_id: str, svc=Depends(_svc),
+    current_user: User = Depends(get_current_user)):
     item = await svc.get_item(item_id)
     if not item:
         raise HTTPException(status_code=404, detail="Review item not found")
@@ -99,7 +106,8 @@ async def get_item(item_id: str, svc=Depends(_svc)):
 
 
 @router.post("/queue", status_code=201)
-async def submit_for_review(body: SubmitRequest, svc=Depends(_svc)):
+async def submit_for_review(body: SubmitRequest, svc=Depends(_svc),
+    current_user: User = Depends(require_role([UserRole.ADMIN, UserRole.USER]))):
     return await svc.submit(
         instruction=body.instruction,
         response=body.response,
@@ -115,25 +123,28 @@ async def submit_for_review(body: SubmitRequest, svc=Depends(_svc)):
 
 
 @router.post("/queue/{item_id}/approve")
-async def approve_item(item_id: str, action: ReviewAction, svc=Depends(_svc)):
-    result = await svc.approve(item_id, action.reviewer, action.notes)
+async def approve_item(item_id: str, action: ReviewAction, svc=Depends(_svc),
+    current_user: User = Depends(require_role([UserRole.ADMIN, UserRole.USER]))):
+    result = await svc.approve(item_id, current_user.username, action.notes)
     if not result:
         raise HTTPException(status_code=404, detail="Review item not found")
     return result
 
 
 @router.post("/queue/{item_id}/reject")
-async def reject_item(item_id: str, action: ReviewAction, svc=Depends(_svc)):
-    result = await svc.reject(item_id, action.reviewer, action.notes)
+async def reject_item(item_id: str, action: ReviewAction, svc=Depends(_svc),
+    current_user: User = Depends(require_role([UserRole.ADMIN, UserRole.USER]))):
+    result = await svc.reject(item_id, current_user.username, action.notes)
     if not result:
         raise HTTPException(status_code=404, detail="Review item not found")
     return result
 
 
 @router.post("/queue/{item_id}/edit")
-async def edit_item(item_id: str, action: EditAction, svc=Depends(_svc)):
+async def edit_item(item_id: str, action: EditAction, svc=Depends(_svc),
+    current_user: User = Depends(require_role([UserRole.ADMIN, UserRole.USER]))):
     result = await svc.edit(
-        item_id, action.reviewer,
+        item_id, current_user.username,
         edited_instruction=action.edited_instruction,
         edited_response=action.edited_response,
         notes=action.notes,
@@ -144,34 +155,38 @@ async def edit_item(item_id: str, action: EditAction, svc=Depends(_svc)):
 
 
 @router.post("/queue/{item_id}/flag")
-async def flag_item(item_id: str, action: ReviewAction, svc=Depends(_svc)):
-    result = await svc.flag(item_id, action.reviewer, action.notes)
+async def flag_item(item_id: str, action: ReviewAction, svc=Depends(_svc),
+    current_user: User = Depends(require_role([UserRole.ADMIN, UserRole.USER]))):
+    result = await svc.flag(item_id, current_user.username, action.notes)
     if not result:
         raise HTTPException(status_code=404, detail="Review item not found")
     return result
 
 
 @router.post("/queue/bulk")
-async def bulk_action(action: BulkAction, svc=Depends(_svc)):
+async def bulk_action(action: BulkAction, svc=Depends(_svc),
+    current_user: User = Depends(require_role([UserRole.ADMIN]))):
     # Copy to avoid mutating the pydantic model's dict
     filters = dict(action.filters)
     action_type = filters.pop("action", "approve")
     if action_type == "approve":
-        count = await svc.bulk_approve(filters, action.reviewer, action.reason)
+        count = await svc.bulk_approve(filters, current_user.username, action.reason)
     else:
-        count = await svc.bulk_reject(filters, action.reviewer, action.reason)
+        count = await svc.bulk_reject(filters, current_user.username, action.reason)
     return {"affected": count, "action": action_type}
 
 
 @router.get("/stats")
-async def review_stats(svc=Depends(_svc)):
+async def review_stats(svc=Depends(_svc),
+    current_user: User = Depends(get_current_user)):
     return await svc.get_stats()
 
 
 # ── HITL endpoints ────────────────────────────────────────────────────────────
 
 @router.get("/paused")
-async def list_paused_jobs(svc=Depends(_svc)):
+async def list_paused_jobs(svc=Depends(_svc),
+    current_user: User = Depends(get_current_user)):
     """Return list of dataset job IDs currently paused at the HITL gate."""
     paused = set(svc.get_paused_jobs())
     if hasattr(svc, "db") and svc.db:
@@ -190,7 +205,8 @@ async def list_paused_jobs(svc=Depends(_svc)):
 
 
 @router.get("/jobs/{job_id}/status")
-async def hitl_job_status(job_id: str, svc=Depends(_svc)):
+async def hitl_job_status(job_id: str, svc=Depends(_svc),
+    current_user: User = Depends(get_current_user)):
     is_paused = svc.is_job_paused(job_id)
     if not is_paused and hasattr(svc, "db") and svc.db:
         try:
@@ -203,7 +219,8 @@ async def hitl_job_status(job_id: str, svc=Depends(_svc)):
 
 
 @router.post("/jobs/{job_id}/resume")
-async def hitl_resume_job(job_id: str, svc=Depends(_svc)):
+async def hitl_resume_job(job_id: str, svc=Depends(_svc),
+    current_user: User = Depends(require_role([UserRole.ADMIN, UserRole.USER]))):
     resumed = await svc.resume_job(job_id)
     if not resumed:
         raise HTTPException(status_code=404, detail=f"Job {job_id} is not currently paused")

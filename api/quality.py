@@ -2,7 +2,8 @@
 Quality Dashboard API — endpoints for dataset quality metrics.
 """
 import logging
-from fastapi import APIRouter, Query, Request
+from fastapi import APIRouter, Depends, Query, Request
+from api.auth import User, get_current_user
 from datetime import datetime, timedelta, timezone
 from typing import Optional
 
@@ -30,7 +31,8 @@ def _get_review_service(request: Request = None):
 
 
 @router.get("/overview")
-async def quality_overview(request: Request):
+async def quality_overview(request: Request,
+    current_user: User = Depends(get_current_user)):
     """Get overall quality metrics overview from real dataset samples in DB."""
     import api.server as server
     db_mgr = getattr(server, "db", None)
@@ -77,7 +79,8 @@ async def quality_overview(request: Request):
 
 
 @router.get("/by-job/{job_id}")
-async def job_quality(job_id: str):
+async def job_quality(job_id: str,
+    current_user: User = Depends(get_current_user)):
     """Get quality metrics for a specific job from DB."""
     import api.server as server
     db_mgr = getattr(server, "db", None)
@@ -105,7 +108,8 @@ async def job_quality(job_id: str):
 
 
 @router.get("/trends")
-async def quality_trends(days: int = Query(7, ge=1, le=90)):
+async def quality_trends(days: int = Query(7, ge=1, le=90),
+    current_user: User = Depends(get_current_user)):
     """Get quality trends over time from DB."""
     import api.server as server
     db_mgr = getattr(server, "db", None)
@@ -135,7 +139,7 @@ async def quality_trends(days: int = Query(7, ge=1, le=90)):
 
 
 @router.get("/distributions")
-async def quality_distributions():
+async def quality_distributions(current_user: User = Depends(get_current_user)):
     """Get quality score distributions directly from DB samples."""
     all_scores = []
     import api.server as server
@@ -176,7 +180,7 @@ async def quality_distributions():
 
 
 @router.get("/sources")
-async def source_quality():
+async def source_quality(current_user: User = Depends(get_current_user)):
     """Get source quality breakdown."""
     segmented = await segmented_quality()
     sources_data = []
@@ -193,7 +197,7 @@ async def source_quality():
 
 
 @router.get("/segmented")
-async def segmented_quality():
+async def segmented_quality(current_user: User = Depends(get_current_user)):
     """Get quality metrics segmented by dataset type, prompt length, and domain."""
     import api.server as server
     db_mgr = getattr(server, "db", None)

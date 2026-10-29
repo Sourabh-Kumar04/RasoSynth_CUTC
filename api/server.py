@@ -76,7 +76,7 @@ from core.observability import ObservabilityManager, correlation_id_var, trace_i
 from core.research_loop import ResearchLoop, TechniqueIntegrator
 from api.websocket_manager import ConnectionManager, get_ws_manager, MessageType
 from api.provider_validator import ProviderValidator
-from api.auth import get_auth_manager, UserRole, User, get_current_user
+from api.auth import get_auth_manager, UserRole, User, get_current_user, require_role
 from api.review import router as review_router
 from api.quality import router as quality_router
 from api.finetune import router as finetune_router
@@ -275,12 +275,14 @@ class CSRFMiddleware(BaseHTTPMiddleware):
 
         # Check if path should be skipped
         path = request.url.path
-        if path in self.SKIP_PATHS or path.startswith(("/auth/", "/docs", "/redoc", "/openapi")) or path.endswith(("/export", "/download", "/signed-url")):
+        if path in self.SKIP_PATHS or path.startswith(("/auth/", "/docs", "/redoc", "/openapi")):
             return await call_next(request)
 
-        # Machine-to-machine API requests with Authorization: Bearer or X-API-Key are immune to CSRF
+        # Machine-to-machine API requests with an Authorization: Bearer header are immune to CSRF
+        # (a Bearer header value is not ambient like a cookie; a bare X-API-Key header is NOT
+        # accepted here because no X-API-Key credential is validated anywhere).
         auth_header = request.headers.get("Authorization", "")
-        if auth_header.startswith("Bearer ") or request.headers.get("X-API-Key"):
+        if auth_header.startswith("Bearer "):
             return await call_next(request)
 
         # Check for WebSocket upgrade
@@ -993,7 +995,7 @@ def _validate_security_config():
 # itself succeeds even if JWT_SECRET is unset; the lifespan is the fail-fast gate.
 # _validate_security_config() is invoked at the top of lifespan(), below.
 @app.get("/providers", response_model=list[ProviderStatus], tags=["Providers"])
-async def list_providers():
+async def list_providers(current_user: User = Depends(get_current_user)):
     """List all configured providers with performance stats."""
     if not router:
         return []
@@ -1023,7 +1025,7 @@ async def list_providers():
 
 
 @app.get("/providers/techniques", tags=["Providers"])
-async def get_provider_techniques():
+async def get_provider_techniques(current_user: User = Depends(get_current_user)):
     """Get recommended techniques for each task type."""
     if not router:
         return {}
@@ -1038,7 +1040,7 @@ async def get_provider_techniques():
 
 @app.get("/health/circuit-breakers", tags=["Health"])
 @app.get("/providers/circuit-breakers", tags=["Providers"])
-async def get_circuit_breakers_status():
+async def get_circuit_breakers_status(current_user: User = Depends(get_current_user)):
     """Get circuit breaker statuses for configured providers."""
     if not failover_engine or not hasattr(failover_engine, "circuit_breakers"):
         return {}
@@ -1049,7 +1051,8 @@ async def get_circuit_breakers_status():
 
 
 @app.get("/providers/{provider_name}", response_model=ProviderStatus, tags=["Providers"])
-async def get_provider(provider_name: str):
+async def get_provider(provider_name: str,
+    current_user: User = Depends(get_current_user)):
     """Get single provider status and performance statistics."""
     if not router:
         raise HTTPException(status_code=503, detail="Router not initialized")
@@ -1073,7 +1076,8 @@ async def get_provider(provider_name: str):
 
 
 @app.get("/providers/{provider_name}/metrics", tags=["Providers"])
-async def get_provider_metrics(provider_name: str):
+async def get_provider_metrics(provider_name: str,
+    current_user: User = Depends(get_current_user)):
     """Get granular performance metrics for a specific provider."""
     if not router:
         raise HTTPException(status_code=503, detail="Router not initialized")
@@ -1094,7 +1098,8 @@ async def get_provider_metrics(provider_name: str):
 
 
 @app.patch("/providers/{provider_name}", tags=["Providers"])
-async def update_provider(provider_name: str, payload: dict = Body(...)):
+async def update_provider(provider_name: str, payload: dict = Body(...),
+    admin_user: User = Depends(require_role([UserRole.ADMIN]))):
     """Update dynamic configuration or priority for a provider."""
     if not router:
         raise HTTPException(status_code=503, detail="Router not initialized")
@@ -1109,7 +1114,8 @@ async def update_provider(provider_name: str, payload: dict = Body(...)):
 
 
 @app.post("/providers/test", response_model=ProviderTestResponse, tags=["Providers"])
-async def test_provider(request: ProviderTestRequest, fastapi_request: Request):
+async def test_provider(request: ProviderTestRequest, fastapi_request: Request,
+    current_user: User = Depends(get_current_user)):
     """Test connectivity to a specific provider (rate limited: 20/min/IP)."""
     # Rate limiting on provider test (distributed Redis-backed with in-memory fallback)
     client_ip = get_client_ip(fastapi_request)
@@ -1146,7 +1152,8 @@ async def test_provider(request: ProviderTestRequest, fastapi_request: Request):
 
 
 @app.post("/research", response_model=ResearchResponse, tags=["Research"])
-async def trigger_research(request: ResearchRequest):
+async def trigger_research(request: ResearchRequest,
+    current_user: User = Depends(get_current_user)):
     """Trigger autonomous research cycle."""
     if not research_loop:
         raise HTTPException(status_code=500, detail="Research loop not initialized")
@@ -1162,7 +1169,7 @@ async def trigger_research(request: ResearchRequest):
 
 
 @app.get("/research/status", tags=["Research"])
-async def get_research_status():
+async def get_research_status(current_user: User = Depends(get_current_user)):
     """Get research loop status and history."""
     if not research_loop:
         return {"status": "disabled"}
@@ -1178,7 +1185,8 @@ async def get_research_status():
 
 
 @app.post("/research/cycle", response_model=ResearchResponse, tags=["Research"])
-async def trigger_research_cycle(request: Optional[ResearchRequest] = None):
+async def trigger_research_cycle(request: Optional[ResearchRequest] = None,
+    current_user: User = Depends(get_current_user)):
     """Trigger an autonomous research cycle across ArXiv and Hugging Face."""
     if not research_loop:
         raise HTTPException(status_code=500, detail="Research loop not initialized")
@@ -1192,7 +1200,7 @@ async def trigger_research_cycle(request: Optional[ResearchRequest] = None):
 
 
 @app.get("/research/techniques", tags=["Research"])
-async def get_research_techniques():
+async def get_research_techniques(current_user: User = Depends(get_current_user)):
     """Get discovered and cached research techniques."""
     if not research_loop:
         return {"techniques": {}}
@@ -1203,7 +1211,7 @@ async def get_research_techniques():
 
 
 @app.get("/research/heuristics", tags=["Research"])
-async def get_research_heuristics():
+async def get_research_heuristics(current_user: User = Depends(get_current_user)):
     """Get active pipeline heuristics updated by the research loop."""
     if not technique_integrator:
         return {"heuristics": {}}
@@ -1218,7 +1226,7 @@ async def get_research_heuristics():
 # =============================================================================
 
 @app.get("/agents", tags=["Agents"])
-async def list_registered_agents():
+async def list_registered_agents(current_user: User = Depends(get_current_user)):
     """List all registered agent types and capabilities in the multi-agent society."""
     try:
         from agents.registry import AgentRegistry
@@ -1242,7 +1250,7 @@ async def list_registered_agents():
 
 
 @app.get("/agents/stats", tags=["Agents"])
-async def get_agent_stats():
+async def get_agent_stats(current_user: User = Depends(get_current_user)):
     """Get statistics on registered and active agent instances."""
     try:
         from agents.registry import AgentRegistry
@@ -1256,7 +1264,8 @@ async def get_agent_stats():
 # =============================================================================
 
 @app.post("/datasets/{dataset_id}/deliver", response_model=DeliveryResponseSchema, tags=["Storage & Delivery"])
-async def deliver_dataset(dataset_id: str, request: DeliveryRequestSchema):
+async def deliver_dataset(dataset_id: str, request: DeliveryRequestSchema,
+    current_user: User = Depends(get_current_user)):
     """Trigger ADR-002 packaging and delivery of a dataset."""
     if not hasattr(app.state, "delivery_manager") or not app.state.delivery_manager:
         raise HTTPException(status_code=503, detail="DeliveryManager is not initialized")
@@ -1308,7 +1317,8 @@ async def deliver_dataset(dataset_id: str, request: DeliveryRequestSchema):
 
 
 @app.get("/deliveries/{delivery_id}", response_model=DeliveryResponseSchema, tags=["Storage & Delivery"])
-async def get_delivery_status(delivery_id: str):
+async def get_delivery_status(delivery_id: str,
+    current_user: User = Depends(get_current_user)):
     """Get delivery operation status and download URLs."""
     if not hasattr(app.state, "delivery_manager") or not app.state.delivery_manager:
         raise HTTPException(status_code=503, detail="DeliveryManager is not initialized")
@@ -1330,7 +1340,8 @@ async def get_delivery_status(delivery_id: str):
 
 
 @app.post("/adaptability", response_model=AdaptabilityResponse, tags=["Adaptability"])
-async def analyze_adaptability(request: AdaptabilityRequest):
+async def analyze_adaptability(request: AdaptabilityRequest,
+    current_user: User = Depends(get_current_user)):
     """Analyze dataset feasibility under given constraints."""
     from core.orchestrator_core import ConstraintAnalyzer
 
@@ -1345,10 +1356,53 @@ async def analyze_adaptability(request: AdaptabilityRequest):
     )
 
 
+
+async def _authenticate_websocket(websocket: WebSocket):
+    """Verify a WebSocket caller before accept.
+
+    Browsers cannot set an Authorization header on a WebSocket handshake, so a
+    JWT is accepted either as an Authorization Bearer header or as the
+    ``?token=`` query parameter. Returns the authenticated User, or None after
+    closing the socket with 4401 when the token is missing/invalid.
+    Job ownership cannot be enforced per-user yet: jobs carry no owner column;
+    callers must at least be authenticated and the job must exist.
+    """
+    token = None
+    auth_header = websocket.headers.get("authorization", "")
+    if auth_header.startswith("Bearer "):
+        token = auth_header[7:].strip()
+    if not token:
+        token = websocket.query_params.get("token")
+    if not token:
+        await websocket.close(code=4401)
+        return None
+    try:
+        auth_mgr = get_auth_manager()
+        token_data = auth_mgr.verify_token(token)
+        user = auth_mgr.get_user(token_data.username)
+    except Exception:
+        await websocket.close(code=4401)
+        return None
+    if not user:
+        await websocket.close(code=4401)
+        return None
+    return user
+
+
 @app.websocket("/jobs/{job_id}/stream")
 @app.websocket("/ws/jobs/{job_id}")
 async def job_stream(websocket: WebSocket, job_id: str):
     """WebSocket endpoint for real-time job progress streaming."""
+    if await _authenticate_websocket(websocket) is None:
+        return
+    if db is not None:
+        try:
+            existing = await db.get_job_status(job_id)
+        except Exception:
+            existing = None
+        if not existing and not (orchestrator and job_id in getattr(orchestrator, "active_jobs", {})):
+            await websocket.close(code=4404)
+            return
     await websocket.accept()
 
     if job_id not in active_websockets:
@@ -1390,6 +1444,8 @@ async def job_stream(websocket: WebSocket, job_id: str):
 @app.websocket("/ws/jobs")
 async def jobs_list_stream(websocket: WebSocket):
     """WebSocket endpoint for real-time jobs list streaming."""
+    if await _authenticate_websocket(websocket) is None:
+        return
     await websocket.accept()
     list_key = "__jobs_list__"
     if list_key not in active_websockets:
@@ -1418,7 +1474,7 @@ async def jobs_list_stream(websocket: WebSocket):
 
 
 @app.get("/metrics", tags=["Metrics"])
-async def metrics_endpoint():
+async def metrics_endpoint(current_user: User = Depends(get_current_user)):
     """Expose Prometheus metrics in text/plain format."""
     try:
         from prometheus_client import CONTENT_TYPE_LATEST
@@ -1438,7 +1494,7 @@ async def metrics_endpoint():
 
 
 @app.get("/observability/langsmith", tags=["Metrics"])
-async def langsmith_status():
+async def langsmith_status(current_user: User = Depends(get_current_user)):
     """Expose LangSmith tracing and monitoring connection status."""
     if not observability or not hasattr(observability, "langsmith"):
         return {"status": "disabled", "available": False, "enabled": False}
@@ -1448,21 +1504,24 @@ async def langsmith_status():
 # ── Observability & Tracing Endpoints ──────────────────────────────────────────
 
 @app.get("/traces", tags=["Observability"])
-async def get_traces(service: Optional[str] = None, limit: int = 50):
+async def get_traces(service: Optional[str] = None, limit: int = 50,
+    current_user: User = Depends(get_current_user)):
     """Retrieve recent traces from the observability ring buffer."""
     traces = observability.get_traces(service=service, limit=limit) if observability else []
     return {"traces": traces}
 
 
 @app.get("/traces/correlation", tags=["Observability"])
-async def get_traces_by_correlation(correlation_id: str):
+async def get_traces_by_correlation(correlation_id: str,
+    current_user: User = Depends(get_current_user)):
     """Retrieve traces matching a specific correlation ID."""
     traces = observability.get_traces(correlation_id=correlation_id) if observability else []
     return {"traces": traces}
 
 
 @app.get("/traces/{trace_id}", tags=["Observability"])
-async def get_trace(trace_id: str):
+async def get_trace(trace_id: str,
+    current_user: User = Depends(get_current_user)):
     """Retrieve a specific trace or span by trace_id or span id."""
     if not observability:
         raise HTTPException(status_code=404, detail="Observability not initialized")
@@ -1626,7 +1685,7 @@ async def liveness_check():
 
 
 @app.get("/health/providers/metrics", tags=["Health"])
-async def get_provider_health_metrics():
+async def get_provider_health_metrics(current_user: User = Depends(get_current_user)):
     """Get performance and reliability metrics for all configured providers."""
     metrics_map = {}
 
@@ -1653,7 +1712,7 @@ async def get_provider_health_metrics():
 
 
 @app.get("/settings/compute", tags=["Settings"])
-async def get_compute_settings():
+async def get_compute_settings(current_user: User = Depends(get_current_user)):
     """Return cloud GPU provider configuration status (without exposing raw secrets)."""
     cfg = get_settings()
     m_id = os.getenv("MODAL_TOKEN_ID") or cfg.modal_token_id
@@ -1680,7 +1739,8 @@ class UpdateComputeSettingsRequest(BaseModel):
 
 
 @app.post("/settings/compute", tags=["Settings"])
-async def update_compute_settings(payload: UpdateComputeSettingsRequest):
+async def update_compute_settings(payload: UpdateComputeSettingsRequest,
+    admin_user: User = Depends(require_role([UserRole.ADMIN]))):
     """Update runtime cloud compute and HuggingFace tokens."""
     cfg = get_settings()
     if payload.modal_token_id:
@@ -1706,7 +1766,8 @@ async def update_compute_settings(payload: UpdateComputeSettingsRequest):
 
 @app.post("/validate", tags=["Validation"])
 @app.post("/validate/dataset", tags=["Validation"])
-async def validate_dataset_request(payload: dict = Body(default_factory=dict)):
+async def validate_dataset_request(payload: dict = Body(default_factory=dict),
+    current_user: User = Depends(get_current_user)):
     """Validate dataset generation request configuration prior to pipeline execution."""
     errors = []
     warnings = []
@@ -1899,7 +1960,8 @@ class DomainAnalysisRequest(BaseModel):
 
 @app.post("/agent/analyze-domain", tags=["Agent"])
 @app.post("/api/agent/analyze-domain", tags=["Agent"])
-async def agent_analyze_domain(request: DomainAnalysisRequest):
+async def agent_analyze_domain(request: DomainAnalysisRequest,
+    current_user: User = Depends(get_current_user)):
     """
     Autonomous Semantic Discovery Agent:
     Discovers canonical domain, preserved terms (syntactic invariants), and anti-domains (polysemy collisions)
@@ -1923,7 +1985,8 @@ async def agent_analyze_domain(request: DomainAnalysisRequest):
 
 
 @app.post("/jobs/preview", tags=["Jobs"])
-async def preview_job_sources(request: SourcePreviewRequest):
+async def preview_job_sources(request: SourcePreviewRequest,
+    current_user: User = Depends(get_current_user)):
     """Build an improved search plan and fetch a small source-only preview."""
     if not orchestrator:
         raise HTTPException(status_code=503, detail="Discovery pipeline is not available")
@@ -2053,7 +2116,8 @@ async def preview_job_sources(request: SourcePreviewRequest):
 
 
 @app.post("/jobs/preview/batch", tags=["Jobs"])
-async def preview_job_example_batch(request: ExampleBatchPreviewRequest):
+async def preview_job_example_batch(request: ExampleBatchPreviewRequest,
+    current_user: User = Depends(get_current_user)):
     """Extract, filter, and generate a tiny grounded example batch for approval."""
     if not orchestrator or not orchestrator.router:
         raise HTTPException(status_code=503, detail="A configured AI provider is required to generate example records")
@@ -2214,7 +2278,8 @@ async def preview_job_example_batch(request: ExampleBatchPreviewRequest):
     }
 
 @app.post("/jobs/estimate", tags=["Jobs"])
-async def estimate_job(request: JobRequest):
+async def estimate_job(request: JobRequest,
+    current_user: User = Depends(get_current_user)):
     """Estimate feasibility and flag a planning-budget mismatch before a job starts."""
     from core.orchestrator_core import ConstraintAnalyzer
 
@@ -2231,7 +2296,8 @@ async def estimate_job(request: JobRequest):
 
 
 @app.post("/jobs/plan", tags=["Jobs"])
-async def plan_job(request: JobRequest):
+async def plan_job(request: JobRequest,
+    current_user: User = Depends(get_current_user)):
     """Generate an execution plan with resource allocation, step costs, and workflow optimization."""
     try:
         from api.planning.planner import WorkflowPlanner
@@ -2283,7 +2349,7 @@ async def plan_job(request: JobRequest):
 
 
 @app.get("/cluster/ray", tags=["Observability"])
-async def get_ray_cluster_status():
+async def get_ray_cluster_status(current_user: User = Depends(get_current_user)):
     """Get Ray distributed GPU and compute cluster worker status."""
     try:
         from workers.ray_pipeline import get_ray_status
@@ -2305,7 +2371,8 @@ async def create_job(
     request: JobRequest,
     background_tasks: BackgroundTasks,
     idempotency_key: Optional[str] = Header(None, alias="Idempotency-Key"),
-):
+
+    current_user: User = Depends(get_current_user)):
     """Create a new dataset generation job and kick off the pipeline.
 
     Supports idempotent dispatches via 'Idempotency-Key' header or configuration fingerprint.
@@ -2392,7 +2459,8 @@ async def list_jobs(
     status: Optional[str] = None,
     limit: int = 50,
     cursor: Optional[str] = None,
-):
+
+    current_user: User = Depends(get_current_user)):
     """List dataset generation jobs (most recent first)."""
     if not db:
         raise HTTPException(status_code=503, detail="Database not available")
@@ -2424,7 +2492,8 @@ async def list_jobs(
 
 
 @app.get("/jobs/{job_id}", response_model=JobDetailResponse, tags=["Jobs"])
-async def get_job(job_id: str):
+async def get_job(job_id: str,
+    current_user: User = Depends(get_current_user)):
     """Get a single job's full detail (config + progression counters)."""
     if not db:
         raise HTTPException(status_code=503, detail="Database not available")
@@ -2462,7 +2531,8 @@ async def get_job(job_id: str):
 
 
 @app.post("/jobs/{job_id}/cancel", tags=["Jobs"])
-async def cancel_job(job_id: str):
+async def cancel_job(job_id: str,
+    current_user: User = Depends(get_current_user)):
     """Cancel an active or pending dataset generation job."""
     if not db:
         raise HTTPException(status_code=503, detail="Database not available")
@@ -2495,7 +2565,8 @@ async def cancel_job(job_id: str):
 
 
 @app.delete("/jobs/{job_id}", tags=["Jobs"])
-async def delete_job_endpoint(job_id: str):
+async def delete_job_endpoint(job_id: str,
+    admin_user: User = Depends(require_role([UserRole.ADMIN]))):
     """Delete a job, all associated datasets/samples, and output files."""
     if not db:
         raise HTTPException(status_code=503, detail="Database not available")
@@ -2539,7 +2610,8 @@ class RejectPreviewRequest(BaseModel):
 
 
 @app.get("/jobs/{job_id}/preview_samples", tags=["Jobs"])
-async def get_job_preview_samples(job_id: str):
+async def get_job_preview_samples(job_id: str,
+    current_user: User = Depends(get_current_user)):
     """Retrieve early dataset preview samples generated for a job."""
     if not db:
         raise HTTPException(status_code=503, detail="Database not available")
@@ -2557,7 +2629,8 @@ async def get_job_preview_samples(job_id: str):
 
 
 @app.post("/jobs/{job_id}/accept_preview", tags=["Jobs"])
-async def accept_job_preview(job_id: str, payload: AcceptPreviewRequest = Body(default_factory=AcceptPreviewRequest)):
+async def accept_job_preview(job_id: str, payload: AcceptPreviewRequest = Body(default_factory=AcceptPreviewRequest),
+    current_user: User = Depends(get_current_user)):
     """Accept early preview samples, optionally with user edits, and advance pipeline with full capabilities."""
     if orchestrator and hasattr(orchestrator, "accept_preview"):
         success = orchestrator.accept_preview(job_id, edited_samples=payload.edited_samples)
@@ -2570,7 +2643,8 @@ async def accept_job_preview(job_id: str, payload: AcceptPreviewRequest = Body(d
 
 
 @app.post("/jobs/{job_id}/reject_preview", tags=["Jobs"])
-async def reject_job_preview(job_id: str, payload: RejectPreviewRequest = Body(default_factory=RejectPreviewRequest)):
+async def reject_job_preview(job_id: str, payload: RejectPreviewRequest = Body(default_factory=RejectPreviewRequest),
+    current_user: User = Depends(get_current_user)):
     """Reject early preview samples, optionally supply updated prompt, and re-generate preview."""
     if orchestrator and hasattr(orchestrator, "reject_preview"):
         success = orchestrator.reject_preview(job_id, updated_prompt=payload.updated_prompt)
@@ -2597,7 +2671,8 @@ async def reject_job_preview(job_id: str, payload: RejectPreviewRequest = Body(d
 async def list_datasets(
     limit: int = 50,
     cursor: Optional[str] = None,
-):
+
+    current_user: User = Depends(get_current_user)):
     """List datasets (most recent first)."""
     if not db:
         raise HTTPException(status_code=503, detail="Database not available")
@@ -2620,7 +2695,8 @@ async def list_datasets(
 
 
 @app.get("/datasets/{dataset_id}", tags=["Datasets"])
-async def get_dataset(dataset_id: str):
+async def get_dataset(dataset_id: str,
+    current_user: User = Depends(get_current_user)):
     """Get a single dataset by ID (or job ID — falls back to job lookup)."""
     if not db:
         raise HTTPException(status_code=503, detail="Database not available")
@@ -2640,7 +2716,8 @@ async def get_dataset(dataset_id: str):
 
 
 @app.get("/datasets/{dataset_id}/records", tags=["Datasets"])
-async def get_dataset_records(dataset_id: str, limit: int = 10):
+async def get_dataset_records(dataset_id: str, limit: int = 10,
+    current_user: User = Depends(get_current_user)):
     """Get sample records from a dataset."""
     if not db:
         raise HTTPException(status_code=503, detail="Database not available")
@@ -2682,7 +2759,8 @@ async def get_dataset_records(dataset_id: str, limit: int = 10):
 
 
 @app.delete("/datasets/{dataset_id}", tags=["Datasets"])
-async def delete_dataset_endpoint(dataset_id: str):
+async def delete_dataset_endpoint(dataset_id: str,
+    admin_user: User = Depends(require_role([UserRole.ADMIN]))):
     """Delete a dataset, its samples, and output file."""
     if not db:
         raise HTTPException(status_code=503, detail="Database not available")
@@ -2718,7 +2796,8 @@ async def delete_dataset_endpoint(dataset_id: str):
 
 
 @app.post("/datasets/{dataset_id}/export", tags=["Datasets"])
-async def export_dataset(dataset_id: str, request: dict = None):
+async def export_dataset(dataset_id: str, request: dict = None,
+    current_user: User = Depends(get_current_user)):
     """Download an existing dataset file.
 
     Returns the dataset file directly.  Supports ``format`` in the JSON body:
@@ -2928,7 +3007,8 @@ async def export_dataset(dataset_id: str, request: dict = None):
 # =============================================================================
 
 @app.get("/jobs/{job_id}/records", tags=["Jobs"])
-async def get_job_records(job_id: str, limit: int = 10):
+async def get_job_records(job_id: str, limit: int = 10,
+    current_user: User = Depends(get_current_user)):
     """Get sample records from datasets belonging to a job."""
     from pathlib import Path
     import json
@@ -3013,7 +3093,8 @@ async def get_job_records(job_id: str, limit: int = 10):
 
 
 @app.get("/jobs/{job_id}/summary", tags=["Jobs"])
-async def get_job_dataset_summary(job_id: str):
+async def get_job_dataset_summary(job_id: str,
+    current_user: User = Depends(get_current_user)):
     """Return persisted quality, provenance, balance, and review coverage for a job."""
     if not db:
         raise HTTPException(status_code=503, detail="Database not available")
@@ -3114,7 +3195,8 @@ async def get_job_dataset_summary(job_id: str):
 
 
 @app.get("/jobs/{job_id}/report", tags=["Jobs"])
-async def get_job_report(job_id: str):
+async def get_job_report(job_id: str,
+    current_user: User = Depends(get_current_user)):
     """Return comprehensive analytical and execution report for a job."""
     summary = await get_job_dataset_summary(job_id)
     job = await db.get_job_status(job_id) if db else None
@@ -3211,7 +3293,8 @@ async def create_presigned_download_url(
     request: Request,
     ttl_seconds: int = Query(3600, ge=60, le=86400, description="Token validity in seconds (default 3600)"),
     format: Optional[str] = Query(None, description="Dataset format: jsonl, csv, xml, parquet, json"),
-):
+
+    current_user: User = Depends(get_current_user)):
     """Generate an ephemeral HMAC-SHA256 presigned token for streaming private datasets."""
     final_ttl = ttl_seconds
     final_format = (format or "jsonl").lower().strip()
@@ -3250,12 +3333,13 @@ async def download_job_dataset(
     token: Optional[str] = Query(None, description="Ephemeral HMAC-SHA256 presigned token"),
     expires: Optional[int] = Query(None, description="Unix timestamp expiration of signed token"),
     request: Request = None,
-):
+
+    current_user: User = Depends(get_current_user)):
     """Download the completed dataset file for a job or dataset ID.
     
     Dynamically negotiates formats (JSONL, CSV, XML, Parquet, JSON) and resolves
     data from local storage or dynamically streams from the database.
-    Requires an ephemeral presigned token, Bearer auth, or public benchmark preset.
+    Requires an ephemeral presigned token or a Bearer JWT.
     """
     # 0. Authorization check: Ephemeral Presigned Token or Bearer Auth
     authorized = False
@@ -3285,8 +3369,8 @@ async def download_job_dataset(
             except Exception:
                 pass
 
-    if not authorized and os.getenv("ALLOW_ANONYMOUS_DOWNLOADS", "false").lower() == "true":
-        authorized = True
+    # NOTE (P0): ALLOW_ANONYMOUS_DOWNLOADS was removed. Downloads now require a
+    # valid presigned token or a Bearer JWT; there is no anonymous path.
 
     if not authorized:
         raise HTTPException(
@@ -3553,7 +3637,8 @@ async def download_job_dataset(
 # =============================================================================
 
 @app.post("/checkpoints", response_model=CheckpointResponse, status_code=201, tags=["Checkpoints"])
-async def create_checkpoint(request: CreateCheckpointRequest):
+async def create_checkpoint(request: CreateCheckpointRequest,
+    current_user: User = Depends(get_current_user)):
     """Create a new checkpoint for a job."""
     if not checkpoint_manager:
         raise HTTPException(status_code=503, detail="Checkpoint manager not available")
@@ -3609,7 +3694,8 @@ async def create_checkpoint(request: CreateCheckpointRequest):
 
 
 @app.get("/checkpoints/{job_id}", response_model=CheckpointResponse, tags=["Checkpoints"])
-async def get_checkpoint(job_id: str, checkpoint_id: Optional[str] = None):
+async def get_checkpoint(job_id: str, checkpoint_id: Optional[str] = None,
+    current_user: User = Depends(get_current_user)):
     """Get checkpoint(s) for a job."""
     if not checkpoint_manager:
         raise HTTPException(status_code=503, detail="Checkpoint manager not available")
@@ -3647,7 +3733,8 @@ async def get_checkpoint(job_id: str, checkpoint_id: Optional[str] = None):
 
 
 @app.get("/checkpoints/{job_id}/history", response_model=list[CheckpointResponse], tags=["Checkpoints"])
-async def get_checkpoint_history(job_id: str, limit: int = 10):
+async def get_checkpoint_history(job_id: str, limit: int = 10,
+    current_user: User = Depends(get_current_user)):
     """Get checkpoint history for a job."""
     if not checkpoint_manager:
         raise HTTPException(status_code=503, detail="Checkpoint manager not available")
@@ -3682,7 +3769,8 @@ async def get_checkpoint_history(job_id: str, limit: int = 10):
 
 
 @app.post("/checkpoints/{job_id}/restore", response_model=RestoreCheckpointResponse, tags=["Checkpoints"])
-async def restore_checkpoint(request: RestoreCheckpointRequest):
+async def restore_checkpoint(request: RestoreCheckpointRequest,
+    admin_user: User = Depends(require_role([UserRole.ADMIN]))):
     """Resume a non-completed job from persisted pipeline state."""
     if not checkpoint_manager:
         raise HTTPException(status_code=503, detail="Checkpoint manager not available")
@@ -3760,7 +3848,8 @@ async def restore_checkpoint(request: RestoreCheckpointRequest):
 # =============================================================================
 
 @app.post("/providers/switch", response_model=ProviderSwitchResponse, tags=["Providers"])
-async def switch_provider(request: ProviderSwitchRequest):
+async def switch_provider(request: ProviderSwitchRequest,
+    admin_user: User = Depends(require_role([UserRole.ADMIN]))):
     """Manually switch to a different provider during job execution."""
     if not provider_hot_switcher:
         raise HTTPException(status_code=503, detail="Provider switcher not available")
@@ -3785,7 +3874,8 @@ async def switch_provider(request: ProviderSwitchRequest):
 
 
 @app.post("/providers/failover", response_model=FailoverResponse, tags=["Providers"])
-async def trigger_failover(request: FailoverRequest):
+async def trigger_failover(request: FailoverRequest,
+    admin_user: User = Depends(require_role([UserRole.ADMIN]))):
     """Manually trigger failover for a job."""
     if not failover_engine:
         raise HTTPException(status_code=503, detail="Failover engine not available")
@@ -3825,7 +3915,8 @@ async def trigger_failover(request: FailoverRequest):
 
 
 @app.get("/failover/history", response_model=FailoverHistoryResponse, tags=["Failover"])
-async def get_failover_history(job_id: Optional[str] = None, limit: int = 50):
+async def get_failover_history(job_id: Optional[str] = None, limit: int = 50,
+    current_user: User = Depends(get_current_user)):
     """Get failover history."""
     if not failover_engine:
         raise HTTPException(status_code=503, detail="Failover engine not available")
@@ -3854,7 +3945,7 @@ async def get_failover_history(job_id: Optional[str] = None, limit: int = 50):
 
 
 @app.get("/failover/stats", tags=["Failover"])
-async def get_failover_stats():
+async def get_failover_stats(current_user: User = Depends(get_current_user)):
     """Get failover statistics."""
     if not failover_engine:
         raise HTTPException(status_code=503, detail="Failover engine not available")
@@ -3868,7 +3959,8 @@ async def get_failover_stats():
         },
     }
 @app.get("/orchestration/dag", tags=["Orchestration"])
-async def get_orchestration_dag(job_id: Optional[str] = Query(default=None)):
+async def get_orchestration_dag(job_id: Optional[str] = Query(default=None),
+    current_user: User = Depends(get_current_user)):
     """Get the current dataset synthesis orchestration DAG reflecting live execution state."""
     stage_order = [
         "analyzing_constraints",
@@ -4094,7 +4186,8 @@ async def get_orchestration_dag(job_id: Optional[str] = Query(default=None)):
 
 
 @app.post("/orchestration/steps/{step_id}/retry", tags=["Orchestration"])
-async def retry_orchestration_step(step_id: str, job_id: Optional[str] = Query(default=None)):
+async def retry_orchestration_step(step_id: str, job_id: Optional[str] = Query(default=None),
+    current_user: User = Depends(get_current_user)):
     """Retry a specific step in the orchestration DAG."""
     if db and job_id:
         job = await db.get_job_status(job_id)
@@ -4103,7 +4196,8 @@ async def retry_orchestration_step(step_id: str, job_id: Optional[str] = Query(d
     return {"success": True, "step_id": step_id, "job_id": job_id, "status": "retrying"}
 
 @app.get("/metrics/history", tags=["Metrics"])
-async def get_metrics_history(time_range: str = Query(default="1h", alias="range")):
+async def get_metrics_history(time_range: str = Query(default="1h", alias="range"),
+    current_user: User = Depends(get_current_user)):
     """Get historical system telemetry metrics with dynamic UTC intervals and live trace telemetry."""
     now = datetime.now(timezone.utc)
     interval_minutes = 10 if time_range == "1h" else 60
@@ -4160,14 +4254,16 @@ async def get_metrics_history(time_range: str = Query(default="1h", alias="range
 async def get_tokenizer_fertility_metrics(
     language: str = Query(default="en"),
     script_mode: str = Query(default="native"),
-):
+
+    current_user: User = Depends(get_current_user)):
     """Estimate tokenizer fertility and token efficiency across foundation models."""
     from core.tokenizer_metrics import estimate_tokenizer_fertility
     return estimate_tokenizer_fertility(language=language, script_mode=script_mode)
 
 
 @app.post("/tools/mask-pii", tags=["Tools"])
-async def tool_mask_pii(request: dict = Body(...)):
+async def tool_mask_pii(request: dict = Body(...),
+    current_user: User = Depends(get_current_user)):
     """Detect and mask Indian statutory identifiers (Aadhaar, PAN, GSTIN, UPI, Mobile)."""
     from core.validation.indian_pii import detect_indian_pii, mask_indian_pii
     text = str(request.get("text", ""))
@@ -4183,7 +4279,8 @@ async def tool_mask_pii(request: dict = Body(...)):
 
 
 @app.post("/tools/speech-normalize", tags=["Tools"])
-async def tool_speech_normalize(request: dict = Body(...)):
+async def tool_speech_normalize(request: dict = Body(...),
+    current_user: User = Depends(get_current_user)):
     """Verbalize numbers, abbreviations, and currencies for Voice AI pipelines."""
     from core.normalization.indian_numerical import verbalize_for_speech
     text = str(request.get("text", ""))
@@ -4195,7 +4292,8 @@ async def tool_speech_normalize(request: dict = Body(...)):
 
 
 @app.post("/tools/evaluate-fidelity", tags=["Tools"])
-async def tool_evaluate_fidelity(request: dict = Body(...)):
+async def tool_evaluate_fidelity(request: dict = Body(...),
+    current_user: User = Depends(get_current_user)):
     """Calculate cross-lingual semantic fidelity and chrF++ score."""
     from core.metrics.fidelity import evaluate_fidelity
     hyp = str(request.get("hypothesis", ""))
@@ -4204,7 +4302,8 @@ async def tool_evaluate_fidelity(request: dict = Body(...)):
 
 
 @app.post("/tools/evaluate-rubric", tags=["Tools"])
-async def tool_evaluate_rubric(request: dict = Body(...)):
+async def tool_evaluate_rubric(request: dict = Body(...),
+    current_user: User = Depends(get_current_user)):
     """Evaluate synthetic sample against 5-dimensional LLM-as-a-Judge quality rubric."""
     from core.evaluation.llm_judge import evaluate_sample_rubric
     inst = str(request.get("instruction", ""))
@@ -4222,7 +4321,8 @@ async def tool_evaluate_rubric(request: dict = Body(...)):
 
 
 @app.get("/datasets/{job_id}/huggingface-card", tags=["Datasets"])
-async def get_dataset_huggingface_card(job_id: str):
+async def get_dataset_huggingface_card(job_id: str,
+    current_user: User = Depends(get_current_user)):
     """Generate Hugging Face Dataset Card (README.md) with YAML frontmatter."""
     from pathlib import Path
     from core.export.huggingface_exporter import generate_hf_dataset_card
@@ -4276,7 +4376,8 @@ async def get_dataset_huggingface_card(job_id: str):
 
 
 @app.post("/datasets/{job_id}/publish-huggingface", tags=["Datasets"])
-async def publish_dataset_to_huggingface_hub(job_id: str, request: dict = Body(...)):
+async def publish_dataset_to_huggingface_hub(job_id: str, request: dict = Body(...),
+    admin_user: User = Depends(require_role([UserRole.ADMIN]))):
     """Publish dataset and README card directly to Hugging Face Hub."""
     from core.export.hf_hub_publisher import publish_dataset_to_hf_hub
     from core.export.huggingface_exporter import generate_hf_dataset_card
@@ -4362,7 +4463,8 @@ async def get_dataset_training_recipe(
     job_id: str,
     framework: str = "unsloth",
     base_model: Optional[str] = None,
-):
+
+    current_user: User = Depends(get_current_user)):
     """Generate fine-tuning recipe and launch scripts (Unsloth, Axolotl, LLaMA-Factory)."""
     from core.training.recipe_generator import generate_training_recipe
 
@@ -4394,7 +4496,8 @@ async def get_dataset_training_recipe(
 
 
 @app.get("/datasets/{job_id}/dbom", tags=["Datasets"])
-async def get_dataset_dbom(job_id: str):
+async def get_dataset_dbom(job_id: str,
+    current_user: User = Depends(get_current_user)):
     """Generate or retrieve cryptographic Data Bill of Materials (DBOM) and Data Nutrition Label."""
     from pathlib import Path
     import json
@@ -4514,7 +4617,8 @@ async def get_dbom_badge_svg_endpoint(certificate_id: str):
 
 
 @app.post("/tools/generate-adversarial-probes", tags=["Tools"])
-async def tool_generate_adversarial_probes(request: dict = Body(...)):
+async def tool_generate_adversarial_probes(request: dict = Body(...),
+    current_user: User = Depends(get_current_user)):
     """Generate domain-specific adversarial stress test probes."""
     from core.safety.adversarial_generator import generate_adversarial_probes
     domain = str(request.get("domain", "taxation"))
@@ -4536,7 +4640,8 @@ async def tool_generate_adversarial_probes(request: dict = Body(...)):
 
 
 @app.post("/tools/audit-contamination", tags=["Tools"])
-async def tool_audit_contamination(request: dict = Body(...)):
+async def tool_audit_contamination(request: dict = Body(...),
+    current_user: User = Depends(get_current_user)):
     """Audit dataset samples against standard Indic & global LLM evaluation benchmarks."""
     from core.evaluation.contamination_checker import check_dataset_contamination
     samples = request.get("samples") or []
@@ -4555,7 +4660,8 @@ async def tool_audit_contamination(request: dict = Body(...)):
 
 
 @app.post("/tools/evaluate-rag", tags=["Tools"])
-async def tool_evaluate_rag(request: dict = Body(...)):
+async def tool_evaluate_rag(request: dict = Body(...),
+    current_user: User = Depends(get_current_user)):
     """Evaluate grounding faithfulness, attribution, and citation coverage of a RAG response."""
     from core.generation.rag_synthesizer import evaluate_rag_faithfulness
     response = str(request.get("response", ""))
@@ -4569,7 +4675,8 @@ async def tool_evaluate_rag(request: dict = Body(...)):
 
 
 @app.post("/tools/semantic-density", tags=["Tools"])
-async def tool_semantic_density(request: dict = Body(...)):
+async def tool_semantic_density(request: dict = Body(...),
+    current_user: User = Depends(get_current_user)):
     """Analyze dataset semantic density, 2D topic clusters, entropy, and outliers."""
     from core.curation.diversity_mapper import analyze_semantic_diversity
     samples = request.get("samples") or []
@@ -4580,7 +4687,8 @@ async def tool_semantic_density(request: dict = Body(...)):
 
 
 @app.post("/tools/evaluate-dialogue", tags=["Tools"])
-async def tool_evaluate_dialogue(request: dict = Body(...)):
+async def tool_evaluate_dialogue(request: dict = Body(...),
+    current_user: User = Depends(get_current_user)):
     """Evaluate structural integrity, alternation, and turn balance of a dialogue."""
     from core.generation.multi_turn_synthesizer import evaluate_dialogue_coherence
     turns = request.get("turns") or []
@@ -4590,7 +4698,8 @@ async def tool_evaluate_dialogue(request: dict = Body(...)):
 
 
 @app.post("/tools/best-of-n", tags=["Tools"])
-async def tool_best_of_n(request: dict = Body(...)):
+async def tool_best_of_n(request: dict = Body(...),
+    current_user: User = Depends(get_current_user)):
     """Perform Best-of-N rejection sampling and consensus filtering."""
     from core.curation.best_of_n import filter_best_of_n
     instruction = str(request.get("instruction", ""))
@@ -4608,7 +4717,8 @@ async def tool_best_of_n(request: dict = Body(...)):
 
 
 @app.post("/tools/audit-representation", tags=["Tools"])
-async def tool_audit_representation(request: dict = Body(...)):
+async def tool_audit_representation(request: dict = Body(...),
+    current_user: User = Depends(get_current_user)):
     """Audit geographic distribution, urbanicity balance, and demographic parity."""
     from core.curation.representation_balancer import audit_dataset_representation
     samples = request.get("samples") or []
@@ -4618,7 +4728,8 @@ async def tool_audit_representation(request: dict = Body(...)):
 
 
 @app.post("/tools/verify-dbom", tags=["Tools"])
-async def tool_verify_dbom(request: dict = Body(...)):
+async def tool_verify_dbom(request: dict = Body(...),
+    current_user: User = Depends(get_current_user)):
     """Cryptographically verify dataset against its DBOM certificate."""
     from core.export.dbom_attestor import verify_dataset_dbom
     samples = request.get("samples") or []
@@ -4629,7 +4740,8 @@ async def tool_verify_dbom(request: dict = Body(...)):
 
 
 @app.post("/tools/generate-contrastive-pair", tags=["Tools"])
-async def tool_generate_contrastive_pair(request: dict = Body(...)):
+async def tool_generate_contrastive_pair(request: dict = Body(...),
+    current_user: User = Depends(get_current_user)):
     """Synthesize contrastive factual perturbation and critique pair."""
     from core.generation.contrastive_generator import synthesize_contrastive_pair
     inst = str(request.get("instruction", ""))
@@ -4645,7 +4757,8 @@ async def tool_generate_contrastive_pair(request: dict = Body(...)):
 
 
 @app.post("/tools/rebalance-dataset", tags=["Tools"])
-async def tool_rebalance_dataset(request: dict = Body(...)):
+async def tool_rebalance_dataset(request: dict = Body(...),
+    current_user: User = Depends(get_current_user)):
     """Formulate targeted prompt mutations and quotas to bridge representation deficits."""
     from core.curation.active_balancer import plan_active_rebalancing
     audit_report = request.get("audit_report") or {}
@@ -4661,7 +4774,8 @@ async def tool_rebalance_dataset(request: dict = Body(...)):
 
 
 @app.post("/tools/generate-dialectic", tags=["Tools"])
-async def tool_generate_dialectic(request: dict = Body(...)):
+async def tool_generate_dialectic(request: dict = Body(...),
+    current_user: User = Depends(get_current_user)):
     """Synthesize structured multi-agent dialectic debate sample."""
     from core.generation.socratic_synthesizer import format_dialectic_sample, evaluate_dialectic_coherence
     topic = str(request.get("topic", ""))
@@ -4687,7 +4801,8 @@ async def tool_generate_dialectic(request: dict = Body(...)):
 
 
 @app.post("/tools/calibrate-judge", tags=["Tools"])
-async def tool_calibrate_judge(request: dict = Body(...)):
+async def tool_calibrate_judge(request: dict = Body(...),
+    current_user: User = Depends(get_current_user)):
     """Calibrate LLM Judge alignment against human reviewer decisions and compute Cohen's Kappa."""
     from core.evaluation.judge_calibrator import calibrate_judge_alignment
     evaluations = request.get("evaluations") or []
@@ -4698,7 +4813,8 @@ async def tool_calibrate_judge(request: dict = Body(...)):
 
 
 @app.post("/tools/evaluate-benchmark", tags=["Tools"])
-async def tool_evaluate_benchmark(request: dict = Body(...)):
+async def tool_evaluate_benchmark(request: dict = Body(...),
+    current_user: User = Depends(get_current_user)):
     """Directly evaluate model outputs against a synthetic test benchmark."""
     from core.evaluation.benchmark_evaluator import evaluate_benchmark_split
     pairs = request.get("evaluation_pairs") or []
@@ -4714,7 +4830,8 @@ async def tool_evaluate_benchmark(request: dict = Body(...)):
 
 
 @app.post("/tools/shard-dataset", tags=["Tools"])
-async def tool_shard_dataset(request: dict = Body(...)):
+async def tool_shard_dataset(request: dict = Body(...),
+    current_user: User = Depends(get_current_user)):
     """Partition dataset samples into standard Hugging Face/PyTorch sharded chunks."""
     from core.export.streaming_sharder import shard_dataset_records
     samples = request.get("samples") or []
@@ -4732,7 +4849,7 @@ async def tool_shard_dataset(request: dict = Body(...)):
 
 
 @app.get("/benchmarks/quality", tags=["Research"])
-async def get_quality_benchmarks():
+async def get_quality_benchmarks(current_user: User = Depends(get_current_user)):
     """Run comprehensive quality, throughput latency, and unit economic benchmarks."""
     from research.quality_benchmark import QualityBenchmark
     benchmark = QualityBenchmark()
@@ -4745,7 +4862,7 @@ async def get_quality_benchmarks():
 
 
 @app.get("/benchmarks/evaluation", tags=["Research"])
-async def get_finetune_evaluation_benchmark():
+async def get_finetune_evaluation_benchmark(current_user: User = Depends(get_current_user)):
     """Return empirical before vs. after fine-tuning benchmark evaluation deltas."""
     from pathlib import Path
     import json
