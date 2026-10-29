@@ -619,10 +619,42 @@ class TestWorkflow6FastAPIEndpointsRegression:
         assert "user_tax" in res_card.json()["content"].lower() or "dataset user_tax" in res_card.json()["content"].lower()
 
     def test_get_dbom_badge_svg(self, client):
-        res = client.get("/badges/dbom/user_tax_dataset.svg")
-        assert res.status_code == 200
-        assert res.headers["content-type"] == "image/svg+xml"
-        svg_text = res.text
-        assert "<svg" in svg_text
-        assert "DBOM" in svg_text
-        assert "Verified" in svg_text
+        # Unknown certificate returns 404
+        res_unknown = client.get("/badges/dbom/unknown_fake_certificate.svg")
+        assert res_unknown.status_code == 404
+
+        # Verified badge with real DBOM and sample file
+        import json
+        from pathlib import Path
+        from core.export.dbom_attestor import generate_dbom_attestation
+
+        sample = [{"instruction": "Test GST", "response": "Goods and Services Tax", "input": ""}]
+        dbom = generate_dbom_attestation("test_badge_dataset", sample, license_type="Apache-2.0")
+        cert_id = dbom["certificate_id"]
+
+        test_dir = Path("outputs/test_badge")
+        test_dir.mkdir(parents=True, exist_ok=True)
+        dbom_path = test_dir / "dataset.dbom.json"
+        sample_path = test_dir / "dataset.jsonl"
+
+        with open(dbom_path, "w", encoding="utf-8") as f:
+            json.dump(dbom, f)
+        with open(sample_path, "w", encoding="utf-8") as f:
+            for s in sample:
+                f.write(json.dumps(s) + "\n")
+
+        try:
+            res = client.get(f"/badges/dbom/{cert_id}.svg")
+            assert res.status_code == 200
+            assert res.headers["content-type"] == "image/svg+xml"
+            svg_text = res.text
+            assert "<svg" in svg_text
+            assert "DBOM" in svg_text
+            assert "Verified" in svg_text
+        finally:
+            if dbom_path.exists():
+                dbom_path.unlink()
+            if sample_path.exists():
+                sample_path.unlink()
+            if test_dir.exists():
+                test_dir.rmdir()

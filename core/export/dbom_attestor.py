@@ -16,20 +16,35 @@ from typing import Any, Dict, List, Optional, Tuple
 
 
 def compute_sample_hash(sample: Dict[str, Any]) -> str:
-    """Compute deterministic SHA-256 leaf hash for a dataset record."""
+    """Compute deterministic SHA-256 leaf hash for a dataset record.
+
+    Includes instruction, response, input, and metadata fields.
+    """
     canonical = {
         "instruction": str(sample.get("instruction", "")).strip(),
         "response": str(sample.get("response", "")).strip(),
         "input": str(sample.get("input", "")).strip() if sample.get("input") else "",
+        "metadata": {
+            str(k): str(v)
+            for k, v in sorted(
+                (k, v)
+                for k, v in sample.items()
+                if k not in ("instruction", "response", "input")
+            )
+        },
     }
     dumped = json.dumps(canonical, sort_keys=True, separators=(",", ":"))
     return hashlib.sha256(dumped.encode("utf-8")).hexdigest()
 
 
 def compute_merkle_root(leaf_hashes: List[str]) -> str:
-    """Compute Merkle Tree root hash from list of leaf SHA-256 hashes."""
+    """Compute Merkle Tree root hash from list of leaf SHA-256 hashes.
+
+    Refuses empty dataset inputs (returns a clearly marked non-root placeholder
+    that is never presented as a valid Merkle root).
+    """
     if not leaf_hashes:
-        return hashlib.sha256(b"empty_dataset").hexdigest()
+        return "EMPTY_DATASET_NO_MERKLE_ROOT"
 
     current_level = leaf_hashes.copy()
     while len(current_level) > 1:
@@ -61,7 +76,10 @@ def generate_dbom_attestation(
     now_iso = datetime.now(timezone.utc).isoformat()
 
     pii_masked = flags.get("pii_masked")
-    if pii_masked is None:
+    cultural_safety_certified = flags.get("cultural_safety_certified")
+
+    # If flags are not measured via an actual runner, do not default or trust caller True
+    if pii_masked is None or flags.get("pii_measured") is not True:
         try:
             from core.validation.indian_pii import detect_indian_pii
             found_pii = False
@@ -75,6 +93,20 @@ def generate_dbom_attestation(
         except Exception:
             # Fail closed: a detector error means "unknown", never "clean".
             pii_masked = None
+
+    if cultural_safety_certified is None or flags.get("cultural_safety_measured") is not True:
+        try:
+            from core.validation.cultural_guardrails import check_cultural_safety
+            all_safe = True
+            for s in samples:
+                full_text = f"{s.get('instruction', '')} {s.get('input', '')} {s.get('response', '')}"
+                is_safe, _ = check_cultural_safety(full_text)
+                if not is_safe:
+                    all_safe = False
+                    break
+            cultural_safety_certified = all_safe
+        except Exception:
+            cultural_safety_certified = None
 
     certificate_id = f"DBOM-{merkle_root[:12].upper()}"
 
@@ -92,7 +124,7 @@ def generate_dbom_attestation(
             # Fail closed: unmeasured fields are None (rendered as
             # "not verified" / "not measured"), never certified-by-default.
             "pii_masked": pii_masked,
-            "cultural_safety_certified": flags.get("cultural_safety_certified"),
+            "cultural_safety_certified": cultural_safety_certified,
             "benchmark_contamination_rate_pct": flags.get("contamination_rate_pct"),
             "diversity_entropy": flags.get("diversity_entropy"),
             "statutory_compliance_act": flags.get("statutory_compliance_act"),

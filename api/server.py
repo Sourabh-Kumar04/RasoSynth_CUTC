@@ -4382,9 +4382,12 @@ async def publish_dataset_to_huggingface_hub(job_id: str, request: dict = Body(.
         raise HTTPException(status_code=400, detail="Missing required field 'repo_id' (e.g. 'username/dataset-name')")
 
     hf_token = request.get("hf_token")
-    private = bool(request.get("private", False))
+    private = bool(request.get("private", True))
 
     job = await db.get_job(job_id) if db else None
+    if not job:
+        raise HTTPException(status_code=404, detail=f"Job '{job_id}' not found.")
+
     domain = (job.target_domain if job else None) or f"Dataset {job_id[:8]}"
     dataset_type = (job.dataset_type if job else None) or "sft"
     sample_count = job.samples_generated if job else None
@@ -4406,27 +4409,16 @@ async def publish_dataset_to_huggingface_hub(job_id: str, request: dict = Body(.
     )
     merkle_root = getattr(job, "merkle_root", None) or config.get("merkle_root")
 
-    readme_content = generate_hf_dataset_card(
-        dataset_name=domain,
-        domain=domain,
-        sample_count=sample_count,
-        language=lang,
-        script_mode=script,
-        dataset_type=dataset_type,
-        license_type="apache-2.0",
-        has_dpo=has_dpo,
-        has_tool_calling=has_tool,
-        has_bitext=has_bitext,
-        tokenizer_savings_pct=savings,
-        synthesis_mode=synthesis_mode,
-        merkle_root=merkle_root,
-    )
+    recorded_license = config.get("license") or config.get("license_type")
 
     # Fetch samples from db
     samples = []
     if db:
         datasets = await db.get_datasets_by_job(job_id)
         for ds in datasets:
+            if not recorded_license:
+                ds_meta = ds.get("metadata") or {}
+                recorded_license = ds_meta.get("license") or ds_meta.get("license_type")
             ds_samples = await db.get_samples(ds["id"], limit=1000)
             for s in ds_samples:
                 samples.append({
@@ -4436,7 +4428,23 @@ async def publish_dataset_to_huggingface_hub(job_id: str, request: dict = Body(.
                     "difficulty_tier": s.get("difficulty_tier", 3),
                 })
     if not samples:
-        samples = [{"instruction": f"Sample prompt for {domain}", "response": f"Sample response for {domain}"}]
+        raise HTTPException(status_code=409, detail=f"Job '{job_id}' has no generated samples.")
+
+    readme_content = generate_hf_dataset_card(
+        dataset_name=domain,
+        domain=domain,
+        sample_count=sample_count,
+        language=lang,
+        script_mode=script,
+        dataset_type=dataset_type,
+        license_type=recorded_license or "unknown",
+        has_dpo=has_dpo,
+        has_tool_calling=has_tool,
+        has_bitext=has_bitext,
+        tokenizer_savings_pct=savings,
+        synthesis_mode=synthesis_mode,
+        merkle_root=merkle_root,
+    )
 
     try:
         result = publish_dataset_to_hf_hub(
@@ -4515,6 +4523,9 @@ async def get_dataset_dbom(job_id: str,
             }
 
     job = await db.get_job_status(job_id) if db else None
+    if not job and not disk_match:
+        raise HTTPException(status_code=404, detail=f"Job or dataset '{job_id}' not found.")
+
     config = (job.get("config") if isinstance(job, dict) else getattr(job, "config", {})) or {}
     domain = config.get("target_domain") or config.get("prompt") or (job.get("target_domain") if isinstance(job, dict) else getattr(job, "target_domain", None)) or f"Dataset {job_id[:8]}"
     lang = config.get("language", "en")
@@ -4542,9 +4553,13 @@ async def get_dataset_dbom(job_id: str,
                         pass
 
     samples = []
+    recorded_license = config.get("license") or config.get("license_type")
     if db:
         datasets = await db.get_datasets_by_job(job_id)
         for ds in datasets:
+            if not recorded_license:
+                ds_meta = ds.get("metadata") or {}
+                recorded_license = ds_meta.get("license") or ds_meta.get("license_type")
             ds_samples = await db.get_samples(ds["id"], limit=500)
             for s in ds_samples:
                 samples.append({
@@ -4554,10 +4569,7 @@ async def get_dataset_dbom(job_id: str,
                 })
 
     if not samples:
-        samples = [
-            {"instruction": f"Instruction sample 1 for {domain}", "response": "Response sample 1"},
-            {"instruction": f"Instruction sample 2 for {domain}", "response": "Response sample 2"},
-        ]
+        raise HTTPException(status_code=409, detail=f"Job '{job_id}' has no generated samples.")
 
     synthesis_mode = config.get("synthesis_mode", "standard")
     dbom = generate_dbom_attestation(
@@ -4565,7 +4577,7 @@ async def get_dataset_dbom(job_id: str,
         samples=samples,
         domain=domain,
         language=lang,
-        license_type="Apache-2.0",
+        license_type=recorded_license or "unknown",
         synthesis_mode=synthesis_mode,
     )
     nutrition_label = generate_nutrition_label_markdown(dbom)
@@ -4583,29 +4595,80 @@ async def get_dbom_badge_svg_endpoint(certificate_id: str):
     """Generate dynamic cryptographic DBOM verification SVG badge for dataset READMEs."""
     from fastapi.responses import Response
     from core.export.badge_generator import generate_dbom_badge_svg
+    from core.export.dbom_attestor import compute_merkle_root, compute_sample_hash
     from pathlib import Path
     import json
 
-    merkle_root = ""
-    status = "verified"
+    cert_clean = certificate_id.strip()
+    if cert_clean.endswith(".svg"):
+        cert_clean = cert_clean[:-4]
+    matched_dbom = None
 
     for cand in Path("outputs").glob("**/*.dbom.json"):
         try:
             with open(cand, "r", encoding="utf-8") as f:
                 cdata = json.load(f)
-            if cdata.get("certificate_id") == certificate_id or certificate_id in cand.stem:
-                merkle_root = cdata.get("merkle_root_hash", "")
+            if cdata.get("certificate_id") == cert_clean:
+                matched_dbom = (cand, cdata)
                 break
         except Exception:
             pass
 
-    if not merkle_root:
-        merkle_root = certificate_id.replace("DBOM-", "").lower()
+    if not matched_dbom:
+        raise HTTPException(status_code=404, detail=f"DBOM certificate '{cert_clean}' not found.")
 
+    cand_path, cdata = matched_dbom
+    claimed_root = cdata.get("merkle_root_hash", "")
+    verified = False
+
+    # Attempt to recompute Merkle root from corresponding dataset samples
+    sample_file = None
+    for ext in ("jsonl", "parquet"):
+        possible = cand_path.with_name(cand_path.name.replace(".dbom.json", f".{ext}"))
+        if possible.exists():
+            sample_file = possible
+            break
+        stem_match = cand_path.parent / f"{cand_path.stem.split('.')[0]}.{ext}"
+        if stem_match.exists():
+            sample_file = stem_match
+            break
+
+    if sample_file and sample_file.exists():
+        try:
+            samples = []
+            if sample_file.suffix == ".jsonl":
+                with open(sample_file, "r", encoding="utf-8") as f:
+                    for line in f:
+                        if line.strip():
+                            samples.append(json.loads(line))
+            elif sample_file.suffix == ".parquet":
+                import pyarrow.parquet as pq
+                table = pq.read_table(str(sample_file))
+                samples = table.to_pylist()
+
+            if samples:
+                leaf_hashes = [compute_sample_hash(s) for s in samples]
+                computed_root = compute_merkle_root(leaf_hashes)
+                if computed_root == claimed_root and claimed_root:
+                    verified = True
+        except Exception:
+            verified = False
+    elif claimed_root and claimed_root != "EMPTY_DATASET_NO_MERKLE_ROOT":
+        # Dataset sidecar file might have been cleaned up or DBOM is self-contained
+        # Check if samples list is in the dbom json
+        embedded_samples = cdata.get("samples")
+        if isinstance(embedded_samples, list) and embedded_samples:
+            leaf_hashes = [compute_sample_hash(s) for s in embedded_samples]
+            computed_root = compute_merkle_root(leaf_hashes)
+            if computed_root == claimed_root:
+                verified = True
+
+    status = "verified" if verified else "unverified"
     svg_content = generate_dbom_badge_svg(
-        certificate_id=certificate_id,
-        merkle_root=merkle_root,
+        certificate_id=cert_clean,
+        merkle_root=claimed_root if verified else "",
         status=status,
+        verified=verified,
     )
     return Response(content=svg_content, media_type="image/svg+xml")
 

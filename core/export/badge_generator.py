@@ -9,13 +9,17 @@ from typing import Any, Dict, Optional
 
 
 def generate_dbom_badge_svg(
-    certificate_id: str = "DBOM-VERIFIED",
+    certificate_id: str = "DBOM-UNVERIFIED",
     merkle_root: str = "",
-    status: str = "verified",
-    pii_compliant: bool = True,
+    status: str = "unverified",
+    verified: bool = False,
 ) -> str:
-    """Generate a clean, high-contrast SVG badge for dataset verification."""
-    is_verified = status.lower() in ("verified", "valid", "cryptographically_verified")
+    """Generate a clean, high-contrast SVG badge for dataset verification.
+
+    Refuses a caller-supplied 'verified' status unless the verified flag is
+    explicitly set by a real verification procedure.
+    """
+    is_verified = bool(verified) and status.lower() in ("verified", "valid", "cryptographically_verified")
     
     label = "DBOM"
     short_hash = (merkle_root[:8] + "…" + merkle_root[-4:]) if len(merkle_root) >= 12 else "SHA-256"

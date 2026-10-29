@@ -75,7 +75,11 @@ class RasoSynthClient:
         base_url: Optional[str] = None,
         timeout: float = 60.0,
     ):
-        self.api_key = api_key or os.environ.get("RASOSYNTH_API_KEY") or os.environ.get("JWT_SECRET")
+        self.api_key = api_key or os.environ.get("RASOSYNTH_API_KEY")
+        if not self.api_key:
+            raise ValueError(
+                "Missing API key. Provide api_key argument or set RASOSYNTH_API_KEY environment variable."
+            )
         self.base_url = (base_url or os.environ.get("RASOSYNTH_BASE_URL") or "http://localhost:8000").rstrip("/")
         self.timeout = timeout
 
@@ -146,15 +150,11 @@ class RasoSynthClient:
             "language": language,
         }
 
-        # Try API request first
-        try:
-            resp = self._request("POST", "/jobs", req_payload)
-            job_id = resp.get("job_id") or resp.get("id")
-            if not job_id:
-                raise RuntimeError(f"Unexpected response payload: {resp}")
-        except ConnectionError:
-            # Fallback to local synchronous run if air-gapped or server offline
-            return self._run_local_synthesis(req_payload)
+        # Try API request
+        resp = self._request("POST", "/jobs", req_payload)
+        job_id = resp.get("job_id") or resp.get("id")
+        if not job_id:
+            raise RuntimeError(f"Unexpected response payload: {resp}")
 
         if not wait:
             return JobResult(
@@ -254,13 +254,53 @@ class RasoSynthClient:
         except RuntimeError:
             job_obj, db_inst = asyncio.run(_exec())
 
-        # Resolve DBOM attestation
-        dbom = DBOMAttestation(
-            certificate_id=f"DBOM-{job_id[:12].upper()}",
-            merkle_root="e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        # Resolve samples from DB for real DBOM attestation
+        samples = []
+        try:
+            async def _fetch_samples():
+                datasets = await db_inst.get_datasets_by_job(job_id)
+                res = []
+                for ds in datasets:
+                    s_list = await db_inst.get_samples(ds["id"], limit=1000)
+                    for s in s_list:
+                        res.append({
+                            "instruction": s.get("instruction", ""),
+                            "response": s.get("response", ""),
+                            "input": s.get("input", ""),
+                        })
+                return res
+
+            try:
+                loop = asyncio.get_event_loop()
+                if loop.is_running():
+                    import concurrent.futures
+                    with concurrent.futures.ThreadPoolExecutor() as executor:
+                        samples = executor.submit(lambda: asyncio.run(_fetch_samples())).result()
+                else:
+                    samples = loop.run_until_complete(_fetch_samples())
+            except RuntimeError:
+                samples = asyncio.run(_fetch_samples())
+        except Exception:
+            samples = []
+
+        if not samples:
+            raise RuntimeError(f"Local synthesis finished with no samples for job {job_id}.")
+
+        real_dbom = generate_dbom_attestation(
+            dataset_name=req_payload.get("target_domain", f"Dataset {job_id[:8]}"),
+            samples=samples,
             domain=req_payload.get("target_domain", ""),
             language=req_payload.get("language", "en"),
-            total_samples=job_obj.samples_generated,
+            license_type="unknown",
+            synthesis_mode=req_payload.get("synthesis_mode", "standard"),
+        )
+
+        dbom = DBOMAttestation(
+            certificate_id=real_dbom["certificate_id"],
+            merkle_root=real_dbom["merkle_root_hash"],
+            domain=real_dbom.get("domain", ""),
+            language=real_dbom.get("language", "en"),
+            total_samples=real_dbom.get("total_samples", len(samples)),
         )
 
         return JobResult(

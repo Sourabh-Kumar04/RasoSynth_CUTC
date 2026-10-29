@@ -29,11 +29,12 @@ def publish_dataset_to_hub(
     dataset_dir: str | Path,
     repo_id: str,
     token: Optional[str] = None,
-    private: bool = False,
+    private: bool = True,
     dry_run: bool = False,
     dataset_name: Optional[str] = None,
     domain: str = "General Knowledge",
     language: str = "en",
+    license_type: Optional[str] = None,
 ) -> Dict[str, Any]:
     """Publish dataset directory and cryptographic attestation to Hugging Face Hub."""
     p = Path(dataset_dir)
@@ -49,34 +50,59 @@ def publish_dataset_to_hub(
     if not jsonl_files and not parquet_files:
         raise ValueError(f"No .jsonl or .parquet dataset files found in {dataset_dir}")
 
-    # Load or inspect DBOM
-    dbom_info = {}
-    if dbom_files:
-        try:
-            with open(dbom_files[0], "r", encoding="utf-8") as f:
-                dbom_info = json.load(f)
-        except Exception:
-            pass
+    if not dbom_files:
+        raise ValueError(
+            f"No DBOM attestation file (*.dbom.json) found in {dataset_dir}. "
+            "Refusing to publish without cryptographic provenance."
+        )
 
-    merkle_root = dbom_info.get("merkle_root_hash", "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855")
-    cert_id = dbom_info.get("certificate_id", f"DBOM-CERT-{merkle_root[:12].upper()}")
-    sample_count = dbom_info.get("sample_count", 1000)
+    # Load DBOM
+    try:
+        with open(dbom_files[0], "r", encoding="utf-8") as f:
+            dbom_info = json.load(f)
+    except Exception as exc:
+        raise ValueError(f"Failed to read DBOM file {dbom_files[0]}: {exc}") from exc
+
+    merkle_root = dbom_info.get("merkle_root_hash")
+    if not merkle_root or merkle_root == "EMPTY_DATASET_NO_MERKLE_ROOT":
+        raise ValueError(f"Invalid or missing Merkle root in DBOM certificate: {merkle_root}")
+
+    cert_id = dbom_info.get("certificate_id")
+    if not cert_id:
+        raise ValueError("Missing certificate_id in DBOM certificate.")
+
+    sample_count = dbom_info.get("total_samples") or dbom_info.get("sample_count")
+    if sample_count is None or sample_count <= 0:
+        # Count samples in jsonl or parquet
+        if jsonl_files:
+            with open(jsonl_files[0], "r", encoding="utf-8") as f:
+                sample_count = sum(1 for line in f if line.strip())
+        elif parquet_files:
+            import pyarrow.parquet as pq
+            table = pq.read_table(str(parquet_files[0]))
+            sample_count = table.num_rows
+
+    if not sample_count or sample_count <= 0:
+        raise ValueError(f"Dataset has 0 samples in {dataset_dir}. Refusing to publish empty dataset.")
+
+    prov = dbom_info.get("provenance", {})
+    resolved_license = license_type or prov.get("license") or "unknown"
 
     # Ensure README.md exists and includes cryptographic DBOM verification and nutrition facts
     if not readme_file.exists():
         card_content = generate_hf_dataset_card(
             dataset_name=dataset_name or repo_id.split("/")[-1],
-            domain=domain,
+            domain=domain or dbom_info.get("domain", "General Knowledge"),
             sample_count=sample_count,
-            language=language,
+            language=language or dbom_info.get("language", "en"),
             script_mode="latin",
             dataset_type="sft",
-            license_type="apache-2.0",
+            license_type=resolved_license,
             has_dpo=False,
             has_tool_calling=False,
             has_bitext=False,
-            tokenizer_savings_pct=21.4,
-            synthesis_mode=dbom_info.get("synthesis_mode", "cot"),
+            tokenizer_savings_pct=0.0,
+            synthesis_mode=dbom_info.get("synthesis_mode", "standard"),
             merkle_root=merkle_root,
             certificate_id=cert_id,
         )
@@ -136,7 +162,7 @@ def main():
     parser = argparse.ArgumentParser(description="Publish attested datasets to Hugging Face Hub")
     parser.add_argument("--dataset-dir", required=True, help="Path to local dataset directory")
     parser.add_argument("--repo-id", required=True, help="Target Hugging Face dataset repo ID (e.g. user/my-dataset)")
-    parser.add_argument("--private", action="store_true", help="Set repository to private")
+    parser.add_argument("--public", action="store_true", help="Set repository to public (defaults to private)")
     parser.add_argument("--dry-run", action="store_true", help="Validate dataset and DBOM files without uploading")
 
     args = parser.parse_args()
@@ -144,7 +170,7 @@ def main():
         publish_dataset_to_hub(
             dataset_dir=args.dataset_dir,
             repo_id=args.repo_id,
-            private=args.private,
+            private=not args.public,
             dry_run=args.dry_run,
         )
     except Exception as e:
