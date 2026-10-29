@@ -4789,7 +4789,37 @@ async def get_favicon():
     if fav_svg.exists():
         return Response(content=fav_svg.read_bytes(), media_type="image/svg+xml")
     # Inline fallback
-    inline_svg = """<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 40 40" fill="none"><rect width="40" height="40" rx="10" fill="#0a0a0f"/><path d="M20 5.5L32.5 12.8V27.2L20 34.5L7.5 27.2V12.8L20 5.5Z" stroke="#f26625" stroke-width="2"/><circle cx="20" cy="20" r="6" fill="#f26625"/></svg>"""
+    inline_svg = """<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" fill="none">
+  <!-- C1 Original, light-background version: ink R dots, stone field dots, orange final point. -->
+  <!-- Field dots (r 2.6, stone #d8d2c4) -->
+  <circle cx="52" cy="12" r="2.6" fill="#d8d2c4"/>
+  <circle cx="22" cy="22" r="2.6" fill="#d8d2c4"/>
+  <circle cx="32" cy="22" r="2.6" fill="#d8d2c4"/>
+  <circle cx="52" cy="22" r="2.6" fill="#d8d2c4"/>
+  <circle cx="52" cy="32" r="2.6" fill="#d8d2c4"/>
+  <circle cx="22" cy="42" r="2.6" fill="#d8d2c4"/>
+  <circle cx="32" cy="42" r="2.6" fill="#d8d2c4"/>
+  <circle cx="52" cy="42" r="2.6" fill="#d8d2c4"/>
+  <circle cx="22" cy="52" r="2.6" fill="#d8d2c4"/>
+  <circle cx="32" cy="52" r="2.6" fill="#d8d2c4"/>
+  <circle cx="42" cy="52" r="2.6" fill="#d8d2c4"/>
+  <!-- R dots (r 3.6, ink #1b1b18) -->
+  <circle cx="12" cy="12" r="3.6" fill="#1b1b18"/>
+  <circle cx="22" cy="12" r="3.6" fill="#1b1b18"/>
+  <circle cx="32" cy="12" r="3.6" fill="#1b1b18"/>
+  <circle cx="42" cy="12" r="3.6" fill="#1b1b18"/>
+  <circle cx="12" cy="22" r="3.6" fill="#1b1b18"/>
+  <circle cx="42" cy="22" r="3.6" fill="#1b1b18"/>
+  <circle cx="12" cy="32" r="3.6" fill="#1b1b18"/>
+  <circle cx="22" cy="32" r="3.6" fill="#1b1b18"/>
+  <circle cx="32" cy="32" r="3.6" fill="#1b1b18"/>
+  <circle cx="42" cy="32" r="3.6" fill="#1b1b18"/>
+  <circle cx="12" cy="42" r="3.6" fill="#1b1b18"/>
+  <circle cx="42" cy="42" r="3.6" fill="#1b1b18"/>
+  <circle cx="12" cy="52" r="3.6" fill="#1b1b18"/>
+  <!-- Final point (r 3.6, orange #f26625); leg steps diagonally (42,42) -> (52,52) -->
+  <circle cx="52" cy="52" r="3.6" fill="#f26625"/>
+</svg>"""
     return Response(content=inline_svg.encode("utf-8"), media_type="image/svg+xml")
 
 
