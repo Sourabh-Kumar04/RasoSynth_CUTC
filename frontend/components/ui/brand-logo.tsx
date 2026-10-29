@@ -1,4 +1,4 @@
-'use client'
+"use client"
 
 export interface BrandLogoProps {
   className?: string
@@ -6,19 +6,17 @@ export interface BrandLogoProps {
   showWordmark?: boolean
   wordmarkClassName?: string
   showBadge?: boolean
-  /**
-   * Colour variant of the dot mark. 'dark' is the default: the component
-   * is used on a dark UI, so the R dots are paper (#f5f2ea) and the field
-   * dots are dark stone (#4a463f). 'light' is for light backgrounds: ink
-   * R dots (#1b1b18) and light-stone field dots (#d8d2c4). The final
-   * point is flat orange (#f26625) in both variants.
-   */
-  variant?: 'dark' | 'light'
+  variant?: "dark" | "light"
 }
 
 // C1 Original: a flat dot-grid R on a 5x5 grid, viewBox 0 0 64 64,
 // coordinates 12, 22, 32, 42, 52 on both axes. Flat colours only.
 // The leg steps diagonally from (42,42) to the orange final point (52,52).
+// Small-size rule: at 40px or below the faint field dots are dropped and
+// the R dots are bolder, so the R stays readable in headers. The full C1
+// (field plus R) is kept at larger sizes. Dark variant is the default:
+// R dots are paper on dark UI, field dots are dark stone. Light variant
+// inverts them. The final point is flat orange in both variants.
 const FIELD_DOTS: ReadonlyArray<readonly [number, number]> = [
   [52, 12],
   [22, 22], [32, 22], [52, 22],
@@ -36,18 +34,19 @@ const R_DOTS: ReadonlyArray<readonly [number, number]> = [
 ]
 
 export function BrandLogo({
-  className = '',
+  className = "",
   size = 34,
   showWordmark = false,
-  wordmarkClassName = '',
+  wordmarkClassName = "",
   showBadge = false,
-  variant = 'dark',
+  variant = "dark",
 }: BrandLogoProps) {
-  const rFill = variant === 'light' ? '#1b1b18' : '#f5f2ea'
-  const fieldFill = variant === 'light' ? '#d8d2c4' : '#4a463f'
-
+  const rFill = variant === "light" ? "#1b1b18" : "#f5f2ea"
+  const fieldFill = variant === "light" ? "#d8d2c4" : "#4a463f"
+  const small = size <= 40
+  const rRadius = small ? 4.4 : 3.6
   return (
-    <div className={`inline-flex items-center gap-2.5 ${className}`}>
+    <div className={"inline-flex items-center gap-2.5 " + className}>
       <svg
         width={size}
         height={size}
@@ -58,18 +57,17 @@ export function BrandLogo({
         role="img"
         aria-label="RasoSynthTune"
       >
-        {FIELD_DOTS.map(([cx, cy]) => (
-          <circle key={`f-${cx}-${cy}`} cx={cx} cy={cy} r={2.6} fill={fieldFill} />
+        {small ? null : FIELD_DOTS.map(([cx, cy]) => (
+          <circle key={"f-" + cx + "-" + cy} cx={cx} cy={cy} r={2.6} fill={fieldFill} />
         ))}
         {R_DOTS.map(([cx, cy]) => (
-          <circle key={`r-${cx}-${cy}`} cx={cx} cy={cy} r={3.6} fill={rFill} />
+          <circle key={"r-" + cx + "-" + cy} cx={cx} cy={cy} r={rRadius} fill={rFill} />
         ))}
-        <circle cx={52} cy={52} r={3.6} fill="#f26625" />
+        <circle cx={52} cy={52} r={rRadius} fill="#f26625" />
       </svg>
-
       {showWordmark && (
         <div className="flex items-center gap-1.5">
-          <span className={`font-display font-bold tracking-[-0.04em] text-white leading-none ${wordmarkClassName}`}>
+          <span className={"font-display font-bold tracking-[-0.04em] text-white leading-none " + wordmarkClassName}>
             Raso<span className="text-[#f26625]">Synth</span><span className="text-[#d8d2c4] font-semibold">Tune</span>
           </span>
           {showBadge && (

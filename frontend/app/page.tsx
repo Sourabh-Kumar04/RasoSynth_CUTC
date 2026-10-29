@@ -369,7 +369,7 @@ export default function ZenPortalPage() {
       <header className="relative z-20 flex items-center justify-between px-6 sm:px-12 py-5 border-b border-[#1c1c28]/40 backdrop-blur-md">
         <div className="flex items-center space-x-3">
           <Link href="/" className="flex items-center space-x-2.5 group">
-            <BrandLogo size={32} />
+            <BrandLogo size={40} />
             <div className="flex flex-col">
               <span className="font-display text-sm font-bold tracking-tight text-white">
                 Raso<span className="text-[#f26625]">Synth</span><span className="text-[#a8a29e] font-semibold">Tune</span>
