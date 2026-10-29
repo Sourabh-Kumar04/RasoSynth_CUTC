@@ -93,6 +93,30 @@ def _db(request: Request):
     return d
 
 
+def _looks_like_real_weights(path: Path) -> bool:
+    """Heuristic gate against the old fabricated weight files.
+
+    The previous download/GGUF endpoints wrote a GGUF/safetensors magic (or
+    header length) followed by zero bytes and served the result as weights.
+    A real weights file has non-zero content past its header: this rejects
+    empty files, tiny files, and files whose sampled content after the first
+    8 bytes is all zero (the exact shape of the old fabrications). It is a
+    guard, not a format validator — real format validation belongs to the
+    loader that consumes the file.
+    """
+    try:
+        if not path.is_file():
+            return False
+        size = path.stat().st_size
+        if size <= 8:
+            return False
+        with open(path, "rb") as f:
+            sample = f.read(65536)
+        return any(b != 0 for b in sample[8:])
+    except Exception:
+        return False
+
+
 # ── Endpoints ─────────────────────────────────────────────────────────────────
 
 @router.get("/models")
@@ -329,24 +353,25 @@ async def download_finetuned_model(job_id: str, manager=Depends(_manager),
     out_dir = Path(output_path)
     zip_candidate = out_dir.parent / "finetuned_model_lora.zip" if out_dir.name == "model_weights" else out_dir / "finetuned_model_lora.zip"
 
-    if not zip_candidate.exists():
-        # Look for directory to zip
-        source_dir = out_dir if out_dir.is_dir() else out_dir.parent
-        source_dir.mkdir(parents=True, exist_ok=True)
-        if not (source_dir / "adapter_model.safetensors").exists():
-            # Create standard placeholder adapter files
-            (source_dir / "adapter_config.json").write_text('{"peft_type": "LORA", "r": 16, "lora_alpha": 32}')
-            (source_dir / "adapter_model.safetensors").write_bytes(b"\x00" * 1024)
-            (source_dir / "README.md").write_text("# RasoSynth Fine-Tuned Model\n\nDBOM Merkle Verified.")
+    # P0: never fabricate an adapter. Serve only a zip built from real
+    # adapter weights; otherwise fail with "no adapter exists". Placeholder
+    # dirs (e.g. *.PLACEHOLDER files from simulated runs) never qualify,
+    # and previously fabricated zero-byte files are rejected by the check.
+    source_dir = out_dir if out_dir.is_dir() else out_dir.parent
+    if not _looks_like_real_weights(source_dir / "adapter_model.safetensors"):
+        raise HTTPException(
+            status_code=404,
+            detail="No adapter exists for this job: no trained adapter weights were found, and none are fabricated in their place.",
+        )
 
-        zip_candidate = source_dir / "finetuned_model_lora.zip"
-        with zipfile.ZipFile(zip_candidate, "w", zipfile.ZIP_DEFLATED) as zipf:
-            for root, _, files in os.walk(source_dir):
-                for file in files:
-                    if file.endswith(".zip"):
-                        continue
-                    fp = Path(root) / file
-                    zipf.write(fp, fp.relative_to(source_dir))
+    zip_candidate = source_dir / "finetuned_model_lora.zip"
+    with zipfile.ZipFile(zip_candidate, "w", zipfile.ZIP_DEFLATED) as zipf:
+        for root, _, files in os.walk(source_dir):
+            for file in files:
+                if file.endswith(".zip"):
+                    continue
+                fp = Path(root) / file
+                zipf.write(fp, fp.relative_to(source_dir))
 
     return FileResponse(
         str(zip_candidate),
@@ -463,19 +488,30 @@ async def export_gguf_quantization(job_id: str, manager=Depends(_manager),
 
     output_path = getattr(job, "output_path", None) or (job.get("output_path") if isinstance(job, dict) else None) or f"outputs/finetune/{job_id}"
     out_dir = Path(output_path)
-    out_dir.mkdir(parents=True, exist_ok=True)
     gguf_path = out_dir / "model-q4_k_m.gguf"
-    if not gguf_path.exists():
-        with open(gguf_path, "wb") as f:
-            f.write(b"GGUF\x03\x00\x00\x00" + b"\x00" * 4096)
-
-    return {
-        "status": "ready",
-        "format": "GGUF-Q4_K_M",
-        "gguf_path": str(gguf_path),
-        "file_size_mb": 1150.4,
-        "runtime_compatibility": ["Ollama", "LM Studio", "vLLM", "llama.cpp"]
-    }
+    # P0: a GGUF file is only "ready" when a real one exists on disk (the
+    # old path wrote magic + zeroes and reported an invented size).
+    # Previously fabricated zero-files are rejected by the weights check.
+    if _looks_like_real_weights(gguf_path):
+        return {
+            "status": "ready",
+            "format": "GGUF-Q4_K_M",
+            "gguf_path": str(gguf_path),
+            "file_size_mb": round(gguf_path.stat().st_size / 1_000_000, 2),
+            "runtime_compatibility": ["Ollama", "LM Studio", "vLLM", "llama.cpp"]
+        }
+    # No real GGUF: quantisation requires trained weights, and no
+    # quantisation backend is wired into this endpoint, so it cannot
+    # manufacture one from a placeholder.
+    if not _looks_like_real_weights(out_dir / "adapter_model.safetensors"):
+        raise HTTPException(
+            status_code=404,
+            detail="No adapter exists for this job; GGUF export requires trained adapter weights.",
+        )
+    raise HTTPException(
+        status_code=501,
+        detail="GGUF export is not implemented: a trained adapter exists but no quantisation backend is wired into this endpoint.",
+    )
 
 
 @router.get("/jobs/{job_id}/download_gguf")
@@ -488,11 +524,14 @@ async def download_gguf_file(job_id: str, manager=Depends(_manager),
 
     output_path = getattr(job, "output_path", None) or (job.get("output_path") if isinstance(job, dict) else None) or f"outputs/finetune/{job_id}"
     out_dir = Path(output_path)
-    out_dir.mkdir(parents=True, exist_ok=True)
     gguf_path = out_dir / "model-q4_k_m.gguf"
-    if not gguf_path.exists():
-        with open(gguf_path, "wb") as f:
-            f.write(b"GGUF\x03\x00\x00\x00" + b"\x00" * 4096)
+    # P0: serve only a real GGUF file; previously fabricated magic+zero
+    # files (and missing files) fail instead of being served or created.
+    if not _looks_like_real_weights(gguf_path):
+        raise HTTPException(
+            status_code=404,
+            detail="No GGUF export exists for this job.",
+        )
 
     model_name = getattr(job, "output_model_name", None) or (job.get("output_model_name") if isinstance(job, dict) else None) or f"rasosynth-{job_id[:8]}"
     return FileResponse(
