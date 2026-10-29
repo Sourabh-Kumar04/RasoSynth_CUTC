@@ -354,6 +354,13 @@ async def test_multilingual_advanced_controls_and_cultural_guardrails():
     fertility = estimate_tokenizer_fertility("hi", "native")
     assert fertility["reference_llama3_fertility"] > fertility["optimal_fertility"]
     assert fertility["potential_token_savings_pct"] > 50.0
+    assert fertility["source_status"] == "estimated_unsourced"
+    assert fertility["source"] is None
+
+    # Test unknown language handling
+    unknown_fertility = estimate_tokenizer_fertility("klingon", "native")
+    assert unknown_fertility["unsupported_language"] is True
+    assert "unsupported" in unknown_fertility["language_fallback_marker"]
 
 
 @pytest.mark.asyncio

@@ -230,11 +230,14 @@ class ProviderCostComparison:
         model: str,
         input_tokens: int,
         output_tokens: int
-    ) -> float:
-        """Estimate cost for a request."""
+    ) -> Optional[float]:
+        """Estimate cost for a request.
+
+        Returns None if provider/model rate is unknown (never 0.0 free).
+        """
         rates = self._provider_rates.get(provider, {}).get(model)
         if not rates:
-            return 0.0
+            return None
 
         input_cost = (input_tokens / 1000) * rates["input_cost_per_1k"]
         output_cost = (output_tokens / 1000) * rates["output_cost_per_1k"]
@@ -253,7 +256,8 @@ class ProviderCostComparison:
         for provider, models in self._provider_rates.items():
             if model in models:
                 cost = self.estimate_cost(provider, model, input_tokens, output_tokens)
-                options.append({"provider": provider, "model": model, "estimated_cost": cost})
+                if cost is not None:
+                    options.append({"provider": provider, "model": model, "estimated_cost": cost})
 
         if not options:
             return None
@@ -349,8 +353,10 @@ class CostOptimizationEngine:
         if "api_calls" in expensive and expensive["api_calls"] > 100:
             recommendations.append({
                 "type": "caching",
-                "message": "Enable semantic caching to reduce API calls",
+                "message": "Enable semantic caching to reduce API calls (heuristic estimate: ~30% reduction)",
                 "potential_savings": expensive["api_calls"] * 0.3,
+                "is_estimate": True,
+                "estimation_heuristic": "30% reduction heuristic",
                 "priority": "medium"
             })
 

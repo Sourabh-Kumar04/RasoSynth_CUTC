@@ -27,9 +27,9 @@ class GPUInfo:
     name: str = ""
     memory_total_gb: float = 0.0
     memory_used_gb: float = 0.0
-    utilization_percent: float = 0.0
-    temperature_celsius: float = 0.0
-    power_watts: float = 0.0
+    utilization_percent: Optional[float] = None
+    temperature_celsius: Optional[float] = None
+    power_watts: Optional[float] = None
     status: GPUStatus = GPUStatus.UNKNOWN
     last_updated: datetime = field(default_factory=lambda: datetime.now(timezone.utc))
 
@@ -110,9 +110,9 @@ class GPUMonitor:
                         name=props.name,
                         memory_total_gb=props.total_memory / 1e9,
                         memory_used_gb=memory_allocated,
-                        utilization_percent=0,  # Would use nvidia-smi
-                        temperature_celsius=0,    # Would use nvidia-smi
-                        power_watts=0,           # Would use nvidia-smi
+                        utilization_percent=None,  # Not measured via torch.cuda; None rather than fake 0
+                        temperature_celsius=None,  # Not measured via torch.cuda; None rather than fake 0
+                        power_watts=None,          # Not measured via torch.cuda; None rather than fake 0
                         status=self._calculate_status(memory_allocated, props.total_memory / 1e9),
                         last_updated=datetime.now(timezone.utc)
                     )
@@ -156,11 +156,19 @@ class GPUMonitor:
 
         total_memory = sum(g.memory_total_gb for g in self._gpus.values())
         used_memory = sum(g.memory_used_gb for g in self._gpus.values())
-        avg_utilization = sum(g.utilization_percent for g in self._gpus.values()) / len(self._gpus)
+        utils = [g.utilization_percent for g in self._gpus.values() if g.utilization_percent is not None]
+        avg_utilization = sum(utils) / len(utils) if utils else None
 
         healthy = sum(1 for g in self._gpus.values() if g.status == GPUStatus.HEALTHY)
         degraded = sum(1 for g in self._gpus.values() if g.status == GPUStatus.DEGRADED)
         critical = sum(1 for g in self._gpus.values() if g.status == GPUStatus.CRITICAL)
+
+        if critical > 0:
+            overall_status = "critical"
+        elif degraded > 0:
+            overall_status = "degraded"
+        else:
+            overall_status = "healthy"
 
         return {
             "total_gpus": len(self._gpus),
@@ -170,7 +178,7 @@ class GPUMonitor:
             "healthy_gpus": healthy,
             "degraded_gpus": degraded,
             "critical_gpus": critical,
-            "overall_status": "healthy" if critical == 0 else "degraded" if degraded > 0 else "critical"
+            "overall_status": overall_status
         }
 
 
@@ -265,9 +273,9 @@ class VRAMTracker:
         gpu_id: int,
         task_id: str
     ) -> float:
-        """Release VRAM allocation."""
+        """Release VRAM allocation and return the amount of GB actually released."""
         allocations = self.monitor._allocations.get(gpu_id, [])
-        released = 0.0
+        released = sum(a.allocated_gb for a in allocations if a.task_id == task_id)
 
         self.monitor._allocations[gpu_id] = [
             a for a in allocations if a.task_id != task_id
@@ -279,7 +287,6 @@ class VRAMTracker:
             gpu.memory_used_gb = sum(
                 a.allocated_gb for a in self.monitor._allocations.get(gpu_id, [])
             )
-            released = gpu.memory_used_gb
 
         return released
 

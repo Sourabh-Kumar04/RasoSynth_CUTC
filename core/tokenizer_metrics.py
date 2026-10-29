@@ -3,12 +3,16 @@
 Empirical tokenizer fertility metrics (tokens-per-word) and efficiency estimates
 across popular foundation model tokenizer families (Llama-3, Gemma-2, Sarvam-Indic,
 Mistral, Qwen-2.5) for multilingual and Indic text.
+
+NOTE: The fertility values below are estimated and unsourced heuristics (no published
+corpus or empirical benchmark run date is cited). Consumers should treat these ratios as
+indicative guidelines rather than precise ground-truth tokenizer measurements.
 """
 
-from typing import Dict, Any
+from typing import Any, Dict, Optional
 
 
-# Empirical fertility table: tokens per word across language, script, and model architecture
+# Estimated/unsourced fertility table: tokens per word across language, script, and model architecture
 _FERTILITY_INDEX: Dict[str, Dict[str, Dict[str, float]]] = {
     "en": {
         "all": {
@@ -101,11 +105,13 @@ def estimate_tokenizer_fertility(language: str, script_mode: str = "native") -> 
         script_mode: 'native' | 'romanized' | 'dual'
 
     Returns:
-        Dict with fertility rates per model, recommended model, and savings percentage.
+        Dict with fertility rates per model, recommended model, savings percentage,
+        and explicit source/unsupported language markers.
     """
     lang = (language or "en").lower().strip()
     mode = (script_mode or "native").lower().strip()
 
+    is_unsupported = lang not in _FERTILITY_INDEX
     lang_data = _FERTILITY_INDEX.get(lang, _FERTILITY_INDEX["en"])
     model_fertilities = lang_data.get(mode) or lang_data.get("all") or next(iter(lang_data.values()))
 
@@ -117,9 +123,11 @@ def estimate_tokenizer_fertility(language: str, script_mode: str = "native") -> 
     if worst_model[1] > 0:
         savings_vs_worst = round((1.0 - (best_model[1] / worst_model[1])) * 100, 1)
 
-    return {
+    result: Dict[str, Any] = {
         "language": lang,
         "script_mode": mode,
+        "source": None,
+        "source_status": "estimated_unsourced",
         "fertility_tokens_per_word": model_fertilities,
         "optimal_model": best_model[0],
         "optimal_fertility": best_model[1],
@@ -130,3 +138,10 @@ def estimate_tokenizer_fertility(language: str, script_mode: str = "native") -> 
             f"({best_model[1]} tok/word, saving ~{savings_vs_worst}% tokens vs {worst_model[0]})."
         ),
     }
+
+    if is_unsupported:
+        result["unsupported_language"] = True
+        result["language_fallback_marker"] = "unsupported_language_english_fertilities_shown"
+        result["note"] = f"Language '{lang}' is unsupported. English fertilities shown as placeholder; not empirical for '{lang}'."
+
+    return result
