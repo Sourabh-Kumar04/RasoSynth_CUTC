@@ -27,10 +27,25 @@ from fastapi.responses import FileResponse, PlainTextResponse
 from pydantic import BaseModel, Field, model_validator
 
 from finetuning.trainer import SUPPORTED_MODELS
-from api.auth import User, get_auth_manager, get_current_user
+from api.auth import User, UserRole, get_auth_manager, get_current_user, require_role
 
 logger = logging.getLogger(__name__)
 router = APIRouter(prefix="/api/finetune", tags=["finetune"])
+
+
+def _enforce_owner(resource: Optional[dict], current_user: User, resource_name: str = "Fine-tune job"):
+    """Enforce owner check: Admin can access any row; non-admin can only access own rows.
+    
+    Rows with owner=None (legacy single-tenant rows) are visible only to ADMIN.
+    Returns 404 (Not Found) on mismatch to prevent existence leakage.
+    """
+    if not resource:
+        raise HTTPException(status_code=404, detail=f"{resource_name} not found")
+    if current_user.role == UserRole.ADMIN:
+        return
+    owner = resource.get("owner")
+    if not owner or owner != current_user.username:
+        raise HTTPException(status_code=404, detail=f"{resource_name} not found")
 
 
 # ── Schemas ───────────────────────────────────────────────────────────────────
@@ -130,9 +145,9 @@ async def create_finetune_job(
     request: Request,
     manager=Depends(_manager),
     db=Depends(_db),
-
-    current_user: User = Depends(get_current_user)):
+    current_user: User = Depends(require_role([UserRole.ADMIN, UserRole.USER]))):
     payload = body.model_dump()
+    payload["owner"] = current_user.username
 
     # Preferred path: resolve an immutable version. This prevents a training
     # job from silently consuming a changed "latest" export.
@@ -249,9 +264,9 @@ async def list_finetune_jobs(
     limit: int = Query(50, ge=1, le=500),
     offset: int = Query(0, ge=0),
     manager=Depends(_manager),
-
     current_user: User = Depends(get_current_user)):
-    all_jobs = await manager.list_jobs(limit=1000)
+    owner_filter = None if current_user.role == UserRole.ADMIN else current_user.username
+    all_jobs = await manager.list_jobs(limit=1000, owner=owner_filter)
     paged = all_jobs[offset : offset + limit]
     return {
         "jobs": paged,
@@ -266,14 +281,15 @@ async def list_finetune_jobs(
 async def get_finetune_job(job_id: str, manager=Depends(_manager),
     current_user: User = Depends(get_current_user)):
     job = await manager.get_job(job_id)
-    if job is None:
-        raise HTTPException(status_code=404, detail="Fine-tune job not found")
+    _enforce_owner(job, current_user)
     return job
 
 
 @router.delete("/jobs/{job_id}")
 async def cancel_finetune_job(job_id: str, manager=Depends(_manager),
-    current_user: User = Depends(get_current_user)):
+    current_user: User = Depends(require_role([UserRole.ADMIN, UserRole.USER]))):
+    job = await manager.get_job(job_id)
+    _enforce_owner(job, current_user)
     if not await manager.cancel_job(job_id):
         raise HTTPException(status_code=404, detail="Job not found or already completed")
     return {"status": "cancelled", "job_id": job_id}
@@ -284,9 +300,10 @@ async def get_finetune_logs(
     job_id: str,
     limit: int = Query(200, ge=1, le=500),
     manager=Depends(_manager),
-
     current_user: User = Depends(get_current_user)):
     """Return the last N training log events from the in-memory ring buffer."""
+    job = await manager.get_job(job_id)
+    _enforce_owner(job, current_user)
     return {"job_id": job_id, "logs": manager.get_logs(job_id, limit=limit)}
 
 
@@ -342,8 +359,7 @@ async def download_finetuned_model(job_id: str, manager=Depends(_manager),
     current_user: User = Depends(get_current_user)):
     """Download zipped fine-tuned LoRA adapter weights and model artifacts."""
     job = await manager.get_job(job_id)
-    if job is None:
-        raise HTTPException(status_code=404, detail="Job not found")
+    _enforce_owner(job, current_user)
 
     output_path = getattr(job, "output_path", None) or (job.get("output_path") if isinstance(job, dict) else None)
     if not output_path:
@@ -385,8 +401,7 @@ async def get_model_card(job_id: str, manager=Depends(_manager),
     current_user: User = Depends(get_current_user)):
     """Return Hugging Face Model Card with DBOM Merkle verification proof."""
     job = await manager.get_job(job_id)
-    if job is None:
-        raise HTTPException(status_code=404, detail="Job not found")
+    _enforce_owner(job, current_user)
 
     output_path = getattr(job, "output_path", None) or (job.get("output_path") if isinstance(job, dict) else None)
     if output_path:
@@ -480,11 +495,10 @@ async def get_model_card(job_id: str, manager=Depends(_manager),
 
 @router.post("/jobs/{job_id}/export_gguf")
 async def export_gguf_quantization(job_id: str, manager=Depends(_manager),
-    current_user: User = Depends(get_current_user)):
+    current_user: User = Depends(require_role([UserRole.ADMIN, UserRole.USER]))):
     """Generate 4-bit GGUF quantization (Q4_K_M) for edge and local LM deployment."""
     job = await manager.get_job(job_id)
-    if job is None:
-        raise HTTPException(status_code=404, detail="Job not found")
+    _enforce_owner(job, current_user)
 
     output_path = getattr(job, "output_path", None) or (job.get("output_path") if isinstance(job, dict) else None) or f"outputs/finetune/{job_id}"
     out_dir = Path(output_path)
@@ -519,8 +533,7 @@ async def download_gguf_file(job_id: str, manager=Depends(_manager),
     current_user: User = Depends(get_current_user)):
     """Download quantized GGUF binary for edge/local LM deployment (Ollama / LM Studio)."""
     job = await manager.get_job(job_id)
-    if job is None:
-        raise HTTPException(status_code=404, detail="Job not found")
+    _enforce_owner(job, current_user)
 
     output_path = getattr(job, "output_path", None) or (job.get("output_path") if isinstance(job, dict) else None) or f"outputs/finetune/{job_id}"
     out_dir = Path(output_path)
@@ -546,8 +559,7 @@ async def get_ollama_modelfile(job_id: str, manager=Depends(_manager),
     current_user: User = Depends(get_current_user)):
     """Generate an Ollama-compatible Modelfile with optimal chat prompt template and stopping criteria."""
     job = await manager.get_job(job_id)
-    if job is None:
-        raise HTTPException(status_code=404, detail="Job not found")
+    _enforce_owner(job, current_user)
 
     model_name = getattr(job, "output_model_name", None) or (job.get("output_model_name") if isinstance(job, dict) else None) or f"rasosynth-{job_id[:8]}"
     template_type = getattr(job, "chat_template", "alpaca") or "alpaca"

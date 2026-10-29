@@ -2,7 +2,7 @@
 Quality Dashboard API — endpoints for dataset quality metrics.
 """
 import logging
-from fastapi import APIRouter, Depends, Query, Request
+from fastapi import APIRouter, Depends, HTTPException, Query, Request
 from api.auth import User, get_current_user
 from datetime import datetime, timedelta, timezone
 from typing import Optional
@@ -88,8 +88,16 @@ async def job_quality(job_id: str,
     current_user: User = Depends(get_current_user)):
     """Get quality metrics for a specific job from DB."""
     import api.server as server
+    from api.auth import UserRole
     db_mgr = getattr(server, "db", None)
     if db_mgr and db_mgr.db:
+        # Enforce owner access
+        job = await db_mgr.db.get_job(job_id)
+        if job:
+            if current_user.role != UserRole.ADMIN:
+                owner = getattr(job, "owner", None)
+                if not owner or owner != current_user.username:
+                    raise HTTPException(status_code=404, detail="Job not found")
         from core.db import Sample
         from sqlalchemy import select, func
         try:

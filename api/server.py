@@ -1259,12 +1259,20 @@ async def get_agent_stats(current_user: User = Depends(get_current_user)):
 
 @app.post("/datasets/{dataset_id}/deliver", response_model=DeliveryResponseSchema, tags=["Storage & Delivery"])
 async def deliver_dataset(dataset_id: str, request: DeliveryRequestSchema,
-    current_user: User = Depends(get_current_user)):
+    current_user: User = Depends(require_role([UserRole.ADMIN, UserRole.USER]))):
     """Trigger ADR-002 packaging and delivery of a dataset."""
     if not hasattr(app.state, "delivery_manager") or not app.state.delivery_manager:
         raise HTTPException(status_code=503, detail="DeliveryManager is not initialized")
     if not db:
         raise HTTPException(status_code=503, detail="Database not available")
+
+    # Enforce dataset owner
+    dataset = await db.get_dataset(dataset_id)
+    if not dataset:
+        datasets_for_job = await db.get_datasets_by_job(dataset_id)
+        if datasets_for_job:
+            dataset = datasets_for_job[0]
+    _enforce_owner(dataset, current_user, resource_name="Dataset")
 
     samples = await db.get_samples(dataset_id, limit=50000)
     if not samples:
@@ -2358,6 +2366,21 @@ async def get_ray_cluster_status(current_user: User = Depends(get_current_user))
         }
 
 
+def _enforce_owner(resource: Optional[dict], current_user: User, resource_name: str = "Resource"):
+    """Enforce owner check: Admin can access any row; non-admin can only access own rows.
+    
+    Rows with owner=None (legacy single-tenant rows) are visible only to ADMIN.
+    Returns 404 (Not Found) on mismatch to prevent existence leakage.
+    """
+    if not resource:
+        raise HTTPException(status_code=404, detail=f"{resource_name} not found")
+    if current_user.role == UserRole.ADMIN:
+        return
+    owner = resource.get("owner")
+    if not owner or owner != current_user.username:
+        raise HTTPException(status_code=404, detail=f"{resource_name} not found")
+
+
 _idempotency_cache: dict[str, dict] = {}
 
 @app.post("/jobs", response_model=JobResponse, status_code=201, tags=["Jobs"])
@@ -2365,8 +2388,7 @@ async def create_job(
     request: JobRequest,
     background_tasks: BackgroundTasks,
     idempotency_key: Optional[str] = Header(None, alias="Idempotency-Key"),
-
-    current_user: User = Depends(get_current_user)):
+    current_user: User = Depends(require_role([UserRole.ADMIN, UserRole.USER]))):
     """Create a new dataset generation job and kick off the pipeline.
 
     Supports idempotent dispatches via 'Idempotency-Key' header or configuration fingerprint.
@@ -2405,6 +2427,7 @@ async def create_job(
     if request.approved_examples and request.approved_example_indices is not None:
         config["approved_examples"] = [request.approved_examples[index] for index in request.approved_example_indices]
     config["id"] = job_id
+    config["owner"] = current_user.username
 
     try:
         await db.create_job(config)
@@ -2453,20 +2476,20 @@ async def list_jobs(
     status: Optional[str] = None,
     limit: int = 50,
     cursor: Optional[str] = None,
-
     current_user: User = Depends(get_current_user)):
     """List dataset generation jobs (most recent first)."""
     if not db:
         raise HTTPException(status_code=503, detail="Database not available")
 
+    owner_filter = None if current_user.role == UserRole.ADMIN else current_user.username
     try:
-        jobs = await db.list_jobs(status=status, limit=limit + 1, cursor=cursor)
+        jobs = await db.list_jobs(status=status, limit=limit + 1, cursor=cursor, owner=owner_filter)
     except Exception as e:
         if "no such table" in str(e).lower() or "relation" in str(e).lower():
             logger.info("Database table missing — auto-creating tables...")
             try:
                 await db.create_tables()
-                jobs = await db.list_jobs(status=status, limit=limit + 1)
+                jobs = await db.list_jobs(status=status, limit=limit + 1, owner=owner_filter)
             except Exception as retry_err:
                 logger.error(f"Failed to list jobs after table creation: {retry_err}")
                 return {"data": [], "has_more": False, "next_cursor": None}
@@ -2493,8 +2516,7 @@ async def get_job(job_id: str,
         raise HTTPException(status_code=503, detail="Database not available")
 
     job = await db.get_job_status(job_id)
-    if not job:
-        raise HTTPException(status_code=404, detail=f"Job {job_id} not found")
+    _enforce_owner(job, current_user, resource_name="Job")
 
     # Resolve quality score and simulated flag
     job_cfg = job.get("config") or {}
@@ -2526,14 +2548,17 @@ async def get_job(job_id: str,
 
 @app.post("/jobs/{job_id}/cancel", tags=["Jobs"])
 async def cancel_job(job_id: str,
-    current_user: User = Depends(get_current_user)):
+    current_user: User = Depends(require_role([UserRole.ADMIN, UserRole.USER]))):
     """Cancel an active or pending dataset generation job."""
     if not db:
         raise HTTPException(status_code=503, detail="Database not available")
 
     job = await db.get_job_status(job_id)
-    if not job:
-        raise HTTPException(status_code=404, detail=f"Job {job_id} not found")
+    _enforce_owner(job, current_user, resource_name="Job")
+
+    status = (job.get("status") or "").lower()
+    if status in {"cancelled", "completed", "failed"}:
+        raise HTTPException(status_code=409, detail=f"Cannot cancel job in '{status}' state")
 
     # Cancel orchestrator in-memory active task if running
     if orchestrator and hasattr(orchestrator, "active_jobs") and job_id in orchestrator.active_jobs:
@@ -2610,8 +2635,7 @@ async def get_job_preview_samples(job_id: str,
     if not db:
         raise HTTPException(status_code=503, detail="Database not available")
     job = await db.get_job_status(job_id)
-    if not job:
-        raise HTTPException(status_code=404, detail=f"Job {job_id} not found")
+    _enforce_owner(job, current_user, resource_name="Job")
     config = job.get("config") or {}
     preview_samples = config.get("preview_samples", [])
     return {
@@ -2624,8 +2648,18 @@ async def get_job_preview_samples(job_id: str,
 
 @app.post("/jobs/{job_id}/accept_preview", tags=["Jobs"])
 async def accept_job_preview(job_id: str, payload: AcceptPreviewRequest = Body(default_factory=AcceptPreviewRequest),
-    current_user: User = Depends(get_current_user)):
+    current_user: User = Depends(require_role([UserRole.ADMIN, UserRole.USER]))):
     """Accept early preview samples, optionally with user edits, and advance pipeline with full capabilities."""
+    if not db:
+        raise HTTPException(status_code=503, detail="Database not available")
+    job = await db.get_job_status(job_id)
+    _enforce_owner(job, current_user, resource_name="Job")
+
+    status = (job.get("status") or "").lower()
+    stage = (job.get("current_stage") or "").lower()
+    if status not in {"awaiting_preview_approval", "pending", "running"} and "preview" not in stage:
+        raise HTTPException(status_code=409, detail=f"Job {job_id} is in state '{status}' (stage '{stage}') and not awaiting preview approval")
+
     if orchestrator and hasattr(orchestrator, "accept_preview"):
         success = orchestrator.accept_preview(job_id, edited_samples=payload.edited_samples)
         if success:
@@ -2638,8 +2672,18 @@ async def accept_job_preview(job_id: str, payload: AcceptPreviewRequest = Body(d
 
 @app.post("/jobs/{job_id}/reject_preview", tags=["Jobs"])
 async def reject_job_preview(job_id: str, payload: RejectPreviewRequest = Body(default_factory=RejectPreviewRequest),
-    current_user: User = Depends(get_current_user)):
+    current_user: User = Depends(require_role([UserRole.ADMIN, UserRole.USER]))):
     """Reject early preview samples, optionally supply updated prompt, and re-generate preview."""
+    if not db:
+        raise HTTPException(status_code=503, detail="Database not available")
+    job = await db.get_job_status(job_id)
+    _enforce_owner(job, current_user, resource_name="Job")
+
+    status = (job.get("status") or "").lower()
+    stage = (job.get("current_stage") or "").lower()
+    if status not in {"awaiting_preview_approval", "pending", "running"} and "preview" not in stage:
+        raise HTTPException(status_code=409, detail=f"Job {job_id} is in state '{status}' (stage '{stage}') and not awaiting preview approval")
+
     if orchestrator and hasattr(orchestrator, "reject_preview"):
         success = orchestrator.reject_preview(job_id, updated_prompt=payload.updated_prompt)
         if success:
@@ -2647,11 +2691,9 @@ async def reject_job_preview(job_id: str, payload: RejectPreviewRequest = Body(d
     if db:
         status_update: dict[str, Any] = {"status": "running", "current_stage": "query_optimizer"}
         if payload.updated_prompt:
-            job = await db.get_job_status(job_id)
-            if job:
-                cfg = job.get("config") or {}
-                cfg["target_domain"] = payload.updated_prompt
-                status_update["config"] = cfg
+            cfg = job.get("config") or {}
+            cfg["target_domain"] = payload.updated_prompt
+            status_update["config"] = cfg
         await db.update_job_status(job_id, status_update)
         return {"success": True, "message": "Job updated for regeneration."}
     raise HTTPException(status_code=404, detail="Job not found or not awaiting preview")
@@ -2665,14 +2707,14 @@ async def reject_job_preview(job_id: str, payload: RejectPreviewRequest = Body(d
 async def list_datasets(
     limit: int = 50,
     cursor: Optional[str] = None,
-
     current_user: User = Depends(get_current_user)):
     """List datasets (most recent first)."""
     if not db:
         raise HTTPException(status_code=503, detail="Database not available")
 
+    owner_filter = None if current_user.role == UserRole.ADMIN else current_user.username
     try:
-        datasets = await db.list_datasets(limit=limit + 1)
+        datasets = await db.list_datasets(limit=limit + 1, owner=owner_filter)
     except Exception as e:
         logger.error(f"Failed to list datasets: {e}")
         raise HTTPException(status_code=500, detail=f"Failed to list datasets: {e}")
@@ -2703,9 +2745,7 @@ async def get_dataset(dataset_id: str,
         if datasets_for_job:
             dataset = datasets_for_job[0]
 
-    if not dataset:
-        raise HTTPException(status_code=404, detail=f"Dataset {dataset_id} not found")
-
+    _enforce_owner(dataset, current_user, resource_name="Dataset")
     return dataset
 
 
@@ -2723,8 +2763,7 @@ async def get_dataset_records(dataset_id: str, limit: int = 10,
             if datasets_for_job:
                 dataset = datasets_for_job[0]
 
-        if not dataset:
-            raise HTTPException(status_code=404, detail=f"Dataset {dataset_id} not found")
+        _enforce_owner(dataset, current_user, resource_name="Dataset")
 
         samples = await db.get_samples(dataset["id"], limit=limit)
         records = []
@@ -2791,7 +2830,7 @@ async def delete_dataset_endpoint(dataset_id: str,
 
 @app.post("/datasets/{dataset_id}/export", tags=["Datasets"])
 async def export_dataset(dataset_id: str, request: dict = None,
-    current_user: User = Depends(get_current_user)):
+    current_user: User = Depends(require_role([UserRole.ADMIN, UserRole.USER]))):
     """Download an existing dataset file.
 
     Returns the dataset file directly.  Supports ``format`` in the JSON body:
@@ -2818,8 +2857,7 @@ async def export_dataset(dataset_id: str, request: dict = None,
         if datasets_for_job:
             dataset = datasets_for_job[0]
 
-    if not dataset:
-        raise HTTPException(status_code=404, detail=f"Dataset {dataset_id} not found")
+    _enforce_owner(dataset, current_user, resource_name="Dataset")
 
     export_format = (request or {}).get("format", "jsonl").lower()
     if export_format not in {"json", "jsonl", "csv", "parquet", "zip", "tar.gz", "tar", "sql", "qdrant"}:
@@ -3007,6 +3045,12 @@ async def get_job_records(job_id: str, limit: int = 10,
     from pathlib import Path
     import json
 
+    if not db:
+        raise HTTPException(status_code=503, detail="Database not available")
+
+    job = await db.get_job_status(job_id)
+    _enforce_owner(job, current_user, resource_name="Job")
+
     # Dynamic resolution from disk datasets if matching output exists
     disk_info = _resolve_dynamic_disk_dataset(job_id)
     if disk_info and Path(disk_info["output_path"]).exists() and disk_info["output_path"].endswith(".jsonl"):
@@ -3033,9 +3077,6 @@ async def get_job_records(job_id: str, limit: int = 10,
             "message": None,
         }
 
-    if not db:
-        raise HTTPException(status_code=503, detail="Database not available")
-
     try:
         # Find datasets for this job, then fetch their samples
         datasets = await db.get_datasets_by_job(job_id)
@@ -3060,7 +3101,6 @@ async def get_job_records(job_id: str, limit: int = 10,
 
         # Fallback to early preview samples if export has not completed yet
         if not records:
-            job = await db.get_job_status(job_id)
             if job and job.get("config"):
                 cfg = job["config"]
                 preview_samples = cfg.get("preview_samples") or []
@@ -3094,8 +3134,7 @@ async def get_job_dataset_summary(job_id: str,
         raise HTTPException(status_code=503, detail="Database not available")
 
     job = await db.get_job_status(job_id)
-    if not job:
-        raise HTTPException(status_code=404, detail=f"Job {job_id} not found")
+    _enforce_owner(job, current_user, resource_name="Job")
 
     datasets = await db.get_datasets_by_job(job_id)
     config = job.get("config") or {}
@@ -3287,9 +3326,20 @@ async def create_presigned_download_url(
     request: Request,
     ttl_seconds: int = Query(3600, ge=60, le=86400, description="Token validity in seconds (default 3600)"),
     format: Optional[str] = Query(None, description="Dataset format: jsonl, csv, xml, parquet, json"),
-
-    current_user: User = Depends(get_current_user)):
+    current_user: User = Depends(require_role([UserRole.ADMIN, UserRole.USER]))):
     """Generate an ephemeral HMAC-SHA256 presigned token for streaming private datasets."""
+    # Verify existence and ownership of target job or dataset
+    if db:
+        target_obj = await db.get_job_status(job_id)
+        if not target_obj:
+            target_obj = await db.get_dataset(job_id)
+        if not target_obj:
+            datasets_for_job = await db.get_datasets_by_job(job_id)
+            if datasets_for_job:
+                target_obj = datasets_for_job[0]
+        if not target_obj:
+            raise HTTPException(status_code=404, detail=f"Job or Dataset '{job_id}' not found")
+        _enforce_owner(target_obj, current_user, resource_name="Job/Dataset")
     final_ttl = ttl_seconds
     final_format = (format or "jsonl").lower().strip()
 
@@ -3360,6 +3410,22 @@ async def download_job_dataset(
                 token_data = auth_mgr.verify_token(token_str)
                 if token_data:
                     authorized = True
+                    # Check owner for bearer authenticated users
+                    if token_data.role != UserRole.ADMIN.value and db:
+                        target_res = await db.get_job_status(job_id)
+                        if not target_res:
+                            target_res = await db.get_dataset(job_id)
+                        if not target_res:
+                            datasets_for_job = await db.get_datasets_by_job(job_id)
+                            if datasets_for_job:
+                                target_res = datasets_for_job[0]
+                        if not target_res:
+                            raise HTTPException(status_code=404, detail="Resource not found")
+                        owner = target_res.get("owner")
+                        if not owner or owner != token_data.username:
+                            raise HTTPException(status_code=404, detail="Resource not found")
+            except HTTPException:
+                raise
             except Exception:
                 pass
 
@@ -3632,10 +3698,18 @@ async def download_job_dataset(
 
 @app.post("/checkpoints", response_model=CheckpointResponse, status_code=201, tags=["Checkpoints"])
 async def create_checkpoint(request: CreateCheckpointRequest,
-    current_user: User = Depends(get_current_user)):
+    current_user: User = Depends(require_role([UserRole.ADMIN, UserRole.USER]))):
     """Create a new checkpoint for a job."""
     if not checkpoint_manager:
         raise HTTPException(status_code=503, detail="Checkpoint manager not available")
+    if not db:
+        raise HTTPException(status_code=503, detail="Database not available")
+
+    # Verify job existence and owner
+    job = await db.get_job_status(request.job_id)
+    if not job:
+        raise HTTPException(status_code=404, detail=f"Job {request.job_id} not found")
+    _enforce_owner(job, current_user, resource_name="Job")
 
     from core.orchestrator_pkg.checkpoints import ProviderContext
 
@@ -3693,9 +3767,19 @@ async def get_checkpoint(job_id: str, checkpoint_id: Optional[str] = None,
     """Get checkpoint(s) for a job."""
     if not checkpoint_manager:
         raise HTTPException(status_code=503, detail="Checkpoint manager not available")
+    if not db:
+        raise HTTPException(status_code=503, detail="Database not available")
+
+    # Verify job existence and owner
+    job = await db.get_job_status(job_id)
+    if not job:
+        raise HTTPException(status_code=404, detail=f"Job {job_id} not found")
+    _enforce_owner(job, current_user, resource_name="Job")
 
     if checkpoint_id:
         checkpoint = await checkpoint_manager.store.get_by_id(checkpoint_id)
+        if checkpoint and checkpoint.job_id != job_id:
+            raise HTTPException(status_code=404, detail=f"Checkpoint {checkpoint_id} does not belong to job {job_id}")
     else:
         checkpoint = await checkpoint_manager.store.get_latest(job_id)
 
@@ -3732,6 +3816,14 @@ async def get_checkpoint_history(job_id: str, limit: int = 10,
     """Get checkpoint history for a job."""
     if not checkpoint_manager:
         raise HTTPException(status_code=503, detail="Checkpoint manager not available")
+    if not db:
+        raise HTTPException(status_code=503, detail="Database not available")
+
+    # Verify job existence and owner
+    job = await db.get_job_status(job_id)
+    if not job:
+        raise HTTPException(status_code=404, detail=f"Job {job_id} not found")
+    _enforce_owner(job, current_user, resource_name="Job")
 
     checkpoints = await checkpoint_manager.store.get_history(job_id, limit)
 
@@ -3763,11 +3855,25 @@ async def get_checkpoint_history(job_id: str, limit: int = 10,
 
 
 @app.post("/checkpoints/{job_id}/restore", response_model=RestoreCheckpointResponse, tags=["Checkpoints"])
-async def restore_checkpoint(request: RestoreCheckpointRequest,
+async def restore_checkpoint(job_id: str, request: RestoreCheckpointRequest,
     admin_user: User = Depends(require_role([UserRole.ADMIN]))):
     """Resume a non-completed job from persisted pipeline state."""
+    if request.job_id != job_id:
+        raise HTTPException(status_code=400, detail=f"Path job_id '{job_id}' does not match request body job_id '{request.job_id}'")
+
     if not checkpoint_manager:
         raise HTTPException(status_code=503, detail="Checkpoint manager not available")
+    if not db:
+        raise HTTPException(status_code=503, detail="Database not available")
+
+    stored_job = await db.get_job_status(job_id)
+    if not stored_job:
+        raise HTTPException(status_code=404, detail=f"Job {job_id} not found")
+
+    if request.checkpoint_id:
+        cp = await checkpoint_manager.store.get_by_id(request.checkpoint_id)
+        if not cp or cp.job_id != job_id:
+            raise HTTPException(status_code=404, detail=f"Checkpoint {request.checkpoint_id} does not belong to job {job_id}")
 
     resume_state = await checkpoint_manager.resume_from_checkpoint(
         job_id=request.job_id,
@@ -3790,10 +3896,6 @@ async def restore_checkpoint(request: RestoreCheckpointRequest,
         raise HTTPException(status_code=503, detail="Pipeline is not available for checkpoint recovery")
     if request.job_id in orchestrator.active_jobs:
         raise HTTPException(status_code=409, detail="Job is already running")
-
-    stored_job = await db.get_job_status(request.job_id)
-    if not stored_job:
-        raise HTTPException(status_code=404, detail=f"Job {request.job_id} not found")
 
     requested_stage = request.resume_from_stage or resume_state["resume_from_stage"]
     resume_state["resume_from_stage"] = requested_stage

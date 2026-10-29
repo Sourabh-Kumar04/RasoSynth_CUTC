@@ -18,6 +18,21 @@ from pydantic import BaseModel
 router = APIRouter(prefix="/api/review", tags=["review"])
 
 
+def _enforce_owner(resource: Optional[dict], current_user: User, resource_name: str = "Review item"):
+    """Enforce owner check: Admin can access any row; non-admin can only access own rows.
+    
+    Rows with owner=None (legacy single-tenant rows) are visible only to ADMIN.
+    Returns 404 (Not Found) on mismatch to prevent existence leakage.
+    """
+    if not resource:
+        raise HTTPException(status_code=404, detail=f"{resource_name} not found")
+    if current_user.role == UserRole.ADMIN:
+        return
+    owner = resource.get("owner")
+    if not owner or owner != current_user.username:
+        raise HTTPException(status_code=404, detail=f"{resource_name} not found")
+
+
 # ── Dependency ────────────────────────────────────────────────────────────────
 
 def _svc(request: Request):
@@ -72,23 +87,23 @@ async def list_queue(
     page: int = Query(1, ge=1),
     page_size: int = Query(50, ge=1, le=500),
     svc=Depends(_svc),
-
     current_user: User = Depends(get_current_user)):
-    return await svc.get_queue(status=status, job_id=job_id, page=page, page_size=page_size)
+    owner_filter = None if current_user.role == UserRole.ADMIN else current_user.username
+    return await svc.get_queue(status=status, job_id=job_id, page=page, page_size=page_size, owner=owner_filter)
 
 
 @router.get("/queue/export")
 async def export_approved(
     job_id: Optional[str] = Query(None, description="Filter by dataset job ID"),
     svc=Depends(_svc),
-
     current_user: User = Depends(get_current_user)):
     """
     Stream all approved review items as a JSONL file suitable for fine-tuning.
     Each line: {"instruction": ..., "response": ..., "input": "", ...}
     """
+    owner_filter = None if current_user.role == UserRole.ADMIN else current_user.username
     async def _stream():
-        async for line in svc.export_approved(job_id=job_id):
+        async for line in svc.export_approved(job_id=job_id, owner=owner_filter):
             yield line
 
     return StreamingResponse(
@@ -102,8 +117,7 @@ async def export_approved(
 async def get_item(item_id: str, svc=Depends(_svc),
     current_user: User = Depends(get_current_user)):
     item = await svc.get_item(item_id)
-    if not item:
-        raise HTTPException(status_code=404, detail="Review item not found")
+    _enforce_owner(item, current_user)
     return item
 
 
@@ -121,12 +135,15 @@ async def submit_for_review(body: SubmitRequest, svc=Depends(_svc),
         hallucination_risk=body.hallucination_risk,
         duplicate_score=body.duplicate_score,
         diversity_score=body.diversity_score,
+        owner=current_user.username,
     )
 
 
 @router.post("/queue/{item_id}/approve")
 async def approve_item(item_id: str, action: ReviewAction, svc=Depends(_svc),
     current_user: User = Depends(require_role([UserRole.ADMIN, UserRole.USER]))):
+    item = await svc.get_item(item_id)
+    _enforce_owner(item, current_user)
     result = await svc.approve(item_id, current_user.username, action.notes)
     if not result:
         raise HTTPException(status_code=404, detail="Review item not found")
@@ -136,6 +153,8 @@ async def approve_item(item_id: str, action: ReviewAction, svc=Depends(_svc),
 @router.post("/queue/{item_id}/reject")
 async def reject_item(item_id: str, action: ReviewAction, svc=Depends(_svc),
     current_user: User = Depends(require_role([UserRole.ADMIN, UserRole.USER]))):
+    item = await svc.get_item(item_id)
+    _enforce_owner(item, current_user)
     result = await svc.reject(item_id, current_user.username, action.notes)
     if not result:
         raise HTTPException(status_code=404, detail="Review item not found")
@@ -145,6 +164,8 @@ async def reject_item(item_id: str, action: ReviewAction, svc=Depends(_svc),
 @router.post("/queue/{item_id}/edit")
 async def edit_item(item_id: str, action: EditAction, svc=Depends(_svc),
     current_user: User = Depends(require_role([UserRole.ADMIN, UserRole.USER]))):
+    item = await svc.get_item(item_id)
+    _enforce_owner(item, current_user)
     result = await svc.edit(
         item_id, current_user.username,
         edited_instruction=action.edited_instruction,
@@ -159,6 +180,8 @@ async def edit_item(item_id: str, action: EditAction, svc=Depends(_svc),
 @router.post("/queue/{item_id}/flag")
 async def flag_item(item_id: str, action: ReviewAction, svc=Depends(_svc),
     current_user: User = Depends(require_role([UserRole.ADMIN, UserRole.USER]))):
+    item = await svc.get_item(item_id)
+    _enforce_owner(item, current_user)
     result = await svc.flag(item_id, current_user.username, action.notes)
     if not result:
         raise HTTPException(status_code=404, detail="Review item not found")
@@ -209,6 +232,10 @@ async def list_paused_jobs(svc=Depends(_svc),
 @router.get("/jobs/{job_id}/status")
 async def hitl_job_status(job_id: str, svc=Depends(_svc),
     current_user: User = Depends(get_current_user)):
+    if hasattr(svc, "db") and svc.db:
+        job = await svc.db.get_job(job_id)
+        if job:
+            _enforce_owner(job.to_dict(), current_user, resource_name="Job")
     is_paused = svc.is_job_paused(job_id)
     if not is_paused and hasattr(svc, "db") and svc.db:
         try:
@@ -223,6 +250,10 @@ async def hitl_job_status(job_id: str, svc=Depends(_svc),
 @router.post("/jobs/{job_id}/resume")
 async def hitl_resume_job(job_id: str, svc=Depends(_svc),
     current_user: User = Depends(require_role([UserRole.ADMIN, UserRole.USER]))):
+    if hasattr(svc, "db") and svc.db:
+        job = await svc.db.get_job(job_id)
+        if job:
+            _enforce_owner(job.to_dict(), current_user, resource_name="Job")
     resumed = await svc.resume_job(job_id)
     if not resumed:
         raise HTTPException(status_code=404, detail=f"Job {job_id} is not currently paused")

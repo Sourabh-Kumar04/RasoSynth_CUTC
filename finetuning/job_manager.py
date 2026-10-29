@@ -181,6 +181,7 @@ class FinetuneJobManager:
             "dataset_id": ft_config.dataset_id or None,
             "config": persisted_config,
             "total_epochs": total_epochs,
+            "owner": config.get("owner"),
         })
 
         self._logs[job_id] = deque(maxlen=LOG_BUFFER_SIZE)
@@ -212,9 +213,9 @@ class FinetuneJobManager:
         fj: Optional[FineTuneJob] = await self.db.get_finetune_job(job_id)
         return _scrub_job_dict(fj.to_dict()) if fj else None
 
-    async def list_jobs(self, limit: int = 100) -> list[dict]:
+    async def list_jobs(self, limit: int = 100, owner: Optional[str] = None) -> list[dict]:
         """Return jobs directly from DB to prevent cross-worker cache staleness in multi-process uvicorn."""
-        jobs = await self.db.list_finetune_jobs(limit=limit)
+        jobs = await self.db.list_finetune_jobs(limit=limit, owner=owner)
         return [_scrub_job_dict(j.to_dict()) for j in jobs]
 
     def _persist_log_event(self, job_id: str, event: dict) -> None:

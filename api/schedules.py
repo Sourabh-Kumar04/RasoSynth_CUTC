@@ -1,9 +1,13 @@
-"""Durable recrawl, refresh, and retraining schedule API."""
+"""Durable recrawl, refresh, and retraining schedule API.
+
+Note: Schedules currently operate in single-tenant mode across the cluster;
+retraining and recrawl schedules are managed by system operators.
+"""
 from datetime import datetime
 from typing import Any, Literal, Optional
 
 from fastapi import APIRouter, Depends, HTTPException, Request
-from api.auth import User, get_current_user
+from api.auth import User, UserRole, get_current_user, require_role
 from pydantic import BaseModel, Field
 
 
@@ -27,7 +31,8 @@ def _db(request: Request):
 
 @router.post("", status_code=201)
 async def create_schedule(body: ScheduleCreateRequest, db=Depends(_db),
-    current_user: User = Depends(get_current_user)):
+    current_user: User = Depends(require_role([UserRole.ADMIN, UserRole.USER]))):
+    """Create a durable workflow schedule. Note: schedules operate in single-tenant mode."""
     if body.workflow_type == "retrain" and not body.workflow_config.get("dataset_version_id"):
         raise HTTPException(status_code=422, detail="Retraining schedules require an immutable dataset_version_id")
     return await db.create_workflow_schedule(**body.model_dump())
@@ -36,10 +41,12 @@ async def create_schedule(body: ScheduleCreateRequest, db=Depends(_db),
 @router.get("")
 async def list_schedules(limit: int = 100, db=Depends(_db),
     current_user: User = Depends(get_current_user)):
+    """List schedules. Note: operates in single-tenant mode."""
     return {"items": await db.list_workflow_schedules(limit=min(max(limit, 1), 500))}
 
 
 @router.get("/{schedule_id}/runs")
 async def list_schedule_runs(schedule_id: str, limit: int = 100, db=Depends(_db),
     current_user: User = Depends(get_current_user)):
+    """List runs for a schedule. Note: operates in single-tenant mode."""
     return {"items": await db.list_workflow_schedule_runs(schedule_id, limit=min(max(limit, 1), 500))}
