@@ -5,7 +5,7 @@ import { Toaster } from '@/components/ui/toaster'
 import { MockModeBanner } from '@/components/mock-mode-banner'
 
 export const metadata: Metadata = {
-  title: 'RasoSynthTune | Autonomous Dataset Synthesis & Fine-Tuning Studio',
+  title: 'RasoSynthTune | Dataset Synthesis & Fine-Tuning Studio',
   description: 'AI-native dataset generation, multi-tier evaluation, and PEFT/LoRA fine-tuning platform for Indic and specialized LLMs',
   icons: {
     icon: [
