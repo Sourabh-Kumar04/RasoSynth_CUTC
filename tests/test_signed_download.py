@@ -40,13 +40,14 @@ def test_sign_and_verify_token():
     assert _verify_download_token(job_id, expired_token, expired_time) is False
 
 
-def test_signed_url_generation_endpoints():
+def test_signed_url_generation_endpoints(auth_headers):
     """Test POST and GET /jobs/{id}/signed-url."""
     client = TestClient(app)
     job_id = "job-secure-5678"
+    csrf_token = client.get("/auth/csrf-token").json()["csrf_token"]
 
     # GET signed URL
-    resp_get = client.get(f"/jobs/{job_id}/signed-url?ttl_seconds=1800&format=csv")
+    resp_get = client.get(f"/jobs/{job_id}/signed-url?ttl_seconds=1800&format=csv", headers=auth_headers)
     assert resp_get.status_code == 200
     data_get = resp_get.json()
     assert data_get["job_id"] == job_id
@@ -58,7 +59,8 @@ def test_signed_url_generation_endpoints():
     # POST signed URL
     resp_post = client.post(
         f"/jobs/{job_id}/signed-url",
-        json={"ttl_seconds": 7200, "format": "parquet"}
+        json={"ttl_seconds": 7200, "format": "parquet"},
+        headers={"X-CSRF-Token": csrf_token, **auth_headers}
     )
     assert resp_post.status_code == 200
     data_post = resp_post.json()
@@ -67,23 +69,24 @@ def test_signed_url_generation_endpoints():
     assert data_post["expires_in_seconds"] == 7200
 
 
-def test_download_authorization_enforcement():
-    """Test that unauthorized access to private dataset is blocked with 403."""
+def test_download_authorization_enforcement(auth_headers):
+    """Test that unauthorized access to private dataset is blocked."""
     client = TestClient(app)
     job_id = "private-research-dataset-9999"
 
-    # 1. Unauthenticated direct download -> 403 Forbidden
+    # 1. Unauthenticated direct download -> 401 from the auth gate
+    # (get_current_user runs before the route's own token checks).
     resp_unauth = client.get(f"/jobs/{job_id}/download")
-    assert resp_unauth.status_code == 403
-    assert "Unauthorized dataset access" in resp_unauth.json()["detail"]
+    assert resp_unauth.status_code == 401
+    assert "Authentication required" in resp_unauth.json()["detail"]
 
     # 2. Forged / invalid token -> 403 Forbidden
-    resp_forged = client.get(f"/jobs/{job_id}/download?token=invalidtoken123&expires={int(time.time()) + 3600}")
+    resp_forged = client.get(f"/jobs/{job_id}/download?token=invalidtoken123&expires={int(time.time()) + 3600}", headers=auth_headers)
     assert resp_forged.status_code == 403
     assert "Invalid or expired download token" in resp_forged.json()["detail"]
 
     # 3. Missing expires or token parameter -> 403 Forbidden
-    resp_partial = client.get(f"/jobs/{job_id}/download?token=some_token")
+    resp_partial = client.get(f"/jobs/{job_id}/download?token=some_token", headers=auth_headers)
     assert resp_partial.status_code == 403
 
     # 5. Valid signed token should pass authorization (status != 403)
@@ -96,7 +99,7 @@ def test_download_authorization_enforcement():
             mock_db.get_dataset = AsyncMock(return_value=None)
             mock_db.get_job_status = AsyncMock(return_value=None)
             mock_db.get_datasets = AsyncMock(return_value=[])
-            resp_valid = client.get(f"/jobs/{job_id}/download?token={valid_token}&expires={valid_exp}")
+            resp_valid = client.get(f"/jobs/{job_id}/download?token={valid_token}&expires={valid_exp}", headers=auth_headers)
             assert resp_valid.status_code == 404  # Successfully authenticated! Proceeded to lookup.
 
 

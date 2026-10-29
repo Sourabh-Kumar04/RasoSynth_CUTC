@@ -29,6 +29,11 @@ def client():
             token = csrf_res.json().get("csrf_token")
             if token:
                 c.headers.update({"x-csrf-token": token})
+        # Auth is enforced in tests (conftest forces AUTH_DISABLED=false):
+        # mint a real ADMIN JWT so auth-gated tool/data routes return 200.
+        from api.auth import UserRole, get_auth_manager
+        jwt = get_auth_manager().create_token("admin-001", "testadmin", UserRole.ADMIN)
+        c.headers.update({"Authorization": f"Bearer {jwt}"})
         yield c
 
 

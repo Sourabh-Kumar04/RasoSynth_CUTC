@@ -138,7 +138,7 @@ class TestObservabilityTraces:
 class TestTraceEndpointsAndMiddleware:
     """Test /traces API endpoints and TracingMiddleware header propagation."""
 
-    def test_tracing_endpoints_and_headers(self) -> None:
+    def test_tracing_endpoints_and_headers(self, auth_headers) -> None:
         import os
         from fastapi.testclient import TestClient
         os.environ.setdefault("JWT_SECRET", "a1b2c3d4e5f6g7h8i9j0k1l2m3n4o5p6q7r8s9t0u1v2w3x4y5z6A")
@@ -156,20 +156,20 @@ class TestTraceEndpointsAndMiddleware:
         assert resp.headers.get("x-correlation-id") == custom_corr
 
         # Verify /traces endpoint returns recorded traces
-        traces_resp = client.get("/traces?limit=10")
+        traces_resp = client.get("/traces?limit=10", headers=auth_headers)
         assert traces_resp.status_code == 200
         data = traces_resp.json()
         assert "traces" in data
         assert len(data["traces"]) > 0
 
         # Query by correlation ID
-        corr_resp = client.get(f"/traces/correlation?correlation_id={custom_corr}")
+        corr_resp = client.get(f"/traces/correlation?correlation_id={custom_corr}", headers=auth_headers)
         assert corr_resp.status_code == 200
         corr_data = corr_resp.json()
         assert any(t["correlation_id"] == custom_corr for t in corr_data["traces"])
 
         # Query single trace by ID
         target_trace = data["traces"][0]
-        single_resp = client.get(f"/traces/{target_trace['trace_id']}")
+        single_resp = client.get(f"/traces/{target_trace['trace_id']}", headers=auth_headers)
         assert single_resp.status_code == 200
         assert single_resp.json()["trace_id"] == target_trace["trace_id"]

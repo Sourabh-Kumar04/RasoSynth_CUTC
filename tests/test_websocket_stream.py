@@ -24,7 +24,9 @@ def test_job_websocket_stream_receives_status_and_merkle_root():
 
     try:
         client = TestClient(app)
-        with client.websocket_connect("/ws/jobs/job-stream-test-456") as websocket:
+        from api.auth import UserRole, get_auth_manager
+        jwt = get_auth_manager().create_token("admin-001", "testadmin", UserRole.ADMIN)
+        with client.websocket_connect(f"/ws/jobs/job-stream-test-456?token={jwt}") as websocket:
             data = websocket.receive_json()
             assert data["job_id"] == "job-stream-test-456"
             assert data["status"] == "completed"
@@ -51,7 +53,9 @@ def test_job_stream_legacy_path_alias():
 
     try:
         client = TestClient(app)
-        with client.websocket_connect("/jobs/job-stream-legacy-789/stream") as websocket:
+        from api.auth import UserRole, get_auth_manager
+        jwt = get_auth_manager().create_token("admin-001", "testadmin", UserRole.ADMIN)
+        with client.websocket_connect(f"/jobs/job-stream-legacy-789/stream?token={jwt}") as websocket:
             data = websocket.receive_json()
             assert data["job_id"] == "job-stream-legacy-789"
             assert data["status"] == "completed"

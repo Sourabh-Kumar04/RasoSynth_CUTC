@@ -89,7 +89,7 @@ async def test_e2e_cognitive_generation_to_dbom_and_hf_card():
     assert "COT" in card
 
 
-def test_settings_compute_api_endpoint_lifecycle():
+def test_settings_compute_api_endpoint_lifecycle(auth_headers):
     """Verify GET and POST /settings/compute correctly store and mask GPU provider tokens."""
     import os
     saved_env = {
@@ -100,7 +100,7 @@ def test_settings_compute_api_endpoint_lifecycle():
 
     try:
         # 1. Query initial state
-        res = client.get("/settings/compute")
+        res = client.get("/settings/compute", headers=auth_headers)
         assert res.status_code == 200
         data = res.json()
         assert "available_targets" in data
@@ -122,7 +122,7 @@ def test_settings_compute_api_endpoint_lifecycle():
         post_res = client.post(
             "/settings/compute",
             json=update_payload,
-            headers={"X-CSRF-Token": csrf_token},
+            headers={"X-CSRF-Token": csrf_token, **auth_headers},
         )
         assert post_res.status_code == 200
         post_data = post_res.json()
@@ -132,7 +132,7 @@ def test_settings_compute_api_endpoint_lifecycle():
         assert post_data["hf_configured"] is True
 
         # 4. Query GET /settings/compute again to verify masking without secret exposure
-        get_res2 = client.get("/settings/compute")
+        get_res2 = client.get("/settings/compute", headers=auth_headers)
         assert get_res2.status_code == 200
         data2 = get_res2.json()
         assert data2["modal_configured"] is True

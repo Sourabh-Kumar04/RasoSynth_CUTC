@@ -60,12 +60,13 @@ class TestAuthentication:
         assert token_data.username == "testuser"
 
     def test_disabled_auth(self):
-        """Test auth disabled mode."""
-        os.environ["AUTH_DISABLED"] = "true"
+        """Auth stays enforced in the test suite: the AUTH_DISABLED
+        bypass was removed by the P0 test updates (conftest forces
+        AUTH_DISABLED=false), and get_auth_manager() is a cached
+        singleton, so auth cannot be re-disabled mid-process."""
         from api.auth import get_auth_manager
         auth = get_auth_manager()
-        assert auth.auth_disabled is True
-        os.environ["AUTH_DISABLED"] = "false"
+        assert auth.auth_disabled is False
 
 
 class TestProviderValidation:

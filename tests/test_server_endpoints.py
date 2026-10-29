@@ -134,7 +134,7 @@ def test_datasets_endpoint():
     return True
 
 
-def test_provider_endpoints():
+def test_provider_endpoints(auth_headers):
     """Test /providers, /providers/{name}, /providers/{name}/metrics, /metrics/history, and /orchestration/dag."""
     from fastapi.testclient import TestClient
     import api.server as server_mod
@@ -147,7 +147,7 @@ def test_provider_endpoints():
 
     with TestClient(server_mod.app) as client:
         # GET /providers
-        resp = client.get("/providers")
+        resp = client.get("/providers", headers=auth_headers)
         assert resp.status_code == 200
         providers = resp.json()
         assert isinstance(providers, list)
@@ -156,12 +156,12 @@ def test_provider_endpoints():
         first_name = providers[0]["name"]
 
         # GET /providers/{name}
-        single_resp = client.get(f"/providers/{first_name}")
+        single_resp = client.get(f"/providers/{first_name}", headers=auth_headers)
         assert single_resp.status_code == 200
         assert single_resp.json()["name"] == first_name
 
         # GET /providers/{name}/metrics
-        metrics_resp = client.get(f"/providers/{first_name}/metrics")
+        metrics_resp = client.get(f"/providers/{first_name}/metrics", headers=auth_headers)
         assert metrics_resp.status_code == 200
         assert metrics_resp.json()["provider"] == first_name
 
@@ -170,30 +170,30 @@ def test_provider_endpoints():
         patch_resp = client.patch(
             f"/providers/{first_name}",
             json={"priority": 1},
-            headers={"x-csrf-token": csrf_token},
+            headers={"x-csrf-token": csrf_token, **auth_headers},
         )
         assert patch_resp.status_code == 200
         assert patch_resp.json()["status"] == "updated"
 
         # GET /metrics/history
-        hist_resp = client.get("/metrics/history?range=1h")
+        hist_resp = client.get("/metrics/history?range=1h", headers=auth_headers)
         assert hist_resp.status_code == 200
         hist_data = hist_resp.json()
         assert "timestamps" in hist_data
         assert "latency" in hist_data
 
         # GET /orchestration/dag
-        dag_resp = client.get("/orchestration/dag")
+        dag_resp = client.get("/orchestration/dag", headers=auth_headers)
         assert dag_resp.status_code == 200
         assert "nodes" in dag_resp.json()
 
         # GET /agents
-        agents_resp = client.get("/agents")
+        agents_resp = client.get("/agents", headers=auth_headers)
         assert agents_resp.status_code == 200
         assert "agents" in agents_resp.json()
 
         # GET /agents/stats
-        stats_resp = client.get("/agents/stats")
+        stats_resp = client.get("/agents/stats", headers=auth_headers)
         assert stats_resp.status_code == 200
         assert "total_registrations" in stats_resp.json()
 
