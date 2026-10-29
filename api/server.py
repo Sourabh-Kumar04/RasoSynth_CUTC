@@ -3231,7 +3231,7 @@ async def get_job_dataset_summary(job_id: str,
 async def get_job_report(job_id: str,
     current_user: User = Depends(get_current_user)):
     """Return comprehensive analytical and execution report for a job."""
-    summary = await get_job_dataset_summary(job_id)
+    summary = await get_job_dataset_summary(job_id, current_user)
     job = await db.get_job_status(job_id) if db else None
     config = (job.get("config") or {}) if job else {}
     return {

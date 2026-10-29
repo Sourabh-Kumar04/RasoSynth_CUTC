@@ -27,6 +27,7 @@ os.environ.setdefault("AI_DATASET_ENVIRONMENT", "development")
 # The project .env file itself is untouched (gitignored).
 os.environ["POSTGRES_URL"] = ""
 os.environ["DATABASE_URL"] = ""
+os.environ["REDIS_URL"] = ""
 
 
 # ============================================

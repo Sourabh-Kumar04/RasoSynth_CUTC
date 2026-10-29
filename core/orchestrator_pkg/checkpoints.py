@@ -134,9 +134,17 @@ class CheckpointStore:
             self._in_memory_store = {}
             logger.info("Checkpoint store using in-memory mode (non-PostgreSQL URL)")
 
-        try:
-            self._redis = redis.from_url(self.redis_url, decode_responses=True)
-        except Exception:
+        if self.redis_url and self.redis_url.startswith("redis://"):
+            try:
+                self._redis = redis.from_url(
+                    self.redis_url,
+                    decode_responses=True,
+                    socket_connect_timeout=0.5,
+                    socket_timeout=0.5,
+                )
+            except Exception:
+                self._redis = None
+        else:
             self._redis = None
 
     async def _ensure_tables(self) -> None:
