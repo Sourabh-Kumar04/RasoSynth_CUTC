@@ -172,8 +172,19 @@ class CSRFTokenManager:
         # (JWT_SECRET is the same across all uvicorn workers)
         secret = os.getenv("CSRF_SECRET")
         if not secret:
-            jwt_secret = os.getenv("JWT_SECRET") or "rasosynthtune-sovereign-production-jwt-token-secret-key-32b-secure"
-            secret = hashlib.sha256(jwt_secret.encode()).hexdigest()
+            jwt_secret = os.getenv("JWT_SECRET") or ""
+            if jwt_secret:
+                secret = hashlib.sha256(jwt_secret.encode()).hexdigest()
+            else:
+                # No CSRF_SECRET and no JWT_SECRET: use an ephemeral secret so
+                # CSRF tokens are never derived from a public default. Tokens
+                # will not validate across restarts until a secret is set.
+                import secrets as _secrets
+                secret = _secrets.token_hex(32)
+                logger.warning(
+                    "CSRF_SECRET and JWT_SECRET are both unset; using an ephemeral "
+                    "CSRF secret (tokens will not survive a restart). Set CSRF_SECRET."
+                )
         self._secret = secret
 
     def _sign(self, payload: str) -> str:
@@ -898,7 +909,6 @@ def _validate_security_config():
     """Validate security configuration at startup. Fails fast if misconfigured."""
     settings = get_settings()
     jwt_secret = settings.jwt_secret
-    default_public_secret = "rasosynthtune-sovereign-production-jwt-token-secret-key-32b-secure"
 
     # Hugging Face Space or auto-generation mode:
     # If deployed on Hugging Face Spaces and no custom JWT_SECRET is provided in Space secrets,
@@ -910,7 +920,7 @@ def _validate_security_config():
         or os.getenv("HF_SPACE")
         or os.getenv("AUTO_GENERATE_JWT_SECRET", "").lower() in ("true", "1")
     )
-    if is_hf_space and (not jwt_secret or jwt_secret == default_public_secret):
+    if is_hf_space and not jwt_secret:
         import secrets
         from pathlib import Path
         import tempfile
@@ -968,32 +978,16 @@ def _validate_security_config():
             "Must be at least 32 characters. "
             "Generate one with: python -c \"import secrets; print(secrets.token_urlsafe(64))\""
         )
-    # Fail fast if default public fallback secret is used in staging/production (excluding HF Space with auto-token)
-    is_production = (
-        os.getenv("AI_DATASET_ENVIRONMENT", "").lower() in ("production", "staging")
-        or os.getenv("ENVIRONMENT", "").lower() in ("production", "staging")
-    )
-    if jwt_secret == default_public_secret:
-        if is_production:
-            raise RuntimeError(
-                "CRITICAL SECURITY ERROR: The hardcoded default JWT_SECRET is active in a production or deployed environment. "
-                "You must set a unique, secret JWT_SECRET environment variable before starting the server. "
-                "Generate one with: python -c \"import secrets; print(secrets.token_urlsafe(64))\""
-            )
-        else:
-            logger.warning(
-                "SECURITY WARNING: Default public JWT_SECRET is currently in use for development. "
-                "Always supply a custom JWT_SECRET in production deployments."
-            )
 
     # Warn if using default/weak secret
     weak_patterns = ["password", "changeme", "demo", "test1234", "000000"]
     if any(p in jwt_secret.lower() for p in weak_patterns):
         logger.warning("JWT_SECRET appears weak or contains common patterns. Use a cryptographically random secret.")
 
-# Call validation function from lifespan startup (not import time) so that import
-# itself succeeds even if JWT_SECRET is unset; the lifespan is the fail-fast gate.
 # _validate_security_config() is invoked at the top of lifespan(), below.
+# Note: Settings() itself now requires JWT_SECRET (no default), so importing
+# this module also requires JWT_SECRET to be set; the lifespan check remains
+# the fail-fast gate for short/weak values.
 @app.get("/providers", response_model=list[ProviderStatus], tags=["Providers"])
 async def list_providers(current_user: User = Depends(get_current_user)):
     """List all configured providers with performance stats."""

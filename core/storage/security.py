@@ -5,6 +5,7 @@ Signed URLs, encryption, access tokens, and audit logging.
 """
 
 import hashlib
+import os
 import hmac
 import base64
 import json
@@ -55,7 +56,11 @@ class SignedURLGenerator:
         secret_key: Optional[str] = None,
         default_expiration_hours: int = 24
     ):
-        self.secret_key = secret_key or "default-secret-key"
+        # No literal default: the secret must be passed explicitly or via the
+        # SIGNED_URL_SECRET environment variable. Signing/verification refuse
+        # (fail closed) when no secret is configured, so no URL is ever signed
+        # with a public value.
+        self.secret_key = secret_key or os.getenv("SIGNED_URL_SECRET") or None
         self.default_expiration = default_expiration_hours
 
     def generate(
@@ -116,6 +121,11 @@ class SignedURLGenerator:
 
     def _sign(self, data: str) -> str:
         """Create HMAC signature."""
+        if not self.secret_key:
+            raise ValueError(
+                "Cannot sign URLs: no signing secret configured. Pass secret_key "
+                "explicitly or set the SIGNED_URL_SECRET environment variable."
+            )
         return hmac.new(
             self.secret_key.encode(),
             data.encode(),
@@ -132,7 +142,16 @@ class EncryptionManager:
     """Handle dataset encryption."""
 
     def __init__(self, encryption_key: Optional[str] = None):
-        self.encryption_key = encryption_key or self._generate_key()
+        # An explicit, persisted key is required: a fresh per-instance key
+        # would make previously encrypted data unrecoverable after restart.
+        key = encryption_key or os.getenv("ENCRYPTION_KEY") or None
+        if not key:
+            raise ValueError(
+                "Cannot initialise EncryptionManager: no encryption key provided. "
+                "Pass encryption_key explicitly or set the ENCRYPTION_KEY "
+                "environment variable to a persisted value."
+            )
+        self.encryption_key = key
 
     def encrypt(self, data: bytes) -> bytes:
         """Encrypt data."""
@@ -143,9 +162,12 @@ class EncryptionManager:
             fernet = Fernet(base64.urlsafe_b64encode(key[:32]))
             return fernet.encrypt(data)
         except ImportError:
-            # Fallback: simple XOR (not secure, use only for testing)
-            key_bytes = self.encryption_key.encode()[:32]
-            return bytes(a ^ b for a, b in zip(data, (key_bytes * (len(data) // 32 + 1))[:len(data)]))
+            # Fail closed: the repeating-key XOR fallback was removed. Dataset
+            # encryption requires the cryptography package.
+            raise RuntimeError(
+                "cryptography package is required for dataset encryption; "
+                "refusing to encrypt without it."
+            )
 
     def decrypt(self, data: bytes) -> bytes:
         """Decrypt data."""
@@ -156,8 +178,10 @@ class EncryptionManager:
             fernet = Fernet(base64.urlsafe_b64encode(key[:32]))
             return fernet.decrypt(data)
         except ImportError:
-            key_bytes = self.encryption_key.encode()[:32]
-            return bytes(a ^ b for a, b in zip(data, (key_bytes * (len(data) // 32 + 1))[:len(data)]))
+            raise RuntimeError(
+                "cryptography package is required for dataset decryption; "
+                "refusing to decrypt without it."
+            )
 
     def encrypt_file(self, input_path: str, output_path: str) -> None:
         """Encrypt a file."""
@@ -179,19 +203,13 @@ class EncryptionManager:
         with open(output_path, 'wb') as f:
             f.write(decrypted)
 
-    def _generate_key(self) -> str:
-        """Generate a new encryption key."""
-        import secrets
-        return base64.urlsafe_b64encode(secrets.token_bytes(32)).decode()
-
-
 class AccessController:
     """Control access to datasets."""
 
-    def __init__(self):
+    def __init__(self, secret_key: Optional[str] = None):
         self._tokens: dict[str, AccessToken] = {}
         self._logs: list[AccessLog] = []
-        self.signed_url_generator = SignedURLGenerator()
+        self.signed_url_generator = SignedURLGenerator(secret_key)
 
     def create_token(
         self,

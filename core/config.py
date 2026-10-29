@@ -97,7 +97,7 @@ class Settings(BaseSettings):
     # Infrastructure - No defaults for credentials!
     redis_url: str = Field(default="redis://redis:6379/0")
     postgres_url: str = Field(
-        default="postgresql+asyncpg://dataset_user:dataset_pass@postgres:5432/dataset_engine",
+        default="",
         validation_alias=AliasChoices("postgres_url", "database_url")
     )
 
@@ -105,7 +105,7 @@ class Settings(BaseSettings):
     @classmethod
     def normalize_postgres_url(cls, v: Optional[str]) -> str:
         if not v:
-            return "postgresql+asyncpg://dataset_user:dataset_pass@postgres:5432/dataset_engine"
+            return ""
         val = str(v).strip()
         # Automatically upgrade standard connection URIs (e.g. Neon, Supabase) to asyncpg
         if val.startswith("postgres://"):
@@ -117,7 +117,7 @@ class Settings(BaseSettings):
             val = val.replace("sslmode=", "ssl=")
         return val
     # JWT Secret (required for security)
-    jwt_secret: str = Field(default_factory=lambda: os.getenv("JWT_SECRET") or "rasosynthtune-sovereign-production-jwt-token-secret-key-32b-secure")
+    jwt_secret: str = Field(default="")  # No default: JWT_SECRET env is required (see validate_production_secrets).
     qdrant_url: str = Field(default="http://qdrant:6333")
 
     # API Keys
@@ -231,7 +231,34 @@ class Settings(BaseSettings):
 
     @model_validator(mode="after")
     def validate_production_secrets(self) -> "Settings":
-        """Fail-fast in production if required secrets are missing."""
+        """Fail-fast if required secrets are missing.
+
+        The JWT/postgres checks below fire in EVERY environment, not only in
+        production: there is no safe default for these values, so an unset or
+        known-public-default value is a configuration error anywhere.
+        """
+        # Unconditional: a JWT secret must be configured (AuthManager also
+        # enforces >=32 chars and rejects weak patterns at auth time).
+        if not self.jwt_secret:
+            raise SecurityError(
+                "JWT_SECRET is required. Set a cryptographically random 32+ character "
+                "value via the JWT_SECRET environment variable."
+            )
+        if len(self.jwt_secret) < 32:
+            raise SecurityError("JWT_SECRET must be at least 32 characters.")
+        if "rasosynthtune-sovereign" in self.jwt_secret.lower():
+            raise SecurityError(
+                "JWT_SECRET uses the removed public default value. Set a unique secret."
+            )
+        # Unconditional: the old public postgres credentials must never reappear,
+        # whether from a default or from the environment.
+        pg = self.postgres_url or ""
+        if "dataset_user" in pg and "dataset_pass" in pg:
+            raise SecurityError(
+                "postgres_url uses the removed public default credentials. "
+                "Set POSTGRES_URL with real credentials."
+            )
+
         production_envs = ("production", "gpu_cluster", "staging")
 
         if self.environment.lower() in production_envs:
