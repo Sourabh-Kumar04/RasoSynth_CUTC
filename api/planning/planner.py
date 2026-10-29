@@ -178,6 +178,7 @@ class WorkflowPlanner:
             estimated_duration_seconds=estimated_duration,
             estimated_cost_usd=estimated_cost,
             input_dependencies=step_config.get("dependencies", []),
+            metadata={"is_estimate": True, "template_estimate": True},
         )
 
     def _optimize_plan(
@@ -205,6 +206,8 @@ class WorkflowPlanner:
                 plan.optimization_applied.append("quality_optimization")
 
         plan.efficiency_score = 0.85
+        plan.metadata["efficiency_score_is_estimate"] = True
+        plan.metadata["cost_duration_is_estimate"] = True
 
     async def plan_dag(
         self,

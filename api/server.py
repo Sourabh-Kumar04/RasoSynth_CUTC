@@ -1477,22 +1477,17 @@ async def jobs_list_stream(websocket: WebSocket):
 
 @app.get("/metrics", tags=["Metrics"])
 async def metrics_endpoint(current_user: User = Depends(get_current_user)):
-    """Expose Prometheus metrics in text/plain format."""
+    """Expose Prometheus metrics in text/plain format.
+
+    NOTE: This endpoint is explicitly authenticated and requires valid user credentials.
+    """
     try:
         from prometheus_client import CONTENT_TYPE_LATEST
         content = observability.get_prometheus_metrics() if observability else ""
         return Response(content=content, media_type=CONTENT_TYPE_LATEST)
     except Exception as e:
-        logger.warning(f"Metrics export fallback: {e}")
-        fallback_text = (
-            "# HELP process_uptime_seconds Total uptime in seconds\n"
-            "# TYPE process_uptime_seconds gauge\n"
-            "process_uptime_seconds 1.0\n"
-            "# HELP http_requests_total Total HTTP requests\n"
-            "# TYPE http_requests_total counter\n"
-            'http_requests_total{status="200"} 1\n'
-        )
-        return Response(content=fallback_text, media_type="text/plain; version=0.0.4; charset=utf-8")
+        logger.warning(f"Metrics export unavailable: {e}")
+        raise HTTPException(status_code=503, detail=f"Metrics export unavailable: {e}")
 
 
 @app.get("/observability/langsmith", tags=["Metrics"])
@@ -2339,6 +2334,11 @@ async def plan_job(request: JobRequest,
             "status": plan.status.value if hasattr(plan.status, "value") else str(plan.status),
             "estimated_cost": plan.total_estimated_cost_usd,
             "estimated_duration_seconds": plan.total_estimated_duration_seconds,
+            "is_estimate": True,
+            "template_estimate": True,
+            "efficiency_score": plan.efficiency_score,
+            "confidence_score": 0.85,
+            "confidence_score_is_estimate": True,
             "orchestration_mode": plan.orchestration_mode,
             "execution_strategy": plan.execution_strategy,
             "steps": [step.model_dump() for step in plan.steps],
@@ -3065,9 +3065,9 @@ async def get_job_records(job_id: str, limit: int = 10,
                         "instruction": item.get("instruction", ""),
                         "response": item.get("response", ""),
                         "input": item.get("input", ""),
-                        "quality_score": item.get("quality_score", 0.95),
-                        "difficulty_tier": item.get("difficulty_tier", 3),
-                        "created_at": item.get("created_at", "2026-10-26T12:00:00Z"),
+                        "quality_score": item.get("quality_score"),
+                        "difficulty_tier": item.get("difficulty_tier"),
+                        "created_at": item.get("created_at"),
                     })
                 if len(disk_records) >= limit:
                     break
@@ -3111,8 +3111,8 @@ async def get_job_records(job_id: str, limit: int = 10,
                         "instruction": ps.get("instruction", ""),
                         "response": ps.get("response", ""),
                         "input": ps.get("input", ""),
-                        "quality_score": ps.get("metadata", {}).get("quality_score", 0.95),
-                        "difficulty_tier": ps.get("metadata", {}).get("difficulty_tier", 3),
+                        "quality_score": ps.get("metadata", {}).get("quality_score"),
+                        "difficulty_tier": ps.get("metadata", {}).get("difficulty_tier"),
                         "created_at": job.get("created_at"),
                     })
 
@@ -4317,14 +4317,52 @@ async def get_metrics_history(time_range: str = Query(default="1h", alias="range
         except Exception:
             pass
 
-    if recent_traces and avg_lat is not None and err_rate is not None:
-        base_lat = int(avg_lat)
-        base_tp = max(len(recent_traces), 15)
-        # Smoothed from the real average, NOT per-bucket measurements.
-        latency_series = [max(10, int(base_lat * factor)) for factor in [1.05, 1.0, 1.08, 0.95, 0.91, 1.02, 1.0]]
-        throughput_series = [max(5, int(base_tp * factor)) for factor in [0.65, 0.75, 0.85, 0.82, 0.92, 0.98, 1.0]]
-        error_series = [round(err_rate * factor, 3) for factor in [1.0, 1.2, 0.8, 0.5, 0.9, 1.1, 1.0]]
-        series_basis = "smoothed_from_average_not_per_bucket"
+    if recent_traces:
+        # Group traces into the 7 time intervals
+        bucket_deltas = [interval_minutes * (6 - i) for i in range(7)]
+        lat_buckets = [[] for _ in range(7)]
+        err_buckets = [0 for _ in range(7)]
+        count_buckets = [0 for _ in range(7)]
+        
+        trace_now = datetime.now(timezone.utc)
+        for t in recent_traces:
+            t_created = t.get("created_at") or t.get("timestamp")
+            if isinstance(t_created, str):
+                try:
+                    t_time = datetime.fromisoformat(t_created)
+                except Exception:
+                    t_time = trace_now
+            elif isinstance(t_created, datetime):
+                t_time = t_created
+            else:
+                t_time = trace_now
+            
+            if t_time.tzinfo is None:
+                t_time = t_time.replace(tzinfo=timezone.utc)
+            
+            age_mins = max(0.0, (trace_now - t_time).total_seconds() / 60.0)
+            b_idx = min(6, int(age_mins / max(interval_minutes, 1)))
+            bucket_pos = 6 - b_idx  # 0 is oldest, 6 is newest
+            if 0 <= bucket_pos < 7:
+                count_buckets[bucket_pos] += 1
+                if "duration_ms" in t:
+                    lat_buckets[bucket_pos].append(t["duration_ms"])
+                if t.get("status") == "error":
+                    err_buckets[bucket_pos] += 1
+
+        latency_series = [
+            round(sum(b) / len(b), 1) if b else None
+            for b in lat_buckets
+        ]
+        throughput_series = [
+            count_buckets[i] if count_buckets[i] > 0 else None
+            for i in range(7)
+        ]
+        error_series = [
+            round(err_buckets[i] / count_buckets[i], 3) if count_buckets[i] > 0 else None
+            for i in range(7)
+        ]
+        series_basis = "real_bucket_observations"
     else:
         latency_series = [None] * 7
         throughput_series = [None] * 7
@@ -5022,18 +5060,28 @@ async def get_quality_benchmarks(current_user: User = Depends(get_current_user))
 
 @app.get("/benchmarks/evaluation", tags=["Research"])
 async def get_finetune_evaluation_benchmark(current_user: User = Depends(get_current_user)):
-    """Return empirical before vs. after fine-tuning benchmark evaluation deltas."""
+    """Return illustrative before vs. after fine-tuning benchmark demonstration deltas (DEMO ONLY, not empirical model evaluation)."""
     from pathlib import Path
     import json
+    data = None
     eval_file = Path("outputs/evaluation/before_vs_after_finetune_benchmark.json")
     if eval_file.exists():
         try:
             with open(eval_file, "r", encoding="utf-8") as f:
-                return json.load(f)
+                data = json.load(f)
         except Exception:
             pass
-    from scripts.demo_finetune_eval import run_finetune_eval_benchmark
-    return run_finetune_eval_benchmark()
+    if data is None:
+        from scripts.demo_finetune_eval import run_finetune_eval_benchmark
+        data = run_finetune_eval_benchmark()
+
+    # Label payload clearly as demo/illustrative and unverified/not held-out
+    if isinstance(data, dict):
+        data["evaluation_type"] = "demo"
+        data["is_empirical"] = False
+        data["held_out"] = False
+        data["scope_note"] = "DEMO ONLY: Hand-authored pairs; not a held-out evaluation set, no real fine-tuned model run. Deltas illustrative only."
+    return data
 
 
 @app.get("/", tags=["Root"])

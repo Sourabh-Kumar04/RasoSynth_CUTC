@@ -42,11 +42,11 @@ async def quality_overview(request: Request,
     total_samples = 0
 
     if db_mgr and db_mgr.db:
-        from core.db import Sample, Dataset
+        from core.db import Sample, Job
         from sqlalchemy import select, func
         try:
             async with db_mgr.db.session_maker() as session:
-                job_res = await session.execute(select(func.count(Dataset.id)))
+                job_res = await session.execute(select(func.count(Job.id)))
                 total_jobs = job_res.scalar() or 0
 
                 sample_res = await session.execute(
@@ -70,13 +70,15 @@ async def quality_overview(request: Request,
 
     # Empty/unavailable aggregates are reported as "unavailable", never
     # as a 0.0 that would read as a measured zero-quality average.
-    total_reviewed = total_samples or review_stats.get("total", 0)
+    total_reviewed = review_stats.get("total", 0)
     approval_rate = review_stats.get("approval_rate") if review_stats else None
     rejection_rate = review_stats.get("rejection_rate") if review_stats else None
     return {
         "average_quality": round(avg_quality, 3) if total_samples > 0 else "unavailable",
         "total_jobs": total_jobs,
+        "total_samples": total_samples,
         "total_samples_reviewed": total_reviewed,
+        "total_samples_reviewed_semantics": "Counts only samples processed through ReviewService, distinct from stored DB samples",
         "approval_rate": approval_rate if approval_rate is not None else "unavailable",
         "rejection_rate": rejection_rate if rejection_rate is not None else "unavailable",
         "last_updated": datetime.now(timezone.utc).isoformat(),
@@ -123,7 +125,7 @@ async def job_quality(job_id: str,
 @router.get("/trends")
 async def quality_trends(days: int = Query(7, ge=1, le=90),
     current_user: User = Depends(get_current_user)):
-    """Get quality trends over time from DB."""
+    """Get quality trends over time from DB, honoring days parameter and averaging properly per time interval."""
     import api.server as server
     db_mgr = getattr(server, "db", None)
     
@@ -131,13 +133,30 @@ async def quality_trends(days: int = Query(7, ge=1, le=90),
     if db_mgr and db_mgr.db:
         from core.db import Sample
         from sqlalchemy import select
+        cutoff = datetime.now(timezone.utc) - timedelta(days=days)
         try:
             async with db_mgr.db.session_maker() as session:
-                stmt = select(Sample.quality_score, Sample.created_at).order_by(Sample.created_at.desc()).limit(100)
+                stmt = (
+                    select(Sample.quality_score, Sample.created_at)
+                    .where(Sample.created_at >= cutoff)
+                    .order_by(Sample.created_at.asc())
+                    .limit(5000)
+                )
                 res = await session.execute(stmt)
+                # Aggregate/average by day
+                daily_scores: dict[str, list[float]] = {}
                 for score, created_at in res.all():
-                    if score is not None:
-                        recent.append({"avg_quality": score, "timestamp": created_at.isoformat() if created_at else ""})
+                    if score is not None and created_at:
+                        day_key = created_at.strftime("%Y-%m-%d")
+                        daily_scores.setdefault(day_key, []).append(float(score))
+                
+                for day_key in sorted(daily_scores.keys()):
+                    scores = daily_scores[day_key]
+                    recent.append({
+                        "avg_quality": round(sum(scores) / len(scores), 3),
+                        "timestamp": day_key,
+                        "sample_count": len(scores),
+                    })
         except Exception as e:
             logger.error(f"Error querying quality trends: {e}")
 
@@ -152,8 +171,12 @@ async def quality_trends(days: int = Query(7, ge=1, le=90),
 
 
 @router.get("/distributions")
-async def quality_distributions(current_user: User = Depends(get_current_user)):
-    """Get quality score distributions directly from DB samples."""
+async def quality_distributions(
+    limit: int = Query(10000, ge=1, le=50000),
+    offset: int = Query(0, ge=0),
+    current_user: User = Depends(get_current_user)
+):
+    """Get quality score distributions directly from DB samples with pagination/capping."""
     all_scores = []
     import api.server as server
     db_mgr = getattr(server, "db", None)
@@ -162,8 +185,13 @@ async def quality_distributions(current_user: User = Depends(get_current_user)):
         from sqlalchemy import select
         try:
             async with db_mgr.db.session_maker() as session:
-                res = await session.execute(select(Sample.quality_score))
-                all_scores = [r for (r,) in res.all() if r is not None]
+                res = await session.execute(
+                    select(Sample.quality_score)
+                    .where(Sample.quality_score.isnot(None))
+                    .offset(offset)
+                    .limit(limit)
+                )
+                all_scores = [float(r) for (r,) in res.all() if r is not None]
         except Exception as e:
             logger.error(f"Error querying score distribution: {e}")
 
@@ -176,7 +204,9 @@ async def quality_distributions(current_user: User = Depends(get_current_user)):
 
     buckets = [0] * 10
     for s in all_scores:
-        idx = min(9, int(s * 10))
+        # Clamp scores to [0.0, 1.0] so negative scores or >1 values never index corruptly
+        clamped = max(0.0, min(1.0, float(s)))
+        idx = min(9, int(clamped * 10))
         buckets[idx] += 1
 
     return {

@@ -790,7 +790,8 @@ class DatasetOrchestrator:
                                     "metadata": {
                                         "preview": True,
                                         "domain": domain_name,
-                                        "quality_score": round(0.94 + (i * 0.02), 2),
+                                        "quality_score": None,
+                                        "quality_status": "unmeasured_preview",
                                         "difficulty_tier": 3 + i,
                                         "preview_origin": "llm_router",
                                     }
@@ -822,7 +823,8 @@ class DatasetOrchestrator:
                                         "metadata": {
                                             "preview": True,
                                             "domain": domain_name,
-                                            "quality_score": round(0.93 + (idx * 0.02), 2),
+                                            "quality_score": None,
+                                            "quality_status": "unmeasured_preview",
                                             "difficulty_tier": 3 + idx,
                                             "preview_origin": "synthesis_agent",
                                         }
@@ -847,7 +849,8 @@ class DatasetOrchestrator:
                                 "metadata": {
                                     "preview": True,
                                     "domain": domain_name,
-                                    "quality_score": 0.94,
+                                    "quality_score": None,
+                                    "quality_status": "unmeasured_preview",
                                     "difficulty_tier": getattr(sample_obj, "difficulty_tier", 3),
                                     "preview_origin": "curriculum_generator",
                                 }
@@ -873,7 +876,8 @@ class DatasetOrchestrator:
                     "type": "preview_samples_ready",
                     "job_id": job_id,
                     "stage": "preview_acceptance",
-                    "samples": preview_samples
+                    "samples": preview_samples,
+                    "quality_status": "unmeasured_preview",
                 })
             except Exception:
                 pass
@@ -1763,8 +1767,11 @@ class DatasetOrchestrator:
             "messages": [f"Filtered to {len(filtered)} quality samples"],
         }
 
-    def _compute_sample_topic_relevance(self, instruction: str, response: str, user_prompt: str, target_domain: str) -> float:
-        """Score semantic topic alignment of a sample against user prompt and domain."""
+    def _compute_sample_lexical_topic_relevance(self, instruction: str, response: str, user_prompt: str, target_domain: str) -> Optional[float]:
+        """Score lexical keyword overlap of a sample against user prompt and domain keywords.
+
+        Returns None if no domain/prompt keywords could be extracted (never a fabricated 0.90).
+        """
         import re
         comb_sample = f"{instruction} {response}".lower()
 
@@ -1802,7 +1809,7 @@ class DatasetOrchestrator:
             keywords.extend(["nclt", "director", "shareholder", "board", "resolution", "statutory", "mca", "roc"])
 
         if not keywords:
-            return 0.90
+            return None
 
         unique_kw = set(keywords)
         matched = sum(1 for kw in unique_kw if kw in comb_sample)
@@ -1813,6 +1820,10 @@ class DatasetOrchestrator:
         elif matched == 1:
             return 0.50
         return 0.25
+
+    def _compute_sample_topic_relevance(self, instruction: str, response: str, user_prompt: str, target_domain: str) -> Optional[float]:
+        """Backwards-compatible alias for lexical topic relevance."""
+        return self._compute_sample_lexical_topic_relevance(instruction, response, user_prompt, target_domain)
 
     async def _construct_node(self, state: AgentState) -> AgentState:
         """Enhanced construction with schema inference and seedless synthetic support."""
@@ -2566,44 +2577,64 @@ class DatasetOrchestrator:
             resp = str(s.get("response", "")).strip()
             t_score = s.get("topic_score")
             if t_score is None:
-                t_score = self._compute_sample_topic_relevance(inst, resp, user_prompt, target_domain_str)
+                t_score = self._compute_sample_lexical_topic_relevance(inst, resp, user_prompt, target_domain_str)
                 s["topic_score"] = t_score
-            topic_scores.append(t_score)
-            grounding_scores.append(float(s.get("llm_review_score", s.get("quality_score", 0.85)) or 0.85))
-            clarity_scores.append(min(1.0, max(0.5, len(inst) / 50.0)))
-            completeness_scores.append(min(1.0, max(0.5, len(resp) / 100.0)))
-            domain_scores.append(0.92)
+            if t_score is not None:
+                topic_scores.append(t_score)
+            
+            # Grounding: only append if real score is available
+            g_val = s.get("llm_review_score") or s.get("quality_score")
+            if g_val is not None:
+                try:
+                    grounding_scores.append(float(g_val))
+                except (ValueError, TypeError):
+                    pass
 
-        avg_topic = sum(topic_scores) / max(len(topic_scores), 1) if topic_scores else 0.85
-        avg_grounding = sum(grounding_scores) / max(len(grounding_scores), 1) if grounding_scores else 0.85
-        avg_clarity = sum(clarity_scores) / max(len(clarity_scores), 1) if clarity_scores else 0.85
-        avg_completeness = sum(completeness_scores) / max(len(completeness_scores), 1) if completeness_scores else 0.85
-        avg_domain = sum(domain_scores) / max(len(domain_scores), 1) if domain_scores else 0.90
+            # Clarity & completeness: unmeasured heuristics should not be derived from length alone
+            # Domain: unmeasured unless real scorer evaluated it
+
+        avg_topic = (sum(topic_scores) / len(topic_scores)) if topic_scores else None
+        avg_grounding = (sum(grounding_scores) / len(grounding_scores)) if grounding_scores else None
+        avg_clarity = None
+        avg_completeness = None
+        avg_domain = None
 
         quality_breakdown = {
-            "topic_fidelity": round(avg_topic, 3),
-            "source_grounding": round(avg_grounding, 3),
-            "instruction_clarity": round(avg_clarity, 3),
-            "response_completeness": round(avg_completeness, 3),
-            "domain_correctness": round(avg_domain, 3),
+            "topic_fidelity": round(avg_topic, 3) if avg_topic is not None else None,
+            "source_grounding": round(avg_grounding, 3) if avg_grounding is not None else None,
+            "instruction_clarity": None,
+            "response_completeness": None,
+            "domain_correctness": None,
         }
-        composite_score = round(sum(quality_breakdown.values()) / len(quality_breakdown), 3)
+        
+        measured_values = [v for v in [avg_topic, avg_grounding] if v is not None]
+        composite_score = round(sum(measured_values) / len(measured_values), 3) if measured_values else None
         quality_breakdown["composite"] = composite_score
 
         # F2: BLOCK "Ready" + DBOM certification when sampled topic fidelity is below 80% (0.80)
-        passed = (len(samples) > 0) and ((avg_topic >= 0.80) and (composite_score >= 0.65) and missing_reference_count == 0)
+        passed = (
+            (len(samples) > 0)
+            and (avg_topic is not None and avg_topic >= 0.80)
+            and (composite_score is not None and composite_score >= 0.65)
+            and missing_reference_count == 0
+        )
 
         # Persist breakdown into job metadata and dataset record
         job_meta = job.setdefault("metadata", {})
         job_meta["quality_breakdown"] = quality_breakdown
-        job_meta["quality_score"] = composite_score
-        job["quality_score"] = composite_score
+        # A failed gate must NOT persist a passing mean
+        if passed:
+            job_meta["quality_score"] = composite_score
+            job["quality_score"] = composite_score
+        else:
+            job_meta["quality_score"] = None
+            job["quality_score"] = None
 
         retries = int(state.get("synthesis_retries", 0))
         if not passed:
             retries += 1
             logger.warning(
-                f"[{job_id}] Quality Eval topic fidelity gate FAILED (attempt {retries}): topic_fidelity={avg_topic:.2f} (<0.80) or composite={composite_score:.2f}. "
+                f"[{job_id}] Quality Eval topic fidelity gate FAILED (attempt {retries}): topic_fidelity={avg_topic} (<0.80) or composite={composite_score}. "
                 "Marking for HITL review."
             )
         else:
@@ -2616,13 +2647,13 @@ class DatasetOrchestrator:
             "quality_eval_passed": passed,
             "synthesis_retries": retries,
             "quality_breakdown": quality_breakdown,
-            "quality_score": composite_score,
+            "quality_score": composite_score if passed else None,
             "missing_reference_count": missing_reference_count,
             "evidence_context": evidence_context,
             "current_stage": "quality_eval",
             "progress": 0.75,
             "messages": [
-                f"Quality eval (topic_fidelity={avg_topic:.2f}, composite={composite_score:.2f}, "
+                f"Quality eval (topic_fidelity={avg_topic}, composite={composite_score}, "
                 f"ensemble_reviewed={ensemble_reviewed}, missing_references={missing_reference_count}, pass={passed})"
             ],
         }

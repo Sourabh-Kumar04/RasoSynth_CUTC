@@ -73,40 +73,40 @@ class APIMetrics:
 
         return total / uptime
 
-    def get_avg_latency(self, endpoint: Optional[str] = None) -> float:
+    def get_avg_latency(self, endpoint: Optional[str] = None) -> Optional[float]:
         """Get average request latency."""
         if endpoint:
             latencies = self._request_latencies.get(endpoint, [])
         else:
             latencies = [l for latencies in self._request_latencies.values() for l in latencies]
 
-        return sum(latencies) / len(latencies) if latencies else 0.0
+        return sum(latencies) / len(latencies) if latencies else None
 
-    def get_p50_latency(self, endpoint: Optional[str] = None) -> float:
+    def get_p50_latency(self, endpoint: Optional[str] = None) -> Optional[float]:
         """Get P50 latency."""
         latencies = self._get_latencies(endpoint)
         if not latencies:
-            return 0.0
+            return None
 
         sorted_latencies = sorted(latencies)
         idx = int(len(sorted_latencies) * 0.5)
         return sorted_latencies[idx]
 
-    def get_p95_latency(self, endpoint: Optional[str] = None) -> float:
+    def get_p95_latency(self, endpoint: Optional[str] = None) -> Optional[float]:
         """Get P95 latency."""
         latencies = self._get_latencies(endpoint)
         if not latencies:
-            return 0.0
+            return None
 
         sorted_latencies = sorted(latencies)
         idx = int(len(sorted_latencies) * 0.95)
         return sorted_latencies[idx]
 
-    def get_p99_latency(self, endpoint: Optional[str] = None) -> float:
+    def get_p99_latency(self, endpoint: Optional[str] = None) -> Optional[float]:
         """Get P99 latency."""
         latencies = self._get_latencies(endpoint)
         if not latencies:
-            return 0.0
+            return None
 
         sorted_latencies = sorted(latencies)
         idx = int(len(sorted_latencies) * 0.99)
@@ -118,7 +118,7 @@ class APIMetrics:
             return self._request_latencies.get(endpoint, [])
         return [l for latencies in self._request_latencies.values() for l in latencies]
 
-    def get_error_rate(self, endpoint: Optional[str] = None) -> float:
+    def get_error_rate(self, endpoint: Optional[str] = None) -> Optional[float]:
         """Get error rate percentage."""
         if endpoint:
             errors = self._error_counts.get(endpoint, 0)
@@ -127,7 +127,7 @@ class APIMetrics:
             errors = sum(self._error_counts.values())
             total = sum(self._request_counts.values())
 
-        return (errors / total * 100) if total > 0 else 0.0
+        return (errors / total * 100) if total > 0 else None
 
     def get_summary(self) -> Dict[str, Any]:
         """Get metrics summary."""
@@ -329,10 +329,10 @@ class OrchestrationMetrics:
     def get_resource_utilization_stats(self) -> Dict[str, Any]:
         """Get resource utilization statistics."""
         return {
-            "avg_gpu_percent": sum(self._gpu_utilization) / len(self._gpu_utilization) if self._gpu_utilization else 0,
-            "avg_memory_percent": sum(self._memory_utilization) / len(self._memory_utilization) if self._memory_utilization else 0,
-            "peak_gpu_percent": max(self._gpu_utilization) if self._gpu_utilization else 0,
-            "peak_memory_percent": max(self._memory_utilization) if self._memory_utilization else 0
+            "avg_gpu_percent": sum(self._gpu_utilization) / len(self._gpu_utilization) if self._gpu_utilization else None,
+            "avg_memory_percent": sum(self._memory_utilization) / len(self._memory_utilization) if self._memory_utilization else None,
+            "peak_gpu_percent": max(self._gpu_utilization) if self._gpu_utilization else None,
+            "peak_memory_percent": max(self._memory_utilization) if self._memory_utilization else None
         }
 
     def get_summary(self) -> Dict[str, Any]:
