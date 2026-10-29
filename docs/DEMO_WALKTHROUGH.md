@@ -38,26 +38,21 @@ rasosynthtune generate --domain "Indian Taxation & GST Compliance" --size 5 --fo
 # 2. Verify Merkle root integrity, DPDP statutory PII compliance, and 0% benchmark leakage
 rasosynthtune audit --dataset outputs/dataset_distillation_5.jsonl
 ```
-* **Key result to show the audience**: The Terminal Audit Scorecard displaying `PASSED - Cryptographically Intact`, `0 statutory PII entities`, and `0% contamination against MMLU, GSM8K, IndicGLUE, ARC`.
+* **Key result to show the audience**: The Terminal Audit Scorecard displaying `PASSED - Cryptographically Intact`, `0 statutory PII entities`, and `0% contamination against MMLU, GSM8K, IndicGLUE, ARC` — where the contamination figure is a canary spot-check, not a leakage guarantee.
 
 ---
 
-## ⏱️ Minute 3: Empirical Validation & 1,904x Unit Economics (2:00 - 3:00)
+## ⏱️ Minute 3: Empirical Validation — small-sample pilot (2:00 - 3:00)
 
-### Empirical Accuracy Delta (The Proof):
-* "We put our synthetic datasets to the test on `sarvamai/sarvam-2b-v0.5`. Evaluating on held-out statutory evaluation pairs:
+### Empirical Accuracy Delta (small-sample pilot — n=5, recorded 2026-10-20; not production proof):
+* "We put our synthetic datasets to the test on `sarvamai/sarvam-2b-v0.5`. Evaluating on held-out statutory evaluation pairs (n=5):
   * **chrF Character Overlap**: Improved from `14.80` to **`94.33`** (**+537.4% Relative Gain**).
   * **Mean Token-F1**: Improved from `0.191` to **`0.739`** (**+286.9% Relative Gain**).
   * **Exact Match (EM)**: Smashed from `0.0%` to **`40.0%`** (**+40.0% Absolute Delta**).
   * **Citation Grounding**: **100% Grounded** in CGST Act statutory provisions."
 
 ### Unit Economics Simulator:
-* Open the **Research & Optimization** tab (`http://localhost:3000/research` ➔ `Quality Benchmarks & ROI`).
-* Highlight the audited unit economic breakdown:
-  * **Human Labeling (Scale AI baseline)**: $100,000.00 USD per 100k samples.
-  * **RasoSynthTune Cloud Refinery**: **$52.50 USD** ($0.00052 / sample).
-  * **RasoSynthTune Air-Gapped Local (vLLM)**: **$40.00 USD** ($0.00040 / sample).
-  * **Net Enterprise Savings**: **+$99,947.50 USD (1,904x Cost Reduction)**.
+* The unit-economics figures previously shown here were untraced to any measured run and have been removed. Do not present a cost-reduction multiple in the demo until a traced run exists.
 
 ---
 

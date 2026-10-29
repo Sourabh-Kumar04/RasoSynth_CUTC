@@ -12,9 +12,9 @@ As frontier foundation models hit data walls on public web crawls, the decisive 
 
 **RasoSynthTune** solves this through an autonomous synthetic data refinery that:
 1. **Curates & Synthesizes Domain Data**: Generates multi-turn, multi-difficulty reasoning datasets with four specialized post-training modes (Instruction Distillation, Agentic Chain-of-Thought, Contrastive DPO/RLHF Pairs, and Self-Correcting Reflection).
-2. **Enforces Cryptographic Provenance (DBOM)**: Computes deterministic SHA-256 Merkle root trees over dataset samples, issuing tamper-evident Data Bill of Materials certificates and auditable Data Nutrition Labels compliant with the **EU AI Act**, **India DPDP Act 2023**, and **ISO 42001**.
+2. **Enforces Cryptographic Provenance (DBOM)**: Computes deterministic SHA-256 Merkle root trees over dataset samples, issuing tamper-evident Data Bill of Materials certificates and auditable Data Nutrition Labels. No certification or compliance claim under the EU AI Act, India DPDP Act 2023, or ISO 42001 is made — compliance status is unverified.
 3. **Validates Quality & Prevents Benchmark Leakage**: Uses 5-dimensional heuristic filtering, MinHash de-duplication, statutory PII masking (Aadhaar, PAN, GSTIN, UPI), and n-gram canary audit against MMLU, GSM8K, IndicGLUE, and ARC.
-4. **Delivers 1,904x Cost Reductions**: Slashes unit dataset generation costs from **$1.00/sample** (traditional human labeling) to **$0.00052/sample** (RasoSynthTune cloud refinery), saving enterprise teams **$99,947 per 100k samples**.
+4. **Unit economics**: no cost-reduction multiple is claimed here. The previously quoted $1.00 vs $0.00052 per-sample figures and the 1,904x multiple were not traced to a measured run and have been removed.
 
 ---
 
@@ -52,7 +52,7 @@ As frontier foundation models hit data walls on public web crawls, the decisive 
 
 ## 3. Audited Benchmarks & Empirical Validation
 
-All metrics are measured live using `QualityBenchmark` and `BenchmarkEvaluator`:
+Metrics in section A are from a single recorded pilot run of **n=5** evaluation pairs (`outputs/evaluation/before_vs_after_finetune_benchmark.json`, 2026-10-20). They are a small-sample pilot, not production proof, and the recorded rating is `acceptable_requires_tuning`.
 
 ### A. Model Fine-Tuning Accuracy Delta (`sarvamai/sarvam-2b-v0.5`)
 Evaluated on held-out statutory evaluation pairs covering the Central Goods and Services Tax (CGST) Act 2017:
@@ -63,18 +63,15 @@ Evaluated on held-out statutory evaluation pairs covering the Central Goods and 
 | **Mean Token-F1** | 0.191 | **0.739** | **+286.9% Relative Gain** |
 | **Exact Match (EM)** | 0.0% | **40.0%** | **+40.0% Absolute Delta** |
 | **Citation Grounding** | 100.0% | **100.0%** | **100% Statutory Citations** |
-| **Composite Quality Score** | 10.6 | **64.4** | **+53.8 pts (Production-Ready)** |
+| **Composite Quality Score** | 10.6 | **64.4** | **+53.8 pts (recorded rating: `acceptable_requires_tuning` — not production-ready)** |
 
-### B. High-Throughput Cryptographic Engine
+### B. High-Throughput Cryptographic Engine (unverified — no recorded run in this repo reproduces these figures; treat as unconfirmed, not measured)
 * **Throughput**: **~302,570 samples/second** on multi-threaded SHA-256 leaf and Merkle node hashing.
 * **Latency Profile**: **3.4 μs** p50 per-sample hashing latency.
-* **Contamination Rate**: **0.0%** across standard evaluation canary signatures.
+* **Contamination Rate**: **0.0%** across standard evaluation canary signatures — a canary spot-check, not a leakage guarantee.
 
-### C. Enterprise Unit Economics (100,000 Sample Batch)
-* **Scale AI / Surge AI (Human Labeling @ $1.00/pair)**: $100,000.00 USD
-* **RasoSynthTune Cloud Refinery (@ $0.00052/pair)**: $52.50 USD
-* **RasoSynthTune Air-Gapped Local (vLLM @ $0.00040/pair)**: $40.00 USD
-* **Net Enterprise Savings**: **$99,947.50 USD (1,904x Cost Reduction)**
+### C. Enterprise Unit Economics — removed
+The previously quoted vendor-vs-refinery per-sample figures and the 1,904x cost-reduction multiple were not traced to a measured run and are no longer claimed.
 
 ---
 
@@ -101,8 +98,6 @@ rasosynthtune serve --host 0.0.0.0 --port 8000
 
 ---
 
-## 5. Security & Regulatory Compliance
+## 5. Security & Regulatory Posture (unverified — no certification claimed)
 
-* **India DPDP Act 2023 & IT Act 2000**: Zero unmasked personal identifiable records; automated statutory regex and neural masking for 6 statutory identifier classes.
-* **EU AI Act (Article 10 - Data Governance)**: Tamper-evident cryptographic provenance, documented bias distributions, and auditable Data Nutrition Labels.
-* **ISO 42001 (Artificial Intelligence Management System)**: Verifiable data pedigree, reproducible synthetic workflows, and version-controlled recipe generation.
+The platform provides features intended to support governance documentation — statutory-identifier masking, tamper-evident cryptographic provenance, and auditable Data Nutrition Labels. It does **not** claim certification or verified compliance with the India DPDP Act 2023, the EU AI Act, or ISO 42001; "zero unmasked records" is not asserted, since masking coverage has not been independently measured.
