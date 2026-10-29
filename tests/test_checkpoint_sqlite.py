@@ -4,13 +4,15 @@ from fastapi.testclient import TestClient
 from api.server import app
 
 
-def test_checkpoint_endpoints_sqlite():
+def test_checkpoint_endpoints_sqlite(auth_headers):
     test_job_id = str(uuid.uuid4())
     with TestClient(app) as client:
         # Fetch CSRF token
         csrf_res = client.get("/auth/csrf-token")
         csrf_token = csrf_res.json().get("csrf_token")
-        headers = {"X-CSRF-Token": csrf_token} if csrf_token else {}
+        headers = dict(auth_headers)
+        if csrf_token:
+            headers["X-CSRF-Token"] = csrf_token
 
         # Create a checkpoint
         create_payload = {
@@ -32,12 +34,12 @@ def test_checkpoint_endpoints_sqlite():
         assert cp_id
 
         # Get latest checkpoint
-        res_latest = client.get(f"/checkpoints/{test_job_id}")
+        res_latest = client.get(f"/checkpoints/{test_job_id}", headers=auth_headers)
         assert res_latest.status_code == 200, res_latest.text
         assert res_latest.json()["checkpoint_id"] == cp_id
 
         # Get checkpoint history
-        res_hist = client.get(f"/checkpoints/{test_job_id}/history")
+        res_hist = client.get(f"/checkpoints/{test_job_id}/history", headers=auth_headers)
         assert res_hist.status_code == 200, res_hist.text
         assert len(res_hist.json()) >= 1
 
@@ -53,5 +55,5 @@ def test_checkpoint_endpoints_sqlite():
             assert restore_data["success"] is True
 
         # Test job report endpoint
-        res_report = client.get(f"/jobs/{test_job_id}/report")
+        res_report = client.get(f"/jobs/{test_job_id}/report", headers=auth_headers)
         assert res_report.status_code in [200, 404, 503]
