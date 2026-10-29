@@ -94,3 +94,13 @@ in doubt, the text was kept.
 This pass changed display text only. Typecheck and build results for the
 commit that carries this file are reported in the job's final report.
 
+
+## Follow-up (same pass, found by grep after the first commit)
+
+- "/datasets" metadata description in
+  frontend/app/(dashboard)/datasets/layout.tsx still read "Browse
+  certified synthetic datasets ..." after the display subtitle was
+  removed. The word "certified" was removed there too, so the metadata
+  now reads "Browse synthetic datasets, DBOM provenance seals, and
+  download production archives." No other layout metadata contained a
+  removed string (checked by grep).
