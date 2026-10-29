@@ -200,8 +200,13 @@ class StrategyAgent(Agent):
 
         return risks
 
-    async def _estimate_duration(self, requirements: Dict) -> Dict[str, float]:
-        """Estimate pipeline duration."""
+    async def _estimate_duration(self, requirements: Dict) -> Dict[str, Any]:
+        """Estimate pipeline duration.
+
+        HEURISTIC ESTIMATE from fixed per-scale rates, not a measured
+        projection: minutes and cost below must not be quoted as
+        forecasts.
+        """
         scale = requirements.get("scale", "medium")
         sample_count = requirements.get("sample_count", 10000)
 
@@ -209,6 +214,8 @@ class StrategyAgent(Agent):
         factor = scale_factors.get(scale, 1.0)
 
         return {
+            "method": "heuristic_estimate",
+            "note": "Heuristic estimate from fixed per-scale rates, not measured timing or cost.",
             "discovery_minutes": 5 * factor,
             "extraction_minutes": 30 * factor,
             "processing_minutes": 20 * factor,

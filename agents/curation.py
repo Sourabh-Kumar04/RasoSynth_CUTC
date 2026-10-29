@@ -62,7 +62,11 @@ class ContextAgent(Agent):
 
 
 class HumanArbiterAgent(Agent):
-    """Routes only uncertain, unsafe, or source-missing samples to human review."""
+    """Routes only uncertain, unsafe, or source-missing samples to human review.
+
+    Samples with NO review score are treated as uncertain and routed to
+    review: a missing score must never default to a passing value.
+    """
 
     async def initialize(self) -> bool:
         self.update_state(AgentState.IDLE)
@@ -78,8 +82,15 @@ class HumanArbiterAgent(Agent):
                 if not isinstance(sample, dict):
                     continue
                 provenance = (sample.get("metadata") or {}).get("provenance", {})
-                score = float(sample.get("llm_review_score", sample.get("quality_score", 1.0)) or 0.0)
-                if sample.get("needs_human_review") or score < 0.75 or not provenance.get("source_url"):
+                # A missing score must NEVER default to 1.0 and sail past
+                # review unreviewed: unscored (or unparseable) samples are
+                # routed to human review.
+                score_raw = sample.get("llm_review_score", sample.get("quality_score"))
+                try:
+                    score = float(score_raw) if score_raw is not None else None
+                except (TypeError, ValueError):
+                    score = None
+                if sample.get("needs_human_review") or score is None or score < 0.75 or not provenance.get("source_url"):
                     selected.append(sample)
             return TaskResult(
                 task_id=payload.get("task_id", context.job_id), agent_id=self.agent_id,

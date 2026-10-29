@@ -151,7 +151,23 @@ class AgentMessage:
 
 @dataclass
 class TaskResult:
-    """Result of agent task execution."""
+    """Result of agent task execution.
+
+    Confidence semantics -- read before trusting this field:
+    - ``confidence`` is the executing agent's SELF-REPORTED confidence
+      in its own output on a 0.0-1.0 scale. It is NOT a measured
+      accuracy, NOT a calibrated probability, and NOT comparable
+      across agents.
+    - The default 0.0 means unknown / unscored. Every failed result
+      carries the default and therefore makes no confidence claim.
+    - Fixed constants emitted by agents (0.85, 0.9, 0.95, 0.97, ...)
+      are self-assessment placeholders, not measurements. Values
+      computed from the task's own evidence (e.g. whether sources
+      were found, whether generation succeeded) carry an evidential
+      basis but remain uncalibrated.
+    - Never gate quality, approval, or human review on confidence
+      alone; use the output's own scores and the arbitration rules.
+    """
     task_id: str
     agent_id: str
     success: bool

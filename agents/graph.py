@@ -240,11 +240,13 @@ class AgentGraph:
             parallel_groups=parallel_groups
         )
 
-        # Estimate duration
+        # Estimate duration. Edge weights are planning weights, not
+        # measured timings, so the duration is a heuristic estimate.
         total_weight = sum(
             edge.weight for edge in self.edges
         )
         plan.estimated_duration_ms = total_weight * 1000
+        plan.metadata["estimated_duration_method"] = "heuristic_weight_estimate"
 
         # Collect required capabilities
         for node in self.nodes.values():
