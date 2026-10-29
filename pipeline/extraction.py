@@ -20,6 +20,15 @@ def _is_safe_url(url: str) -> tuple[bool, str]:
     """Validate URL is not targeting internal/private infrastructure.
 
     Returns (is_safe, reason).
+
+    Fail-closed: if the hostname cannot be resolved, the URL is REJECTED
+    (a previous version allowed it with a warning, which let unresolvable
+    names through to the fetcher).
+    NOTE (accepted risk): this is a check-then-fetch guard — DNS rebinding
+    between this check and the HTTP connect (TOCTOU) is not eliminated,
+    because httpx connects by hostname. The direct fetch paths mitigate it
+    by disabling redirects (follow_redirects=False), so a response cannot
+    smuggle the client onto a private target.
     """
     try:
         parsed = httpx.URL(url)
@@ -58,8 +67,8 @@ def _is_safe_url(url: str) -> tuple[bool, str]:
                         ip.is_multicast or ip.is_reserved):
                     return False, f"Resolved to unsafe IP: {ip}"
         except (socket.gaierror, OSError):
-            # If resolution fails, allow the URL but log a warning
-            logging.getLogger(__name__).warning(f"Could not resolve hostname {hostname} for SSRF check")
+            # Fail closed: an unresolvable hostname must not reach the fetcher.
+            return False, f"DNS resolution failed for {hostname}"
 
         # Block URLs with credentials or unusual ports
         if parsed.username or parsed.password:
@@ -495,7 +504,8 @@ class ExtractionPipeline:
             or os.getenv("AI_KOSH_API_KEY")
             or os.getenv("AIKOSH_ACCESS_KEY")
         )
-        if not (dataset_id and remote_path and ".." not in PurePosixPath(remote_path).parts and filename and extension in allowed_extensions and api_key):
+        import re as _re_a
+        if not (dataset_id and _re_a.fullmatch(r"[A-Za-z0-9_.-]+", dataset_id) and remote_path and ".." not in PurePosixPath(remote_path).parts and filename and extension in allowed_extensions and api_key):
             yield ExtractedContent(
                 content="", content_type="error", url=getattr(source, "url", ""),
                 extraction_warnings=["AIKosh file access is unavailable or the listed file format is unsupported."],
@@ -1187,7 +1197,10 @@ class ExtractionPipeline:
                 def _safe_load_hf():
                     from datasets import load_dataset, get_dataset_config_names
                     ds_id = meta.get("id") or getattr(source, "title", "")
-                    if not ds_id:
+                    # The SDK resolves this id to hub URLs internally, so a
+                    # crafted id must never reach it: only owner/name slugs.
+                    import re as _re
+                    if not ds_id or not _re.fullmatch(r"[A-Za-z0-9_.-]+(/[A-Za-z0-9_.-]+)?", str(ds_id)) or ".." in str(ds_id).split("/"):
                         return None
                     try:
                         configs = get_dataset_config_names(ds_id)
@@ -1342,6 +1355,13 @@ class ExtractionPipeline:
                     dataset_ref = match.group(1)
 
             if not dataset_ref:
+                return
+            import re as _re_k
+            if not _re_k.fullmatch(r"[^/\s]+/[^/\s]+", str(dataset_ref)) or ".." in str(dataset_ref).split("/"):
+                yield ExtractedContent(
+                    content="", content_type="error", url=getattr(source, "url", ""),
+                    extraction_warnings=["Kaggle dataset ref blocked: invalid ref format"],
+                )
                 return
 
             path = None
@@ -1503,7 +1523,11 @@ class ExtractionPipeline:
             # Try to get the actual files from Zenodo record
             zenodo_id = None
             if hasattr(source, 'metadata__') and source.metadata__.get('zenodo_id'):
-                zenodo_id = source.metadata__['zenodo_id']
+                # Metadata is untrusted input: only a plain numeric record id
+                # may reach the API URL (anything else is rejected, not
+                # interpolated into a request path).
+                _raw_zid = str(source.metadata__['zenodo_id']).strip()
+                zenodo_id = _raw_zid if _raw_zid.isdigit() else None
             elif source.url:
                 # Extract from URL like https://zenodo.org/record/1234565678
                 import re
@@ -1542,7 +1566,10 @@ class ExtractionPipeline:
                                 # Only read small plain text/markdown/json files
                                 if file_size < 100000 and any(file_name.endswith(ext) for ext in ('.txt', '.md', '.json', '.csv')):
                                     file_url = file_info.get('links', {}).get('self')
-                                    if file_url:
+                                    # Response-built URL: validate it exactly
+                                    # like a caller-supplied URL before fetching.
+                                    _safe_file, _reason = _is_safe_url(file_url) if file_url else (False, "missing file URL")
+                                    if file_url and _safe_file:
                                         try:
                                             file_response = await client.get(file_url)
                                             if file_response.status_code == 200 and len(file_response.text.strip()) > 50:
