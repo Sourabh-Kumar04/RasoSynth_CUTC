@@ -85,7 +85,7 @@ export default function OrchestrationPage() {
 
   const fetchJobs = useCallback(async () => {
     try {
-      const response = await api.getJobs({ limit: 20 }).catch(() => ({ data: [] }))
+      const response = await api.getJobs({ limit: 20 })
       const jobList = response.data || []
       setJobs(jobList)
       if (jobList.length > 0) {

@@ -42,8 +42,3 @@ export function MetricCard({
     </div>
   )
 }
-
-export function metricTone(state: MetricState): string {
-  return clsx(state === 'ok' && 'text-emerald-400', state === 'error' && 'text-rose-400', state === 'unknown' && 'text-[#d8d2c4]')
-}
-

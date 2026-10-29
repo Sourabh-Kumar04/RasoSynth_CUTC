@@ -31,7 +31,7 @@ function shortId(id: unknown): string {
 
 /** Message shown when a live source cannot be read. Never a made-up value. */
 const UNAVAILABLE_NOTE =
-  'Unknown — live data is unavailable. The backend may be unreachable, or the call may need a login JWT (data calls return 401 without one). This page stores no token and shows no substitute numbers.'
+  'Unknown — live data is unavailable. The backend may be unreachable, or the call may need a valid login session (data calls return 401 without one). Sign in to view live results.'
 
 /**
  * Dashboard — the primary workspace view for dataset generation and
@@ -57,9 +57,17 @@ export default function DashboardPage() {
   const [healthState, setHealthState] = useState<SourceState>('loading')
   const [selectedJobId, setSelectedJobId] = useState<string | null>(null)
   const [lastUpdated, setLastUpdated] = useState<string | null>(null)
+  const [isMockMode, setIsMockMode] = useState(false)
+
+  useEffect(() => {
+    try {
+      setIsMockMode(localStorage.getItem('mockMode') === 'true')
+    } catch {
+      setIsMockMode(false)
+    }
+  }, [])
 
   const load = useCallback(async () => {
-    setLastUpdated(new Date().toLocaleTimeString())
     try {
       const res = await api.getJobs({ limit: 20 })
       const list = Array.isArray(res?.data) ? res.data : []
@@ -91,6 +99,7 @@ export default function DashboardPage() {
     } catch {
       setHealthState('unavailable')
     }
+    setLastUpdated(new Date().toLocaleTimeString())
   }, [])
 
   useEffect(() => {
@@ -111,7 +120,7 @@ export default function DashboardPage() {
       <PageHeader
         eyebrow="Workspace"
         title="Dashboard"
-        purpose="Dataset generation and fine-tuning jobs, pipeline stages, and quality metrics. Only live backend data is shown; anything unavailable is marked Unknown."
+        purpose={isMockMode ? "Dataset generation and fine-tuning jobs, pipeline stages, and quality metrics." : "Dataset generation and fine-tuning jobs, pipeline stages, and quality metrics. Only live backend data is shown; anything unavailable is marked Unknown."}
         action={
           <>
             <Button variant="outline" size="sm" onClick={load} className="rounded-md border-[#272738] font-mono text-xs text-[#a8a29e] hover:text-white">
@@ -125,16 +134,71 @@ export default function DashboardPage() {
           </>
         }
         status={
-          <StatusStrip
-            items={[
-              healthState === 'ok'
-                ? { label: `Backend: ${str(health?.status) ?? 'reachable'}`, tone: 'ok' as const }
-                : { label: 'Backend: unknown', qualifier: 'liveness check did not return', tone: 'neutral' as const },
-              jobsState === 'unavailable' || ftState === 'unavailable' || qualityState === 'unavailable'
-                ? { label: 'Some live data unavailable', qualifier: 'shown as Unknown below — no substitute numbers', tone: 'warn' as const }
-                : { label: 'Live data connected', tone: 'ok' as const },
-            ]}
-          />
+          (() => {
+            const backendRaw = (str(health?.status) || 'unknown').toLowerCase()
+            const isBackendHealthy = healthState === 'ok' && backendRaw === 'healthy'
+            const isBackendStandby = healthState === 'ok' && backendRaw === 'standby'
+            const isBackendDegraded = healthState === 'ok' && backendRaw === 'degraded'
+            const isBackendError = healthState === 'ok' && (backendRaw === 'unhealthy' || backendRaw === 'error')
+
+            const backendTone = isBackendHealthy
+              ? ('ok' as const)
+              : isBackendStandby || isBackendDegraded
+              ? ('warn' as const)
+              : isBackendError
+              ? ('bad' as const)
+              : ('neutral' as const)
+
+            const backendLabel = isBackendHealthy
+              ? 'Backend: healthy'
+              : isBackendStandby
+              ? 'Backend: standby'
+              : isBackendDegraded
+              ? 'Backend: degraded'
+              : isBackendError
+              ? `Backend: ${backendRaw}`
+              : 'Backend: unknown'
+
+            const allSourcesFailed =
+              jobsState === 'unavailable' &&
+              ftState === 'unavailable' &&
+              qualityState === 'unavailable' &&
+              healthState !== 'ok'
+
+            const someSourcesFailed =
+              jobsState === 'unavailable' ||
+              ftState === 'unavailable' ||
+              qualityState === 'unavailable'
+
+            const items: Array<{ label: string; qualifier?: string; tone: 'ok' | 'warn' | 'bad' | 'neutral' }> = [
+              {
+                label: backendLabel,
+                qualifier: !isBackendHealthy && healthState !== 'ok' ? 'liveness check did not return' : undefined,
+                tone: backendTone,
+              },
+            ]
+
+            if (allSourcesFailed) {
+              items.push({
+                label: 'All data sources unavailable',
+                qualifier: 'Backend unreachable or authentication required. Please sign in.',
+                tone: 'bad' as const,
+              })
+            } else if (someSourcesFailed) {
+              items.push({
+                label: 'Some live data unavailable',
+                qualifier: 'shown as Unknown below — no substitute numbers',
+                tone: 'warn' as const,
+              })
+            } else {
+              items.push({
+                label: 'Live data connected',
+                tone: 'ok' as const,
+              })
+            }
+
+            return <StatusStrip items={items} />
+          })()
         }
       />
 

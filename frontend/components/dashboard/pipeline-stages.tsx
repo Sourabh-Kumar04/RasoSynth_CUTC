@@ -76,7 +76,7 @@ export function PipelineStages({
       <div className="mt-3 font-mono text-xs text-[#a8a29e]">
         {allUnknown
           ? 'Stage state: unknown — the selected job reports no stage, or no job data is available.'
-          : `Current stage: ${currentStage}${typeof progress === 'number' ? ` · Progress: ${Math.round(progress * 100)}%` : ' · Progress: unknown'}`}
+          : `Current stage: ${currentStage}${typeof progress === 'number' && Number.isFinite(progress) ? ` · Progress: ${Math.round(Math.min(100, Math.max(0, progress <= 1 ? progress * 100 : progress)))}%` : ' · Progress: unknown'}`}
       </div>
     </div>
   )
