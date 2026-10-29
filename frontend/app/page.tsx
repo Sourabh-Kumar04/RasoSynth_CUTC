@@ -1206,29 +1206,19 @@ export default function ZenPortalPage() {
 
           <div className="pt-8 border-t border-[#1c1c28]/60 flex flex-col sm:flex-row items-center justify-between text-xs font-mono text-zinc-500 gap-4">
             <div className="flex flex-col sm:flex-row items-center gap-2 sm:gap-4">
-              <p>© 2026 RasoSynthTune · Apache 2.0 Open Source Architecture</p>
+              <p>© 2026 RasoSynthTune · PolyForm Noncommercial 1.0.0</p>
               <span className="hidden sm:inline text-zinc-700">·</span>
               <a
-                href="https://github.com/Sourabh-Kumar04/RasoSynthTune"
+                href="https://github.com/Sourabh-Kumar04/RasoSynth_CUTC"
                 target="_blank"
                 rel="noreferrer"
                 className="hover:text-white transition-colors underline underline-offset-2"
               >
                 GitHub Repository
               </a>
-              <span className="hidden sm:inline text-zinc-700">·</span>
-              <a
-                href="https://huggingface.co/spaces/Sourabh-Kumar04/RasoSynthTune"
-                target="_blank"
-                rel="noreferrer"
-                className="hover:text-white transition-colors underline underline-offset-2"
-              >
-                Hugging Face Space
-              </a>
+
             </div>
             <div className="flex items-center space-x-3 text-zinc-400">
-              <span className="text-emerald-400">● Hosted Space Demo Ready</span>
-              <span>·</span>
               <span>Python 3.12 · Next.js 14</span>
             </div>
           </div>

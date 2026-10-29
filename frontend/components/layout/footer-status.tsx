@@ -46,10 +46,12 @@ export function FooterStatus() {
     )
   }
 
+  // P0: missing metrics are unknown, never literal fallbacks (45 / 0.1).
+  const memPct = snapshot.system_metrics?.memory_used_percent
+  const cpuLoad = snapshot.system_metrics?.cpu_load_1m
   const hostPressureCritical =
-    (snapshot.system_metrics?.memory_used_percent ?? 45) > 85 ||
-    (snapshot.system_metrics?.cpu_load_1m ?? 0.1) > 3.0
-  const displayStatus = hostPressureCritical ? 'degraded' : snapshot.status || 'healthy'
+    (memPct != null && memPct > 85) || (cpuLoad != null && cpuLoad > 3.0)
+  const displayStatus = hostPressureCritical ? 'degraded' : snapshot.status || 'unknown'
   const degraded = displayStatus.toLowerCase() === 'degraded'
   const label = displayStatus.charAt(0).toUpperCase() + displayStatus.slice(1)
 
@@ -59,7 +61,7 @@ export function FooterStatus() {
         className={`w-1.5 h-1.5 rounded-full animate-pulse ${degraded ? 'bg-amber-400' : 'bg-emerald-400'}`}
       />
       <span>
-        {label}: Hybrid Standalone · Real Supabase PostgreSQL
+        {label}
       </span>
     </span>
   )

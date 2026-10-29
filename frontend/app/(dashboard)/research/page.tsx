@@ -224,22 +224,12 @@ export default function ResearchPage() {
     if (status?.cached_techniques && typeof status.cached_techniques === 'object') {
       return Object.values(status.cached_techniques).flat().map(String)
     }
-    return [
-      'De-duplication via MinHash LSH (Jaccard > 0.85)',
-      'Toxicity & Hallucination filtering using LLM-as-a-Judge',
-      'Self-Instruct Prompt Diversification & Constraint Optimization',
-      'AST Python Syntax Compilation & Static Sandbox Analysis',
-    ]
+    return []
   })()
 
   const history: string[] = Array.isArray(status?.research_history) && status!.research_history.length > 0
     ? status!.research_history.map((h: any) => typeof h === 'string' ? h : (h?.query || h?.title || h?.name || JSON.stringify(h)))
-    : [
-      'ArXiv Search: "Autonomous SFT Dataset Synthesis Frameworks"',
-      'GitHub Crawl: Open-source RAG benchmark corpora and prompt templates',
-      'PapersWithCode: High-quality instruction-following evaluation sets',
-      'HuggingFace Hub: Fine-tuning datasets quality metrics and license terms',
-    ]
+    : []
 
   const activeTechniquesCount = Object.values(enabledToggles).filter(Boolean).length
 
@@ -318,7 +308,7 @@ export default function ResearchPage() {
                 <div className="flex items-center gap-1.5 mt-1">
                   <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse shadow-[0_0_8px_rgba(16,185,129,0.8)]" />
                   <p className="text-xl font-bold font-mono capitalize text-white">
-                    {status?.status ?? 'Autonomous Active'}
+                    {status?.status ?? 'Unknown'}
                   </p>
                 </div>
               </div>
@@ -444,9 +434,9 @@ export default function ResearchPage() {
                   <div>
                     <p className="text-xs text-[#a8a29e] font-mono uppercase">Lexical Diversity (D-2)</p>
                     <p className="text-xl font-bold font-mono text-emerald-400 mt-0.5">
-                      {benchmarks?.results?.benchmark_generation_quality?.lexical_diversity_distinct_2 ?? '0.9831'}
+                      {benchmarks?.results?.benchmark_generation_quality?.lexical_diversity_distinct_2 ?? 'Unknown'}
                     </p>
-                    <span className="text-xs text-[#a8a29e] font-mono">+15.6% vs raw crawls</span>
+                    <span className="text-xs text-[#a8a29e] font-mono">vs raw crawls (comparison unmeasured)</span>
                   </div>
                   <div className="h-9 w-9 rounded-xl bg-[#161622] border border-[#3b3b52] flex items-center justify-center">
                     <Sparkles className="h-4.5 w-4.5 text-emerald-400" />
@@ -461,10 +451,10 @@ export default function ResearchPage() {
                     <p className="text-xl font-bold font-mono text-[#f26625] mt-0.5">
                       {benchmarks?.results?.benchmark_latency?.throughput_samples_per_sec
                         ? `${Math.round(benchmarks.results.benchmark_latency.throughput_samples_per_sec).toLocaleString()} /s`
-                        : '302,570 /s'}
+                        : 'Unknown'}
                     </p>
                     <span className="text-xs text-[#a8a29e] font-mono">
-                      p50: {benchmarks?.results?.benchmark_latency?.p50_latency_per_sample_us ?? '3.3'} μs/rec
+                      p50: {benchmarks?.results?.benchmark_latency?.p50_latency_per_sample_us ?? 'Unknown'} μs/rec
                     </span>
                   </div>
                   <div className="h-9 w-9 rounded-xl bg-[#161622] border border-[#3b3b52] flex items-center justify-center">
@@ -493,10 +483,10 @@ export default function ResearchPage() {
                   <div>
                     <p className="text-xs text-[#a8a29e] font-mono uppercase">Cost Reduction vs Human</p>
                     <p className="text-xl font-bold font-mono text-amber-400 mt-0.5">
-                      {benchmarks?.results?.benchmark_cost_efficiency?.cost_reduction_pct ?? '99.95'}%
+                      {benchmarks?.results?.benchmark_cost_efficiency?.cost_reduction_pct ?? 'Unknown'}%
                     </p>
                     <span className="text-xs text-[#a8a29e] font-mono">
-                      {benchmarks?.results?.benchmark_cost_efficiency?.roi_cost_efficiency_multiple ?? '1904x cheaper'}
+                      {benchmarks?.results?.benchmark_cost_efficiency?.roi_cost_efficiency_multiple ?? 'Unknown'}
                     </span>
                   </div>
                   <div className="h-9 w-9 rounded-xl bg-[#161622] border border-[#3b3b52] flex items-center justify-center">
@@ -520,25 +510,25 @@ export default function ResearchPage() {
                   <div className="flex justify-between px-4 py-3">
                     <span className="text-[#a8a29e]">SHA-256 Leaf Hashing Latency</span>
                     <span className="text-white font-bold">
-                      {benchmarks?.results?.benchmark_latency?.sample_hashing_latency_ms ?? '0.281'} ms / 100 recs
+                      {benchmarks?.results?.benchmark_latency?.sample_hashing_latency_ms ?? 'Unknown'} ms / 100 recs
                     </span>
                   </div>
                   <div className="flex justify-between px-4 py-3">
                     <span className="text-[#a8a29e]">Merkle Tree Root Construction</span>
                     <span className="text-white font-bold">
-                      {benchmarks?.results?.benchmark_latency?.merkle_tree_latency_ms ?? '0.048'} ms / 100 recs
+                      {benchmarks?.results?.benchmark_latency?.merkle_tree_latency_ms ?? 'Unknown'} ms / 100 recs
                     </span>
                   </div>
                   <div className="flex justify-between px-4 py-3">
                     <span className="text-[#a8a29e]">Deduplication Hash Lookup</span>
                     <span className="text-white font-bold">
-                      {benchmarks?.results?.benchmark_latency?.dedup_lookup_latency_ms ?? '0.002'} ms
+                      {benchmarks?.results?.benchmark_latency?.dedup_lookup_latency_ms ?? 'Unknown'} ms
                     </span>
                   </div>
                   <div className="flex justify-between px-4 py-3">
                     <span className="text-[#a8a29e]">Multi-Provider Fallback Cascade</span>
                     <span className="text-emerald-400 font-bold">
-                      {benchmarks?.results?.benchmark_provider_quality?.fallback_resilience_rating ?? '99.9% Dynamic Fallback'}
+                      {benchmarks?.results?.benchmark_provider_quality?.fallback_resilience_rating ?? 'Unknown'}
                     </span>
                   </div>
                 </CardContent>
@@ -614,15 +604,15 @@ export default function ResearchPage() {
                   <div className="p-3 bg-[#0d0d14] rounded-xl border border-[#272738] text-xs font-mono space-y-2">
                     <div className="flex justify-between items-center text-[#a8a29e]">
                       <span>Baseline Architecture:</span>
-                      <span className="text-white font-semibold">{evalBenchmark?.base_model?.name ?? 'sarvamai/sarvam-2b-v0.5 (Pretrained Baseline)'}</span>
+                      <span className="text-white font-semibold">{evalBenchmark?.base_model?.name ?? 'Unknown'}</span>
                     </div>
                     <div className="flex justify-between items-center text-[#a8a29e]">
                       <span>Fine-Tuned Adapter:</span>
-                      <span className="text-emerald-400 font-semibold">{evalBenchmark?.tuned_model?.name ?? 'sarvamai/sarvam-2b-v0.5 + RasoSynthTune SFT LoRA'}</span>
+                      <span className="text-emerald-400 font-semibold">{evalBenchmark?.tuned_model?.name ?? 'Unknown'}</span>
                     </div>
                     <div className="flex justify-between items-center text-[#a8a29e]">
                       <span>Statutory Domain:</span>
-                      <span className="text-[#f26625] font-semibold">{evalBenchmark?.benchmark_domain ?? 'Indian Taxation & GST Compliance'}</span>
+                      <span className="text-[#f26625] font-semibold">{evalBenchmark?.benchmark_domain ?? 'Unknown'}</span>
                     </div>
                   </div>
                 </CardContent>
@@ -804,6 +794,11 @@ export default function ResearchPage() {
                 </CardTitle>
               </CardHeader>
               <CardContent className="p-0 divide-y divide-[#272738]">
+                {history.length === 0 && (
+                  <p className="px-5 py-6 text-xs font-mono text-[#a8a29e]">
+                    No research history recorded yet — run a research sweep to generate it.
+                  </p>
+                )}
                 {history.map((entry, i) => (
                   <div key={i} className="flex items-center gap-3 px-5 py-3.5">
                     <Clock className="h-4 w-4 text-[#f26625] shrink-0" />

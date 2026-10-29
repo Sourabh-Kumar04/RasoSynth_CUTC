@@ -194,27 +194,13 @@ export default function OrchestrationPage() {
   const runningJobs = jobs.filter((j) => j.status === 'running')
   const completedJobs = jobs.filter((j) => j.status === 'completed')
 
-  const fallbackHistory = [
-    'ArXiv Search: "Autonomous SFT Dataset Synthesis Frameworks"',
-    'GitHub Crawl: Open-source RAG benchmark corpora and prompt templates',
-    'PapersWithCode: High-quality instruction-following evaluation sets',
-    'HuggingFace Hub: Fine-tuning datasets quality metrics and license terms',
-  ]
-
-  const fallbackTechniques = [
-    'De-duplication via MinHash LSH (Jaccard > 0.85)',
-    'Toxicity & Hallucination filtering using LLM-as-a-Judge',
-    'Self-Instruct Prompt Diversification & Constraint Optimization',
-    'AST Python Syntax Compilation & Static Analysis',
-  ]
-
   const researchHistoryList: string[] = (() => {
     if (Array.isArray(researchStatus?.research_history) && researchStatus.research_history.length > 0) {
       return researchStatus.research_history.map((item: any) =>
         typeof item === 'string' ? item : (item?.query || item?.title || item?.name || JSON.stringify(item))
       )
     }
-    return fallbackHistory
+    return []
   })()
 
   const cachedTechniquesList: string[] = (() => {
@@ -225,7 +211,7 @@ export default function OrchestrationPage() {
       const flattened = Object.values(researchStatus.cached_techniques).flat().map(String)
       if (flattened.length > 0) return flattened
     }
-    return fallbackTechniques
+    return []
   })()
 
   return (
@@ -286,7 +272,7 @@ export default function OrchestrationPage() {
           </TabsTrigger>
           <TabsTrigger value="agents" className="rounded-sm text-xs font-mono flex items-center gap-1.5 data-[state=active]:bg-[#f26625] data-[state=active]:text-white data-[state=active]">
             <Users className="w-3.5 h-3.5" />
-            Multi-Agent Society ({agents.length || 13})
+            Multi-Agent Society ({agents.length > 0 ? agents.length : '—'})
           </TabsTrigger>
           <TabsTrigger value="research" className="rounded-sm text-xs font-mono flex items-center gap-1.5 data-[state=active]:bg-[#f26625] data-[state=active]:text-white data-[state=active]">
             <FlaskConical className="w-3.5 h-3.5" />
@@ -328,7 +314,7 @@ export default function OrchestrationPage() {
                 <div className="absolute left-10 right-10 top-1/2 -translate-y-1/2 h-[2px] bg-[#1c1c28] -z-0" />
 
                 {PIPELINE_STAGES.map((stage, i, arr) => {
-                  const currentStage = selectedJob?.current_stage || 'constructing_dataset'
+                  const currentStage = selectedJob?.current_stage || 'unknown'
                   const isCurrent = currentStage.includes(stage.id.split('_')[0])
                   const isPast = selectedJob?.progress ? selectedJob.progress * arr.length > i : i < 3
 
@@ -419,7 +405,7 @@ export default function OrchestrationPage() {
                   <div className="p-2.5 rounded bg-[#0a0a0f] border border-[#4a463f] space-y-1">
                     <span className="text-zinc-500 text-xs uppercase block">Inputs / Invariants</span>
                     <p className="text-zinc-300">
-                      Domain: <strong className="text-white">{selectedJob?.target_domain || 'Finance & Taxation'}</strong><br />
+                      Domain: <strong className="text-white">{selectedJob?.target_domain || 'Unknown'}</strong><br />
                       PII Guard: <span className="text-emerald-400">DPDP Active</span> · MinHash: &gt;0.85
                     </p>
                   </div>
@@ -447,7 +433,7 @@ export default function OrchestrationPage() {
                 <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3 text-xs font-mono">
                   <div className="p-2 rounded bg-[#0a0a0f] border border-[#272738]">
                     <span className="text-[#a8a29e] text-xs block">Current Stage</span>
-                    <span className="text-white font-bold truncate block">{selectedJob.current_stage || 'constructing_dataset'}</span>
+                    <span className="text-white font-bold truncate block">{selectedJob.current_stage || 'unknown'}</span>
                   </div>
                   <div className="p-2 rounded bg-[#0a0a0f] border border-[#272738]">
                     <span className="text-[#a8a29e] text-xs block">Samples Generated</span>
@@ -483,7 +469,7 @@ export default function OrchestrationPage() {
                   </span>
                   <span className="text-[#4a463f]">/</span>
                   <span className="text-[#a8a29e] text-xs">
-                    Domain: <strong className="text-white font-normal">{selectedJob.target_domain || selectedJob.domain || selectedJob.dataset_name || 'General'}</strong>
+                    Domain: <strong className="text-white font-normal">{selectedJob.target_domain || selectedJob.domain || selectedJob.dataset_name || 'Unknown'}</strong>
                   </span>
                   <span className="text-[#4a463f]">/</span>
                   <span className="text-[#d8d2c4] text-xs flex items-center gap-1">
@@ -555,11 +541,11 @@ export default function OrchestrationPage() {
                       Review sample reasoning quality below. Accepting triggers full distributed synthesis, neural evaluation, and Merkle DBOM sealing.
                     </p>
                     <div className="flex flex-wrap items-center gap-3 pt-1 text-xs font-mono text-zinc-400">
-                      <span>Target Batch: <strong className="text-white">{selectedJob.config?.dataset_size || selectedJob.dataset_size || 1000} samples</strong></span>
+                      <span>Target Batch: <strong className="text-white">{(selectedJob.config?.dataset_size || selectedJob.dataset_size) ? `${selectedJob.config?.dataset_size || selectedJob.dataset_size} samples` : 'Unknown'}</strong></span>
                       <span className="text-zinc-700">·</span>
-                      <span>Est. Duration: <strong className="text-white">~{Math.max(1, Math.round((selectedJob.config?.dataset_size || selectedJob.dataset_size || 1000) / 750))} mins</strong></span>
+                      <span>Est. Duration: <strong className="text-white">{(selectedJob.config?.dataset_size || selectedJob.dataset_size) ? `~${Math.max(1, Math.round((selectedJob.config?.dataset_size || selectedJob.dataset_size) / 750))} mins` : 'Unknown'}</strong></span>
                       <span className="text-zinc-700">·</span>
-                      <span>Projected Cost: <strong className="text-emerald-400">${(((selectedJob.config?.dataset_size || selectedJob.dataset_size || 1000) / 1000) * 0.06).toFixed(2)}</strong> <span className="text-xs text-zinc-500">($0.00 Local)</span></span>
+                      <span>Projected Cost: <strong className="text-emerald-400">{(selectedJob.config?.dataset_size || selectedJob.dataset_size) ? `$${(((selectedJob.config?.dataset_size || selectedJob.dataset_size) / 1000) * 0.06).toFixed(2)}` : 'Unknown'}</strong> <span className="text-xs text-zinc-500">($0.00 Local)</span></span>
                     </div>
                   </div>
                   <div className="flex items-center gap-2 shrink-0">
@@ -1001,6 +987,9 @@ export default function OrchestrationPage() {
                 </CardTitle>
               </CardHeader>
               <CardContent className="p-4 space-y-2 text-xs font-mono">
+                {researchHistoryList.length === 0 && (
+                  <p className="text-[#a8a29e]">No research history recorded yet.</p>
+                )}
                 {researchHistoryList.map((item: string, idx: number) => (
                   <div key={idx} className="p-2.5 rounded-lg bg-[#0a0a0f] border border-[#272738] text-[#a8a29e] flex items-center gap-2">
                     <Search className="w-3.5 h-3.5 text-[#f26625] shrink-0" />
@@ -1018,6 +1007,9 @@ export default function OrchestrationPage() {
                 </CardTitle>
               </CardHeader>
               <CardContent className="p-4 space-y-2 text-xs font-mono">
+                {cachedTechniquesList.length === 0 && (
+                  <p className="text-[#a8a29e]">No techniques cached yet.</p>
+                )}
                 {cachedTechniquesList.map((item: string, idx: number) => (
                   <div key={idx} className="p-2.5 rounded-lg bg-[#0a0a0f] border border-[#272738] text-white flex items-center gap-2">
                     <CheckCircle2 className="w-3.5 h-3.5 text-emerald-400 shrink-0" />

@@ -149,7 +149,8 @@ function jobToDataset(job: any): any {
     modality: job.dataset_type || job.config?.dataset_type || 'text',
     format: job.output_format || job.config?.export_format || 'jsonl',
     synthesis_mode: synthesisMode,
-    size: formatSize((job.samples_generated || 0) * 1024 * 2),
+    // P0: size is an ESTIMATE (2,048 bytes/sample assumed, not measured).
+    size: formatSize((job.samples_generated || 0) * 1024 * 2) + ' (est.)',
     records: job.samples_generated || 0,
     quality: typeof (job.quality_score ?? job.metadata?.quality_score ?? job.metadata?.quality_breakdown?.composite) === 'number'
       ? Math.round(Number(job.quality_score ?? job.metadata?.quality_score ?? job.metadata?.quality_breakdown?.composite) <= 1.0 

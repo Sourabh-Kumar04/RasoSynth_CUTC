@@ -24,18 +24,35 @@ interface HealthStatus {
 }
 
 const PROVIDERS_CONFIG = [
-  { name: 'AI Kosh (IndiaAI / Bhashini)', env: 'AIKOSH_API_KEY',   letter: 'AK', color: 'text-[#10b981] bg-[#10b981]/10 border-emerald-500/30', configured: true,  masked: '●●●●' },
-  { name: 'Google Gemini (1.5 / 2.0)',    env: 'GEMINI_API_KEY',    letter: 'G',  color: 'text-[#f26625] bg-[#f26625]/10 border-[#f26625]/30',  configured: true,  masked: '●●●●' },
-  { name: 'Groq Cloud (Llama-3.3-70B)',   env: 'GROQ_API_KEY',      letter: 'Gr', color: 'text-[#f97316] bg-[#f97316]/10 border-orange-500/30', configured: true,  masked: '●●●●' },
-  { name: 'DeepSeek (R1 / V3)',           env: 'DEEPSEEK_API_KEY',  letter: 'DS', color: 'text-[#f26625] bg-[#f26625]/10 border-[#f26625]/30',     configured: true,  masked: '●●●●' },
-  { name: 'OpenRouter Aggregator',        env: 'OPENROUTER_API_KEY',letter: 'OR', color: 'text-[#f26625] bg-[#f26625]/10 border-[#f26625]/30', configured: true,  masked: '●●●●' },
-  { name: 'Together AI (DeepSeek R1)',    env: 'TOGETHER_API_KEY',  letter: 'TG', color: 'text-[#f26625] bg-[#f26625]/10 border-[#f26625]/30',       configured: true,  masked: '●●●●' },
-  { name: 'HuggingFace Hub Token',        env: 'HF_TOKEN',          letter: 'HF', color: 'text-[#f59e0b] bg-[#f59e0b]/10 border-amber-500/30',   configured: true,  masked: '●●●●' },
-  { name: 'Ollama (Local Engine)',        env: 'OLLAMA_BASE_URL',   letter: 'Ol', color: 'text-emerald-400 bg-emerald-500/10 border-emerald-500/30', configured: true, masked: 'http://localhost:11434' },
-  { name: 'NVIDIA NIM Microservices',     env: 'NVIDIA_API_KEY',    letter: 'N',  color: 'text-[#a8a29e] bg-[#1b1b18] border-[#4a463f]',        configured: false, masked: null },
-  { name: 'Anthropic Claude 3.5',         env: 'ANTHROPIC_API_KEY', letter: 'A',  color: 'text-[#a8a29e] bg-[#1b1b18] border-[#4a463f]',        configured: false, masked: null },
-  { name: 'OpenAI (GPT-4o)',              env: 'OPENAI_API_KEY',    letter: 'O',  color: 'text-[#a8a29e] bg-[#1b1b18] border-[#4a463f]',        configured: false, masked: null },
+  { name: 'AI Kosh (IndiaAI / Bhashini)', env: 'AIKOSH_API_KEY',   letter: 'AK', color: 'text-[#10b981] bg-[#10b981]/10 border-emerald-500/30' },
+  { name: 'Google Gemini (1.5 / 2.0)',    env: 'GEMINI_API_KEY',    letter: 'G',  color: 'text-[#f26625] bg-[#f26625]/10 border-[#f26625]/30' },
+  { name: 'Groq Cloud (Llama-3.3-70B)',   env: 'GROQ_API_KEY',      letter: 'Gr', color: 'text-[#f97316] bg-[#f97316]/10 border-orange-500/30' },
+  { name: 'DeepSeek (R1 / V3)',           env: 'DEEPSEEK_API_KEY',  letter: 'DS', color: 'text-[#f26625] bg-[#f26625]/10 border-[#f26625]/30' },
+  { name: 'OpenRouter Aggregator',        env: 'OPENROUTER_API_KEY',letter: 'OR', color: 'text-[#f26625] bg-[#f26625]/10 border-[#f26625]/30' },
+  { name: 'Together AI (DeepSeek R1)',    env: 'TOGETHER_API_KEY',  letter: 'TG', color: 'text-[#f26625] bg-[#f26625]/10 border-[#f26625]/30' },
+  { name: 'HuggingFace Hub Token',        env: 'HF_TOKEN',          letter: 'HF', color: 'text-[#f59e0b] bg-[#f59e0b]/10 border-amber-500/30' },
+  { name: 'Ollama (Local Engine)',        env: 'OLLAMA_BASE_URL',   letter: 'Ol', color: 'text-emerald-400 bg-emerald-500/10 border-emerald-500/30' },
+  { name: 'NVIDIA NIM Microservices',     env: 'NVIDIA_API_KEY',    letter: 'N',  color: 'text-[#a8a29e] bg-[#1b1b18] border-[#4a463f]' },
+  { name: 'Anthropic Claude 3.5',         env: 'ANTHROPIC_API_KEY', letter: 'A',  color: 'text-[#a8a29e] bg-[#1b1b18] border-[#4a463f]' },
+  { name: 'OpenAI (GPT-4o)',              env: 'OPENAI_API_KEY',    letter: 'O',  color: 'text-[#a8a29e] bg-[#1b1b18] border-[#4a463f]' },
 ]
+
+// P0: provider "configured" status is verified against the backend
+// GET /providers list — never hardcoded. Backend router names map to the
+// UI rows below; a row with no backend counterpart is "not reported",
+// not "configured". When the backend is unreachable every row is unknown.
+const BACKEND_PROVIDER_TO_ENV: Record<string, string> = {
+  google_gemini: 'GEMINI_API_KEY',
+  groq: 'GROQ_API_KEY',
+  deepseek: 'DEEPSEEK_API_KEY',
+  openrouter: 'OPENROUTER_API_KEY',
+  together: 'TOGETHER_API_KEY',
+  nvidia_nim: 'NVIDIA_API_KEY',
+  anthropic: 'ANTHROPIC_API_KEY',
+  openai: 'OPENAI_API_KEY',
+  huggingface: 'HF_TOKEN',
+  ollama: 'OLLAMA_BASE_URL',
+}
 
 const LIMITS_CONFIG = [
   { label: 'Max Concurrent Dataset Jobs', env: 'MAX_CONCURRENT_JOBS', desc: 'Maximum simultaneous dataset generation pipelines' },
@@ -67,6 +84,8 @@ export default function SettingsPage() {
     hf_token_masked: string | null
     available_targets: string[]
   } | null>(null)
+  // Backend-reported providers (null = backend unreachable / not loaded yet).
+  const [backendProviders, setBackendProviders] = useState<{ name: string }[] | null>(null)
   const [modalTokenId, setModalTokenId] = useState('')
   const [modalTokenSecret, setModalTokenSecret] = useState('')
   const [runpodApiKey, setRunpodApiKey] = useState('')
@@ -93,10 +112,21 @@ export default function SettingsPage() {
     }
   }, [])
 
+  const fetchBackendProviders = useCallback(async () => {
+    try {
+      const res = await api.getProviders()
+      setBackendProviders(Array.isArray(res) ? res : [])
+    } catch (e) {
+      console.warn('Failed to fetch backend providers', e)
+      setBackendProviders(null)
+    }
+  }, [])
+
   useEffect(() => {
     fetchHealth()
     fetchComputeSettings()
-  }, [fetchHealth, fetchComputeSettings])
+    fetchBackendProviders()
+  }, [fetchHealth, fetchComputeSettings, fetchBackendProviders])
 
   const refresh = () => {
     setRefreshing(true)
@@ -189,7 +219,7 @@ export default function SettingsPage() {
             )}
             <div>
               <p className="text-xs font-bold text-white flex items-center gap-2">
-                <span>Platform Status: {loading ? 'Checking runtime...' : health?.status?.toUpperCase() ?? 'ONLINE'}</span>
+                <span>Platform Status: {loading ? 'Checking runtime...' : health?.status?.toUpperCase() ?? 'UNKNOWN'}</span>
                 {!loading && infraStatus && (
                   <span className="text-xs font-mono px-2 py-0.2 rounded-md bg-emerald-500/10 text-emerald-400 border border-emerald-500/30">
                     Live Verified
@@ -542,12 +572,18 @@ export default function SettingsPage() {
                   <CardDescription className="text-xs text-[#a8a29e]">Environment key detection and failover routing readiness</CardDescription>
                 </div>
                 <Badge variant="outline" className="text-xs font-mono border-emerald-500/40 text-emerald-400 bg-emerald-950/20">
-                  {PROVIDERS_CONFIG.filter(p => p.configured).length} / {PROVIDERS_CONFIG.length} Configured
+                  {backendProviders === null
+                    ? 'Backend provider status unavailable'
+                    : `${PROVIDERS_CONFIG.filter(p => backendProviders.some(b => BACKEND_PROVIDER_TO_ENV[b.name] === p.env)).length} / ${PROVIDERS_CONFIG.length} reported by backend`}
                 </Badge>
               </div>
             </CardHeader>
             <CardContent className="p-0 divide-y divide-[#272738]">
-              {PROVIDERS_CONFIG.map(({ name, env, letter, color, configured, masked }) => (
+              {PROVIDERS_CONFIG.map(({ name, env, letter, color }) => {
+                const reported = backendProviders === null
+                  ? null
+                  : backendProviders.some(b => BACKEND_PROVIDER_TO_ENV[b.name] === env)
+                return (
                 <div key={env} className="flex items-center justify-between px-5 py-3.5">
                   <div className="flex items-center gap-3.5">
                     <div className={clsx('h-9 w-9 rounded-xl border flex items-center justify-center text-xs font-bold font-mono', color)}>
@@ -556,7 +592,7 @@ export default function SettingsPage() {
                     <div>
                       <p className="text-xs font-bold text-white flex items-center gap-2">
                         {name}
-                        {configured ? (
+                        {reported ? (
                           <CheckCircle2 className="h-3.5 w-3.5 text-[#10b981]" />
                         ) : (
                           <span className="w-1.5 h-1.5 rounded-full bg-[#4a463f] inline-block" />
@@ -567,14 +603,15 @@ export default function SettingsPage() {
                   </div>
                   <span className={clsx(
                     'text-xs font-mono font-bold px-2.5 py-0.5 rounded-md border',
-                    configured
+                    reported
                       ? 'bg-emerald-950/40 text-[#10b981] border-emerald-500/30'
                       : 'bg-zinc-900 text-zinc-500 border-zinc-800'
                   )}>
-                    {configured ? `Configured (${masked})` : 'Not configured (Optional)'}
+                    {reported === null ? 'Unknown (backend unreachable)' : reported ? 'Reported by backend' : 'Not reported by backend'}
                   </span>
                 </div>
-              ))}
+                )
+              })}
             </CardContent>
           </Card>
         </TabsContent>

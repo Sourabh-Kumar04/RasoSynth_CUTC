@@ -109,10 +109,12 @@ export default function ObservabilityPage() {
 
   // Headline status reflects host pressure too, so it never reads Healthy
   // next to a Critical RAM badge on the Load & RAM card.
+  // P0: missing metrics are unknown, never literal fallbacks (45 / 0.1).
+  const memPct = health?.system_metrics?.memory_used_percent
+  const cpuLoad = health?.system_metrics?.cpu_load_1m
   const hostPressureCritical =
-    (health?.system_metrics?.memory_used_percent ?? 45) > 85 ||
-    (health?.system_metrics?.cpu_load_1m ?? 0.1) > 3.0
-  const displayStatus = hostPressureCritical ? 'degraded' : (health?.status || 'healthy')
+    (memPct != null && memPct > 85) || (cpuLoad != null && cpuLoad > 3.0)
+  const displayStatus = hostPressureCritical ? 'degraded' : (health?.status || 'unknown')
 
   return (
     <div className="space-y-6 w-full pb-8">
@@ -260,16 +262,18 @@ export default function ObservabilityPage() {
               <div>
                 <div className="flex items-center gap-1.5 mb-0.5">
                   <p className="text-xs text-[#a8a29e] font-mono uppercase tracking-wider">System Load &amp; RAM</p>
-                  {((health?.system_metrics?.memory_used_percent ?? 45) > 85 || (health?.system_metrics?.cpu_load_1m ?? 0.1) > 3.0) ? (
+                  {(memPct == null && cpuLoad == null) ? (
+                    <span className="text-xs font-mono px-1.5 py-0.2 rounded bg-zinc-900 text-zinc-400 border border-zinc-800">Unknown</span>
+                  ) : ((memPct != null && memPct > 85) || (cpuLoad != null && cpuLoad > 3.0)) ? (
                     <span className="text-xs font-mono px-1.5 py-0.2 rounded bg-rose-950/60 text-rose-400 border border-rose-800">Critical</span>
-                  ) : ((health?.system_metrics?.memory_used_percent ?? 45) > 70 || (health?.system_metrics?.cpu_load_1m ?? 0.1) > 1.5) ? (
+                  ) : ((memPct != null && memPct > 70) || (cpuLoad != null && cpuLoad > 1.5)) ? (
                     <span className="text-xs font-mono px-1.5 py-0.2 rounded bg-amber-950/60 text-amber-300 border border-amber-800">Elevated</span>
                   ) : (
                     <span className="text-xs font-mono px-1.5 py-0.2 rounded bg-emerald-950/60 text-emerald-400 border border-emerald-800">Normal</span>
                   )}
                 </div>
                 <p className="text-xs font-bold font-mono text-[#f26625] mt-1">
-                  Load: {health?.system_metrics?.cpu_load_1m ?? '0.12'} · RAM: {health?.system_metrics?.memory_used_percent ? `${health.system_metrics.memory_used_percent}%` : '42%'}
+                  Load: {cpuLoad ?? 'Unknown'} · RAM: {memPct != null ? `${memPct}%` : 'Unknown'}
                 </p>
               </div>
               <div className="h-10 w-10 rounded-md bg-[#f26625]/10 border border-[#f26625]/30 flex items-center justify-center transition-transform group-hover:scale-110">
@@ -415,9 +419,7 @@ export default function ObservabilityPage() {
                   Active Cognitive Engines on Cluster:
                 </span>
                 <div className="flex flex-wrap gap-1.5">
-                  {(rayCluster?.engines_deployed || [
-                    'cot', 'socratic', 'preference', 'multi_turn', 'tool_calling', 'contrastive', 'rag'
-                  ]).map((eng: string) => (
+                  {(rayCluster?.engines_deployed ?? []).map((eng: string) => (
                     <span
                       key={eng}
                       className="px-2 py-0.5 rounded text-xs font-mono bg-[#161622] border border-[#272738] text-zinc-300 uppercase flex items-center gap-1"
@@ -426,6 +428,9 @@ export default function ObservabilityPage() {
                       {eng}
                     </span>
                   ))}
+                  {(rayCluster?.engines_deployed ?? []).length === 0 && (
+                    <span className="text-xs font-mono text-[#a8a29e]">No engines reported by the backend</span>
+                  )}
                 </div>
               </div>
             </CardContent>
