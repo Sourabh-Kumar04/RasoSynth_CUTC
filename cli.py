@@ -396,7 +396,6 @@ def handle_publish(args: argparse.Namespace) -> int:
         res = publish_dataset_to_hub(
             dataset_dir=args.dataset_dir,
             repo_id=args.repo_id,
-            token=args.token,
             private=args.private,
             dry_run=args.dry_run,
         )
@@ -472,7 +471,6 @@ def build_parser() -> argparse.ArgumentParser:
     publish_parser = subparsers.add_parser("publish", help="Publish dataset and cryptographic DBOM to Hugging Face Hub")
     publish_parser.add_argument("--dataset-dir", required=True, help="Path to directory containing dataset and .dbom.json")
     publish_parser.add_argument("--repo-id", required=True, help="Hugging Face repo id (e.g., rasosynthtune/indic-gst-law-instruct-v1)")
-    publish_parser.add_argument("--token", default=None, help="Hugging Face API token (or HF_TOKEN env var)")
     publish_parser.add_argument("--private", action="store_true", help="Set repository to private")
     publish_parser.add_argument("--dry-run", action="store_true", help="Validate metadata and DBOM without uploading")
 

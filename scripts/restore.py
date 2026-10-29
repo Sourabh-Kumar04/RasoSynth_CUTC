@@ -12,6 +12,7 @@ Usage:
     python scripts/restore.py --list  # List available backups
 """
 import argparse
+import os
 import json
 import logging
 import shutil
@@ -19,6 +20,7 @@ import subprocess
 import sys
 import tarfile
 import tempfile
+from datetime import datetime, timezone
 from pathlib import Path
 from typing import Optional
 
@@ -27,6 +29,33 @@ logging.basicConfig(
     format="%(asctime)s - %(name)s - %(levelname)s - %(message)s"
 )
 logger = logging.getLogger("restore")
+
+
+def _pg_connection_args(db_url):
+    """Split a postgres URL into CLI argv (no credentials) + env overrides.
+
+    Credentials must never travel as subprocess argv (visible in process
+    listings); the password is passed via the PGPASSWORD environment variable
+    only. Returns (argv_parts, env_overrides).
+    """
+    from urllib.parse import unquote, urlparse
+
+    clean = db_url.replace("+asyncpg", "").replace("+psycopg2", "")
+    parsed = urlparse(clean)
+    argv = []
+    if parsed.hostname:
+        argv += ["--host", parsed.hostname]
+    if parsed.port:
+        argv += ["--port", str(parsed.port)]
+    if parsed.username:
+        argv += ["--username", unquote(parsed.username)]
+    dbname = parsed.path.lstrip("/") if parsed.path else ""
+    if dbname:
+        argv += ["--dbname", dbname]
+    env = {}
+    if parsed.password:
+        env["PGPASSWORD"] = unquote(parsed.password)
+    return argv, env
 
 
 class RestoreError(Exception):
@@ -97,7 +126,7 @@ class RestoreManager:
 
         try:
             with tarfile.open(path, "r:gz") as tar:
-                tar.extractall(path=extract_dir)
+                tar.extractall(path=extract_dir, filter="data")
 
             # Find the backup directory within the extraction
             backup_contents = list(extract_dir.iterdir())
@@ -150,19 +179,27 @@ class RestoreManager:
 
         if db_file.suffix == ".sqlite":
             dest = Path(self.db_url.replace("sqlite:///", "").replace("sqlite+aiosqlite:///", ""))
+            if dest.exists():
+                # Never overwrite a live SQLite file without a backup.
+                stamp = datetime.now(timezone.utc).strftime("%Y%m%d%H%M%S")
+                backup_dest = dest.with_name(f"{dest.name}.bak-{stamp}")
+                shutil.copy2(dest, backup_dest)
+                logger.info("Existing SQLite database backed up: %s -> %s", dest, backup_dest)
             shutil.copy2(db_file, dest)
             logger.info("SQLite database restored: %s -> %s", db_file, dest)
             return {"artifact": "database", "file": str(db_file), "action": "restored", "type": "sqlite"}
 
         if db_file.suffix == ".sql":
-            clean_url = self.db_url.replace("+asyncpg", "").replace("+psycopg2", "")
+            pg_argv, pg_env = _pg_connection_args(self.db_url)
             psql_path = shutil.which("psql")
             if not psql_path:
                 raise RestoreError("psql not found — cannot restore PostgreSQL database")
 
+            run_env = dict(os.environ)
+            run_env.update(pg_env)
             result = subprocess.run(
-                [psql_path, "--quiet", "--file", str(db_file), clean_url],
-                capture_output=True, text=True, timeout=300,
+                [psql_path, "--quiet", "--file", str(db_file)] + pg_argv,
+                capture_output=True, text=True, timeout=300, env=run_env,
             )
             if result.returncode != 0:
                 raise RestoreError(f"psql restore failed: {result.stderr}")
@@ -179,7 +216,7 @@ class RestoreManager:
 
         self.data_dir.mkdir(parents=True, exist_ok=True)
         with tarfile.open(data_file, "r:gz") as tar:
-            tar.extractall(path=self.data_dir.parent)
+            tar.extractall(path=self.data_dir.parent, filter="data")
 
         logger.info("Data restored from %s to %s", data_file, self.data_dir)
         return {"artifact": "data", "file": str(data_file), "action": "restored"}

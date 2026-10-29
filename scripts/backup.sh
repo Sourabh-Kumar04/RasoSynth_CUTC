@@ -9,7 +9,7 @@ PG_USER="${PG_USER:-postgres}"
 PG_HOST="${PG_HOST:-localhost}"
 PG_PORT="${PG_PORT:-5432}"
 PG_DB="${PG_DB:-dataset_engine}"
-PG_PASSWORD="${PG_PASSWORD:-}"
+PG_PASSWORD="${PG_PASSWORD:?PG_PASSWORD environment variable is required for pg_dump}"
 
 mkdir -p "$BACKUP_DIR"
 

@@ -63,7 +63,8 @@ async def run_harness():
     print("==================================================\n")
     
     import os
-    os.environ.setdefault("JWT_SECRET", "K7m9pQ2vX5zL8wR1tY4uN6bC3jF0gH2sD5vA8mK1pQ9xZ4")
+    if not os.environ.get("JWT_SECRET"):
+        raise SystemExit("JWT_SECRET environment variable is required to run the debug harness (no default is provided).")
     router = DummyRouter()
     pipeline = FilteringPipeline(router, {})
     

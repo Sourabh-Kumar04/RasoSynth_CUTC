@@ -106,7 +106,7 @@ def publish_dataset_to_hub(
     # Live publication
     hf_token = token or os.environ.get("HF_TOKEN")
     if not hf_token:
-        raise ValueError("Missing Hugging Face token. Provide --token or set HF_TOKEN environment variable.")
+        raise ValueError("Missing Hugging Face token. Set the HF_TOKEN environment variable (tokens are never accepted on the command line).")
 
     try:
         from huggingface_hub import HfApi
@@ -136,7 +136,6 @@ def main():
     parser = argparse.ArgumentParser(description="Publish attested datasets to Hugging Face Hub")
     parser.add_argument("--dataset-dir", required=True, help="Path to local dataset directory")
     parser.add_argument("--repo-id", required=True, help="Target Hugging Face dataset repo ID (e.g. user/my-dataset)")
-    parser.add_argument("--token", default=None, help="Hugging Face User Access Token (or set HF_TOKEN env)")
     parser.add_argument("--private", action="store_true", help="Set repository to private")
     parser.add_argument("--dry-run", action="store_true", help="Validate dataset and DBOM files without uploading")
 
@@ -145,7 +144,6 @@ def main():
         publish_dataset_to_hub(
             dataset_dir=args.dataset_dir,
             repo_id=args.repo_id,
-            token=args.token,
             private=args.private,
             dry_run=args.dry_run,
         )

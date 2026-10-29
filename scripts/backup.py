@@ -35,6 +35,32 @@ logging.basicConfig(
     level=logging.INFO,
     format="%(asctime)s - %(name)s - %(levelname)s - %(message)s"
 )
+def _pg_connection_args(db_url):
+    """Split a postgres URL into CLI argv (no credentials) + env overrides.
+
+    Credentials must never travel as subprocess argv (visible in process
+    listings); the password is passed via the PGPASSWORD environment variable
+    only. Returns (argv_parts, env_overrides).
+    """
+    from urllib.parse import unquote, urlparse
+
+    clean = db_url.replace("+asyncpg", "").replace("+psycopg2", "")
+    parsed = urlparse(clean)
+    argv = []
+    if parsed.hostname:
+        argv += ["--host", parsed.hostname]
+    if parsed.port:
+        argv += ["--port", str(parsed.port)]
+    if parsed.username:
+        argv += ["--username", unquote(parsed.username)]
+    dbname = parsed.path.lstrip("/") if parsed.path else ""
+    if dbname:
+        argv += ["--dbname", dbname]
+    env = {}
+    if parsed.password:
+        env["PGPASSWORD"] = unquote(parsed.password)
+    return argv, env
+
 logger = logging.getLogger("backup")
 
 
@@ -159,13 +185,16 @@ class BackupManager:
         dest = self.backup_path / f"database_{self.timestamp}.sql"
 
         try:
-            # Extract connection params from URL
-            # URL format: postgresql+asyncpg://user:pass@host:port/dbname
-            clean_url = db_url.replace("+asyncpg", "").replace("+psycopg2", "")
+            # Connection params are split out of the URL: credentials must
+            # never travel as subprocess argv (visible in process listings);
+            # the password goes via the PGPASSWORD environment variable only.
+            pg_argv, pg_env = _pg_connection_args(db_url)
+            run_env = dict(os.environ)
+            run_env.update(pg_env)
             result = subprocess.run(
                 [pg_dump_path, "--no-owner", "--no-acl", "--clean", "--if-exists",
-                 "--file", str(dest), clean_url],
-                capture_output=True, text=True, timeout=120,
+                 "--file", str(dest)] + pg_argv,
+                capture_output=True, text=True, timeout=120, env=run_env,
             )
             if result.returncode != 0:
                 raise BackupError(f"pg_dump failed: {result.stderr}")
