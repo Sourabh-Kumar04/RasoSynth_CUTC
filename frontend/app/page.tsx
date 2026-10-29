@@ -41,6 +41,8 @@ import { playClickSound, playSuccessChime } from '@/lib/audio/sound-effects'
 import { MerkleTreeGraph } from '@/components/dbom/merkle-tree-graph'
 import { computeSampleHash, computeMerkleRoot } from '@/lib/crypto'
 import { BrandLogo } from '@/components/ui/brand-logo'
+import { Mascot } from '@/components/ui/mascot'
+import { Button } from '@/components/ui/button'
 import { SynthesisFlowDiagram } from '@/components/ui/synthesis-flow-diagram'
 
 // 7 Synthesis Engines Definition with example preview data (illustrative, not live output)
@@ -249,6 +251,7 @@ export default function ZenPortalPage() {
   const [showVerifyModal, setShowVerifyModal] = useState(false)
   const [recomputedRoot, setRecomputedRoot] = useState<string | null>(null)
   const [isRecomputing, setIsRecomputing] = useState(false)
+  const [deploymentMode, setDeploymentMode] = useState<string | null>(null)
 
   const handleRecomputeClientSide = () => {
     setIsRecomputing(true)
@@ -288,6 +291,13 @@ export default function ZenPortalPage() {
 
     canvas.addEventListener('mousemove', handleMouseMove)
     return () => canvas.removeEventListener('mousemove', handleMouseMove)
+  }, [])
+
+  // Hero status pill: actual deployment mode from backend /health, never a hardcoded LIVE.
+  useEffect(() => {
+    api.getHealth().then((h) => {
+      if (h && h.deployment_mode) setDeploymentMode(h.deployment_mode)
+    }).catch(() => {})
   }, [])
 
   const handleLaunch = async () => {
@@ -531,6 +541,23 @@ export default function ZenPortalPage() {
           SECTION 1: Zen Spatial Command Hub (Hero)
       ───────────────────────────────────────────────────────────── */}
       <section className="relative z-10 flex flex-col items-center justify-center min-h-[82vh] px-4 sm:px-6 max-w-5xl mx-auto py-12">
+        {/* Hero mascot + status pill (TummyTap composition, dark only) */}
+        <Mascot size="large" className="mb-2" />
+        <motion.div
+          initial={{ opacity: 0, y: -10 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.6 }}
+          className="inline-flex items-center space-x-2 px-3.5 py-1 rounded-full bg-[#12121a]/90 border border-[#272738] text-xs font-mono text-zinc-400 mb-6 backdrop-blur-md shadow-sm"
+          title="Deployment mode reported by the backend /health endpoint"
+        >
+          <span className="w-1.5 h-1.5 rounded-full bg-[#f26625]" />
+          <span className="tracking-widest uppercase text-white font-semibold">
+            {deploymentMode ? deploymentMode.toUpperCase() : "MODE UNKNOWN"}
+          </span>
+          <span className="text-zinc-600">/</span>
+          <span className="text-zinc-400">Mode from backend /health</span>
+        </motion.div>
+
         {/* Subtle Aperture Tag */}
         <motion.div
           initial={{ opacity: 0, y: -10 }}
@@ -567,6 +594,30 @@ export default function ZenPortalPage() {
           Pure reasoning trajectories, statutory grounded invariance, and cryptographically verified
           Merkle DBOM provenance for frontier LLM fine-tuning.
         </motion.p>
+
+        {/* Hero tagline + orange underline bar + shadcn CTAs */}
+        <motion.p
+          initial={{ opacity: 0, y: 10 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.7, delay: 0.25 }}
+          className="mt-6 text-xl sm:text-2xl font-extrabold tracking-wide text-center text-white"
+        >
+          RAW IDEAS. REAL DATASETS. <span className="text-[#f26625]">REAL MODELS.</span>
+        </motion.p>
+        <div className="mt-4 h-1.5 w-[120px] rounded bg-[#f26625]" aria-hidden="true" />
+        <motion.div
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          transition={{ duration: 0.6, delay: 0.35 }}
+          className="mt-6 flex flex-wrap items-center justify-center gap-3"
+        >
+          <Button asChild size="lg">
+            <Link href="/studio">Open Studio</Link>
+          </Button>
+          <Button asChild variant="outline" size="lg">
+            <Link href="/datasets">View Data Library</Link>
+          </Button>
+        </motion.div>
 
         {/* Central Floating Command Bar */}
         <motion.div

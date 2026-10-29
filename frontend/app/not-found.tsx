@@ -2,11 +2,13 @@ import Link from 'next/link'
 import { BrandLogo } from '@/components/ui/brand-logo'
 import { Home, ArrowRight, Database, FlaskConical } from 'lucide-react'
 import { Button } from '@/components/ui/button'
+import { Mascot } from '@/components/ui/mascot'
 
 export default function NotFound() {
   return (
     <div className="min-h-screen bg-[#0a0a0f] text-white flex flex-col items-center justify-center p-6 font-mono text-center">
       <BrandLogo size={48} className="mb-6" />
+      <Mascot size="medium" className="mb-2" />
       <span className="px-2.5 py-0.5 rounded bg-rose-950/40 border border-rose-500/30 text-rose-300 text-xs uppercase tracking-wider mb-2">
         HTTP 404 · Route Not Found
       </span>

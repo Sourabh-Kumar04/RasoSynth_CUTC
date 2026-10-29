@@ -41,6 +41,7 @@ import {
 import { clsx } from 'clsx'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
+import { Mascot } from '@/components/ui/mascot'
 import { Input } from '@/components/ui/input'
 import { Badge } from '@/components/ui/badge'
 import { Progress } from '@/components/ui/progress'
@@ -739,7 +740,7 @@ export default function DatasetsPage() {
       {!isLoading && datasets.length === 0 && !error && (
         <Card className="border-[#272738] bg-[#12121a] rounded-md">
           <CardContent className="p-12 flex flex-col items-center justify-center">
-            <Database className="h-12 w-12 text-[#a8a29e] mb-4" />
+            <Mascot size="medium" className="mb-2" />
             <h3 className="text-lg font-bold text-white mb-2">No datasets yet</h3>
             <p className="text-xs text-[#a8a29e] mb-6 text-center max-w-md">
               Describe the dataset you need in the Studio. Discover authentic source repositories, review grounded samples, and export to multi-destination targets.
