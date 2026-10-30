@@ -85,7 +85,7 @@ def discover_task(self, job_id: str, query: str, domain: str, config: dict):
                     "url": source.url,
                     "source_type": source.source_type.value,
                     "title": source.title,
-                    "metadata": source.metadata_,
+                    "metadata": source.metadata,
                 })
 
         # Use asyncio.run() - proper way to run async in sync context

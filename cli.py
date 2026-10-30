@@ -168,10 +168,20 @@ def handle_generate(args: argparse.Namespace) -> int:
             model=getattr(args, "model_name", "sarvamai/sarvam-2b-v0.5"),
         )
         print(f"[Engine] Utilizing local {engine_choice.upper()} air-gapped engine at {engine.base_url}")
+        if not engine.is_available():
+            raise RuntimeError(
+                f"Local {engine_choice.upper()} engine at {engine.base_url} is offline or unavailable. "
+                "Refusing to write offline echo-template placeholders into dataset rows."
+            )
         for i in range(args.size):
             base_item = seed_pool[i % len(seed_pool)]
             prompt = f"Domain: {args.domain}. Task: Formulate an authoritative instruction and answer based on: {base_item['instruction']}"
             res = engine.generate_completion(prompt=prompt)
+            if res.get("status") != "live_local" or "Air-gapped local synthetic response for:" in res.get("content", ""):
+                raise RuntimeError(
+                    f"Local engine returned offline fallback / echo template content ({res.get('status')}). "
+                    "Refusing to store echo-template content as real dataset generation."
+                )
             inst = f"[{args.domain}] Variant {i + 1}: {base_item['instruction']}" if i >= len(seed_pool) else base_item["instruction"]
             resp = res["content"]
             item_copy = {

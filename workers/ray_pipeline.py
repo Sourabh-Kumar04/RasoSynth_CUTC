@@ -75,7 +75,7 @@ class DiscoveryWorker:
                     "url": source.url,
                     "source_type": source.source_type.value,
                     "title": source.title,
-                    "metadata": source.metadata_,
+                    "metadata": source.metadata,
                 })
 
         try:

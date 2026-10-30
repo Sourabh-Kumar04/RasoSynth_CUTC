@@ -18,7 +18,7 @@ def _is_valid_uuid(val: any) -> bool:
         return False
 from sqlalchemy.ext.asyncio import create_async_engine, AsyncSession, async_sessionmaker
 from sqlalchemy.orm import declarative_base, relationship
-from sqlalchemy import Column, String, Integer, Float, DateTime, JSON, Text, ForeignKey, delete
+from sqlalchemy import Column, String, Integer, Float, DateTime, JSON, Text, ForeignKey, Boolean, delete
 
 Base = declarative_base()
 
@@ -56,6 +56,7 @@ class Job(Base):
     quality_score = Column(Float, nullable=True)
     merkle_root = Column(String, nullable=True)
     owner = Column(String(255), nullable=True, index=True)
+    is_simulated = Column(Boolean, default=False)
 
     datasets = relationship("Dataset", back_populates="job", cascade="all, delete-orphan", lazy="selectin")
 
@@ -73,6 +74,7 @@ class Job(Base):
             "quality_score": q,
             "merkle_root": self.merkle_root or (self.datasets[0].metadata_.get("merkle_root_hash") if self.datasets and self.datasets[0].metadata_ else None),
             "owner": getattr(self, "owner", None),
+            "is_simulated": getattr(self, "is_simulated", False),
             "created_at": self.created_at.isoformat() if self.created_at else None,
             "updated_at": self.updated_at.isoformat() if self.updated_at else None,
         }
@@ -91,6 +93,7 @@ class Dataset(Base):
     metadata_ = Column("metadata", JSON)
     output_path = Column(String)
     owner = Column(String(255), nullable=True, index=True)
+    is_simulated = Column(Boolean, default=False)
 
     job = relationship("Job", back_populates="datasets")
     samples = relationship("Sample", back_populates="dataset", cascade="all, delete-orphan")
@@ -314,6 +317,7 @@ class FineTuneJob(Base):
     output_path = Column(String(512))                         # local checkpoint dir
     hf_repo_url = Column(String(512))                         # HF Hub URL if pushed
     owner = Column(String(255), nullable=True, index=True)
+    is_simulated = Column(Boolean, default=False)
     # timing
     created_at = Column(DateTime, default=utc_now)
     started_at = Column(DateTime)
@@ -337,6 +341,7 @@ class FineTuneJob(Base):
             "output_path": self.output_path,
             "hf_repo_url": self.hf_repo_url,
             "owner": getattr(self, "owner", None),
+            "is_simulated": getattr(self, "is_simulated", False),
             "created_at": self.created_at.isoformat() if self.created_at else None,
             "started_at": self.started_at.isoformat() if self.started_at else None,
             "completed_at": self.completed_at.isoformat() if self.completed_at else None,
@@ -371,6 +376,7 @@ class ReviewQueueItem(Base):
     review_version = Column(Integer, default=0)
     extra_metadata = Column(JSON, default=dict)
     owner = Column(String(255), nullable=True, index=True)
+    is_simulated = Column(Boolean, default=False)
     # timestamps
     created_at = Column(DateTime, default=utc_now, index=True)
     updated_at = Column(DateTime, default=utc_now, onupdate=utc_now)
@@ -398,6 +404,7 @@ class ReviewQueueItem(Base):
             "review_version": self.review_version,
             "metadata": self.extra_metadata or {},
             "owner": getattr(self, "owner", None),
+            "is_simulated": getattr(self, "is_simulated", False),
             "created_at": self.created_at.isoformat() if self.created_at else None,
             "updated_at": self.updated_at.isoformat() if self.updated_at else None,
         }

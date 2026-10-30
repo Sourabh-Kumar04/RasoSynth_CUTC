@@ -295,6 +295,7 @@ class FinetuneJobManager:
             await self._broadcast(job_id, start_event)
 
             trainer = Trainer(config)
+            simulated_job = bool(persisted_config.get("is_simulated", False))
             try:
                 async for event in trainer.train():
                     event["job_id"] = job_id
@@ -307,12 +308,18 @@ class FinetuneJobManager:
                     await self._broadcast(job_id, event)
                     etype = event.get("type")
 
+                    if event.get("is_simulated"):
+                        simulated_job = True
+                        persisted_config["is_simulated"] = True
+                        await self.db.update_finetune_job(job_id, is_simulated=True, config=persisted_config)
+
                     if etype == "progress":
                         await self.db.update_finetune_job(
                             job_id,
                             progress=event.get("progress", 0),
                             current_epoch=int(event.get("epoch", 0)),
                             train_loss=event.get("loss"),
+                            is_simulated=simulated_job,
                         )
                     elif etype == "eval":
                         await self.db.update_finetune_job(job_id, eval_loss=event.get("eval_loss"))
@@ -322,6 +329,7 @@ class FinetuneJobManager:
                             output_path=event.get("output_path"),
                             hf_repo_url=event.get("hf_repo_url"),
                             completed_at=utc_now(),
+                            is_simulated=simulated_job,
                         )
                         self._list_cache = None
                         logger.info("Fine-tune job %s completed", job_id)
@@ -392,7 +400,19 @@ class FinetuneJobManager:
             f"Hardware Engine: `{target}`\n"
             f"Status: **{status}**"
         )
-        if status == "completed":
+        is_simulated_run = bool(event.get("is_simulated") or getattr(config, "is_simulated", False) or getattr(config, "execution_target", "") in ("modal", "colab", "runpod", "serverless") and event.get("is_simulated"))
+        if is_simulated_run:
+            logger.info("Finetune job %s is simulated; omitting loss/artifact claims from webhook notification.", job_id)
+            title = f"RasoSynthTune Fine-Tuning Job {status.upper()} (SIMULATED)"
+            summary = (
+                f"Job ID: `{job_id}`\n"
+                f"Base Model: `{base_model}`\n"
+                f"Hardware Engine: `{target}` (Simulated Run)\n"
+                f"Status: **{status} (Simulated)**\n"
+                f"Note: This was a simulated/stub execution. No real model artifacts or loss metrics were produced."
+            )
+            loss = "N/A (Simulated)"
+        elif status == "completed":
             summary += f"\nFinal Loss: `{loss}`\nArtifacts ready for download."
         elif err_msg:
             summary += f"\nError: `{err_msg}`"
