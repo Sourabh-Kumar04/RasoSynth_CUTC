@@ -68,6 +68,65 @@ class TestAuthentication:
         auth = get_auth_manager()
         assert auth.auth_disabled is False
 
+    def test_auth_disabled_production_behaviour_in_fresh_process(self):
+        """Pin AUTH_DISABLED=true production behaviour in a fresh process.
+
+        An in-process env flip does not affect the already-imported singleton
+        auth manager. In a fresh process with AUTH_DISABLED=true:
+        1. When no users configured: get_current_user raises 503 (System not configured).
+        2. When users configured: get_current_user still requires valid token format (401),
+           guaranteeing audit trail and preventing silent auth bypass in production.
+        """
+        import subprocess
+        code = """
+import os, sys, asyncio
+sys.path.insert(0, '.')
+# Ensure clean env without inherited conftest credentials
+os.environ.pop('ADMIN_USER', None)
+os.environ.pop('USER_USER', None)
+os.environ['JWT_SECRET'] = 'K7m9pQ2vX5zL8wR1tY4uN6bC3jF0gH2sD5vA8mK1pQ9xZ4'
+os.environ['AUTH_DISABLED'] = 'true'
+from api.auth import get_current_user, get_auth_manager
+from fastapi import HTTPException
+
+# Check 1: Without users configured
+auth = get_auth_manager()
+assert auth.auth_disabled is True
+assert len(auth._users) == 0, f"Expected 0 users, found: {list(auth._users.keys())}"
+
+try:
+    asyncio.run(get_current_user(None))
+    raise AssertionError("Should have raised HTTPException")
+except HTTPException as e:
+    assert e.status_code == 503, f"Expected 503 when no users configured, got {e.status_code}"
+
+# Check 2: With users configured
+os.environ['ADMIN_USER'] = 'admin:secret123'
+os.environ['USER_USER'] = 'user:secret123'
+from api.auth import AuthManager
+auth_with_users = AuthManager()
+assert auth_with_users.auth_disabled is True
+assert len(auth_with_users._users) == 2
+
+import api.auth as auth_mod
+auth_mod._auth_manager = auth_with_users
+try:
+    asyncio.run(get_current_user(None))
+    raise AssertionError("Should have raised HTTPException")
+except HTTPException as e:
+    assert e.status_code == 401, f"Expected 401 audit trail requirement, got {e.status_code}"
+
+print("FRESH_PROCESS_AUTH_DISABLED_OK")
+"""
+        proc = subprocess.run(
+            [sys.executable, "-c", code],
+            cwd=str(project_root),
+            capture_output=True,
+            text=True,
+        )
+        assert proc.returncode == 0, f"Subprocess failed:\nstdout:\n{proc.stdout}\nstderr:\n{proc.stderr}"
+        assert "FRESH_PROCESS_AUTH_DISABLED_OK" in proc.stdout
+
 
 class TestProviderValidation:
     """Test provider validation system."""

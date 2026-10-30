@@ -175,6 +175,11 @@ def mock_sample():
             self.quality_score = quality_score
             self.difficulty_tier = difficulty_tier
 
+        def get(self, key, default=None):
+            if key == "metadata":
+                return self.metadata_
+            return getattr(self, key, default)
+
     return MockSample()
 
 
