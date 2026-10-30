@@ -145,3 +145,12 @@ curl -X POST https://your-api-domain.com/jobs \
   -H "Content-Type: application/json" \
   -d '{"target_domain": "Healthcare Claims", "num_samples": 5}'
 ```
+
+---
+
+## Production Security & Operational Configuration
+
+- **Download Signing Secret (`DOWNLOAD_SIGNING_SECRET`)**: Mandatory dedicated 32+ character secret for presigned dataset downloads and previews. Presigned URL minting fails closed when absent (no fallback to `JWT_SECRET`).
+- **Token Revocation & Expiry**: Tokens are revoked in-memory on logout (`/auth/logout`) for single-process deployments. Configure short `JWT_EXPIRATION_HOURS` (e.g. 1–24 hours) as the boundary against process restarts.
+- **Account Lockout Policy**: 5 failed login attempts in 15 minutes lock an account for 15 minutes. Admin credentials are gated by default; use `unlock_user()` or process restart if escape is needed.
+- **Orchestration Retry Semantics**: Step retry (`POST /orchestration/steps/{step_id}/retry`) relaunches the complete pipeline from the stored job configuration. Targeted stage resume is handled via `POST /checkpoints/{checkpoint_id}/restore`.

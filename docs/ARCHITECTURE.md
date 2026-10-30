@@ -72,3 +72,12 @@ service — those are roadmap (Stages 3–4) or, for the GPU fleet,
 simulated stubs. Adding any of them here requires code in the tree
 first.
 
+---
+
+## Security & Operational Semantics (Decisions Implemented)
+
+- **Token Revocation**: Implemented as in-memory, single-process token revocation on `/auth/logout`. Persistent token revocation is deferred because the SQL schema (`init.sql` / `core/db.py`) does not define a user or token storage table. Tokens carry a short expiry (`JWT_EXPIRATION_HOURS`, default 24h, operational recommendation: 1h), which bounds token validity if the process restarts.
+- **Lockout Policy**: Standard defaults of 5 consecutive failed login attempts within a 15-minute rolling window (`AUTH_LOCKOUT_WINDOW_SECONDS=900`) trigger a 15-minute account lockout (`AUTH_LOCKOUT_DURATION_SECONDS=900`). Environment-configured administrative users are gated by this lockout to prevent credential brute-forcing; the documented escape mechanism is invoking `unlock_user()` programmatically or restarting the single-process service.
+- **Retry Semantics**: Step retry (`POST /orchestration/steps/{step_id}/retry`) operates as a **full-pipeline relaunch** using the stored job configuration. For stage-targeted resumption from an intermediate state, operators must use checkpoint restore (`POST /checkpoints/{checkpoint_id}/restore`).
+- **Preview / Download Signing**: Ephemeral download tokens use HMAC-SHA256 with a **dedicated secret** (`DOWNLOAD_SIGNING_SECRET` / `PREVIEW_SIGNING_SECRET`). Signing fails closed when the dedicated secret is absent, with **no fallback to JWT_SECRET** or ambient secrets.
+
