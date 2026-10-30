@@ -153,6 +153,9 @@ def get_client_ip(request: Request) -> str:
     return request.client.host if request.client else "unknown"
 
 
+# Global constants
+MAX_SAMPLE_LOAD_LIMIT = int(os.getenv("MAX_SAMPLE_LOAD_LIMIT", "10000"))
+
 # Global rate limiters (multi-worker safe)
 _login_rate_limiter = RateLimiter(max_requests=5, window_seconds=60, prefix="login")
 _provider_test_rate_limiter = RateLimiter(max_requests=20, window_seconds=60, prefix="provider_test")
@@ -1183,7 +1186,7 @@ async def trigger_research(request: ResearchRequest,
         techniques_discovered=results.get("techniques_discovered", []),
         papers_found=results.get("papers_found", []),
         updates_applied=results.get("updates_applied", []),
-        status=results.get("status", "unknown")
+        status=results.get("status", "completed")
     )
 
 
@@ -1265,7 +1268,8 @@ async def list_registered_agents(current_user: User = Depends(get_current_user))
             "total": len(registrations),
         }
     except Exception as exc:
-        raise HTTPException(status_code=500, detail=f"Failed to query agent registry: {exc}")
+        logger.error("Failed to query agent registry: %s", exc, exc_info=True)
+        raise HTTPException(status_code=500, detail="Failed to query agent registry")
 
 
 @app.get("/agents/stats", tags=["Agents"])
@@ -1275,7 +1279,8 @@ async def get_agent_stats(current_user: User = Depends(get_current_user)):
         from agents.registry import AgentRegistry
         return AgentRegistry.get_stats()
     except Exception as exc:
-        raise HTTPException(status_code=500, detail=f"Failed to query agent stats: {exc}")
+        logger.error("Failed to query agent stats: %s", exc, exc_info=True)
+        raise HTTPException(status_code=500, detail="Failed to query agent stats")
 
 
 # =============================================================================
@@ -1299,7 +1304,7 @@ async def deliver_dataset(dataset_id: str, request: DeliveryRequestSchema,
             dataset = datasets_for_job[0]
     _enforce_owner(dataset, current_user, resource_name="Dataset")
 
-    samples = await db.get_samples(dataset_id, limit=50000)
+    samples = await db.get_samples(dataset_id, limit=MAX_SAMPLE_LOAD_LIMIT)
     if not samples:
         raise HTTPException(status_code=404, detail=f"No samples found for dataset {dataset_id}")
 
@@ -1340,7 +1345,8 @@ async def deliver_dataset(dataset_id: str, request: DeliveryRequestSchema,
             compression=request.compression,
         )
     except Exception as exc:
-        raise HTTPException(status_code=500, detail=f"Delivery failed: {exc}")
+        logger.error("Delivery failed: %s", exc, exc_info=True)
+        raise HTTPException(status_code=500, detail="Delivery failed")
 
 
 @app.get("/deliveries/{delivery_id}", response_model=DeliveryResponseSchema, tags=["Storage & Delivery"])
@@ -1525,8 +1531,9 @@ async def langsmith_status(current_user: User = Depends(get_current_user)):
 
 # ── Observability & Tracing Endpoints ──────────────────────────────────────────
 
+
 @app.get("/traces", tags=["Observability"])
-async def get_traces(service: Optional[str] = None, limit: int = 50,
+async def get_traces(service: Optional[str] = None, limit: int = Query(default=50, ge=1, le=100),
     current_user: User = Depends(get_current_user)):
     """Retrieve recent traces from the observability ring buffer."""
     traces = observability.get_traces(service=service, limit=limit) if observability else []
@@ -2372,7 +2379,7 @@ async def plan_job(request: JobRequest,
         }
     except Exception as exc:
         logger.error(f"Planning failed: {exc}", exc_info=True)
-        raise HTTPException(status_code=500, detail=f"Failed to generate workflow plan: {exc}")
+        raise HTTPException(status_code=500, detail="Failed to generate workflow plan")
 
 
 @app.get("/cluster/ray", tags=["Observability"])
@@ -2406,7 +2413,36 @@ def _enforce_owner(resource: Optional[dict], current_user: User, resource_name: 
         raise HTTPException(status_code=404, detail=f"{resource_name} not found")
 
 
-_idempotency_cache: dict[str, dict] = {}
+from collections import OrderedDict
+_idempotency_cache: OrderedDict[str, dict] = OrderedDict()
+_IDEMPOTENCY_CACHE_MAX_SIZE = 1000
+_IDEMPOTENCY_TTL_SECONDS = 300.0  # 5 minutes TTL for explicit keys; 30s for fingerprint keys
+
+def _get_idempotent_entry(key: str) -> Optional[dict]:
+    now_ts = time.time()
+    entry = _idempotency_cache.get(key)
+    if not entry:
+        return None
+    # Expire entries exceeding their TTL
+    ttl = entry.get("ttl", _IDEMPOTENCY_TTL_SECONDS)
+    if now_ts - entry.get("timestamp", 0) > ttl:
+        _idempotency_cache.pop(key, None)
+        return None
+    # Move to end (LRU hit)
+    _idempotency_cache.move_to_end(key)
+    return entry
+
+def _set_idempotent_entry(key: str, response_data: dict, ttl: float = _IDEMPOTENCY_TTL_SECONDS) -> None:
+    now_ts = time.time()
+    _idempotency_cache[key] = {
+        "timestamp": now_ts,
+        "ttl": ttl,
+        "response": response_data,
+    }
+    _idempotency_cache.move_to_end(key)
+    while len(_idempotency_cache) > _IDEMPOTENCY_CACHE_MAX_SIZE:
+        _idempotency_cache.popitem(last=False)
+
 
 @app.post("/jobs", response_model=JobResponse, status_code=201, tags=["Jobs"])
 async def create_job(
@@ -2426,13 +2462,15 @@ async def create_job(
     if not db:
         raise HTTPException(status_code=503, detail="Database not available")
 
-    # Idempotency check: catch retries and duplicate proxy submissions
-    now_ts = time.time()
+    # Idempotency check: per-user, bounded, TTL-expired cache
+    user_prefix = current_user.username or "anonymous"
     raw_cfg_key = f"{request.target_domain}:{request.dataset_size}:{getattr(request, 'language', 'en')}:{getattr(request, 'raw_input', '')[:100]}"
-    dedup_key = idempotency_key or hashlib.sha256(raw_cfg_key.encode("utf-8")).hexdigest()
+    fingerprint = hashlib.sha256(raw_cfg_key.encode("utf-8")).hexdigest()
+    dedup_key = f"{user_prefix}:{idempotency_key}" if idempotency_key else f"{user_prefix}:{fingerprint}"
+    is_explicit_key = bool(idempotency_key)
 
-    cached = _idempotency_cache.get(dedup_key)
-    if cached and (now_ts - cached["timestamp"] < 30.0 or idempotency_key):
+    cached = _get_idempotent_entry(dedup_key)
+    if cached:
         logger.info("Idempotent create_job hit for key %s -> returning existing job %s", dedup_key, cached["response"]["id"])
         return JobResponse(**cached["response"])
 
@@ -2457,8 +2495,8 @@ async def create_job(
     try:
         await db.create_job(config)
     except Exception as e:
-        logger.error(f"Failed to persist new job {job_id}: {e}")
-        raise HTTPException(status_code=500, detail=f"Failed to create job: {e}")
+        logger.error(f"Failed to persist new job {job_id}: {e}", exc_info=True)
+        raise HTTPException(status_code=500, detail="Failed to create job")
 
     queued = False
     if get_settings().enable_celery:
@@ -2489,17 +2527,18 @@ async def create_job(
         samples_generated=0,
         current_stage="initializing",
     )
-    _idempotency_cache[dedup_key] = {
-        "timestamp": now_ts,
-        "response": resp.model_dump(),
-    }
+    _set_idempotent_entry(
+        dedup_key,
+        resp.model_dump(),
+        ttl=300.0 if is_explicit_key else 30.0,
+    )
     return resp
 
 
 @app.get("/jobs", tags=["Jobs"])
 async def list_jobs(
     status: Optional[str] = None,
-    limit: int = 50,
+    limit: int = Query(default=50, ge=1, le=100),
     cursor: Optional[str] = None,
     current_user: User = Depends(get_current_user)):
     """List dataset generation jobs (most recent first)."""
@@ -2551,10 +2590,20 @@ async def get_job(job_id: str,
         quality_score = job_meta.get("quality_score") or (job_meta.get("quality_breakdown") or {}).get("composite")
     is_simulated = bool(job_cfg.get("is_simulated") or job.get("is_simulated") or job.get("execution_mode") == "simulated")
 
+    raw_created = job.get("created_at")
+    parsed_created = None
+    if isinstance(raw_created, str):
+        try:
+            parsed_created = datetime.fromisoformat(raw_created)
+        except (ValueError, TypeError):
+            parsed_created = None
+    elif isinstance(raw_created, datetime):
+        parsed_created = raw_created
+
     return JobDetailResponse(
         id=job["id"],
         status=job["status"],
-        created_at=datetime.fromisoformat(job["created_at"]) if isinstance(job.get("created_at"), str) else job.get("created_at"),
+        created_at=parsed_created,
         progress=job.get("progress", 0.0),
         cost_usd=job.get("cost_usd", 0.0),
         samples_generated=job.get("samples_generated", 0),
@@ -2730,7 +2779,7 @@ async def reject_job_preview(job_id: str, payload: RejectPreviewRequest = Body(d
 
 @app.get("/datasets", tags=["Datasets"])
 async def list_datasets(
-    limit: int = 50,
+    limit: int = Query(default=50, ge=1, le=100),
     cursor: Optional[str] = None,
     current_user: User = Depends(get_current_user)):
     """List datasets (most recent first)."""
@@ -2741,8 +2790,8 @@ async def list_datasets(
     try:
         datasets = await db.list_datasets(limit=limit + 1, owner=owner_filter)
     except Exception as e:
-        logger.error(f"Failed to list datasets: {e}")
-        raise HTTPException(status_code=500, detail=f"Failed to list datasets: {e}")
+        logger.error(f"Failed to list datasets: {e}", exc_info=True)
+        raise HTTPException(status_code=500, detail="Failed to list datasets")
 
     has_more = len(datasets) > limit
     page = datasets[:limit]
@@ -2775,7 +2824,7 @@ async def get_dataset(dataset_id: str,
 
 
 @app.get("/datasets/{dataset_id}/records", tags=["Datasets"])
-async def get_dataset_records(dataset_id: str, limit: int = 10,
+async def get_dataset_records(dataset_id: str, limit: int = Query(default=10, ge=1, le=100),
     current_user: User = Depends(get_current_user)):
     """Get sample records from a dataset."""
     if not db:
@@ -2812,8 +2861,8 @@ async def get_dataset_records(dataset_id: str, limit: int = 10,
     except HTTPException:
         raise
     except Exception as e:
-        logger.error(f"Failed to get records for dataset {dataset_id}: {e}")
-        raise HTTPException(status_code=500, detail=f"Failed to get records: {e}")
+        logger.error(f"Failed to get records for dataset {dataset_id}: {e}", exc_info=True)
+        raise HTTPException(status_code=500, detail="Failed to get records")
 
 
 @app.delete("/datasets/{dataset_id}", tags=["Datasets"])
@@ -3023,7 +3072,7 @@ async def export_dataset(dataset_id: str, request: dict = None,
         ):
             file_path = Path(output_path)
         elif export_format in {"jsonl", "csv", "parquet", "sql", "qdrant"}:
-            samples = await db.get_samples(dataset["id"], limit=50000)
+            samples = await db.get_samples(dataset["id"], limit=MAX_SAMPLE_LOAD_LIMIT)
             if not samples:
                 raise HTTPException(status_code=404, detail="No samples found for this dataset")
             from pipeline.export import ExportPipeline, ExportConfig
@@ -3078,7 +3127,7 @@ async def export_dataset(dataset_id: str, request: dict = None,
 # =============================================================================
 
 @app.get("/jobs/{job_id}/records", tags=["Jobs"])
-async def get_job_records(job_id: str, limit: int = 10,
+async def get_job_records(job_id: str, limit: int = Query(default=10, ge=1, le=100),
     current_user: User = Depends(get_current_user)):
     """Get sample records from datasets belonging to a job."""
     from pathlib import Path
@@ -3161,8 +3210,8 @@ async def get_job_records(job_id: str, limit: int = 10,
             "message": None,
         }
     except Exception as e:
-        logger.error(f"Failed to get records for job {job_id}: {e}")
-        raise HTTPException(status_code=500, detail=f"Failed to get records: {e}")
+        logger.error(f"Failed to get records for job {job_id}: {e}", exc_info=True)
+        raise HTTPException(status_code=500, detail="Failed to get records")
 
 
 @app.get("/jobs/{job_id}/summary", tags=["Jobs"])
@@ -3177,9 +3226,10 @@ async def get_job_dataset_summary(job_id: str,
 
     datasets = await db.get_datasets_by_job(job_id)
     config = job.get("config") or {}
+    review_enabled = bool(config.get("human_review"))
     review = {
-        "enabled": bool(config.get("human_review")),
-        "requested_percentage": float(config.get("human_review_percentage", 10.0)),
+        "enabled": review_enabled,
+        "requested_percentage": float(config.get("human_review_percentage", 10.0)) if review_enabled else 0.0,
         "total": 0,
         "approved": 0,
         "rejected": 0,
@@ -3199,6 +3249,7 @@ async def get_job_dataset_summary(job_id: str,
             "job_id": job_id,
             "status": job.get("status"),
             "sample_count": job.get("samples_generated", 0),
+            "sample_cap": 10000,
             "balance_report": None,
             "provenance": None,
             "quality": {"mean": job.get("quality_score"), "scored_samples": 0},
@@ -3226,9 +3277,10 @@ async def get_job_dataset_summary(job_id: str,
             scores.append(float(score))
 
     config = job.get("config") or {}
+    review_enabled = bool(config.get("human_review"))
     review = {
-        "enabled": bool(config.get("human_review")),
-        "requested_percentage": float(config.get("human_review_percentage", 10.0)),
+        "enabled": review_enabled,
+        "requested_percentage": float(config.get("human_review_percentage", 10.0)) if review_enabled else 0.0,
         "total": 0,
         "approved": 0,
         "rejected": 0,
@@ -3255,6 +3307,7 @@ async def get_job_dataset_summary(job_id: str,
         "dataset_id": dataset["id"],
         "status": job.get("status"),
         "sample_count": dataset.get("size", len(stored)),
+        "sample_cap": 10000,
         "balance_report": dataset_meta.get("balance_report"),
         "provenance": dataset_meta.get("provenance"),
         "quality": {"mean": canonical_mean, "scored_samples": len(scores)},
@@ -3611,7 +3664,7 @@ async def download_job_dataset(
             import pyarrow as pa
             import pyarrow.parquet as pq
             import io
-            all_samples = await db.get_samples(dataset["id"], limit=50000)
+            all_samples = await db.get_samples(dataset["id"], limit=MAX_SAMPLE_LOAD_LIMIT)
             rows = []
             for s in all_samples:
                 rows.append({
@@ -3881,7 +3934,7 @@ async def get_checkpoint(job_id: str, checkpoint_id: Optional[str] = None,
 
 
 @app.get("/checkpoints/{job_id}/history", response_model=list[CheckpointResponse], tags=["Checkpoints"])
-async def get_checkpoint_history(job_id: str, limit: int = 10,
+async def get_checkpoint_history(job_id: str, limit: int = Query(default=10, ge=1, le=100),
     current_user: User = Depends(get_current_user)):
     """Get checkpoint history for a job."""
     if not checkpoint_manager:
@@ -4081,7 +4134,7 @@ async def trigger_failover(request: FailoverRequest,
 
 
 @app.get("/failover/history", response_model=FailoverHistoryResponse, tags=["Failover"])
-async def get_failover_history(job_id: Optional[str] = None, limit: int = 50,
+async def get_failover_history(job_id: Optional[str] = None, limit: int = Query(default=50, ge=1, le=100),
     current_user: User = Depends(get_current_user)):
     """Get failover history."""
     if not failover_engine:
@@ -4491,7 +4544,6 @@ async def tool_mask_pii(request: dict = Body(...),
     detected = detect_indian_pii(text)
     masked_text = mask_indian_pii(text, replacement_mode=mode)
     return {
-        "original": text,
         "masked": masked_text,
         "detected": detected,
         "pii_count": sum(len(v) for v in detected.values()),
@@ -4685,8 +4737,8 @@ async def publish_dataset_to_huggingface_hub(job_id: str, request: dict = Body(.
         )
         return result
     except Exception as e:
-        logger.error(f"Hugging Face publication failed: {e}")
-        raise HTTPException(status_code=500, detail=str(e))
+        logger.error(f"Hugging Face publication failed: {e}", exc_info=True)
+        raise HTTPException(status_code=500, detail="Hugging Face publication failed")
 
 
 @app.get("/datasets/{job_id}/training-recipe", tags=["Datasets"])
