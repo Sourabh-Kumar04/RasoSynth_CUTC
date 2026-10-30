@@ -1,8 +1,13 @@
 """Multi-Agent Dialectic Debate & Socratic Synthesizer.
 
-Synthesizes multi-persona dialectic trajectories where two expert agents debate
-ambiguous statutory, regulatory, or architectural edge cases before reaching
-an adjudicated, consensus verdict.
+Synthesizes multi-persona dialectic trajectories where two fictional
+personas debate ambiguous statutory, regulatory, or architectural edge
+cases before reaching a synthesis.
+
+The personas are FICTIONAL characters, not real experts, auditors, or
+lawyers, and the output is a fictional debate synthesis — NOT an
+adjudication, NOT a consensus verdict, and NOT legal advice. Nothing here
+is grounded in, or verified against, any statute.
 """
 
 from typing import Any, Dict, List, Optional
@@ -10,20 +15,20 @@ from typing import Any, Dict, List, Optional
 
 DEFAULT_PERSONAS = {
     "taxation": [
-        {"name": "Auditor Sharma", "role": "Strict Statutory Compliance & Revenue Protection"},
-        {"name": "CFO Mehra", "role": "Commercial Optimization & Legitimate Business Deduction"},
+        {"name": "Auditor Sharma", "role": "Strict Statutory Compliance & Revenue Protection", "fictional": True},
+        {"name": "CFO Mehra", "role": "Commercial Optimization & Legitimate Business Deduction", "fictional": True},
     ],
     "legal": [
-        {"name": "Counsel Verma", "role": "Prosecution / Statutory Non-Compliance Officer"},
-        {"name": "Advocate Iyer", "role": "Defense / Constitutional Due Process Counsel"},
+        {"name": "Counsel Verma", "role": "Prosecution / Statutory Non-Compliance Officer", "fictional": True},
+        {"name": "Advocate Iyer", "role": "Defense / Constitutional Due Process Counsel", "fictional": True},
     ],
     "healthcare": [
-        {"name": "Dr. Sen", "role": "Conservative Evidence-Based Diagnostic Reviewer"},
-        {"name": "Dr. Reddy", "role": "Interventional Clinical Specialist"},
+        {"name": "Dr. Sen", "role": "Conservative Evidence-Based Diagnostic Reviewer", "fictional": True},
+        {"name": "Dr. Reddy", "role": "Interventional Clinical Specialist", "fictional": True},
     ],
     "general": [
-        {"name": "Agent Alpha", "role": "Statutory / Formal Constraints Analyst"},
-        {"name": "Agent Beta", "role": "Pragmatic / Operational Feasibility Advocate"},
+        {"name": "Agent Alpha", "role": "Statutory / Formal Constraints Analyst", "fictional": True},
+        {"name": "Agent Beta", "role": "Pragmatic / Operational Feasibility Advocate", "fictional": True},
     ],
 }
 
@@ -36,16 +41,16 @@ def build_dialectic_prompt_directive(domain: str = "taxation", rounds: int = 2) 
 
     return (
         f"MULTI-AGENT DIALECTIC DEBATE SPECIFICATION:\n"
-        f"1. Generate a structured Socratic debate between two expert personas:\n"
-        f"   - Persona 1 ({p1['name']}): Focus on {p1['role']}.\n"
-        f"   - Persona 2 ({p2['name']}): Focus on {p2['role']}.\n"
+        f"1. Generate a structured Socratic debate between two fictional expert personas (these are invented characters, not real people):\n"
+        f"   - Persona 1 ({p1['name']}, fictional): Focus on {p1['role']}.\n"
+        f"   - Persona 2 ({p2['name']}, fictional): Focus on {p2['role']}.\n"
         f"2. Conduct {rounds} rounds of debate: Initial thesis, antithesis, and rebuttal.\n"
-        f"3. Provide a final Adjudication synthesising the debate into a definitive, grounded consensus verdict.\n"
+        f"3. Provide a final synthesis of the debate, explicitly labelled as a fictional debate synthesis — NOT a legal adjudication, NOT a consensus verdict, and NOT a verified resolution.\n"
         f"4. Output valid JSON with keys:\n"
         f"   - 'topic': Ambiguous statutory/domain inquiry\n"
-        f"   - 'personas': List of persona profiles\n"
+        f"   - 'personas': List of fictional persona profiles (each flagged fictional)\n"
         f"   - 'debate_rounds': List of turns containing 'speaker', 'stance', and 'argument'\n"
-        f"   - 'verdict': Grounded resolution with statutory rationale\n"
+        f"   - 'verdict': Debate synthesis with rationale (a fictional synthesis, not a legal verdict or adjudication)\n"
     )
 
 
@@ -54,7 +59,7 @@ def format_dialectic_sample(
     debate_rounds: List[Dict[str, Any]],
     verdict: str,
     domain: Optional[str] = None,
-    personas: Optional[List[Dict[str, str]]] = None,
+    personas: Optional[List[Dict[str, Any]]] = None,
 ) -> Dict[str, Any]:
     """Format dialectic debate into structured SFT and conversational chat formats."""
     clean_rounds = []
@@ -68,9 +73,10 @@ def format_dialectic_sample(
         formatted_transcript.append(f"**[{spk}]**: {arg}")
 
     full_dialogue_text = "\n\n".join(formatted_transcript)
-    full_response = f"{full_dialogue_text}\n\n### ⚖️ Adjudicated Consensus Verdict\n{verdict.strip()}"
+    full_response = f"{full_dialogue_text}\n\n### Synthesis (fictional debate — not an adjudication)\n{verdict.strip()}"
 
-    pers = personas or DEFAULT_PERSONAS.get((domain or "general").lower(), DEFAULT_PERSONAS["general"])
+    raw_pers = personas or DEFAULT_PERSONAS.get((domain or "general").lower(), DEFAULT_PERSONAS["general"])
+    pers = [dict(p, fictional=True) for p in raw_pers]
 
     return {
         "instruction": f"Debate and resolve: {topic.strip()}",
@@ -79,8 +85,11 @@ def format_dialectic_sample(
         "personas": pers,
         "debate_rounds": clean_rounds,
         "verdict": verdict.strip(),
+        "synthesis": verdict.strip(),
         "metadata": {
             "type": "dialectic_debate",
+            "provenance": "synthetic_fictional_debate_unverified",
+            "personas_fictional": True,
             "domain": domain or "general",
             "total_rounds": len(clean_rounds),
         }
@@ -88,11 +97,17 @@ def format_dialectic_sample(
 
 
 def evaluate_dialectic_coherence(debate_rounds: List[Dict[str, Any]], verdict: str) -> Dict[str, Any]:
-    """Evaluate debate balance, argumentation depth, and resolution synthesis."""
+    """Evaluate debate balance, argumentation depth, and resolution synthesis.
+
+    NOTE: the score is a length/structure heuristic (speaker count, words
+    per round, verdict length). It does not measure argument quality,
+    correctness, or legal soundness.
+    """
     if not debate_rounds or len(debate_rounds) < 2:
         return {
             "is_valid": False,
             "coherence_score": 0.0,
+            "method": "length_and_structure_heuristic_not_argument_quality",
             "issues": ["Dialectic debate requires at least 2 debate rounds."],
         }
 
@@ -131,6 +146,7 @@ def evaluate_dialectic_coherence(debate_rounds: List[Dict[str, Any]], verdict: s
     return {
         "is_valid": len(issues) == 0 and score >= 0.70,
         "coherence_score": score,
+        "method": "length_and_structure_heuristic_not_argument_quality",
         "distinct_speakers": len(speakers),
         "total_rounds": len(debate_rounds),
         "issues": issues,
