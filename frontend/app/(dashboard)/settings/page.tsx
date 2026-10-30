@@ -267,26 +267,30 @@ export default function SettingsPage() {
             <CardContent className="p-0 divide-y divide-[#272738]">
               {[
                 {
-                  icon: Database, label: 'Database Engine (Cloud Pooler)',
-                  desc: 'POSTGRES_URL — PostgreSQL (asyncpg) on Supabase Cloud Pooler (aws-0-ap-southeast-1)',
-                  status: 'Connected',
+                  icon: Database, label: 'Database Engine',
+                  desc: 'POSTGRES_URL — Database engine connection',
+                  status: loading ? 'Checking…' : health?.database === true ? 'Connected' : health?.database === false ? 'Disconnected' : 'Unknown',
+                  isOk: health?.database === true,
                 },
                 {
                   icon: Activity, label: 'Redis Cache & Distributed Broker',
-                  desc: 'REDIS_URL — L1 memory + L2 Redis cache & Celery async queue execution',
-                  status: 'Active',
+                  desc: 'REDIS_URL — L1 memory + L2 Redis cache',
+                  status: loading ? 'Checking…' : health?.redis === true ? 'Active' : health?.redis === false ? 'Standalone' : 'Unknown',
+                  isOk: health?.redis === true,
                 },
                 {
                   icon: Server, label: 'Vector Database & Semantic Index',
-                  desc: 'QDRANT_URL / SQLite-VSS — MinHash LSH shingling & dense embedding deduplication',
-                  status: 'Active',
+                  desc: 'QDRANT_URL / SQLite-VSS — Vector storage status',
+                  status: 'Configured Reference',
+                  isOk: true,
                 },
                 {
                   icon: Cpu, label: 'Standalone Local Container Execution Mode',
-                  desc: 'Multiprocess worker pool with zero external token dependency & deterministic test harness',
-                  status: 'Active Local Pool',
+                  desc: 'Multiprocess worker pool execution target',
+                  status: 'Configured',
+                  isOk: true,
                 },
-              ].map(({ icon: Icon, label, desc, status }) => (
+              ].map(({ icon: Icon, label, desc, status, isOk }) => (
                 <div key={label} className="flex items-center justify-between px-5 py-3.5">
                   <div className="flex items-center gap-3.5">
                     <div className="h-9 w-9 rounded-xl bg-[#161622] border border-[#272738] flex items-center justify-center">
@@ -295,12 +299,18 @@ export default function SettingsPage() {
                     <div>
                       <p className="text-xs font-bold text-white flex items-center gap-2">
                         {label}
-                        <CheckCircle2 className="h-3.5 w-3.5 text-[#10b981]" />
+                        {isOk && status !== 'Unknown' && <CheckCircle2 className="h-3.5 w-3.5 text-[#10b981]" />}
                       </p>
                       <p className="text-xs text-[#a8a29e] font-mono mt-0.5">{desc}</p>
                     </div>
                   </div>
-                  <span className="text-xs font-mono font-bold px-2.5 py-0.5 rounded-md bg-emerald-950/40 text-[#10b981] border border-emerald-500/30">
+                  <span className={clsx(
+                    "text-xs font-mono font-bold px-2.5 py-0.5 rounded-md border",
+                    status === 'Connected' || status === 'Active' ? "bg-emerald-950/40 text-[#10b981] border-emerald-500/30" :
+                    status === 'Disconnected' ? "bg-rose-950/40 text-rose-400 border-rose-500/30" :
+                    status === 'Standalone' || status === 'Configured' || status === 'Configured Reference' ? "bg-zinc-900 text-[#d8d2c4] border-[#272738]" :
+                    "bg-zinc-900 text-[#a8a29e] border-[#272738]"
+                  )}>
                     {status}
                   </span>
                 </div>
