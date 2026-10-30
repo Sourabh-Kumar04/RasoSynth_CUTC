@@ -673,21 +673,21 @@ export default function ZenPortalPage() {
           ))}
         </motion.div>
 
-        {/* Real-time Telemetry Strip */}
+        {/* Platform Architecture Strip */}
         <div className="mt-12 flex flex-wrap items-center justify-center gap-6 text-xs font-mono text-zinc-500 border-t border-[#1c1c28]/60 pt-6">
           <Link href="/observability" className="flex items-center gap-2 hover:text-zinc-300 transition-colors group">
             <Server className="w-3.5 h-3.5 text-[#f26625]" />
-            <span>Worker Pool: <strong className="text-zinc-200 font-normal group-hover:text-white">8 Threads Configured</strong></span>
+            <span>Worker Pool: <strong className="text-zinc-200 font-normal group-hover:text-white">8 Container Threads Target</strong></span>
           </Link>
           <span className="text-zinc-700">·</span>
           <Link href="/review" className="flex items-center gap-2 hover:text-zinc-300 transition-colors group">
             <Lock className="w-3.5 h-3.5 text-[#f26625]" />
-            <span>DBOM Proofs: <strong className="text-zinc-200 font-normal group-hover:text-white">SHA-256 Merkle Sealed</strong></span>
+            <span>DBOM Proofs: <strong className="text-zinc-200 font-normal group-hover:text-white">SHA-256 Merkle Verification</strong></span>
           </Link>
           <span className="text-zinc-700">·</span>
           <Link href="/quality" className="flex items-center gap-2 hover:text-zinc-300 transition-colors group">
             <Scale className="w-3.5 h-3.5 text-emerald-400" />
-            <span>Neural Judge: <strong className="text-zinc-200 font-normal group-hover:text-white">Dual-Layer Cosine + LLM Rubric</strong></span>
+            <span>Neural Judge: <strong className="text-zinc-200 font-normal group-hover:text-white">Cosine + Rubric Verification</strong></span>
           </Link>
         </div>
       </section>
@@ -886,7 +886,7 @@ export default function ZenPortalPage() {
                 <div className="p-3 rounded-lg bg-[#0a0a0f] border border-[#4a463f]/30 space-y-1.5">
                   <span className="text-xs text-[#f26625] font-bold">STEP 1: Export Payload</span>
                   <p className="text-xs text-zinc-400 font-sans">
-                    Download the raw certified JSONL samples from the dataset library.
+                    Download the raw JSONL sample payload from the dataset library.
                   </p>
                   <code className="text-xs text-[#d8d2c4] block bg-[#12121a] p-1.5 rounded overflow-x-auto">
                     curl -s https://rasosynthtune.vercel.app/api/export -o samples.jsonl
