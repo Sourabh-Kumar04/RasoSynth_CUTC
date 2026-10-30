@@ -56,14 +56,19 @@ def _clean_db_file():
 
 
 @pytest.fixture
-async def db():
+async def db(tmp_path):
     """Create a fresh test database for each test."""
     from core.db import AsyncDB
     from core.config import Settings
 
     settings = Settings()
+    db_url = settings.postgres_url
+    if not db_url:
+        db_file = tmp_path / "test_conftest.db"
+        db_url = f"sqlite+aiosqlite:///{db_file}"
+
     try:
-        db = await AsyncDB.create(settings.postgres_url)
+        db = await AsyncDB.create(db_url)
     except Exception as e:
         pytest.skip(f"Database not available: {e}")
 
