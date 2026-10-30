@@ -1,4 +1,16 @@
-"""Enterprise-grade validation framework for API inputs."""
+"""Enterprise-grade validation framework for API inputs.
+
+SECURITY BOUNDARY (read before relying on this module): the injection /
+SQL / traversal checks below are a BLOCKLIST SCREEN, not a security
+guarantee. A pass does not prove input is safe, and a flag does not prove
+an attack — blocklists miss novel phrasings and flag ordinary prose. Do
+not use this module as the sole security control for any trust boundary;
+pair it with parameterized queries, output encoding, and path
+canonicalization at the point of use. Patterns were reviewed for
+false positives on ordinary prose: bare "--"/"#", generic "on*=..."
+handlers, bare "select ... from ...", and "you are now a ..." no longer
+flag, because each fires on everyday sentences.
+"""
 import re
 import os
 from typing import Any, Callable, Optional, List, Type, Union, Set
@@ -35,21 +47,20 @@ PROMPT_INJECTION_PATTERNS = [
     r"(?i)(disregard\s+(?:previous|above|prior|all)\s+(?:instructions?|rules?))",
     r"(?i)(forget\s+(?:everything|all|your)\s+(?:instructions?|rules?|guidelines?))",
     r"(?i)(system\s*:\s*ignore)",
-    r"(?i)(you\s+(?:are|become)\s+(?:now|just)\s+a)",
-    r"(?i)(new\s+instruction)",
+    r"(?i)(new\s+instructions?\s*:)",
     r"(?i)(override\s+(?:previous|your|system))",
     r"(?i)(#\s*ignore\s+#)",
     r"(?i)(\{\{.*\}\})",  # Template injection
     r"(?i)(\[\[.*\]\])",  # Instruction chaining
     r"<script[^>]*>.*?</script>",  # XSS
     r"javascript:",  # JS protocol
-    r"on\w+\s*=",  # Event handlers
+    r"(?i)\b(onclick|onload|onerror|onmouseover|onmouseout|onmouseenter|onmouseleave|onfocus|onblur|onsubmit|onchange|oninput|onkeydown|onkeyup|ondblclick)\s*=",  # Event handlers
 ]
 
 # SQL injection patterns
 SQL_INJECTION_PATTERNS = [
     r"(?i)(\bunion\b.*\bselect\b)",
-    r"(?i)(\bselect\b.*\bfrom\b)",
+    r"(?i)(\bselect\b\s+[\w\*,\s]+?\s+\bfrom\b\s+\w+\s+(?:\bwhere\b|\bjoin\b|\border\b|\bgroup\b|\blimit\b|;))",
     r"(?i)(\bdrop\b\s+\btable\b)",
     r"(?i)(\binsert\b.*\binto\b)",
     r"(?i)(\bupdate\b.*\bset\b)",
@@ -57,7 +68,7 @@ SQL_INJECTION_PATTERNS = [
     r"(?i)(\bexec\b\s*\()",
     r"(?i)(\bexecute\b\s*\()",
     r"(?i)(\bxp_\w+)",
-    r"(--|\#|\/\*|\*\/)",  # SQL comments
+    r"(\/\*|\*\/)",  # SQL block-comment markers only (bare -- and # removed: false positives)
 ]
 
 # Path traversal patterns
@@ -72,11 +83,13 @@ PATH_TRAVERSAL_PATTERNS = [
 
 
 def validate_no_injection(text: str) -> str:
-    """Validate text doesn't contain injection attempts."""
+    """Blocklist-screen text for injection attempts (see module boundary note).
+
+    Raises SecurityError on a pattern hit. A pass is not a safety
+    guarantee; a hit is not proof of an attack.
+    """
     if not text:
         return text
-
-    text_lower = text.lower()
 
     # Check prompt injection
     for pattern in PROMPT_INJECTION_PATTERNS:
@@ -244,6 +257,12 @@ class StrictString(str):
     def validate(cls, value: Any, info: ValidationInfo = None) -> str:
         return cls(value)
 
+    @classmethod
+    def __get_pydantic_core_schema__(cls, source_type, handler):
+        """Pydantic v2 hook: run the class __new__ validation after str parsing."""
+        from pydantic_core import core_schema
+        return core_schema.no_info_after_validator_function(cls, handler(str))
+
 
 class SafeFilename(str):
     """Filename with strict validation."""
@@ -261,6 +280,12 @@ class SafeFilename(str):
     @classmethod
     def validate(cls, value: Any, info: ValidationInfo = None) -> str:
         return cls(value)
+
+    @classmethod
+    def __get_pydantic_core_schema__(cls, source_type, handler):
+        """Pydantic v2 hook: run the class __new__ validation after str parsing."""
+        from pydantic_core import core_schema
+        return core_schema.no_info_after_validator_function(cls, handler(str))
 
 
 class DomainName(str):
@@ -280,6 +305,12 @@ class DomainName(str):
     def validate(cls, value: Any, info: ValidationInfo = None) -> str:
         return cls(value)
 
+    @classmethod
+    def __get_pydantic_core_schema__(cls, source_type, handler):
+        """Pydantic v2 hook: run the class __new__ validation after str parsing."""
+        from pydantic_core import core_schema
+        return core_schema.no_info_after_validator_function(cls, handler(str))
+
 
 class LanguageCode(str):
     """ISO language code with validation."""
@@ -298,6 +329,12 @@ class LanguageCode(str):
     def validate(cls, value: Any, info: ValidationInfo = None) -> str:
         return cls(value)
 
+    @classmethod
+    def __get_pydantic_core_schema__(cls, source_type, handler):
+        """Pydantic v2 hook: run the class __new__ validation after str parsing."""
+        from pydantic_core import core_schema
+        return core_schema.no_info_after_validator_function(cls, handler(str))
+
 
 class ValidURL(str):
     """URL with validation."""
@@ -315,6 +352,12 @@ class ValidURL(str):
     @classmethod
     def validate(cls, value: Any, info: ValidationInfo = None) -> str:
         return cls(value)
+
+    @classmethod
+    def __get_pydantic_core_schema__(cls, source_type, handler):
+        """Pydantic v2 hook: run the class __new__ validation after str parsing."""
+        from pydantic_core import core_schema
+        return core_schema.no_info_after_validator_function(cls, handler(str))
 
 
 # === Re-export for convenience ===
