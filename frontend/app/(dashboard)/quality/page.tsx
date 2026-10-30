@@ -259,7 +259,7 @@ export default function QualityDashboardPage() {
                 ) : isTopicCertified ? (
                   <Badge variant="outline" className="text-xs font-mono font-bold bg-emerald-950/50 text-emerald-400 border-emerald-600/50 flex items-center gap-1">
                     <CheckCircle2 className="h-3 w-3 text-emerald-400" />
-                    CERTIFIED READY (TOPIC &ge; 80%)
+                    PASSED THRESHOLD (TOPIC &ge; 80%)
                   </Badge>
                 ) : (
                   <Badge variant="outline" className="text-xs font-mono font-bold bg-amber-950/50 text-amber-400 border-amber-600/50 flex items-center gap-1">

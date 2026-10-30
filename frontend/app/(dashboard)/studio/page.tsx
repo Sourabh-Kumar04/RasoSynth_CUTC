@@ -128,7 +128,7 @@ const INDUSTRY_PRESETS = [
     title: 'Medical Clinical Reasoning',
     domain: 'Medical Reasoning & Clinical Differential Diagnosis',
     source: 'PubMed & ACGME',
-    prompt: 'Synthesize an evidence-based clinical reasoning and differential diagnosis dataset adhering to ACGME internal medicine residency diagnostic frameworks. Structure samples across: (1) Tier 1 [30% Diagnostic Panel Interpretation]: Comprehensive analysis of standard laboratory profiles (CBC with differential, comprehensive metabolic panel, arterial blood gas, cardiac biomarker troponin kinetics) in clinical context. (2) Tier 2 [45% Bayesian Probability Workup]: Iterative disease probability updating using likelihood ratios, pre-test probability, illness-script matching, and geriatric drug-drug contraindication screening via AGS Beers Criteria. (3) Tier 3 [25% Multi-Morbidity SOAP Formulations]: De-identified acute critical presentations (septic shock, acute coronary syndrome, decompensated heart failure) with ordered differential ranking, exclusion criteria, and diagnostic workup rationale grounded in AHA/ACC/IDSA guidelines. Responses must maintain clinical rigor with diagnostic rationale before treatment conclusions. Strictly exclude any real patient identifiers (HIPAA / DPDP Act 2023 compliance) and unverified dosage recommendations.',
+    prompt: 'Synthesize an evidence-based clinical reasoning and differential diagnosis dataset adhering to ACGME internal medicine residency diagnostic frameworks. Structure samples across: (1) Tier 1 [30% Diagnostic Panel Interpretation]: Comprehensive analysis of standard laboratory profiles (CBC with differential, comprehensive metabolic panel, arterial blood gas, cardiac biomarker troponin kinetics) in clinical context. (2) Tier 2 [45% Bayesian Probability Workup]: Iterative disease probability updating using likelihood ratios, pre-test probability, illness-script matching, and geriatric drug-drug contraindication screening via AGS Beers Criteria. (3) Tier 3 [25% Multi-Morbidity SOAP Formulations]: De-identified acute critical presentations (septic shock, acute coronary syndrome, decompensated heart failure) with ordered differential ranking, exclusion criteria, and diagnostic workup rationale grounded in AHA/ACC/IDSA guidelines. Responses must maintain clinical rigor with diagnostic rationale before treatment conclusions. Strictly exclude any real patient identifiers (PII redaction) and unverified dosage recommendations.',
     type: 'reasoning',
     category: 'stem',
     language: 'en',
@@ -948,7 +948,7 @@ function StudioContent() {
                         title={s.name}
                       >
                         {typeLabel && (
-                          <span className={`px-1 py-0.2 rounded-[2px] text-[8px] uppercase tracking-wider border font-bold ${typeColor}`}>
+                          <span className={`px-1 py-0.2 rounded-[2px] text-xs uppercase tracking-wider border font-bold ${typeColor}`}>
                             {typeLabel}
                           </span>
                         )}

@@ -404,7 +404,7 @@ export default function OrchestrationPage() {
                     <span className="text-zinc-500 text-xs uppercase block">Inputs / Invariants</span>
                     <p className="text-zinc-300">
                       Domain: <strong className="text-white">{selectedJob?.target_domain || 'Unknown'}</strong><br />
-                      PII Guard: <span className="text-emerald-400">DPDP Active</span> · MinHash: &gt;0.85
+                      PII Guard: <span className="text-emerald-400">Masking Active</span> · MinHash: &gt;0.85
                     </p>
                   </div>
                   <div className="p-2.5 rounded bg-[#0a0a0f] border border-[#4a463f] space-y-1">

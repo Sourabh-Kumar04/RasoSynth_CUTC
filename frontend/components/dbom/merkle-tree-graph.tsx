@@ -344,7 +344,7 @@ export function MerkleTreeGraph({
                 </div>
                 <code className="text-[#d8d2c4] block truncate">{leaf.hash}</code>
                 {isSibling && (
-                  <span className="text-[8px] text-[#f26625] block font-mono">✦ Sibling Proof</span>
+                  <span className="text-xs text-[#f26625] block font-mono">✦ Sibling Proof</span>
                 )}
               </motion.div>
             )

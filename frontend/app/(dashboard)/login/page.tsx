@@ -128,7 +128,7 @@ export default function LoginPage() {
 
         <div className="mt-6 pt-4 border-t border-[#1c1c28] text-xs font-mono text-[#a8a29e] space-y-1">
           <p>Tokens are stored securely in browser localStorage and attached to all API data calls.</p>
-          <p className="text-[11px] text-zinc-500">Unauthenticated calls fail closed with 401.</p>
+          <p className="text-xs text-zinc-500">Unauthenticated calls fail closed with 401.</p>
         </div>
       </div>
     </div>

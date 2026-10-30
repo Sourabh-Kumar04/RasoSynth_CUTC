@@ -1053,7 +1053,7 @@ export default function DatasetsPage() {
                           : "bg-amber-400 animate-pulse"
                       )} />
                       {dataset.status === 'ready'
-                        ? 'Certified Ready'
+                        ? 'Ready'
                         : dataset.status === 'failed'
                         ? 'Failed'
                         : dataset.status === 'cancelled'
@@ -2149,7 +2149,7 @@ export default function DatasetsPage() {
             {/* Footer */}
             <div className="px-6 py-3 border-t border-[#272738] bg-[#0e0e14] flex items-center justify-between">
               <span className="text-xs text-[#a8a29e]">
-                Compliant with EU AI Act &amp; India DPDP Act 2023
+                Audited for PII masking &amp; schema integrity
               </span>
               <div className="flex items-center gap-2">
                 {dbomData?.package_manifest && (

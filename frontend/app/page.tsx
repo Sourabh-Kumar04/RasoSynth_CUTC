@@ -786,7 +786,7 @@ export default function ZenPortalPage() {
             </div>
 
             <div className="pt-2 border-t border-[#1c1c28] flex items-center justify-between text-xs font-mono text-zinc-500">
-              <span>Grounding Invariant: Strict DPDP Act &amp; Citation Rules</span>
+              <span>Grounding Invariant: Strict PII Masking &amp; Citation Rules</span>
               <span className="text-[#f26625]">Example quality score: 0.94 / 1.00 (illustrative, not a live result)</span>
             </div>
           </div>
@@ -1190,7 +1190,7 @@ export default function ZenPortalPage() {
               <span className="text-zinc-200 font-bold uppercase tracking-wider text-xs">Governance</span>
               <ul className="space-y-1.5 text-zinc-400 text-xs">
                 <li>SHA-256 Merkle Provenance</li>
-                <li>Indian DPDP Act Masking</li>
+                <li>Indian PII Masking</li>
                 <li>Data Nutrition Labels</li>
                 <li>Redis Sliding Limiter</li>
                 <li>LLM Judge Rubric v2</li>
