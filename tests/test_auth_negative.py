@@ -15,11 +15,8 @@ def test_unauthenticated_data_route_rejected(test_client):
 
 
 def test_unauthenticated_review_queue_rejected(test_client):
-    # 503 only when the review service itself is not initialised in this
-    # test app; with the service up, the rejection must be a 401. Either
-    # way the request must not return queue data unauthenticated.
     resp = test_client.get("/api/review/queue")
-    assert resp.status_code in (401, 503)
+    assert resp.status_code == 401
 
 
 def test_unauthenticated_mutating_route_rejected(test_client):
@@ -37,7 +34,7 @@ def test_unauthenticated_mutating_route_rejected(test_client):
         },
         headers=headers,
     )
-    assert resp.status_code in (401, 503)
+    assert resp.status_code == 401
 
 
 def test_invalid_token_rejected(test_client):
@@ -73,4 +70,4 @@ def test_viewer_cannot_submit_for_review(test_client):
         },
         headers=headers,
     )
-    assert resp.status_code in (403, 503)
+    assert resp.status_code == 403

@@ -259,13 +259,12 @@ class TestEndToEndSystem:
         csrf_token = csrf_resp.json().get("csrf_token")
         assert csrf_token is not None
 
-        # 2. Query review queue (returns 200 or 503 if review service db connection skipped)
+        # 2. Query review queue
         resp_queue = test_client.get("/api/review/queue", headers=auth_headers)
-        assert resp_queue.status_code in (200, 503)
-        if resp_queue.status_code == 200:
-            queue_data = resp_queue.json()
-            assert isinstance(queue_data, (list, dict))
+        assert resp_queue.status_code == 200
+        queue_data = resp_queue.json()
+        assert isinstance(queue_data, (list, dict))
 
         # 3. Query review stats
         resp_stats = test_client.get("/api/review/stats", headers=auth_headers)
-        assert resp_stats.status_code in (200, 503)
+        assert resp_stats.status_code == 200

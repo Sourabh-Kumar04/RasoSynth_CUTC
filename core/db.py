@@ -474,6 +474,7 @@ class DatabaseManager:
                     ("quality_score", "FLOAT"),
                     ("merkle_root", "VARCHAR"),
                     ("owner", "VARCHAR(255)"),
+                    ("is_simulated", "BOOLEAN DEFAULT 0"),
                 ):
                     try:
                         await conn.execute(
@@ -485,6 +486,12 @@ class DatabaseManager:
                     try:
                         await conn.execute(
                             text(f"ALTER TABLE {tbl} ADD COLUMN owner VARCHAR(255)")
+                        )
+                    except Exception:
+                        pass
+                    try:
+                        await conn.execute(
+                            text(f"ALTER TABLE {tbl} ADD COLUMN is_simulated BOOLEAN DEFAULT 0")
                         )
                     except Exception:
                         pass
@@ -515,6 +522,18 @@ class DatabaseManager:
                 )
                 await conn.execute(
                     text("ALTER TABLE review_queue ADD COLUMN IF NOT EXISTS owner VARCHAR(255)")
+                )
+                await conn.execute(
+                    text("ALTER TABLE jobs ADD COLUMN IF NOT EXISTS is_simulated BOOLEAN DEFAULT FALSE")
+                )
+                await conn.execute(
+                    text("ALTER TABLE datasets ADD COLUMN IF NOT EXISTS is_simulated BOOLEAN DEFAULT FALSE")
+                )
+                await conn.execute(
+                    text("ALTER TABLE finetune_jobs ADD COLUMN IF NOT EXISTS is_simulated BOOLEAN DEFAULT FALSE")
+                )
+                await conn.execute(
+                    text("ALTER TABLE review_queue ADD COLUMN IF NOT EXISTS is_simulated BOOLEAN DEFAULT FALSE")
                 )
                 try:
                     await conn.execute(

@@ -11,7 +11,7 @@ def test_export_unsupported_format_returns_400(auth_headers):
     csrf_token = client.get("/auth/csrf-token").json()["csrf_token"]
     res = client.post("/datasets/nonexistent-id/export", json={"format": "unsupported_ext_xyz"},
                       headers={"X-CSRF-Token": csrf_token, **auth_headers})
-    assert res.status_code in (400, 404, 503)
+    assert res.status_code in (400, 404)
 
 
 @pytest.mark.asyncio
