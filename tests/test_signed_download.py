@@ -44,7 +44,7 @@ def test_signed_url_generation_endpoints(auth_headers):
     """Test POST and GET /jobs/{id}/signed-url for an UNKNOWN job (expect 404 per P0-5)."""
     client = TestClient(app)
     job_id = "job-secure-5678"
-    csrf_token = client.get("/auth/csrf-token").json()["csrf_token"]
+    csrf_token = client.get("/auth/csrf-token", headers=auth_headers).json()["csrf_token"]
 
     # P0-5 requires job/dataset existence before minting a token, so an
     # unknown job must 404 instead of minting a token for nothing (the old

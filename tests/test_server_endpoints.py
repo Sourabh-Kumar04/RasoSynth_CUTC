@@ -166,7 +166,7 @@ def test_provider_endpoints(auth_headers):
         assert metrics_resp.json()["provider"] == first_name
 
         # PATCH /providers/{name} with CSRF token
-        csrf_token = client.get("/auth/csrf-token").json().get("csrf_token", "")
+        csrf_token = client.get("/auth/csrf-token", headers=auth_headers).json().get("csrf_token", "")
         # A numeric priority has no meaning in the router (it orders by
         # provider_priority list), so it is now rejected instead of
         # returning a fake "updated".

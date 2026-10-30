@@ -23,18 +23,22 @@ from api.server import app
 @pytest.fixture(scope="module")
 def client():
     """Create FastAPI TestClient pre-configured with CSRF token."""
+    # Auth is enforced in tests (conftest forces AUTH_DISABLED=false):
+    # mint a real ADMIN JWT first, then fetch the CSRF token as that
+    # authenticated user (anonymous CSRF issuance is rejected).
+    from api.auth import UserRole, get_auth_manager
+
+    manager = get_auth_manager()
+    jwt = manager.create_token("admin-001", "testadmin", UserRole.ADMIN)
     with TestClient(app) as c:
+        c.headers.update({"Authorization": f"Bearer {jwt}"})
         csrf_res = c.get("/auth/csrf-token")
         if csrf_res.status_code == 200:
             token = csrf_res.json().get("csrf_token")
             if token:
                 c.headers.update({"x-csrf-token": token})
-        # Auth is enforced in tests (conftest forces AUTH_DISABLED=false):
-        # mint a real ADMIN JWT so auth-gated tool/data routes return 200.
-        from api.auth import UserRole, get_auth_manager
-        jwt = get_auth_manager().create_token("admin-001", "testadmin", UserRole.ADMIN)
-        c.headers.update({"Authorization": f"Bearer {jwt}"})
         yield c
+
 
 
 class TestWorkflow1PlanningAndCoverage:

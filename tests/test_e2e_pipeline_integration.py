@@ -107,7 +107,7 @@ def test_settings_compute_api_endpoint_lifecycle(auth_headers):
         assert "runpod" in data["available_targets"]
 
         # 2. Get CSRF token
-        csrf_res = client.get("/auth/csrf-token")
+        csrf_res = client.get("/auth/csrf-token", headers=auth_headers)
         assert csrf_res.status_code == 200
         csrf_token = csrf_res.json()["csrf_token"]
 

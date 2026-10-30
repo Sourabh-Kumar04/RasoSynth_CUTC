@@ -78,7 +78,7 @@ def test_finetune_jobs_create_endpoint(test_client, auth_headers):
     app.state.db = MagicMock()
 
     try:
-        csrf_resp = test_client.get("/auth/csrf-token")
+        csrf_resp = test_client.get("/auth/csrf-token", headers=auth_headers)
         csrf_token = csrf_resp.json().get("csrf_token")
         headers = dict(auth_headers)
         if csrf_token:
@@ -310,7 +310,7 @@ def test_finetune_gguf_export_and_download(test_client, tmp_path, auth_headers):
     app.state.ft_manager = mock_mgr
 
     try:
-        csrf_resp = test_client.get("/auth/csrf-token")
+        csrf_resp = test_client.get("/auth/csrf-token", headers=auth_headers)
         csrf_token = csrf_resp.json().get("csrf_token")
         headers = dict(auth_headers)
         if csrf_token:

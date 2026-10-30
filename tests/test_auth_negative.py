@@ -20,11 +20,10 @@ def test_unauthenticated_review_queue_rejected(test_client):
 
 
 def test_unauthenticated_mutating_route_rejected(test_client):
-    # Send a valid CSRF token but no Authorization header, so the
-    # rejection below comes from authentication, not CSRF middleware
-    # (which otherwise 403s first on POSTs without a CSRF token).
-    csrf = test_client.get("/auth/csrf-token").json().get("csrf_token")
-    headers = {"X-CSRF-Token": csrf} if csrf else {}
+    # No CSRF token and no Authorization header: the CSRF middleware
+    # rejects the state-changing request with 403 before route auth
+    # runs (tokens are issued to authenticated users only, so an
+    # unauthenticated caller cannot obtain one).
     resp = test_client.post(
         "/api/review/queue",
         json={
@@ -32,9 +31,10 @@ def test_unauthenticated_mutating_route_rejected(test_client):
             "response": "Test response",
             "job_id": "job-neg-auth",
         },
-        headers=headers,
+        headers={},
     )
-    assert resp.status_code == 401
+    assert resp.status_code == 403
+
 
 
 def test_invalid_token_rejected(test_client):
@@ -57,7 +57,7 @@ def test_viewer_cannot_submit_for_review(test_client):
     manager = get_auth_manager()
     manager.create_user("testviewer-neg", "viewer-pass-7k2m", UserRole.VIEWER)
     token = manager.create_token("viewer-neg-001", "testviewer-neg", UserRole.VIEWER)
-    csrf = test_client.get("/auth/csrf-token").json().get("csrf_token")
+    csrf = test_client.get("/auth/csrf-token", headers={"Authorization": f"Bearer {token}"}).json().get("csrf_token")
     headers = {"Authorization": f"Bearer {token}"}
     if csrf:
         headers["X-CSRF-Token"] = csrf

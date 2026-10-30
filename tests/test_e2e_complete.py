@@ -33,13 +33,18 @@ class TestEndToEndSystem:
         assert resp.headers.get("Referrer-Policy") == "strict-origin-when-cross-origin"
         assert "max-age=" in resp.headers.get("Strict-Transport-Security", "")
 
-    def test_e2e_auth_csrf_flow(self, test_client):
+    def test_e2e_auth_csrf_flow(self, test_client, auth_headers):
         """Verify CSRF token generation for state-changing operations."""
-        resp = test_client.get("/auth/csrf-token")
+        # Anonymous callers get no token at all.
+        assert test_client.get("/auth/csrf-token", headers={}).status_code == 401
+        resp = test_client.get("/auth/csrf-token", headers=auth_headers)
         assert resp.status_code == 200
         csrf_data = resp.json()
         assert "csrf_token" in csrf_data
         assert len(csrf_data["csrf_token"]) > 0
+        assert csrf_data["user_id"] != "anonymous"
+
+
 
     def test_e2e_provider_and_agent_discovery(self, test_client, auth_headers):
         """Verify provider routing endpoints and modular multi-agent discovery."""
@@ -188,7 +193,7 @@ class TestEndToEndSystem:
             assert len(records) == 2
 
             # 4. Multi-format export streaming / on-demand
-            csrf_token = test_client.get("/auth/csrf-token").json()["csrf_token"]
+            csrf_token = test_client.get("/auth/csrf-token", headers=auth_headers).json()["csrf_token"]
             post_headers = dict(auth_headers)
             post_headers["X-CSRF-Token"] = csrf_token
 
@@ -255,7 +260,7 @@ class TestEndToEndSystem:
     def test_e2e_human_review_workflow(self, test_client, auth_headers):
         """Verify human-in-the-loop review operations and queue querying."""
         # 1. Fetch CSRF token for review actions
-        csrf_resp = test_client.get("/auth/csrf-token")
+        csrf_resp = test_client.get("/auth/csrf-token", headers=auth_headers)
         csrf_token = csrf_resp.json().get("csrf_token")
         assert csrf_token is not None
 

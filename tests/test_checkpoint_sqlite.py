@@ -10,7 +10,7 @@ def test_checkpoint_endpoints_sqlite(auth_headers, monkeypatch):
     monkeypatch.setattr("api.server.run_pipeline", _noop_run_pipeline)
     with TestClient(app) as client:
         # Fetch CSRF token
-        csrf_res = client.get("/auth/csrf-token")
+        csrf_res = client.get("/auth/csrf-token", headers=auth_headers)
         csrf_token = csrf_res.json().get("csrf_token")
         headers = dict(auth_headers)
         if csrf_token:

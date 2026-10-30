@@ -296,13 +296,15 @@ class AuthManager:
         self._failed_attempts.pop(username, None)
         self._locked_until.pop(username, None)
         # Real re-hash on legacy-hash login: a successful login against
-        # a non-bcrypt stored hash (plaintext legacy or PBKDF2 fallback)
-        # upgrades the stored hash to bcrypt immediately, so the legacy
-        # form does not survive the login.
-        if not stored_hash.startswith(_BCRYPT_PREFIX) and HAS_BCRYPT and _bcrypt is not None:
+        # a non-preferred stored hash upgrades it immediately, so the
+        # legacy form does not survive the login. Preferred form is
+        # bcrypt when available, else the PBKDF2 fallback format — a
+        # plaintext legacy hash is upgraded in either case.
+        _preferred_prefix = _BCRYPT_PREFIX if (HAS_BCRYPT and _bcrypt is not None) else _LEGACY_PREFIX
+        if not stored_hash.startswith(_preferred_prefix):
             try:
                 user_data["password_hash"] = self._hash_password(password)
-                logger.info("Upgraded legacy password hash to bcrypt on login")
+                logger.info("Upgraded legacy password hash on login")
             except Exception:
                 logger.warning("Legacy password hash upgrade failed; login still succeeded")
 

@@ -43,7 +43,7 @@ def auth_tokens():
 
 
 def _csrf(test_client, headers):
-    csrf = test_client.get("/auth/csrf-token").json().get("csrf_token")
+    csrf = test_client.get("/auth/csrf-token", headers=headers).json().get("csrf_token")
     h = dict(headers)
     if csrf:
         h["X-CSRF-Token"] = csrf
@@ -84,19 +84,22 @@ def _csrf(test_client, headers):
     ],
 )
 def test_unauthenticated_requests_return_401(test_client, method, endpoint, json_body):
-    csrf = test_client.get("/auth/csrf-token").json().get("csrf_token")
-    headers = {"X-CSRF-Token": csrf} if csrf else {}
+    # CSRF tokens are issued to authenticated users only, so an
+    # unauthenticated caller cannot obtain one: GETs reach route auth
+    # (401); POSTs are rejected by the CSRF middleware first (403).
+    # Either way the request is rejected, never served.
     if method == "get":
-        resp = test_client.get(endpoint, headers=headers)
+        resp = test_client.get(endpoint, headers={})
+        expected = 401
     elif method == "post":
-        resp = test_client.post(endpoint, json=json_body, headers=headers)
+        resp = test_client.post(endpoint, json=json_body, headers={})
+        expected = 403
+    else:
+        raise AssertionError(f"unexpected method {method}")
     # A 503 must NEVER count as a pass
-    assert resp.status_code == 401, f"Expected 401 for unauthenticated {method.upper()} {endpoint}, got {resp.status_code}: {resp.text}"
+    assert resp.status_code == expected, f"Expected {expected} for unauthenticated {method.upper()} {endpoint}, got {resp.status_code}: {resp.text}"
 
 
-# ==============================================================================
-# 2. VIEWER Role Restrictions (Read OK, Write 403)
-# ==============================================================================
 
 def test_viewer_reads_open(test_client, auth_tokens):
     """VIEWER can read open non-mutating routes."""
