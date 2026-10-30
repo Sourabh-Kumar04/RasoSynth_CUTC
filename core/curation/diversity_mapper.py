@@ -1,7 +1,16 @@
-"""Semantic Density & Topic Coverage Visualizer.
+"""Lexical Density & Topic Coverage Index Visualizer.
 
-Projects dataset instructions and responses into 2D semantic space (TF-IDF + PCA/SVD)
+Projects dataset instructions and responses into 2D lexical space (TF-IDF + PCA/SVD)
 to visualize cluster distribution, topic balance, outlier edge cases, and synthetic redundancies.
+
+NOTE ON METHOD: this module is LEXICAL, not semantic. TF-IDF counts token
+overlap; it uses no embeddings and measures no meaning. The outputs are
+therefore named ``lexical_*``. The legacy ``semantic_coverage_pct`` /
+``diversity_entropy`` keys are kept only as deprecated aliases with the same
+values so existing consumers (e.g. the quality page) keep working; new
+consumers must use ``lexical_coverage_index`` / ``lexical_diversity_entropy``.
+``lexical_coverage_index`` is an index (share of non-outlier samples), NOT a
+measure of topic coverage: it says nothing about which topics are covered.
 """
 
 import math
@@ -64,7 +73,11 @@ def build_tfidf_matrix(texts: List[str], max_features: int = 128) -> tuple[np.nd
 
 
 def reduce_dimension_2d(matrix: np.ndarray) -> np.ndarray:
-    """Project high-dimensional TF-IDF matrix into 2D coordinates using SVD."""
+    """Project high-dimensional TF-IDF matrix into 2D coordinates using SVD.
+
+    A single sample has no SVD geometry: its [50, 50] coordinate is a
+    canvas-centre placeholder, not a measured position.
+    """
     n_samples, n_features = matrix.shape
     if n_samples == 0:
         return np.zeros((0, 2))
@@ -139,12 +152,29 @@ def analyze_semantic_diversity(
     samples: List[Dict[str, Any]],
     k_clusters: int = 4,
 ) -> Dict[str, Any]:
-    """Analyze dataset semantic density, 2D topic clusters, entropy, and outliers."""
+    """Analyze dataset lexical density, 2D topic clusters, entropy, and outliers.
+
+    Legacy name kept for callers; the method is lexical TF-IDF, not semantic.
+    Prefer :func:`analyze_lexical_diversity` for new code. ``lexical_coverage_index``
+    is the share of non-outlier samples (0-100) — an index, not topic coverage.
+    ``semantic_coverage_pct`` is a deprecated alias of the same value.
+    """
+    return analyze_lexical_diversity(samples, k_clusters=k_clusters)
+
+
+def analyze_lexical_diversity(
+    samples: List[Dict[str, Any]],
+    k_clusters: int = 4,
+) -> Dict[str, Any]:
+    """Analyze dataset lexical (TF-IDF) density, 2D clusters, entropy, and outliers."""
     if not samples:
         return {
             "total_samples": 0,
+            "method": "tfidf_lexical_svd_kmeans",
             "diversity_entropy": 0.0,
+            "lexical_diversity_entropy": 0.0,
             "semantic_coverage_pct": 0.0,
+            "lexical_coverage_index": 0.0,
             "clusters": [],
             "points": [],
             "outlier_count": 0,
@@ -243,12 +273,21 @@ def analyze_semantic_diversity(
     max_entropy = math.log2(k) if k > 1 else 1.0
     normalized_entropy = round(min(1.0, max(0.0, shannon_entropy / max_entropy)), 3)
 
-    coverage_pct = round(min(100.0, (1.0 - (outlier_count / max(len(samples), 1)) * 0.5) * 100), 1)
+    # 7. Lexical coverage INDEX (not topic coverage): the share of samples
+    # that are not outliers under the cluster-distance threshold above.
+    # The previous formula, (1 - outlier_share * 0.5) * 100, floored the
+    # value at 50 for arbitrary reasons and was labelled "coverage".
+    coverage_index = round((1.0 - (outlier_count / max(len(samples), 1))) * 100, 1)
 
     return {
         "total_samples": len(samples),
+        "method": "tfidf_lexical_svd_kmeans",
         "diversity_entropy": normalized_entropy,
-        "semantic_coverage_pct": coverage_pct,
+        "lexical_diversity_entropy": normalized_entropy,
+        "semantic_coverage_pct": coverage_index,
+        "lexical_coverage_index": coverage_index,
+        "lexical_coverage_note": "Index = share of non-outlier samples (0-100); it is not a measure of topic coverage.",
+        "single_sample_coordinate_placeholder": len(samples) == 1,
         "clusters": clusters_info,
         "points": points,
         "outlier_count": outlier_count,
