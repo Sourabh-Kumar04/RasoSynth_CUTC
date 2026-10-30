@@ -152,6 +152,11 @@ function jobToDataset(job: any): any {
     // P0: size is an ESTIMATE (2,048 bytes/sample assumed, not measured).
     size: formatSize((job.samples_generated || 0) * 1024 * 2) + ' (est.)',
     records: job.samples_generated || 0,
+    progress: typeof job.progress === 'number'
+      ? Math.round(job.progress <= 1.0 ? job.progress * 100 : job.progress)
+      : typeof job.progress_fraction === 'number'
+      ? Math.round(job.progress_fraction * 100)
+      : 0,
     quality: typeof (job.quality_score ?? job.metadata?.quality_score ?? job.metadata?.quality_breakdown?.composite) === 'number'
       ? Math.round(Number(job.quality_score ?? job.metadata?.quality_score ?? job.metadata?.quality_breakdown?.composite) <= 1.0 
           ? Number(job.quality_score ?? job.metadata?.quality_score ?? job.metadata?.quality_breakdown?.composite) * 100 
@@ -1466,7 +1471,7 @@ export default function DatasetsPage() {
                         <span>Pipeline In-Flight (Stage: {selected?.current_stage || 'processing'})</span>
                       </div>
                       <p className="text-[#a8a29e] max-w-md mx-auto">
-                        Synthesized {selected?.records || 0} samples ({selected?.quality || 0}% progress).
+                        Synthesized {selected?.records || 0} samples ({selected?.progress ?? 0}% progress).
                         Full verified records and cryptographic DBOM manifest will become available as soon as packaging &amp; export completes.
                       </p>
                     </>
@@ -2050,20 +2055,38 @@ export default function DatasetsPage() {
                   <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5">
                     <div className="p-2.5 rounded-md bg-[#0a0a0f] border border-[#272738]">
                       <span className="text-xs text-[#a8a29e] uppercase block">PII Scrubbing</span>
-                      <span className="text-xs font-bold text-emerald-400 mt-1 flex items-center gap-1"><CheckCircle2 className="h-3.5 w-3.5" />Certified Clean</span>
+                      {dbomData?.dbom?.compliance_audit?.pii_masked === true ? (
+                        <span className="text-xs font-bold text-emerald-400 mt-1 flex items-center gap-1"><CheckCircle2 className="h-3.5 w-3.5" />Certified Clean</span>
+                      ) : dbomData?.dbom?.compliance_audit?.pii_masked === false ? (
+                        <span className="text-xs font-bold text-amber-400 mt-1 flex items-center gap-1"><AlertCircle className="h-3.5 w-3.5" />Unmasked</span>
+                      ) : (
+                        <span className="text-xs font-bold text-[#a8a29e] mt-1 flex items-center gap-1"><AlertCircle className="h-3.5 w-3.5" />Not Audited</span>
+                      )}
                     </div>
                     <div className="p-2.5 rounded-md bg-[#0a0a0f] border border-[#272738]">
                       <span className="text-xs text-[#a8a29e] uppercase block">Cultural Safety</span>
-                      <span className="text-xs font-bold text-emerald-400 mt-1 flex items-center gap-1"><CheckCircle2 className="h-3.5 w-3.5" />Indian IT Act</span>
+                      {dbomData?.dbom?.compliance_audit?.cultural_safety_certified === true ? (
+                        <span className="text-xs font-bold text-emerald-400 mt-1 flex items-center gap-1"><CheckCircle2 className="h-3.5 w-3.5" />{dbomData.dbom.compliance_audit.statutory_compliance_act || 'Indian IT Act'}</span>
+                      ) : dbomData?.dbom?.compliance_audit?.cultural_safety_certified === false ? (
+                        <span className="text-xs font-bold text-rose-400 mt-1 flex items-center gap-1"><AlertCircle className="h-3.5 w-3.5" />Failed</span>
+                      ) : (
+                        <span className="text-xs font-bold text-[#a8a29e] mt-1 flex items-center gap-1"><AlertCircle className="h-3.5 w-3.5" />Not Audited</span>
+                      )}
                     </div>
                     <div className="p-2.5 rounded-md bg-[#0a0a0f] border border-[#272738]">
                       <span className="text-xs text-[#a8a29e] uppercase block">Contamination</span>
-                      <span className="text-xs font-bold text-[#f26625] mt-1 block">0.0% Leakage</span>
+                      <span className="text-xs font-bold text-[#f26625] mt-1 block">
+                        {typeof dbomData?.dbom?.compliance_audit?.benchmark_contamination_rate_pct === 'number'
+                          ? `${dbomData.dbom.compliance_audit.benchmark_contamination_rate_pct}% Leakage`
+                          : 'Not Audited'}
+                      </span>
                     </div>
                     <div className="p-2.5 rounded-md bg-[#0a0a0f] border border-[#272738]">
                       <span className="text-xs text-[#a8a29e] uppercase block">Topic Entropy</span>
                       <span className="text-xs font-bold text-[#d8d2c4] mt-1 block">
-                        {Math.round((dbomData?.dbom?.compliance_audit?.diversity_entropy || 0.94) * 100)}% Parity
+                        {typeof dbomData?.dbom?.compliance_audit?.diversity_entropy === 'number'
+                          ? `${Math.round(dbomData.dbom.compliance_audit.diversity_entropy * 100)}% Parity`
+                          : 'Unknown'}
                       </span>
                     </div>
                   </div>
