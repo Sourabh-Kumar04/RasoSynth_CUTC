@@ -5,13 +5,13 @@ Generates explicit step-by-step reasoning traces enclosed in `<thought>...</thou
 """
 
 import re
-from typing import Dict, Optional, Tuple
+from typing import Any, Dict, Optional, Tuple
 
 
 def build_cot_prompt_directive(language: str = "en") -> str:
     """Build instruction directing the LLM to output explicit Chain-of-Thought reasoning traces."""
     lang = (language or "en").lower().strip()
-    
+
     if "hi" in lang or "hinglish" in lang:
         reasoning_lang_note = "Reasoning can be in natural analytical Hinglish or Hindi matching the domain complexity."
     else:
@@ -61,3 +61,20 @@ def wrap_with_thought(thought: str, solution: str) -> str:
     if clean_thought:
         return f"<thought>\n{clean_thought}\n</thought>\n\n{clean_sol}"
     return clean_sol
+
+
+def format_cot_record(instruction: str, thought: str, solution: str) -> Dict[str, Any]:
+    """Format a CoT trajectory as a record carrying a provenance flag.
+
+    The trace is synthetic model output: its reasoning steps and final
+    answer are NOT verified for correctness by this module. Downstream
+    consumers must not present the trace as verified reasoning.
+    """
+    return {
+        "instruction": (instruction or "").strip(),
+        "thought": (thought or "").strip(),
+        "solution": (solution or "").strip(),
+        "response": wrap_with_thought(thought, solution),
+        "provenance": "synthetic_cot_trajectory_unverified",
+        "verified": False,
+    }

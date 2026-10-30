@@ -26,13 +26,17 @@ def format_kto_sample(
         "label": bool(is_desirable),
         "kto_tag": "desirable" if is_desirable else "undesirable",
     }
-    metadata = {}
+    # Provenance is always present: the desirability label is caller-asserted
+    # (or model-asserted), never verified by this module.
+    metadata = {
+        "provenance": "synthetic_preference_unverified",
+        "label_verified": False,
+    }
     if feedback_reason:
         metadata["feedback_reason"] = feedback_reason
     if domain:
         metadata["domain"] = domain
-    if metadata:
-        sample["metadata"] = metadata
+    sample["metadata"] = metadata
 
     return sample
 
@@ -69,6 +73,8 @@ def format_simpo_pair(
             "rejected_word_count": r_words,
             "length_ratio": length_ratio,
             "verbosity_bias_flag": is_verbosity_biased,
+            "provenance": "synthetic_preference_unverified",
+            "pair_verified": False,
         }
     }
     if domain:
