@@ -64,6 +64,8 @@ class ReviewAction(BaseModel):
     # from the auth token (current_user.username) in every handler below.
     reviewer: str = ""
     notes: str = ""
+    reason_code: Optional[str] = None
+    reason_codes: Optional[list[str]] = None
 
 
 class EditAction(ReviewAction):
@@ -155,7 +157,8 @@ async def reject_item(item_id: str, action: ReviewAction, svc=Depends(_svc),
     current_user: User = Depends(require_role([UserRole.ADMIN, UserRole.USER]))):
     item = await svc.get_item(item_id)
     _enforce_owner(item, current_user)
-    result = await svc.reject(item_id, current_user.username, action.notes)
+    codes = action.reason_codes or ([action.reason_code] if action.reason_code else None)
+    result = await svc.reject(item_id, current_user.username, action.notes, reason_codes=codes)
     if not result:
         raise HTTPException(status_code=404, detail="Review item not found")
     return result
@@ -166,11 +169,13 @@ async def edit_item(item_id: str, action: EditAction, svc=Depends(_svc),
     current_user: User = Depends(require_role([UserRole.ADMIN, UserRole.USER]))):
     item = await svc.get_item(item_id)
     _enforce_owner(item, current_user)
+    codes = action.reason_codes or ([action.reason_code] if action.reason_code else None)
     result = await svc.edit(
         item_id, current_user.username,
         edited_instruction=action.edited_instruction,
         edited_response=action.edited_response,
         notes=action.notes,
+        reason_codes=codes,
     )
     if not result:
         raise HTTPException(status_code=404, detail="Review item not found")
@@ -205,6 +210,28 @@ async def bulk_action(action: BulkAction, svc=Depends(_svc),
 async def review_stats(svc=Depends(_svc),
     current_user: User = Depends(get_current_user)):
     return await svc.get_stats()
+
+
+@router.get("/signals")
+async def review_signals(
+    job_id: Optional[str] = Query(None),
+    svc=Depends(_svc),
+    current_user: User = Depends(get_current_user),
+):
+    """Return aggregated structured reason feedback signals for dataset stratification."""
+    owner_filter = None if current_user.role == UserRole.ADMIN else current_user.username
+    return await svc.get_feedback_signals(job_id=job_id, owner=owner_filter)
+
+
+@router.get("/calibration")
+async def review_calibration(
+    job_id: Optional[str] = Query(None),
+    svc=Depends(_svc),
+    current_user: User = Depends(get_current_user),
+):
+    """Return reviewer calibration and inter-annotator disagreement metrics."""
+    owner_filter = None if current_user.role == UserRole.ADMIN else current_user.username
+    return await svc.get_calibration_stats(job_id=job_id, owner=owner_filter)
 
 
 # ── HITL endpoints ────────────────────────────────────────────────────────────

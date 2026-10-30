@@ -15,6 +15,7 @@ from datetime import datetime, timezone
 from typing import AsyncGenerator, Optional
 
 from core.db import DatabaseManager, ReviewQueueItem
+from core.review_reasons import ReviewCalibrationTracker, normalize_reason_codes
 
 logger = logging.getLogger(__name__)
 
@@ -151,10 +152,23 @@ class ReviewService:
         )
         return item.to_dict() if item else None
 
-    async def reject(self, item_id: str, reviewer: str, reason: str = "") -> Optional[dict]:
+    async def reject(
+        self,
+        item_id: str,
+        reviewer: str,
+        reason: str = "",
+        reason_codes: Optional[list[str] | str] = None,
+    ) -> Optional[dict]:
         existing = await self.db.get_review_item(item_id)
         if not existing:
             return None
+        
+        normalized_codes = normalize_reason_codes(reason_codes, notes=reason)
+        raw_meta = getattr(existing, "extra_metadata", None) or getattr(existing, "metadata", None) or {}
+        meta = dict(raw_meta) if isinstance(raw_meta, dict) else {}
+        meta["reason_codes"] = normalized_codes
+        meta["primary_reason_code"] = normalized_codes[0] if normalized_codes else "other"
+
         item = await self.db.update_review_item(
             item_id,
             review_status="rejected",
@@ -163,6 +177,7 @@ class ReviewService:
             reviewed_by=reviewer,
             review_timestamp=datetime.now(timezone.utc),
             review_version=(existing.review_version or 0) + 1,
+            extra_metadata=meta,
         )
         return item.to_dict() if item else None
 
@@ -173,10 +188,18 @@ class ReviewService:
         edited_instruction: Optional[str] = None,
         edited_response: Optional[str] = None,
         notes: str = "",
+        reason_codes: Optional[list[str] | str] = None,
     ) -> Optional[dict]:
         existing = await self.db.get_review_item(item_id)
         if not existing:
             return None
+
+        normalized_codes = normalize_reason_codes(reason_codes, notes=notes)
+        raw_meta = getattr(existing, "extra_metadata", None) or getattr(existing, "metadata", None) or {}
+        meta = dict(raw_meta) if isinstance(raw_meta, dict) else {}
+        meta["reason_codes"] = normalized_codes
+        meta["primary_reason_code"] = normalized_codes[0] if normalized_codes else "other"
+
         item = await self.db.update_review_item(
             item_id,
             edited_instruction=edited_instruction or existing.instruction,
@@ -187,6 +210,7 @@ class ReviewService:
             reviewed_by=reviewer,
             review_timestamp=datetime.now(timezone.utc),
             review_version=(existing.review_version or 0) + 1,
+            extra_metadata=meta,
         )
         return item.to_dict() if item else None
 
@@ -236,6 +260,18 @@ class ReviewService:
 
     async def get_stats(self) -> dict:
         return await self.db.review_stats()
+
+    async def get_feedback_signals(self, job_id: Optional[str] = None, owner: Optional[str] = None) -> dict:
+        """Aggregate structured review reason signals for pipeline feedback."""
+        items, _ = await self.db.list_review_items(job_id=job_id, page=1, page_size=10000, owner=owner)
+        dict_items = [i.to_dict() for i in items]
+        return ReviewCalibrationTracker.compute_feedback_signals(dict_items)
+
+    async def get_calibration_stats(self, job_id: Optional[str] = None, owner: Optional[str] = None) -> dict:
+        """Compute reviewer calibration / disagreement metrics across reviews."""
+        items, _ = await self.db.list_review_items(job_id=job_id, page=1, page_size=10000, owner=owner)
+        dict_items = [i.to_dict() for i in items]
+        return ReviewCalibrationTracker.compute_inter_annotator_calibration(dict_items)
 
     async def export_approved(self, job_id: Optional[str] = None, owner: Optional[str] = None) -> AsyncGenerator[str, None]:
         """Yield JSONL lines of all approved items (optionally filtered by job/owner)."""
