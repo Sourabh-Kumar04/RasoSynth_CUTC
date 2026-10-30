@@ -74,22 +74,22 @@ export default function QualityDashboardPage() {
   }, [selectedJobId, jobs]);
 
   // Derived 5D scores for the selected dataset
-  const breakdown = selectedJob?.metadata?.quality_breakdown || {
-    topic_fidelity: 0.94,
-    source_grounding: 0.88,
-    instruction_clarity: 0.91,
-    response_completeness: 0.89,
-    domain_correctness: 0.95,
-    composite: typeof selectedJob?.quality_score === 'number' ? (selectedJob.quality_score <= 1.0 ? Math.round(selectedJob.quality_score * 100) / 100 : selectedJob.quality_score / 100) : 0.91,
-  };
+  const rawBreakdown = selectedJob?.metadata?.quality_breakdown || null;
+  const hasRealBreakdown = rawBreakdown && typeof rawBreakdown === 'object';
 
-  const topicFidelityPct = Math.round((breakdown.topic_fidelity ?? 0.94) * 100);
-  const groundingPct = Math.round((breakdown.source_grounding ?? 0.88) * 100);
-  const clarityPct = Math.round((breakdown.instruction_clarity ?? 0.91) * 100);
-  const completenessPct = Math.round((breakdown.response_completeness ?? 0.89) * 100);
-  const domainPct = Math.round((breakdown.domain_correctness ?? 0.95) * 100);
-  const compositePct = Math.round((breakdown.composite ?? 0.91) * 100);
-  const isTopicCertified = topicFidelityPct >= 80;
+  const topicFidelityPct = typeof rawBreakdown?.topic_fidelity === 'number' ? Math.round(rawBreakdown.topic_fidelity * 100) : null;
+  const groundingPct = typeof rawBreakdown?.source_grounding === 'number' ? Math.round(rawBreakdown.source_grounding * 100) : null;
+  const clarityPct = typeof rawBreakdown?.instruction_clarity === 'number' ? Math.round(rawBreakdown.instruction_clarity * 100) : null;
+  const completenessPct = typeof rawBreakdown?.response_completeness === 'number' ? Math.round(rawBreakdown.response_completeness * 100) : null;
+  const domainPct = typeof rawBreakdown?.domain_correctness === 'number' ? Math.round(rawBreakdown.domain_correctness * 100) : null;
+
+  const compositePct = typeof selectedJob?.quality_score === 'number'
+    ? (selectedJob.quality_score <= 1.0 ? Math.round(selectedJob.quality_score * 100) : Math.round(selectedJob.quality_score))
+    : typeof rawBreakdown?.composite === 'number'
+    ? (rawBreakdown.composite <= 1.0 ? Math.round(rawBreakdown.composite * 100) : Math.round(rawBreakdown.composite))
+    : null;
+
+  const isTopicCertified = topicFidelityPct !== null && topicFidelityPct >= 80;
 
   // Semantic Density State
   const [densityLoading, setDensityLoading] = useState(false);
@@ -251,7 +251,12 @@ export default function QualityDashboardPage() {
                 <span className="text-xs text-[#a8a29e] font-mono">[{selectedJobId.slice(0, 8)}...]</span>
               </div>
               <div className="flex items-center gap-2">
-                {isTopicCertified ? (
+                {topicFidelityPct === null ? (
+                  <Badge variant="outline" className="text-xs font-mono font-bold bg-zinc-900/50 text-[#a8a29e] border-[#272738] flex items-center gap-1">
+                    <Info className="h-3 w-3 text-[#a8a29e]" />
+                    AUDIT PENDING (NO TOPIC SCORE)
+                  </Badge>
+                ) : isTopicCertified ? (
                   <Badge variant="outline" className="text-xs font-mono font-bold bg-emerald-950/50 text-emerald-400 border-emerald-600/50 flex items-center gap-1">
                     <CheckCircle2 className="h-3 w-3 text-emerald-400" />
                     CERTIFIED READY (TOPIC &ge; 80%)
@@ -263,7 +268,7 @@ export default function QualityDashboardPage() {
                   </Badge>
                 )}
                 <span className="text-xs font-mono font-bold text-white bg-[#1a1a26] px-2.5 py-0.5 rounded border border-[#272738]">
-                  Composite: <strong className="text-emerald-400">{compositePct}%</strong>
+                  Composite: <strong className={compositePct !== null ? "text-emerald-400" : "text-[#a8a29e]"}>{compositePct !== null ? `${compositePct}%` : 'Unknown'}</strong>
                 </span>
               </div>
             </div>
@@ -283,17 +288,17 @@ export default function QualityDashboardPage() {
                     <span className="text-xs text-zinc-500 font-mono">{dim.threshold}</span>
                   </div>
                   <div className="flex items-baseline justify-between">
-                    <span className={clsx("text-lg font-bold font-mono", dim.val >= 80 ? "text-emerald-400" : "text-amber-400")}>
-                      {dim.val}%
+                    <span className={clsx("text-lg font-bold font-mono", dim.val === null ? "text-[#a8a29e]" : dim.val >= 80 ? "text-emerald-400" : "text-amber-400")}>
+                      {dim.val !== null ? `${dim.val}%` : 'Unknown'}
                     </span>
                     <span className="text-xs text-[#a8a29e] font-mono">
-                      {dim.val >= 80 ? "Pass" : "Flagged"}
+                      {dim.val === null ? "Not Measured" : dim.val >= 80 ? "Pass" : "Flagged"}
                     </span>
                   </div>
                   <div className="w-full bg-[#1c1c28] h-1.5 rounded-full overflow-hidden">
                     <div
-                      className={clsx("h-full transition-all duration-500", dim.val >= 80 ? "bg-emerald-500" : "bg-amber-500")}
-                      style={{ width: `${dim.val}%` }}
+                      className={clsx("h-full transition-all duration-500", dim.val === null ? "bg-zinc-700" : dim.val >= 80 ? "bg-emerald-500" : "bg-amber-500")}
+                      style={{ width: `${dim.val ?? 0}%` }}
                     />
                   </div>
                   <p className="text-xs text-[#a8a29e] font-sans truncate">{dim.desc}</p>
@@ -707,10 +712,10 @@ export default function QualityDashboardPage() {
         <div className="flex items-center justify-between mb-3">
           <h2 className="text-xs font-mono font-bold uppercase tracking-wider text-[#a8a29e] flex items-center gap-2">
             <Layers className="h-4 w-4 text-[#f26625]" />
-            Curriculum Complexity &amp; Cognitive Tier Distribution
+            Curriculum Complexity &amp; Cognitive Tier Specification (Target Profile)
           </h2>
           <span className="text-xs font-mono text-[#f26625] px-2 py-0.5 rounded bg-[#f26625]/10 border border-[#f26625]/30">
-            5-Tier Stratified Balancing
+            5-Tier Stratified Target (Specification Only)
           </span>
         </div>
 
@@ -718,11 +723,11 @@ export default function QualityDashboardPage() {
           <CardContent className="p-5">
             <div className="divide-y divide-[#272738] rounded-md border border-[#272738] bg-[#0a0a0f] mb-6">
               {[
-                { tier: 'Tier 1', label: 'Foundational Recall', pct: 20, count: '1,000', color: 'bg-emerald-500', text: 'text-emerald-400', tokens: '142 avg', pass: '99.4%' },
-                { tier: 'Tier 2', label: 'Structured Logic', pct: 30, count: '1,500', color: 'bg-[#f26625]', text: 'text-[#f26625]', tokens: '286 avg', pass: '98.1%' },
-                { tier: 'Tier 3', label: 'Multi-Step CoT', pct: 25, count: '1,250', color: 'bg-[#f26625]', text: 'text-[#f26625]', tokens: '512 avg', pass: '95.6%' },
-                { tier: 'Tier 4', label: 'Tool Calling & Schema', pct: 15, count: '750', color: 'bg-[#fb923c]', text: 'text-[#fb923c]', tokens: '420 avg', pass: '93.2%' },
-                { tier: 'Tier 5', label: 'Frontier Deduction', pct: 10, count: '500', color: 'bg-amber-500', text: 'text-amber-400', tokens: '890 avg', pass: '91.8%' },
+                { tier: 'Tier 1', label: 'Foundational Recall', pct: 20, count: '1,000 (spec target)', color: 'bg-emerald-500', text: 'text-emerald-400', tokens: '142 avg (target)', pass: 'Target ≥99%' },
+                { tier: 'Tier 2', label: 'Structured Logic', pct: 30, count: '1,500 (spec target)', color: 'bg-[#f26625]', text: 'text-[#f26625]', tokens: '286 avg (target)', pass: 'Target ≥98%' },
+                { tier: 'Tier 3', label: 'Multi-Step CoT', pct: 25, count: '1,250 (spec target)', color: 'bg-[#f26625]', text: 'text-[#f26625]', tokens: '512 avg (target)', pass: 'Target ≥95%' },
+                { tier: 'Tier 4', label: 'Tool Calling & Schema', pct: 15, count: '750 (spec target)', color: 'bg-[#fb923c]', text: 'text-[#fb923c]', tokens: '420 avg (target)', pass: 'Target ≥93%' },
+                { tier: 'Tier 5', label: 'Frontier Deduction', pct: 10, count: '500 (spec target)', color: 'bg-amber-500', text: 'text-amber-400', tokens: '890 avg (target)', pass: 'Target ≥90%' },
               ].map((item) => (
                 <div key={item.tier} className="px-3 py-2.5 space-y-1">
                   <div className="flex items-center justify-between">
@@ -760,11 +765,11 @@ export default function QualityDashboardPage() {
         <div className="flex items-center justify-between mb-3">
           <h2 className="text-xs font-mono font-bold uppercase tracking-wider text-[#a8a29e] flex items-center gap-2">
             <ShieldCheck className="h-4 w-4 text-[#10b981]" />
-            Evaluation Benchmark Decontamination Purity
+            Evaluation Benchmark Decontamination Purity (Protocol Reference)
           </h2>
           <span className="text-xs font-mono text-[#10b981] px-2 py-0.5 rounded bg-emerald-950/40 border border-emerald-500/30 flex items-center gap-1 font-bold">
-            <CheckCircle2 className="w-3 h-3 text-[#10b981]" />
-            100% Zero Test Leakage Certified (Audit Date: 26 Oct 2026)
+            <Info className="w-3 h-3 text-[#10b981]" />
+            MinHash Overlap Barrier Protocol · Per-Dataset Audit Below
           </span>
         </div>
 
@@ -772,11 +777,11 @@ export default function QualityDashboardPage() {
           <CardContent className="p-5 space-y-4">
             <div className="divide-y divide-[#272738] rounded-md border border-[#272738] bg-[#0a0a0f]">
               {[
-                { benchmark: 'MMLU / Hindi', purity: '100.0%', overlap: '0.00%', samples: '14,042 tests', status: 'Clean' },
-                { benchmark: 'GSM8K (Math)', purity: '100.0%', overlap: '0.00%', samples: '1,319 tests', status: 'Clean' },
-                { benchmark: 'IndicGLUE (BoolQ/RTE)', purity: '100.0%', overlap: '0.00%', samples: '8,450 tests', status: 'Clean' },
-                { benchmark: 'ARC Challenge', purity: '100.0%', overlap: '0.00%', samples: '1,172 tests', status: 'Clean' },
-                { benchmark: 'IN22-Gen (MT)', purity: '100.0%', overlap: '0.00%', samples: '2,048 tests', status: 'Clean' },
+                { benchmark: 'MMLU / Hindi', purity: 'Target 100.0%', overlap: '0.00% max allowed', samples: '14,042 tests (split ref)', status: 'Protocol Active' },
+                { benchmark: 'GSM8K (Math)', purity: 'Target 100.0%', overlap: '0.00% max allowed', samples: '1,319 tests (split ref)', status: 'Protocol Active' },
+                { benchmark: 'IndicGLUE (BoolQ/RTE)', purity: 'Target 100.0%', overlap: '0.00% max allowed', samples: '8,450 tests (split ref)', status: 'Protocol Active' },
+                { benchmark: 'ARC Challenge', purity: 'Target 100.0%', overlap: '0.00% max allowed', samples: '1,172 tests (split ref)', status: 'Protocol Active' },
+                { benchmark: 'IN22-Gen (MT)', purity: 'Target 100.0%', overlap: '0.00% max allowed', samples: '2,048 tests (split ref)', status: 'Protocol Active' },
               ].map((b) => (
                 <div key={b.benchmark} className="px-3 py-2.5 space-y-1">
                   <div className="flex items-center justify-between text-xs">
