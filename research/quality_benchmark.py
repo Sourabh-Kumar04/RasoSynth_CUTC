@@ -124,6 +124,7 @@ data and not a held-out set. Syntactic validity is NOT measured
             "avg_response_length_chars": round(statistics.mean(resp_lengths), 1) if resp_lengths else 0,
             "expansion_ratio": round(avg_expansion_ratio, 2),
             "semantic_fidelity_chrf": round(statistics.mean(chrf_scores), 2) if chrf_scores else 0.0,
+            "semantic_fidelity_chrf_note": "chrF lexical overlap between response and instruction; not a semantic-fidelity measurement.",
         }
 
     async def benchmark_latency(self, iterations: int = 100) -> dict:
@@ -187,6 +188,10 @@ data and not a held-out set. Syntactic validity is NOT measured
 
         return {
             "status": "completed",
+            "demo": True,
+            "corpus_type": "single_hardcoded_document",
+            "documents_evaluated": 1,
+            "note": "Schema-parsing check on one hardcoded document; not a provider-quality measurement and not a live provider probe. The 100% figure is 1/1 documents, not a measured provider success rate.",
             "schema_parsing_success_rate_pct": 100.0 if "instruction" in parsed else 0.0,
             "avg_parse_latency_us": round(parse_latency_us, 2),
             "fallback_resilience_rating": "unknown (not measured)",
@@ -255,6 +260,21 @@ data and not a held-out set. Syntactic validity is NOT measured
         ref_d2 = ref_res.get("distinct_2", 0.0)
         d2_delta_pct = round(((ref_d2 - raw_d2) / (raw_d2 if raw_d2 > 0 else 1.0)) * 100, 2)
 
+        # The verdict is computed from the deltas, never hardcoded: the old
+        # string claimed improvement even when the refined dataset scored
+        # lower. It describes only the two lexical measures computed here.
+        if uniq_delta_pct > 0 and d2_delta_pct > 0:
+            verdict = "Refined dataset scored higher on uniqueness and lexical diversity (distinct-2) than the raw dataset on these lexical measures."
+        elif uniq_delta_pct < 0 and d2_delta_pct < 0:
+            verdict = "Refined dataset scored lower on uniqueness and lexical diversity (distinct-2) than the raw dataset on these lexical measures."
+        elif uniq_delta_pct == 0 and d2_delta_pct == 0:
+            verdict = "No change on uniqueness or lexical diversity (distinct-2) between raw and refined datasets on these lexical measures."
+        else:
+            verdict = (
+                f"Mixed lexical result: uniqueness changed by {uniq_delta_pct}% and distinct-2 by "
+                f"{d2_delta_pct}% between raw and refined datasets; neither measure alone establishes higher quality."
+            )
+
         return {
             "raw_dataset": raw_res,
             "refined_dataset": ref_res,
@@ -264,7 +284,8 @@ data and not a held-out set. Syntactic validity is NOT measured
                 "instruction_depth_gain_chars": round(ref_res["avg_instruction_length"] - raw_res["avg_instruction_length"], 1),
                 "response_depth_gain_chars": round(ref_res["avg_response_length"] - raw_res["avg_response_length"], 1),
             },
-            "verdict": "RasoSynthTune refinement demonstrated higher diversity, deduplication hygiene, and structural completeness."
+            "verdict": verdict,
+            "verdict_basis": "uniqueness_rate and distinct_2 deltas only; not a general quality judgement.",
         }
 
     async def benchmark_cost_efficiency(self) -> dict:
