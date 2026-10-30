@@ -1,14 +1,25 @@
-"""Production Fine-Tuning Recipe & Launch Script Generator.
+"""Fine-Tuning Recipe & Launch Script Generator.
 
-Generates production-ready training scripts and framework configurations tailored
-to the synthesized dataset:
-1. Unsloth (2x faster LoRA & QLoRA training)
-2. Axolotl (Distributed enterprise YAML training recipe)
-3. LLaMA-Factory (Unified multi-stage tuning CLI)
-4. Torchtune (PyTorch native LLM fine-tuning)
+Generates training scripts and framework configurations tailored to the
+synthesized dataset for the SUPPORTED frameworks only:
+1. Unsloth (LoRA & QLoRA training)
+2. Axolotl (YAML training recipe)
+3. LLaMA-Factory (multi-stage tuning CLI)
+
+NOTE: generated scripts are templates. ``generate_training_recipe`` syntax-
+validates them (see ``_validate_generated_script``) but does NOT verify
+them against installed framework versions, and no speed or
+production-readiness claim is made for them. Torchtune is NOT supported:
+it has no generator in this module, so requesting it (or any unknown
+framework) raises ``ValueError`` instead of silently returning an Unsloth
+script mislabelled as another framework.
 """
 
+import ast
+
 from typing import Any, Dict, Optional
+
+SUPPORTED_FRAMEWORKS = ("axolotl", "llamafactory", "unsloth")
 
 
 def generate_unsloth_recipe(
@@ -185,14 +196,67 @@ warmup_ratio: 0.05
 """
 
 
+def _validate_generated_script(code: str, filename: str) -> str:
+    """Syntax-validate a generated script; raise ValueError if invalid.
+
+    Python is checked with ``ast.parse``; YAML with ``yaml.safe_load`` when
+    PyYAML is installed (otherwise a structural check); shell scripts with
+    a basic non-empty check. This is SYNTAX validation only: it does not
+    prove the script runs, that its trainer arguments exist in the
+    installed framework version, or that its hyperparameters are sound.
+    """
+    if not code or not code.strip():
+        raise ValueError(f"Generated script {filename} is empty")
+    if filename.endswith(".py"):
+        try:
+            ast.parse(code)
+        except SyntaxError as e:
+            raise ValueError(f"Generated script {filename} failed syntax validation: {e}")
+        return "ast.parse:ok"
+    if filename.endswith((".yaml", ".yml")):
+        try:
+            import yaml
+        except ImportError:
+            if "base_model:" not in code:
+                raise ValueError(f"Generated config {filename} failed structural validation")
+            return "structural-check:ok (pyyaml unavailable)"
+        try:
+            parsed = yaml.safe_load(code)
+        except Exception as e:
+            raise ValueError(f"Generated config {filename} failed YAML validation: {e}")
+        if not isinstance(parsed, dict) or "base_model" not in parsed:
+            raise ValueError(f"Generated config {filename} is missing base_model")
+        return "yaml.safe_load:ok"
+    if filename.endswith(".sh"):
+        if "\x00" in code:
+            raise ValueError(f"Generated script {filename} contains NUL bytes")
+        return "shell:basic-ok"
+    return "unknown-format:unchecked"
+
+
 def generate_training_recipe(
     framework: str = "unsloth",
     dataset_path: str = "dataset.jsonl",
     base_model: str = "sarvamai/sarvam-2b-v0.5",
     dataset_type: str = "sft",
 ) -> Dict[str, str]:
-    """Generate recipe code and instructions for the requested framework."""
-    framework_lower = framework.lower()
+    """Generate recipe code and instructions for the requested framework.
+
+    Raises ValueError for any framework without a generator (including
+    Torchtune): unknown frameworks never silently fall back to Unsloth.
+    """
+    framework_lower = (framework or "").lower()
+    # Interpolated values must not contain newlines: a newline inside a
+    # quoted string or YAML value could break out of its field.
+    for field_name, field_value in (("dataset_path", dataset_path), ("base_model", base_model)):
+        if "\n" in field_value or "\r" in field_value:
+            raise ValueError(f"{field_name} must not contain newlines")
+    if framework_lower not in SUPPORTED_FRAMEWORKS:
+        raise ValueError(
+            f"Unsupported framework '{framework}'. Supported frameworks: "
+            f"{', '.join(SUPPORTED_FRAMEWORKS)}. Torchtune has no generator "
+            "in this module and is not silently replaced with Unsloth."
+        )
     if framework_lower == "axolotl":
         code = generate_axolotl_config(dataset_path=dataset_path, base_model=base_model, dataset_type=dataset_type)
         filename = "axolotl_config.yaml"
@@ -222,14 +286,19 @@ llamafactory-cli train \\
 """
         filename = "train_llamafactory.sh"
         launch_cmd = f"bash {filename}"
-    else:  # unsloth default
+    else:  # unsloth (explicitly selected, not a fallback)
         code = generate_unsloth_recipe(dataset_path=dataset_path, base_model=base_model, dataset_type=dataset_type)
         filename = "train_unsloth.py"
         launch_cmd = f"python {filename}"
 
+    validation = _validate_generated_script(code, filename)
+
     return {
-        "framework": framework,
+        "framework": framework_lower,
         "filename": filename,
         "content": code,
         "launch_command": launch_cmd,
+        "supported_frameworks": ", ".join(SUPPORTED_FRAMEWORKS),
+        "validation": validation,
+        "validation_note": "Syntax-level validation only; not verified against installed framework versions or executed.",
     }
