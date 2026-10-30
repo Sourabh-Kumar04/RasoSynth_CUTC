@@ -284,6 +284,163 @@ class FinetuneJobManager:
             if q in subs:
                 subs.remove(q)
 
+    # ── Post-training evaluation ──────────────────────────────────────────────
+
+    async def _run_post_training_eval(
+        self,
+        job_id: str,
+        config: FineTuneConfig,
+        event: dict,
+    ) -> tuple[bool, Optional[str], Optional[dict]]:
+        """Run automatic base-vs-fine-tuned comparative evaluation on held-out prompts.
+
+        Executed after LoRA adapter export and BEFORE marking the job complete.
+        Returns:
+            (should_continue, error_message, eval_report)
+        """
+        from pathlib import Path
+        import json
+        from core.evaluation.held_out_split import NO_INTERNAL_EVAL_FLAG
+        from core.evaluation.inference_harness import (
+            evaluate_base_vs_finetuned,
+            append_eval_to_model_card,
+        )
+        from core.export.huggingface_exporter import generate_hf_model_card
+
+        out_path_str = event.get("output_path") or config.output_dir
+        out_path = Path(out_path_str)
+        out_path.mkdir(parents=True, exist_ok=True)
+
+        # 1. Locate held-out split files
+        val_candidates = []
+        if config.dataset_path:
+            ds_parent = Path(config.dataset_path).parent
+            val_candidates.extend([
+                ds_parent / "val.jsonl",
+                ds_parent / "test.jsonl",
+                ds_parent / "eval_held_out.jsonl",
+            ])
+        if config.dataset_id:
+            val_candidates.extend([
+                Path("outputs") / str(config.dataset_id) / "val.jsonl",
+                Path("outputs") / str(config.dataset_id) / "test.jsonl",
+            ])
+        val_candidates.extend([
+            out_path / "val.jsonl",
+            out_path / "test.jsonl",
+            Path(config.output_dir) / "val.jsonl",
+        ])
+
+        held_out_samples = []
+        source_val_file = None
+        for cand in val_candidates:
+            if cand.exists() and cand.is_file():
+                source_val_file = cand
+                try:
+                    with open(cand, "r", encoding="utf-8") as f:
+                        for line in f:
+                            line = line.strip()
+                            if line:
+                                held_out_samples.append(json.loads(line))
+                    if held_out_samples:
+                        break
+                except Exception as e:
+                    logger.debug("Failed reading val split %s: %s", cand, e)
+
+        # 2. Check for split_manifest.json (holdout decision)
+        holdout_decision = None
+        manifest_candidates = [
+            out_path / "split_manifest.json",
+        ]
+        if config.dataset_path:
+            manifest_candidates.append(Path(config.dataset_path).parent / "split_manifest.json")
+        for mc in manifest_candidates:
+            if mc.exists():
+                try:
+                    with open(mc, "r", encoding="utf-8") as f:
+                        holdout_decision = json.load(f)
+                    break
+                except Exception:
+                    pass
+
+        # If sample count was below floor or no held-out samples carved
+        if not held_out_samples and not holdout_decision:
+            # Query dataset size
+            sample_count = 0
+            if hasattr(self, "db") and self.db and config.dataset_id:
+                try:
+                    ds = await self.db.get_dataset(str(config.dataset_id))
+                    if ds:
+                        sample_count = getattr(ds, "size", 0) or 0
+                except Exception:
+                    pass
+            holdout_decision = {
+                "floor": 1000,
+                "total_samples": sample_count,
+                "train_count": sample_count,
+                "val_count": 0,
+                "test_count": 0,
+                "status": "below_floor_100_pct_train" if sample_count < 1000 else "no_split_found",
+                "flag": NO_INTERNAL_EVAL_FLAG if sample_count < 1000 else None,
+            }
+
+        # 3. Execute evaluation comparison
+        policy = os.getenv("EVAL_REGRESSION_POLICY", "warn").strip().lower()
+        eval_report = evaluate_base_vs_finetuned(
+            base_model_id=config.base_model,
+            adapter_path=str(out_path),
+            held_out_samples=held_out_samples,
+            job_id=job_id,
+            chat_template=config.chat_template,
+            regression_policy=policy,
+        )
+
+        # 4. Check regression policy block vs warn
+        if eval_report.get("blocks_completion"):
+            err_msg = (
+                f"Evaluation regression blocked job completion: fine-tuned adapter showed negative delta vs base "
+                f"(composite delta: {eval_report.get('headline_composite_delta')}, win rate: {eval_report.get('win_rate_pct')}%). "
+                f"Failing job per regression policy='block'."
+            )
+            logger.error("[%s] %s", job_id, err_msg)
+            return False, err_msg, eval_report
+
+        # 5. Persist eval_report.json artifact
+        try:
+            with open(out_path / "eval_report.json", "w", encoding="utf-8") as f:
+                json.dump(eval_report, f, indent=2)
+        except Exception as e:
+            logger.warning("[%s] Failed saving eval_report.json: %s", job_id, e)
+
+        # 6. Append to Hugging Face Model Card (README.md)
+        readme_path = out_path / "README.md"
+        current_readme = ""
+        if readme_path.exists():
+            try:
+                current_readme = readme_path.read_text(encoding="utf-8")
+            except Exception:
+                current_readme = ""
+        if not current_readme:
+            current_readme = generate_hf_model_card(
+                model_name=config.output_model_name or job_id,
+                base_model=config.base_model,
+                dataset_name=config.dataset_id or "dataset",
+                sample_count=holdout_decision.get("total_samples") if holdout_decision else None,
+                epochs=config.num_train_epochs,
+                learning_rate=config.learning_rate,
+                lora_r=config.lora_r,
+                lora_alpha=config.lora_alpha,
+                holdout_decision=holdout_decision,
+            )
+
+        updated_readme = append_eval_to_model_card(current_readme, eval_report, holdout_decision)
+        try:
+            readme_path.write_text(updated_readme, encoding="utf-8")
+        except Exception as e:
+            logger.warning("[%s] Failed writing evaluation to model card README.md: %s", job_id, e)
+
+        return True, None, eval_report
+
     # ── Internal ──────────────────────────────────────────────────────────────
 
     async def _run_job(self, job_id: str, config: FineTuneConfig):
@@ -295,6 +452,8 @@ class FinetuneJobManager:
             await self._broadcast(job_id, start_event)
 
             trainer = Trainer(config)
+            persisted_config = config.to_dict()
+            persisted_config.pop("hf_token", None)
             simulated_job = bool(persisted_config.get("is_simulated", False))
             try:
                 async for event in trainer.train():
@@ -324,12 +483,41 @@ class FinetuneJobManager:
                     elif etype == "eval":
                         await self.db.update_finetune_job(job_id, eval_loss=event.get("eval_loss"))
                     elif etype == "completed":
+                        # Post-training evaluation on held-out prompts BEFORE marking complete
+                        should_continue, err_msg, eval_report = await self._run_post_training_eval(
+                            job_id, config, event
+                        )
+                        if not should_continue:
+                            # Regression blocked completion per policy
+                            await self.db.update_finetune_job(
+                                job_id,
+                                status="failed",
+                                error=err_msg,
+                                completed_at=utc_now(),
+                            )
+                            self._list_cache = None
+                            error_event = {
+                                "type": "error",
+                                "job_id": job_id,
+                                "message": err_msg,
+                                "eval_report": eval_report,
+                            }
+                            self._persist_log_event(job_id, error_event)
+                            await self._broadcast(job_id, error_event)
+                            await self._dispatch_webhook(config.webhook_url, job_id, "failed", error_event, config)
+                            break
+
+                        if eval_report:
+                            persisted_config["eval_report"] = eval_report
+                            event["eval_report"] = eval_report
+
                         await self.db.update_finetune_job(
                             job_id, status="completed", progress=100.0,
                             output_path=event.get("output_path"),
                             hf_repo_url=event.get("hf_repo_url"),
                             completed_at=utc_now(),
                             is_simulated=simulated_job,
+                            config=persisted_config,
                         )
                         self._list_cache = None
                         logger.info("Fine-tune job %s completed", job_id)

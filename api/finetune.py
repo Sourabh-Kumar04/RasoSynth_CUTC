@@ -542,6 +542,12 @@ async def get_model_card(job_id: str, manager=Depends(_manager),
         or (job.get("execution_mode") if isinstance(job, dict) else "") == "simulated"
     )
 
+    job_config = getattr(job, "config", {}) if not isinstance(job, dict) else job.get("config", {})
+    if not isinstance(job_config, dict):
+        job_config = {}
+    holdout_decision = job_config.get("holdout_decision") or job_config.get("held_out_split")
+    eval_report = job_config.get("eval_report")
+
     card = generate_hf_model_card(
         model_name=model_name,
         base_model=base_model,
@@ -555,6 +561,8 @@ async def get_model_card(job_id: str, manager=Depends(_manager),
         eval_loss=eval_loss,
         merkle_root=merkle_root,
         certificate_id=f"DBOM-{merkle_root[:12].upper()}" if merkle_root else None,
+        holdout_decision=holdout_decision,
+        eval_report=eval_report,
     )
     execution_mode = getattr(job, "execution_mode", None) or (job.get("execution_mode") if isinstance(job, dict) else None)
     seal_line = f"**DBOM Provenance Seal**: `{model_seal}`\n" if model_seal else ""

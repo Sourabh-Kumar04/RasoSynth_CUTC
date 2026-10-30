@@ -160,6 +160,8 @@ def generate_hf_model_card(
     certificate_id: Optional[str] = None,
     domain: str = "General",
     license_type: str = PROJECT_LICENSE,
+    holdout_decision: Optional[Dict[str, Any]] = None,
+    eval_report: Optional[Dict[str, Any]] = None,
 ) -> str:
     """Generate a standard Hugging Face Model Card (README.md) for fine-tuned LoRA adapters."""
     tags = ["rasosynthtune", "peft", "lora", "fine-tuned", "text-generation"]
@@ -176,6 +178,32 @@ library_name: peft
 tags:
 {chr(10).join(f"- {t}" for t in tags)}
 ---"""
+
+    split_block = ""
+    if holdout_decision:
+        floor = holdout_decision.get("floor", 1000)
+        total_s = holdout_decision.get("total_samples", sample_count or 0)
+        train_c = holdout_decision.get("train_count", total_s)
+        val_c = holdout_decision.get("val_count", 0)
+        test_c = holdout_decision.get("test_count", 0)
+        flag = holdout_decision.get("flag")
+        status = holdout_decision.get("status", "unknown")
+
+        flag_section = ""
+        if flag:
+            flag_section = f"\n> [!WARNING]\n> **Holdout Flag**: `{flag}`\n> Automatic full-platform eval was skipped because sample count is below the 1000 floor. Trained on 100% of data.\n"
+
+        split_block = f"""
+## Dataset Split & Floor Decision
+| Metric | Count / Setting |
+| :--- | :--- |
+| **Evaluation Platform Floor** | `{floor}` samples |
+| **Total Synthesized Samples** | `{total_s}` |
+| **Training Split (Carved)** | `{train_c}` samples |
+| **Validation Split (Job Artifact)** | `{val_c}` samples |
+| **Test Split (Job Artifact)** | `{test_c}` samples |
+| **Holdout Decision** | `{status}` |
+{flag_section}"""
 
     dbom_block = ""
     if merkle_root:
@@ -223,6 +251,7 @@ This model is a parameter-efficient fine-tuned (PEFT LoRA) adapter trained on **
 | **Target Modules** | `q_proj, v_proj, k_proj, o_proj, gate_proj, up_proj, down_proj` |
 | **Precision** | `bfloat16` with FlashAttention-2 (template default — verify against the run config) |
 {loss_block}
+{split_block}
 {dbom_block}
 ## Quickstart Inference
 
@@ -260,4 +289,11 @@ print(tokenizer.decode(outputs[0], skip_special_tokens=True))
 }}
 ```
 """
+    if eval_report or (holdout_decision and holdout_decision.get("flag")):
+        try:
+            from core.evaluation.inference_harness import append_eval_to_model_card
+            content = append_eval_to_model_card(content, eval_report or {}, holdout_decision)
+        except Exception:
+            pass
+
     return content.strip()
