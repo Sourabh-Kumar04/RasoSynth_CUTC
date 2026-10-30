@@ -142,17 +142,19 @@ class TestAPIEndpoints:
         assert "data" in data
         assert isinstance(data["data"], list)
 
-    def test_datasets_records_endpoint(self, test_client, test_dataset):
+    def test_datasets_records_endpoint(self, test_client, test_dataset, auth_headers, monkeypatch, db):
+        monkeypatch.setattr("api.server.db", db)
         """Test GET /datasets/{id}/records returns records."""
-        resp = test_client.get(f"/datasets/{test_dataset['id']}/records?limit=10")
+        resp = test_client.get(f"/datasets/{test_dataset['id']}/records?limit=10", headers=auth_headers)
         assert resp.status_code == 200
         data = resp.json()
         assert "records" in data
         assert "count" in data
 
-    def test_datasets_single_endpoint(self, test_client, test_dataset):
+    def test_datasets_single_endpoint(self, test_client, test_dataset, auth_headers, monkeypatch, db):
+        monkeypatch.setattr("api.server.db", db)
         """Test GET /datasets/{id} returns dataset detail."""
-        resp = test_client.get(f"/datasets/{test_dataset['id']}")
+        resp = test_client.get(f"/datasets/{test_dataset['id']}", headers=auth_headers)
         assert resp.status_code == 200
         data = resp.json()
         assert data["name"] == "test_dataset"
@@ -175,12 +177,13 @@ class TestAPIEndpoints:
         data = resp.json()
         assert "data" in data
 
-    def test_jobs_records_endpoint_from_db(self, test_client, test_job):
+    def test_jobs_records_endpoint_from_db(self, test_client, test_job, auth_headers, monkeypatch, db):
+        monkeypatch.setattr("api.server.db", db)
         """Test GET /jobs/{id}/records reads from DB."""
         # Create a dataset for this job
         # (test_job fixture already has one via test_dataset implicitly,
         # but let's test the path explicitly)
-        resp = test_client.get(f"/jobs/{test_job['id']}/records?limit=10")
+        resp = test_client.get(f"/jobs/{test_job['id']}/records?limit=10", headers=auth_headers)
         # Returns 200 even if empty (no file exists), source indicates DB or filesystem
         assert resp.status_code == 200
 
@@ -189,7 +192,6 @@ class TestExportPersistence:
     """Test export node persistence flow."""
 
     @pytest.mark.asyncio
-    @pytest.mark.skip(reason="Flaky: Prometheus duplicate metric registration causes cascade failures in pytest sequence. Works correctly in standalone execution.")
     async def test_export_node_persists_dataset(self, db, orchestrator, mock_sample):
         """Test that _export_node creates dataset and sample records."""
         from unittest.mock import patch, AsyncMock, Mock
@@ -203,7 +205,10 @@ class TestExportPersistence:
         ws_manager.send_to_job = AMock(return_value=1)
         orchestrator.ws_manager = ws_manager
 
-        job_id = "test-job-export-456"
+        import uuid
+        job_id = str(uuid.uuid4())  # get_job/create paths reject non-UUID ids
+        # Persist the job row first, as the API does before the export stage
+        await db.create_job({"id": job_id, "status": "pending", "config": {"target_domain": "test"}})
         orchestrator.active_jobs[job_id] = Job(
             id=job_id, status=JobStatus.RUNNING,
             created_at=datetime.now(timezone.utc), updated_at=datetime.now(timezone.utc),
@@ -250,7 +255,8 @@ class TestExportPersistence:
             assert call_args[0][0] == job_id  # first positional arg is job_id
 
     @pytest.mark.asyncio
-    async def test_download_generates_from_db_when_file_missing(self, db, test_job, test_client):
+    async def test_download_generates_from_db_when_file_missing(self, db, test_job, test_client, auth_headers, monkeypatch):
+        monkeypatch.setattr("api.server.db", db)
         """Test download endpoint falls back to DB when no file on disk."""
         # Create dataset in DB but no file
         ds = await db.create_dataset(
@@ -262,10 +268,14 @@ class TestExportPersistence:
             {"instruction": "DB Q2", "response": "DB A2", "input": "", "metadata": {}, "quality_score": 0.8, "difficulty_tier": 2},
         ])
 
+        # Mark the job completed so the route passes its completion gate
+        # (pending jobs get 409) and reaches the DB fallback under test.
+        await db.update_job_status(test_job["id"], {"status": "completed"})
+
         # Test the download endpoint uses the shared test_client fixture
-        resp = test_client.get(f"/jobs/{test_job['id']}/download")
-        # Status depends on job completion; we just verify it doesn't crash
-        assert resp.status_code in (200, 400, 404)
+        resp = test_client.get(f"/jobs/{test_job['id']}/download", headers=auth_headers)
+        # No file on disk -> generated from the DB samples above.
+        assert resp.status_code == 200
 
 
 class TestWebSocketIntegration:
