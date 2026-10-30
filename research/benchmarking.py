@@ -10,6 +10,7 @@ from datetime import datetime, timezone
 from enum import Enum
 import asyncio
 import json
+import math
 import statistics
 
 
@@ -47,14 +48,22 @@ class BenchmarkConfig:
 
 @dataclass
 class MetricResult:
-    """Result of a single metric."""
+    """Result of a single metric.
+
+    ``confidence_interval`` is the 95% confidence interval for the
+    DIFFERENCE of means (variant - baseline), from a Welch t-test — not
+    an interval for either mean alone. ``p_value`` is the two-sided Welch
+    p-value (None when it cannot be computed, e.g. fewer than 2 samples
+    per side, or for single-observation comparisons).
+    """
     name: str
     baseline_value: float
     variant_value: float
     improvement_percent: float
     is_significant: bool = False
-    confidence_interval: tuple = (0.0, 1.0)
-    statistical_test: str = "t-test"
+    confidence_interval: tuple = (0.0, 0.0)
+    statistical_test: str = "welch_t_test"
+    p_value: Optional[float] = None
 
 
 @dataclass
@@ -88,8 +97,143 @@ class PipelineBenchmark:
     metadata: Dict[str, Any] = field(default_factory=dict)
 
 
+def _betacf(a: float, b: float, x: float) -> float:
+    """Continued fraction for the incomplete beta function (Numerical Recipes)."""
+    max_iter = 200
+    epsilon = 3.0e-14
+    fpmin = 1.0e-300
+    qab = a + b
+    qap = a + 1.0
+    qam = a - 1.0
+    c = 1.0
+    d = 1.0 - qab * x / qap
+    if abs(d) < fpmin:
+        d = fpmin
+    d = 1.0 / d
+    h = d
+    for m in range(1, max_iter + 1):
+        m2 = 2 * m
+        aa = m * (b - m) * x / ((qam + m2) * (a + m2))
+        d = 1.0 + aa * d
+        if abs(d) < fpmin:
+            d = fpmin
+        c = 1.0 + aa / c
+        if abs(c) < fpmin:
+            c = fpmin
+        d = 1.0 / d
+        h *= d * c
+        aa = -(a + m) * (qab + m) * x / ((a + m2) * (qap + m2))
+        d = 1.0 + aa * d
+        if abs(d) < fpmin:
+            d = fpmin
+        c = 1.0 + aa / c
+        if abs(c) < fpmin:
+            c = fpmin
+        d = 1.0 / d
+        delta = d * c
+        h *= delta
+        if abs(delta - 1.0) < epsilon:
+            break
+    return h
+
+
+def _betainc_reg(a: float, b: float, x: float) -> float:
+    """Regularized incomplete beta function I_x(a, b)."""
+    if x <= 0.0:
+        return 0.0
+    if x >= 1.0:
+        return 1.0
+    log_bt = (
+        math.lgamma(a + b) - math.lgamma(a) - math.lgamma(b)
+        + a * math.log(x) + b * math.log(1.0 - x)
+    )
+    bt = math.exp(log_bt)
+    if x < (a + 1.0) / (a + b + 2.0):
+        return bt * _betacf(a, b, x) / a
+    return 1.0 - bt * _betacf(b, a, 1.0 - x) / b
+
+
+def _t_cdf(t: float, df: float) -> float:
+    """CDF of Student's t distribution with df degrees of freedom."""
+    x = df / (df + t * t)
+    ib = _betainc_reg(df / 2.0, 0.5, x)
+    return 1.0 - 0.5 * ib if t >= 0 else 0.5 * ib
+
+
+def _t_critical_95(df: float) -> float:
+    """Two-sided 95% critical value of Student's t (bisection on the CDF)."""
+    if df <= 0:
+        return float("nan")
+    lo, hi = 0.0, 1.0
+    while _t_cdf(hi, df) < 0.975:
+        hi *= 2.0
+        if hi > 1e6:
+            return hi
+    for _ in range(100):
+        mid = (lo + hi) / 2.0
+        if _t_cdf(mid, df) < 0.975:
+            lo = mid
+        else:
+            hi = mid
+    return (lo + hi) / 2.0
+
+
+def welch_t_test(baseline: List[float], variant: List[float]) -> Dict[str, Any]:
+    """Welch two-sample t-test (two-sided) for the difference of means.
+
+    Returns t_statistic, Welch-Satterthwaite df, two-sided p_value, the
+    mean difference (variant - baseline), its standard error, and the 95%
+    confidence interval for that difference. When either side has fewer
+    than 2 samples, no test is possible: p_value is None and the interval
+    is (0.0, 0.0). When both sides are constant, the p-value is 1.0 for
+    equal means and 0.0 otherwise, with a zero-width interval.
+    """
+    nb, nv = len(baseline), len(variant)
+    if nb < 2 or nv < 2:
+        return {
+            "t_statistic": 0.0, "df": 0.0, "p_value": None,
+            "mean_diff": 0.0, "standard_error": 0.0,
+            "ci_low": 0.0, "ci_high": 0.0,
+        }
+    mean_b = statistics.mean(baseline)
+    mean_v = statistics.mean(variant)
+    var_b = statistics.variance(baseline)
+    var_v = statistics.variance(variant)
+    diff = mean_v - mean_b
+    se = math.sqrt(var_b / nb + var_v / nv)
+    if se == 0.0:
+        if diff == 0.0:
+            return {"t_statistic": 0.0, "df": 0.0, "p_value": 1.0,
+                    "mean_diff": 0.0, "standard_error": 0.0,
+                    "ci_low": 0.0, "ci_high": 0.0}
+        return {"t_statistic": float("inf") if diff > 0 else float("-inf"),
+                "df": 0.0, "p_value": 0.0, "mean_diff": diff,
+                "standard_error": 0.0, "ci_low": diff, "ci_high": diff}
+    t_stat = diff / se
+    num = (var_b / nb + var_v / nv) ** 2
+    den = (var_b / nb) ** 2 / (nb - 1) + (var_v / nv) ** 2 / (nv - 1)
+    df = num / den if den > 0 else 0.0
+    p_value = 2.0 * (1.0 - _t_cdf(abs(t_stat), df)) if df > 0 else None
+    if p_value is not None:
+        p_value = min(1.0, max(0.0, p_value))
+    t_crit = _t_critical_95(df) if df > 0 else 0.0
+    margin = t_crit * se
+    return {
+        "t_statistic": t_stat, "df": df, "p_value": p_value,
+        "mean_diff": diff, "standard_error": se,
+        "ci_low": diff - margin, "ci_high": diff + margin,
+    }
+
+
 class BenchmarkRunner:
-    """Runs benchmarks with statistical validation."""
+    """Runs benchmarks with statistical validation (real Welch t-tests).
+
+    Significance is a two-sided Welch t-test at alpha = 0.05 and the
+    confidence interval is for the difference of means. With the default
+    of 5 iterations the test has low power and normality is not assessed:
+    treat non-significant results as "not demonstrated", not as proof of
+    no difference.
+    """
 
     def __init__(self):
         self._benchmarks: Dict[str, BenchmarkComparison] = {}
@@ -154,17 +298,18 @@ class BenchmarkRunner:
         baseline: List[float],
         variant: List[float]
     ) -> MetricResult:
-        """Calculate metric with statistical significance."""
-        baseline_mean = statistics.mean(baseline)
-        variant_mean = statistics.mean(variant)
+        """Calculate metric with a real Welch t-test for significance."""
+        baseline_mean = statistics.mean(baseline) if baseline else 0.0
+        variant_mean = statistics.mean(variant) if variant else 0.0
 
         if baseline_mean == 0:
             improvement = 0.0
         else:
             improvement = ((variant_mean - baseline_mean) / baseline_mean) * 100
 
-        is_significant = self._is_significant(baseline, variant)
-        confidence = self._calculate_ci(baseline, variant)
+        test = welch_t_test(baseline, variant)
+        p_value = test["p_value"]
+        is_significant = p_value is not None and p_value < 0.05
 
         return MetricResult(
             name=name,
@@ -172,7 +317,9 @@ class BenchmarkRunner:
             variant_value=variant_mean,
             improvement_percent=improvement,
             is_significant=is_significant,
-            confidence_interval=confidence
+            confidence_interval=(test["ci_low"], test["ci_high"]),
+            statistical_test="welch_t_test" if p_value is not None else "welch_t_test_insufficient_data",
+            p_value=p_value,
         )
 
     def _is_significant(
@@ -181,31 +328,28 @@ class BenchmarkRunner:
         variant: List[float],
         alpha: float = 0.05
     ) -> bool:
-        """Check statistical significance using t-test approximation."""
-        if len(baseline) < 2 or len(variant) < 2:
-            return False
+        """Check statistical significance with a two-sided Welch t-test.
 
-        baseline_mean = statistics.mean(baseline)
-        variant_mean = statistics.mean(variant)
-
-        if baseline_mean == 0:
-            return abs(variant_mean) > 0.1
-
-        ratio = abs(variant_mean - baseline_mean) / baseline_mean
-        return ratio > 0.05
+        The old implementation returned True for any >5% mean difference;
+        that was not a significance test. Now: p < alpha, or False when
+        the test cannot be computed.
+        """
+        p_value = welch_t_test(baseline, variant)["p_value"]
+        return p_value is not None and p_value < alpha
 
     def _calculate_ci(
         self,
         baseline: List[float],
         variant: List[float]
     ) -> tuple:
-        """Calculate 95% confidence interval."""
-        all_values = baseline + variant
-        mean = statistics.mean(all_values)
-        stdev = statistics.stdev(all_values) if len(all_values) > 1 else 0
+        """Calculate the 95% confidence interval for the DIFFERENCE of means.
 
-        margin = 1.96 * stdev / (len(all_values) ** 0.5)
-        return (max(0, mean - margin), mean + margin)
+        The old implementation pooled both samples into one interval for
+        their combined mean, which answers a different question and hid
+        whether the variant actually differs from baseline.
+        """
+        test = welch_t_test(baseline, variant)
+        return (test["ci_low"], test["ci_high"])
 
     def _calculate_overall_score(self, metrics: List[MetricResult]) -> float:
         """Calculate overall benchmark score."""
@@ -222,14 +366,24 @@ class BenchmarkRunner:
         return (positive_improvements - negative_improvements) / max(len(metrics), 1)
 
     def _generate_recommendation(self, comparison: BenchmarkComparison) -> str:
-        """Generate recommendation based on results."""
+        """Generate recommendation based on results.
+
+        A "Deploy variant" recommendation now requires at least one
+        statistically significant metric: a large but non-significant
+        mean difference is reported as not demonstrated, not deployed.
+        """
         if comparison.status == BenchmarkStatus.FAILED:
             return f"Benchmark failed: {comparison.error}"
 
+        if not comparison.metrics:
+            return "No metrics - no recommendation possible"
+        significant = sum(1 for m in comparison.metrics if m.is_significant)
+        if significant == 0:
+            return "No statistically significant difference - keep baseline on this evidence"
         if comparison.overall_score > 5:
-            return f"Deploy variant - {comparison.overall_score:.1f}% overall improvement"
+            return f"Deploy variant - {comparison.overall_score:.1f}% overall improvement ({significant}/{len(comparison.metrics)} metrics significant)"
         elif comparison.overall_score > 0:
-            return f"Consider variant - marginal {comparison.overall_score:.1f}% improvement"
+            return f"Consider variant - marginal {comparison.overall_score:.1f}% improvement ({significant}/{len(comparison.metrics)} metrics significant)"
         else:
             return "Keep baseline - variant shows no improvement"
 
@@ -285,19 +439,28 @@ class QualityBenchmark:
         baseline: List[float],
         variant: List[float]
     ) -> MetricResult:
-        """Calculate quality metric."""
+        """Calculate quality metric with a real Welch t-test.
+
+        The old version hardcoded the interval (0.8, 1.0) and called any
+        >5% improvement "significant"; both are replaced by the Welch test
+        on the per-output values.
+        """
         baseline_mean = statistics.mean(baseline) if baseline else 0
         variant_mean = statistics.mean(variant) if variant else 0
 
         improvement = ((variant_mean - baseline_mean) / max(baseline_mean, 0.01)) * 100
+        test = welch_t_test(baseline, variant)
+        p_value = test["p_value"]
 
         return MetricResult(
             name=name,
             baseline_value=baseline_mean,
             variant_value=variant_mean,
             improvement_percent=improvement,
-            is_significant=abs(improvement) > 5,
-            confidence_interval=(0.8, 1.0)
+            is_significant=p_value is not None and p_value < 0.05,
+            confidence_interval=(test["ci_low"], test["ci_high"]),
+            statistical_test="welch_t_test" if p_value is not None else "welch_t_test_insufficient_data",
+            p_value=p_value,
         )
 
 
@@ -309,7 +472,13 @@ class CostBenchmark:
         baseline_usage: Dict,
         variant_usage: Dict
     ) -> Dict[str, MetricResult]:
-        """Benchmark cost between baseline and variant."""
+        """Benchmark cost between baseline and variant.
+
+        Inputs are single observations per metric, so no significance test
+        or confidence interval can be computed: is_significant is always
+        False and the test is labelled not-applicable. The old version
+        called any >10% improvement "significant", which it was not.
+        """
         results = {}
 
         cost_metrics = ["api_calls", "compute_hours", "storage_gb", "bandwidth_mb"]
@@ -324,7 +493,10 @@ class CostBenchmark:
                 baseline_value=baseline_val,
                 variant_value=variant_val,
                 improvement_percent=improvement,
-                is_significant=improvement > 10
+                is_significant=False,
+                confidence_interval=(0.0, 0.0),
+                statistical_test="not_applicable_single_observation",
+                p_value=None,
             )
 
         return results
@@ -348,27 +520,38 @@ class SpeedBenchmark:
         p95_baseline = self._percentile(baseline_latencies, 95)
         p95_variant = self._percentile(variant_latencies, 95)
 
+        mean_test = welch_t_test(baseline_latencies, variant_latencies)
+        mean_p = mean_test["p_value"]
         results = {
             "mean_latency": MetricResult(
                 name="mean_latency",
                 baseline_value=baseline_mean,
                 variant_value=variant_mean,
                 improvement_percent=((baseline_mean - variant_mean) / max(baseline_mean, 1)) * 100,
-                is_significant=True
+                is_significant=mean_p is not None and mean_p < 0.05,
+                confidence_interval=(mean_test["ci_low"], mean_test["ci_high"]),
+                statistical_test="welch_t_test" if mean_p is not None else "welch_t_test_insufficient_data",
+                p_value=mean_p,
             ),
             "p50_latency": MetricResult(
                 name="p50_latency",
                 baseline_value=p50_baseline,
                 variant_value=p50_variant,
                 improvement_percent=((p50_baseline - p50_variant) / max(p50_baseline, 1)) * 100,
-                is_significant=True
+                is_significant=False,
+                confidence_interval=(0.0, 0.0),
+                statistical_test="not_applicable_single_observation",
+                p_value=None,
             ),
             "p95_latency": MetricResult(
                 name="p95_latency",
                 baseline_value=p95_baseline,
                 variant_value=p95_variant,
                 improvement_percent=((p95_baseline - p95_variant) / max(p95_baseline, 1)) * 100,
-                is_significant=True
+                is_significant=False,
+                confidence_interval=(0.0, 0.0),
+                statistical_test="not_applicable_single_observation",
+                p_value=None,
             )
         }
 
