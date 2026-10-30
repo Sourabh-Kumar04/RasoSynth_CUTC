@@ -306,26 +306,51 @@ export default function ObservabilityPage() {
                     <Database className="h-4 w-4 text-[#f26625]" />
                     <span className="text-xs font-bold text-white">PostgreSQL Database</span>
                   </div>
-                  <span className="text-xs font-mono font-bold px-2.5 py-0.5 rounded-md bg-emerald-950/40 text-emerald-400 border border-emerald-500/30">
-                    Healthy
-                  </span>
+                  {health?.database === true ? (
+                    <span className="text-xs font-mono font-bold px-2.5 py-0.5 rounded-md bg-emerald-950/40 text-emerald-400 border border-emerald-500/30">
+                      Healthy ({health.database_engine === 'sqlite' ? 'SQLite' : 'PostgreSQL'})
+                    </span>
+                  ) : health?.database === false ? (
+                    <span className="text-xs font-mono font-bold px-2.5 py-0.5 rounded-md bg-rose-950/40 text-rose-400 border border-rose-500/30">
+                      Disconnected
+                    </span>
+                  ) : (
+                    <span className="text-xs font-mono font-bold px-2.5 py-0.5 rounded-md bg-zinc-900 text-[#a8a29e] border border-[#272738]">
+                      Unknown
+                    </span>
+                  )}
                 </div>
                 <div className="flex items-center justify-between p-3.5 rounded-xl bg-[#0a0a0f] border border-[#272738]">
                   <div className="flex items-center gap-3">
                     <Server className="h-4 w-4 text-[#f26625]" />
                     <span className="text-xs font-bold text-white">Redis In-Memory Cache</span>
                   </div>
-                  <span className="text-xs font-mono font-bold px-2.5 py-0.5 rounded-md bg-emerald-950/40 text-emerald-400 border border-emerald-500/30">
-                    Healthy
-                  </span>
+                  {health?.redis === true ? (
+                    <span className="text-xs font-mono font-bold px-2.5 py-0.5 rounded-md bg-emerald-950/40 text-emerald-400 border border-emerald-500/30">
+                      Connected
+                    </span>
+                  ) : health?.redis === false ? (
+                    <span className="text-xs font-mono font-bold px-2.5 py-0.5 rounded-md bg-zinc-900 text-[#a8a29e] border border-[#272738]">
+                      Standalone
+                    </span>
+                  ) : (
+                    <span className="text-xs font-mono font-bold px-2.5 py-0.5 rounded-md bg-zinc-900 text-[#a8a29e] border border-[#272738]">
+                      Unknown
+                    </span>
+                  )}
                 </div>
                 <div className="flex items-center justify-between p-3.5 rounded-xl bg-[#0a0a0f] border border-[#272738]">
                   <div className="flex items-center gap-3">
                     <Activity className="h-4 w-4 text-[#10b981]" />
                     <span className="text-xs font-bold text-white">Synthetics API Backend</span>
                   </div>
-                  <span className="text-xs font-mono font-bold px-2.5 py-0.5 rounded-md bg-emerald-950/40 text-emerald-400 border border-emerald-500/30">
-                    Healthy (99.9%)
+                  <span className={clsx(
+                    "text-xs font-mono font-bold px-2.5 py-0.5 rounded-md border",
+                    displayStatus === 'healthy' ? "bg-emerald-950/40 text-emerald-400 border-emerald-500/30" :
+                    displayStatus === 'degraded' ? "bg-amber-950/40 text-amber-400 border-amber-500/30" :
+                    "bg-zinc-900 text-[#a8a29e] border-[#272738]"
+                  )}>
+                    {displayStatus ? displayStatus.toUpperCase() : 'UNKNOWN'}
                   </span>
                 </div>
               </div>
@@ -343,7 +368,7 @@ export default function ObservabilityPage() {
                 </div>
               </div>
               <span className="text-xs font-mono font-bold px-2.5 py-0.5 rounded-md bg-emerald-950/40 text-emerald-400 border border-emerald-500/30">
-                HEALTHY (8 / 8 THREADS)
+                CONFIGURED (8 THREADS TARGET)
               </span>
             </CardHeader>
             <CardContent className="p-4 space-y-4">
@@ -609,32 +634,32 @@ export default function ObservabilityPage() {
                 <div>
                   <CardTitle className="text-sm font-bold text-white flex items-center gap-2">
                     <Zap className="h-4 w-4 text-emerald-400" />
-                    Indic Tokenizer Fertility &amp; Cost Compression Engine
+                    Indic Tokenizer Fertility &amp; Cost Compression Reference
                   </CardTitle>
                   <p className="text-xs text-[#a8a29e] mt-0.5">
-                    Measuring token bloat (fertility ratio) and training cost reduction across Indic languages
+                    Published reference benchmarks for token bloat (fertility ratio) and training cost reduction across Indic languages (Reference, not dynamic run measurement)
                   </p>
                 </div>
                 <Badge variant="outline" className="border-emerald-600/50 bg-emerald-950/40 text-emerald-400 text-xs">
-                  ~42% Mean Savings on Sarvam
+                  Reference: ~42% Mean Savings on Sarvam
                 </Badge>
               </div>
             </CardHeader>
             <CardContent className="p-4 space-y-4">
               <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
                 <div className="p-3 bg-[#0a0a0f] border border-[#272738] rounded-xl space-y-1">
-                  <span className="text-xs uppercase text-[#a8a29e] font-bold">Standard Llama-3 Fertility</span>
+                  <span className="text-xs uppercase text-[#a8a29e] font-bold">Standard Llama-3 Fertility (Ref)</span>
                   <p className="text-xl font-bold text-rose-400">3.65 tok/word</p>
                   <p className="text-xs text-[#a8a29e]">Byte fallback bloat on Devanagari &amp; Indic scripts</p>
                 </div>
                 <div className="p-3 bg-[#0a0a0f] border border-[#272738] rounded-xl space-y-1">
-                  <span className="text-xs uppercase text-[#a8a29e] font-bold">Sarvam / Gemma-2 Fertility</span>
+                  <span className="text-xs uppercase text-[#a8a29e] font-bold">Sarvam / Gemma-2 Fertility (Ref)</span>
                   <p className="text-xl font-bold text-[#10b981]">1.28 tok/word</p>
                   <p className="text-xs text-[#a8a29e]">Optimized Devanagari subword vocabulary</p>
                 </div>
                 <div className="p-3 bg-[#0a0a0f] border border-[#272738] rounded-xl space-y-1">
-                  <span className="text-xs uppercase text-[#a8a29e] font-bold">Inference &amp; Fine-Tune Savings</span>
-                  <p className="text-xl font-bold text-[#d8d2c4]">~65% Less Compute</p>
+                  <span className="text-xs uppercase text-[#a8a29e] font-bold">Inference &amp; Fine-Tune Savings (Ref)</span>
+                  <p className="text-xl font-bold text-[#d8d2c4]">~65% Less Compute (Est.)</p>
                   <p className="text-xs text-[#a8a29e]">Over 2.8x shorter sequence lengths at training time</p>
                 </div>
               </div>
