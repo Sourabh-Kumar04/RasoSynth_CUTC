@@ -1,8 +1,21 @@
 """Indic Regional & Demographic Representation Balancer.
 
-Audits synthetic datasets for geographic distribution across Indian zones,
-tier classification (Metro vs Urban vs Rural/Gramin), and persona parity
-to prevent geographic skew and ensure inclusive post-training alignment.
+Audits synthetic datasets for geographic distribution across Indian zones
+and tier classification (Metro vs Urban vs Rural/Gramin) to prevent
+geographic skew and ensure inclusive post-training alignment.
+
+METHOD HONESTY NOTES — read before quoting any number from this module:
+- Zones and tiers are KEYWORD matches against sample text (city/state
+  names and rural markers), matched on token/phrase boundaries — never by
+  substring, so "goal" does not match "goa" and "up" inside another word
+  does not match a zone.
+- A sample with no tier keyword is "unknown", NOT "tier_2_3_urban": the
+  old default silently classified every unmarked sample as urban.
+- Gender is NEVER inferred here. First names do not determine gender, so
+  the previous 10+10 first-name lists and the ``gender_distribution`` output
+  have been removed. There is no demographic parity claim in this module:
+  ``representation_parity_score`` measures only how uniformly the
+  keyword matches spread across the five zones.
 """
 
 import re
@@ -42,41 +55,51 @@ TIER_KEYWORDS = {
     ],
 }
 
-FEMALE_NAMES = ["priya", "sunita", "lakshmi", "ananya", "fatima", "kavita", "pooja", "neha", "meera", "shreya"]
-MALE_NAMES = ["rahul", "amit", "suresh", "rajesh", "vikram", "mohammed", "rohit", "arjun", "deepak", "anil"]
+
+def _keyword_matches(keyword: str, lower_text: str, tokens: set) -> bool:
+    """Match a keyword on token/phrase boundaries, never by substring.
+
+    Single words match whole tokens; multi-word phrases match with word
+    boundaries on both sides. "goal" therefore does not match "goa", and
+    "group" does not match "goa" either.
+    """
+    if " " in keyword:
+        return re.search(r"(?<!\w)" + re.escape(keyword) + r"(?!\w)", lower_text) is not None
+    return keyword in tokens
 
 
 def audit_sample_representation(text: str) -> Dict[str, Any]:
-    """Detect regional, urbanicity, and demographic indicators in sample text."""
+    """Detect regional and urbanicity keyword indicators in sample text.
+
+    Returns zones and a setting. ``setting`` is "unknown" when no tier
+    keyword matches. No gender is inferred from names or from anything else.
+    """
     lower = text.lower()
     tokens = set(re.findall(r"\w+", lower))
 
-    # Zone detection
+    # Zone detection (token/phrase boundary matching)
     matched_zones = []
     for zone, kws in ZONE_KEYWORDS.items():
-        if any(kw in lower for kw in kws):
+        if any(_keyword_matches(kw, lower, tokens) for kw in kws):
             matched_zones.append(zone)
 
-    # Tier / Setting detection
-    setting = "tier_2_3_urban"
-    if any(m in lower for m in TIER_KEYWORDS["tier_1_metro"]):
+    # Tier / Setting detection — unknown unless a keyword actually matches
+    setting = "unknown"
+    if any(_keyword_matches(m, lower, tokens) for m in TIER_KEYWORDS["tier_1_metro"]):
         setting = "tier_1_metro"
-    elif any(r in lower for r in TIER_KEYWORDS["rural_gramin"]):
+    elif any(_keyword_matches(r, lower, tokens) for r in TIER_KEYWORDS["rural_gramin"]):
         setting = "rural_gramin"
-
-    # Gender name indicators
-    has_female = any(name in tokens for name in FEMALE_NAMES)
-    has_male = any(name in tokens for name in MALE_NAMES)
 
     return {
         "zones": matched_zones if matched_zones else ["neutral"],
         "setting": setting,
-        "gender_indicator": "female" if (has_female and not has_male) else "male" if (has_male and not has_female) else "neutral",
+        "method": "keyword_match_token_boundary",
+        "gender_inference": "not_performed",
     }
 
 
 def audit_dataset_representation(samples: List[Dict[str, Any]]) -> Dict[str, Any]:
-    """Audit geographic distribution, urbanicity balance, and demographic parity."""
+    """Audit geographic distribution and urbanicity balance (keyword-based)."""
     if not samples:
         return {
             "total_samples": 0,
@@ -85,13 +108,14 @@ def audit_dataset_representation(samples: List[Dict[str, Any]]) -> Dict[str, Any
             "zone_distribution": {},
             "setting_distribution": {},
             "underrepresented_zones": [],
+            "unmatched_zone_samples": 0,
             "recommendations": ["Provide dataset samples to evaluate representation balance."],
         }
 
     total = len(samples)
     zone_counts = Counter()
     setting_counts = Counter()
-    gender_counts = Counter()
+    unmatched_zone_samples = 0
 
     for s in samples:
         inst = s.get("instruction", "")
@@ -99,10 +123,11 @@ def audit_dataset_representation(samples: List[Dict[str, Any]]) -> Dict[str, Any
         text = f"{inst} {resp}"
         rep = audit_sample_representation(text)
 
+        if rep["zones"] == ["neutral"]:
+            unmatched_zone_samples += 1
         for z in rep["zones"]:
             zone_counts[z] += 1
         setting_counts[rep["setting"]] += 1
-        gender_counts[rep["gender_indicator"]] += 1
 
     # Regional distribution percentages
     zones = ["north", "south", "west", "east", "northeast"]
@@ -122,13 +147,13 @@ def audit_dataset_representation(samples: List[Dict[str, Any]]) -> Dict[str, Any
         z for z, info in zone_distribution.items() if info["percentage"] < 10.0
     ]
 
-    # Setting distribution
+    # Setting distribution (includes "unknown" — unmarked samples are not urban)
     setting_distribution = {
         s: {
             "count": setting_counts.get(s, 0),
             "percentage": round((setting_counts.get(s, 0) / total) * 100, 1),
         }
-        for s in ["tier_1_metro", "tier_2_3_urban", "rural_gramin"]
+        for s in ["tier_1_metro", "tier_2_3_urban", "rural_gramin", "unknown"]
     }
 
     # Calculate Parity Score (0.0 - 1.0)
@@ -152,13 +177,14 @@ def audit_dataset_representation(samples: List[Dict[str, Any]]) -> Dict[str, Any
 
     return {
         "total_samples": total,
+        "method": "keyword_match_token_boundary",
         "representation_parity_score": parity_score,
+        "parity_note": "Uniformity of zone-keyword matches across 5 zones only; not a demographic representativeness measure, and no gender is inferred.",
+        "zone_distribution_note": "Percentages are over zone-keyword matches, not over all samples; see unmatched_zone_samples.",
         "status": "balanced" if parity_score >= 0.70 else "skewed",
         "zone_distribution": zone_distribution,
         "setting_distribution": setting_distribution,
-        "gender_distribution": {
-            k: round((v / total) * 100, 1) for k, v in gender_counts.items()
-        },
+        "unmatched_zone_samples": unmatched_zone_samples,
         "underrepresented_zones": underrepresented_zones,
         "recommendations": recommendations,
     }
