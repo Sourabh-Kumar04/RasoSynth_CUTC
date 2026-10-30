@@ -744,7 +744,7 @@ export default function DatasetsPage() {
       {!isLoading && datasets.length === 0 && !error && (
         <Card className="border-[#272738] bg-[#12121a] rounded-md">
           <CardContent className="p-12 flex flex-col items-center justify-center">
-            <Mascot size="medium" className="mb-2" />
+            <Mascot size="medium" state="pointing" className="mb-2" />
             <h3 className="text-lg font-bold text-white mb-2">No datasets yet</h3>
             <p className="text-xs text-[#a8a29e] mb-6 text-center max-w-md">
               Describe the dataset you need in the Studio.

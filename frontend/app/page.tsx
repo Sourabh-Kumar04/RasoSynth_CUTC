@@ -531,8 +531,8 @@ export default function ZenPortalPage() {
           SECTION 1: Zen Spatial Command Hub (Hero)
       ───────────────────────────────────────────────────────────── */}
       <section className="relative z-10 flex flex-col items-center justify-center min-h-[82vh] px-4 sm:px-6 max-w-5xl mx-auto py-12">
-        {/* Hero mascot (TummyTap composition, dark only) */}
-        <Mascot size="large" className="mb-2" />
+        {/* Hero mascot: animated wave cycle with interactive celebration */}
+        <Mascot size="large" state="wave" interactive className="mb-2" />
 
 
 
