@@ -292,3 +292,66 @@ class TestQualityBenchmarkEdgeCases:
         finally:
             Path(raw_path).unlink(missing_ok=True)
             Path(ref_path).unlink(missing_ok=True)
+
+
+class TestP1_16StatisticalValidation:
+    """Welch t-test significance/CIs and computed (not hardcoded) verdicts."""
+
+    def test_welch_clearly_different_vs_identical(self):
+        from research.benchmarking import welch_t_test
+
+        different = welch_t_test([10.0, 10.2, 9.8, 10.1, 9.9], [12.0, 12.3, 11.8, 12.1, 11.9])
+        assert different["p_value"] is not None and different["p_value"] < 0.05
+        assert different["ci_low"] < different["mean_diff"] < different["ci_high"]
+        identical = welch_t_test([1.0, 1.0, 1.0, 1.0, 1.0], [1.0, 1.0, 1.0, 1.0, 1.0])
+        assert identical["p_value"] == 1.0
+        assert welch_t_test([1.0], [2.0, 3.0])["p_value"] is None
+
+    @pytest.mark.asyncio
+    async def test_runner_significance_uses_p_value(self):
+        from research.benchmarking import BenchmarkCategory, BenchmarkConfig, BenchmarkRunner
+
+        async def base(metric, ctx):
+            return {metric: 10.0}
+
+        async def var(metric, ctx):
+            return {metric: 12.0}
+
+        runner = BenchmarkRunner()
+        comp = await runner.run_comparison(
+            BenchmarkConfig(name="t", category=BenchmarkCategory.QUALITY, baseline_fn=base,
+                            variant_fn=var, metric_names=["m"], iterations=5, warmup_iterations=0)
+        )
+        assert comp.metrics[0].statistical_test == "welch_t_test"
+        assert comp.metrics[0].p_value == 0.0
+
+    @pytest.mark.asyncio
+    async def test_compare_datasets_verdict_follows_deltas(self):
+        import json as _json
+        import tempfile as _tf
+
+        benchmark = QualityBenchmark()
+
+        with _tf.NamedTemporaryFile(mode="w", suffix=".jsonl", delete=False) as f_raw:
+            f_raw.write(_json.dumps({"instruction": "unique task A", "response": "detailed output A"}) + "\n")
+            f_raw.write(_json.dumps({"instruction": "unique task B", "response": "detailed output B"}) + "\n")
+            raw_path = f_raw.name
+        with _tf.NamedTemporaryFile(mode="w", suffix=".jsonl", delete=False) as f_ref:
+            f_ref.write(_json.dumps({"instruction": "repeat", "response": "dup"}) + "\n")
+            f_ref.write(_json.dumps({"instruction": "repeat", "response": "dup"}) + "\n")
+            ref_path = f_ref.name
+        try:
+            worse = await benchmark.compare_datasets(raw_path, ref_path)
+            assert "lower" in worse["verdict"]
+            assert "demonstrated higher diversity" not in worse["verdict"]
+        finally:
+            Path(raw_path).unlink(missing_ok=True)
+            Path(ref_path).unlink(missing_ok=True)
+
+    @pytest.mark.asyncio
+    async def test_provider_quality_is_demo_flagged(self):
+        benchmark = QualityBenchmark()
+        result = await benchmark.benchmark_provider_quality()
+        assert result["demo"] is True
+        assert result["documents_evaluated"] == 1
+        assert result["corpus_type"] == "single_hardcoded_document"

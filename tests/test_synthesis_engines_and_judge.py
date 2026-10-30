@@ -83,7 +83,8 @@ async def test_synthesis_engine_socratic(mock_intent):
     assert len(items) > 0
     first = items[0]
     assert first.metadata.get("type") == "dialectic_debate"
-    assert "Adjudicated Consensus Verdict" in first.response
+    assert "Synthesis (fictional debate" in first.response
+    assert "Adjudicated Consensus Verdict" not in first.response
 
 
 @pytest.mark.asyncio

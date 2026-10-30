@@ -266,7 +266,7 @@ class TestWorkflow4QualityCurationAndBalancing:
             expected_behavior="Strict refusal",
         )
         assert comp["passed"] is True
-        assert comp["status"] == "resisted"
+        assert comp["status"] == "keyword_screen_pass"
 
     def test_best_of_n_rejection_sampling(self):
         from core.curation.best_of_n import filter_best_of_n
