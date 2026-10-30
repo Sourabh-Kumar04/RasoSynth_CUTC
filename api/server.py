@@ -146,10 +146,17 @@ class RateLimiter:
 
 
 def get_client_ip(request: Request) -> str:
-    """Extract client IP from request, respecting X-Forwarded-For."""
-    forwarded = request.headers.get("X-Forwarded-For")
-    if forwarded:
-        return forwarded.split(",")[0].strip()
+    """Extract client IP from request.
+
+    X-Forwarded-For is trusted ONLY when TRUST_PROXY=true (i.e. the app
+    really sits behind a trusted proxy that sets it). By default it is
+    ignored, because any client can forge it and login/provider-test
+    rate limits keyed on a forged IP are trivially bypassed.
+    """
+    if os.getenv("TRUST_PROXY", "false").lower() in ("true", "1", "yes"):
+        forwarded = request.headers.get("X-Forwarded-For")
+        if forwarded:
+            return forwarded.split(",")[0].strip()
     return request.client.host if request.client else "unknown"
 
 
@@ -171,23 +178,21 @@ class CSRFTokenManager:
 
     def __init__(self):
         self._token_ttl = int(os.getenv("CSRF_TOKEN_TTL_SECONDS", "3600"))  # 1 hour default
-        # Use explicit CSRF_SECRET, or derive from JWT_SECRET, or fall back
-        # (JWT_SECRET is the same across all uvicorn workers)
+        # Use an explicit CSRF_SECRET, or an ephemeral per-process secret.
+        # The CSRF secret must NEVER be derived from JWT_SECRET: key reuse
+        # across purposes means a CSRF-token forgery path and a JWT path
+        # share one secret. Ephemeral tokens do not survive a restart and
+        # do not validate across workers; set CSRF_SECRET for multi-worker
+        # deployments.
         secret = os.getenv("CSRF_SECRET")
         if not secret:
-            jwt_secret = os.getenv("JWT_SECRET") or ""
-            if jwt_secret:
-                secret = hashlib.sha256(jwt_secret.encode()).hexdigest()
-            else:
-                # No CSRF_SECRET and no JWT_SECRET: use an ephemeral secret so
-                # CSRF tokens are never derived from a public default. Tokens
-                # will not validate across restarts until a secret is set.
-                import secrets as _secrets
-                secret = _secrets.token_hex(32)
-                logger.warning(
-                    "CSRF_SECRET and JWT_SECRET are both unset; using an ephemeral "
-                    "CSRF secret (tokens will not survive a restart). Set CSRF_SECRET."
-                )
+            import secrets as _secrets
+            secret = _secrets.token_hex(32)
+            logger.warning(
+                "CSRF_SECRET is unset; using an ephemeral CSRF secret "
+                "(tokens will not survive a restart or validate across "
+                "workers). Set CSRF_SECRET."
+            )
         self._secret = secret
 
     def _sign(self, payload: str) -> str:
@@ -324,7 +329,11 @@ class CSRFMiddleware(BaseHTTPMiddleware):
                          "Fetch a token from GET /auth/csrf-token."}
             )
 
-        # Get user from JWT if present
+        # Get user from JWT if present. A token bound to "anonymous"
+        # is never accepted: CSRF tokens are only issued to authenticated
+        # users (GET /auth/csrf-token), so an anonymous token on a
+        # state-changing request is rejected here even if it was minted
+        # before this fix and is still within its TTL.
         auth_header = request.headers.get("Authorization", "")
         if auth_header.startswith("Bearer "):
             try:
@@ -335,6 +344,14 @@ class CSRFMiddleware(BaseHTTPMiddleware):
                 user_id = "anonymous"
         else:
             user_id = "anonymous"
+
+        if user_id == "anonymous":
+            logger.warning(f"CSRF token presented without an authenticated user on {request.method} {path}")
+            return JSONResponse(
+                status_code=403,
+                content={"detail": "CSRF token requires an authenticated user. "
+                         "Fetch a token from GET /auth/csrf-token with a valid Authorization header."}
+            )
 
         if not _csrf_manager.validate_token(csrf_token, user_id):
             logger.warning(f"Invalid/expired CSRF token on {request.method} {path} for user {user_id}")
@@ -972,8 +989,8 @@ def _validate_security_config():
         get_settings.cache_clear()
 
         # Update CSRF manager secret if not explicitly configured
-        if not os.getenv("CSRF_SECRET"):
-            _csrf_manager._secret = hashlib.sha256(jwt_secret.encode()).hexdigest()
+        # CSRF secret is intentionally NOT overwritten from JWT_SECRET here:
+        # the manager keeps its explicit CSRF_SECRET or ephemeral secret.
 
         logger.warning(
             "SECURITY NOTICE [HuggingFace Spaces]: No custom JWT_SECRET was configured in Space Secrets. "
@@ -1005,9 +1022,15 @@ def _validate_security_config():
 # the fail-fast gate for short/weak values.
 @app.get("/providers", response_model=list[ProviderStatus], tags=["Providers"])
 async def list_providers(current_user: User = Depends(get_current_user)):
-    """List all configured providers with performance stats."""
+    """List all configured providers with performance stats.
+
+    Outage behaviour: a missing router or a stats failure is a 503,
+    never an empty list — [] would masquerade as "no providers".
+    Availability is reported only when the router explicitly says so;
+    a missing flag is "unknown", never "available".
+    """
     if not router:
-        return []
+        raise HTTPException(status_code=503, detail="Router not initialized")
 
     try:
         stats = router.get_stats()
@@ -1017,7 +1040,8 @@ async def list_providers(current_user: User = Depends(get_current_user)):
             reqs = int(data.get("requests", 0))
             providers.append(ProviderStatus(
                 name=name,
-                status="available" if data.get("available", True) else "degraded",
+                status=("available" if data.get("available") is True
+                        else "degraded" if data.get("available") is False else "unknown"),
                 latency_ms=data.get("avg_latency_ms"),
                 cost_per_token=data.get("cost_per_token", 0.0),
                 requests_today=reqs,
@@ -1030,7 +1054,7 @@ async def list_providers(current_user: User = Depends(get_current_user)):
         return providers
     except Exception as e:
         logger.error(f"Failed to fetch provider stats: {e}")
-        return []
+        raise HTTPException(status_code=503, detail="Provider stats unavailable")
 
 
 @app.get("/providers/techniques", tags=["Providers"])
@@ -1073,7 +1097,8 @@ async def get_provider(provider_name: str,
 
     return ProviderStatus(
         name=provider_name,
-        status="available" if data.get("requests", 0) > 0 or data.get("available", True) else "degraded",
+        status=("available" if data.get("available") is True
+                else "degraded" if data.get("available") is False else "unknown"),
         latency_ms=data.get("avg_latency_ms"),
         cost_per_token=data.get("cost_per_token", 0.0),
         requests_today=data.get("requests", 0),
@@ -1173,6 +1198,17 @@ async def test_provider(request: ProviderTestRequest, fastapi_request: Request,
         )
 
 
+def _research_cycle_status(results: dict) -> str:
+    """One status rule for both research trigger endpoints.
+
+    Report the research loop's own status unchanged (it returns
+    "success"/"skipped"); only a missing key defaults to "completed",
+    meaning this API call ran the cycle to completion. The two trigger
+    endpoints must not disagree on the default.
+    """
+    return results.get("status") or "completed"
+
+
 @app.post("/research", response_model=ResearchResponse, tags=["Research"])
 async def trigger_research(request: ResearchRequest,
     current_user: User = Depends(get_current_user)):
@@ -1186,7 +1222,7 @@ async def trigger_research(request: ResearchRequest,
         techniques_discovered=results.get("techniques_discovered", []),
         papers_found=results.get("papers_found", []),
         updates_applied=results.get("updates_applied", []),
-        status=results.get("status", "completed")
+        status=_research_cycle_status(results)
     )
 
 
@@ -1217,7 +1253,7 @@ async def trigger_research_cycle(request: Optional[ResearchRequest] = None,
         techniques_discovered=results.get("techniques_discovered", []),
         papers_found=results.get("papers_found", []),
         updates_applied=results.get("updates_applied", []),
-        status=results.get("status", "completed"),
+        status=_research_cycle_status(results),
     )
 
 
@@ -1590,7 +1626,9 @@ async def health_check():
         for name, cfg in router._provider_configs.items():
             has_key = bool(cfg.get("api_key") or (name in ("ollama", "vllm") and cfg.get("base_url")))
             if has_key:
-                providers_healthy[name] = "healthy"
+                # Key presence is configuration, not health: no probe has
+                # run, so this must never render as "healthy".
+                providers_healthy[name] = "configured"
 
     # WebSocket manager health
     ws_healthy = False
@@ -1603,10 +1641,16 @@ async def health_check():
 
     research_status = "running" if research_loop and research_loop.last_research_time else "idle"
 
-    overall_status = "healthy"
+    # Overall "healthy" requires a validated healthy provider (from the
+    # provider validator); key-presence-only ("configured") providers cap
+    # the status at "degraded", because presence alone proves nothing.
     if not db_healthy:
         overall_status = "unhealthy"
     elif not providers_healthy:
+        overall_status = "degraded"
+    elif any(v == "healthy" for v in providers_healthy.values()):
+        overall_status = "healthy"
+    else:
         overall_status = "degraded"
 
     db_engine_name = "postgresql"
@@ -1641,7 +1685,7 @@ async def health_check():
                 text=True
             ).strip()
         except Exception:
-            commit_sha = "8e41824"
+            commit_sha = "unknown"
 
     return HealthResponse(
         status=overall_status,
@@ -1668,7 +1712,8 @@ async def readiness_check():
             await db.list_jobs()
             checks["database"] = "ready"
         except Exception as e:
-            checks["database"] = f"not_ready: {str(e)}"
+            logger.warning("Readiness database check failed: %s", e)
+            checks["database"] = "not_ready"
     else:
         checks["database"] = "not_configured"
 
@@ -1678,7 +1723,8 @@ async def readiness_check():
             await cache.redis.ping()
             checks["redis"] = "ready"
         except Exception as e:
-            checks["redis"] = f"not_ready: {str(e)}"
+            logger.warning("Readiness redis check failed: %s", e)
+            checks["redis"] = "not_ready"
     else:
         checks["redis"] = "not_configured"
 
@@ -1742,22 +1788,31 @@ async def get_provider_health_metrics(current_user: User = Depends(get_current_u
 
 @app.get("/settings/compute", tags=["Settings"])
 async def get_compute_settings(current_user: User = Depends(get_current_user)):
-    """Return cloud GPU provider configuration status (without exposing raw secrets)."""
+    """Return cloud GPU provider configuration status (without exposing raw secrets).
+
+    Credential fragments (first/last 4 chars) are admin-only: any
+    authenticated user gets only the boolean configured flags, never
+    fragments an attacker could use to confirm or brute-force a secret.
+    """
     cfg = get_settings()
     m_id = os.getenv("MODAL_TOKEN_ID") or cfg.modal_token_id
     m_sec = os.getenv("MODAL_TOKEN_SECRET") or cfg.modal_token_secret
     r_key = os.getenv("RUNPOD_API_KEY") or cfg.runpod_api_key
     h_tok = os.getenv("HF_TOKEN") or cfg.hf_token
 
-    return {
+    result: dict = {
         "modal_configured": bool(m_id and m_sec),
         "runpod_configured": bool(r_key),
         "hf_configured": bool(h_tok),
-        "modal_token_id_masked": f"{m_id[:4]}...{m_id[-4:]}" if m_id and len(m_id) > 8 else ("configured" if m_id else None),
-        "runpod_key_masked": f"{r_key[:4]}...{r_key[-4:]}" if r_key and len(r_key) > 8 else ("configured" if r_key else None),
-        "hf_token_masked": f"{h_tok[:4]}...{h_tok[-4:]}" if h_tok and len(h_tok) > 8 else ("configured" if h_tok else None),
-        "available_targets": ["local", "modal", "runpod", "serverless"]
+        "available_targets": ["local", "modal", "runpod", "serverless"],
     }
+    if current_user.role == UserRole.ADMIN:
+        result.update({
+            "modal_token_id_masked": f"{m_id[:4]}...{m_id[-4:]}" if m_id and len(m_id) > 8 else ("configured" if m_id else None),
+            "runpod_key_masked": f"{r_key[:4]}...{r_key[-4:]}" if r_key and len(r_key) > 8 else ("configured" if r_key else None),
+            "hf_token_masked": f"{h_tok[:4]}...{h_tok[-4:]}" if h_tok and len(h_tok) > 8 else ("configured" if h_tok else None),
+        })
+    return result
 
 
 class UpdateComputeSettingsRequest(BaseModel):
@@ -1897,9 +1952,22 @@ async def login(request: LoginRequest, fastapi_request: Request):
 
 
 @app.post("/auth/logout", tags=["Authentication"])
-async def logout():
-    """Logout (client should discard token)."""
-    return {"message": "Logged out successfully"}
+async def logout(request: Request, current_user: User = Depends(get_current_user)):
+    """Logout: revoke the presented token server-side.
+
+    Revocation is in-memory for this process (see api/auth.py); tokens
+    also expire automatically after the configured JWT lifetime, which
+    is the fallback revocation story if a process restarts. Clients
+    must still discard the token.
+    """
+    auth_header = request.headers.get("Authorization", "")
+    if auth_header.startswith("Bearer "):
+        get_auth_manager().revoke_token(auth_header[7:])
+    return {
+        "message": "Logged out successfully",
+        "revocation": "token_revoked",
+        "note": "Revocation is in-memory for this process; tokens also expire automatically.",
+    }
 
 
 @app.get("/auth/me", tags=["Authentication"])
@@ -1914,27 +1982,18 @@ async def get_current_user_info(current_user: User = Depends(get_current_user)):
 
 
 @app.get("/auth/csrf-token", tags=["Authentication"])
-async def get_csrf_token(request: Request):
-    """Issue a stateless CSRF token.
+async def get_csrf_token(current_user: User = Depends(get_current_user)):
+    """Issue a stateless CSRF token bound to the authenticated user.
 
-    Issued to either the authenticated user (Authorization: Bearer ...) or the
-    ``anonymous`` identity if no token is supplied. Pair with the
-    ``X-CSRF-Token`` header on subsequent state-changing requests.
+    Unauthenticated requests are rejected (401): tokens are never
+    issued for the ``anonymous`` identity, because the CSRF middleware
+    would otherwise accept an attacker-minted anonymous token on
+    state-changing requests. Pair with the ``X-CSRF-Token`` header.
     """
-    user_id = "anonymous"
-    try:
-        auth_header = request.headers.get("Authorization", "")
-        if auth_header.startswith("Bearer "):
-            token_data = get_auth_manager().verify_token(auth_header[7:])
-            user_id = token_data.user_id
-    except Exception:
-        # Bad/expired JWT → fall back to anonymous; client should re-authenticate
-        user_id = "anonymous"
-
-    token = _csrf_manager.generate_token(user_id)
+    token = _csrf_manager.generate_token(current_user.user_id)
     return {
         "csrf_token": token,
-        "user_id": user_id,
+        "user_id": current_user.user_id,
         "header_name": "X-CSRF-Token",
     }
 
@@ -4413,12 +4472,17 @@ async def get_orchestration_dag(job_id: Optional[str] = Query(default=None),
 @app.post("/orchestration/steps/{step_id}/retry", tags=["Orchestration"])
 async def retry_orchestration_step(step_id: str, job_id: Optional[str] = Query(default=None),
     current_user: User = Depends(get_current_user)):
-    """Mark a job's step for retry.
+    """Retry a job's step by relaunching pipeline work, or error.
 
-    Validates first: a missing job_id, an unavailable database, or an
-    unknown job is an error, never a "retrying" success. Marking sets the
-    job row back to running at this stage; it does not itself re-execute
-    the step (re-execution happens on the orchestrator's resume path).
+    A missing job_id, an unavailable database, an unknown job, a
+    terminal (completed/cancelled) job, an already-running job, or a
+    missing orchestrator are all errors — never a "retrying" success
+    with no work behind it. On success the pipeline is relaunched in
+    the background from the stored job config (per-step resume from a
+    checkpoint is not available here; use checkpoint restore for a
+    stage-targeted resume). The background task updates the job row
+    itself if it fails, so a launch that later fails does not stay
+    "running" silently.
     """
     if not job_id:
         raise HTTPException(status_code=400, detail="job_id query parameter is required")
@@ -4427,8 +4491,19 @@ async def retry_orchestration_step(step_id: str, job_id: Optional[str] = Query(d
     job = await db.get_job_status(job_id)
     if not job:
         raise HTTPException(status_code=404, detail=f"Job '{job_id}' not found")
+    job_status = (job.get("status") or "").lower()
+    if job_status in {"completed", "cancelled"}:
+        raise HTTPException(status_code=409, detail=f"Cannot retry a job in '{job_status}' state")
+    if orchestrator and hasattr(orchestrator, "active_jobs") and job_id in orchestrator.active_jobs:
+        raise HTTPException(status_code=409, detail="Job is already running; retry would duplicate execution")
+    if not orchestrator:
+        raise HTTPException(status_code=503, detail="Orchestrator not initialized; retry not launched")
     await db.update_job_status(job_id, {"status": "running", "current_stage": step_id, "error": None})
-    return {"success": True, "step_id": step_id, "job_id": job_id, "status": "marked_for_retry"}
+    asyncio.create_task(run_pipeline(job_id, job.get("config") or {}))
+    return {"success": True, "step_id": step_id, "job_id": job_id, "status": "retrying",
+            "relaunched": True,
+            "note": "Pipeline relaunched from the start with the stored job config; "
+                    "for stage-targeted resume use checkpoint restore."}
 
 @app.get("/metrics/history", tags=["Metrics"])
 async def get_metrics_history(time_range: str = Query(default="1h", alias="range"),
@@ -4534,6 +4609,36 @@ async def get_tokenizer_fertility_metrics(
     return estimate_tokenizer_fertility(language=language, script_mode=script_mode)
 
 
+def _tool_int(value, field: str, default: int) -> int:
+    """Parse an int tool field; a bad cast is a 400, never a 500."""
+    try:
+        return int(value) if value is not None else default
+    except (ValueError, TypeError):
+        raise HTTPException(status_code=400, detail=f"Field '{field}' must be an integer")
+
+
+def _tool_float(value, field: str, default: float) -> float:
+    """Parse a float tool field; a bad cast is a 400, never a 500."""
+    try:
+        return float(value) if value is not None else default
+    except (ValueError, TypeError):
+        raise HTTPException(status_code=400, detail=f"Field '{field}' must be a number")
+
+
+def _tool_list(value, field: str) -> list:
+    """Require a list tool field (a string is not a list of records)."""
+    if not isinstance(value, list):
+        raise HTTPException(status_code=400, detail=f"Field '{field}' must be a list")
+    return value
+
+
+def _tool_dict(value, field: str) -> dict:
+    """Require a dict tool field."""
+    if not isinstance(value, dict):
+        raise HTTPException(status_code=400, detail=f"Field '{field}' must be an object")
+    return value
+
+
 @app.post("/tools/mask-pii", tags=["Tools"])
 async def tool_mask_pii(request: dict = Body(...),
     current_user: User = Depends(get_current_user)):
@@ -4543,9 +4648,11 @@ async def tool_mask_pii(request: dict = Body(...),
     mode = str(request.get("mode", "redact"))
     detected = detect_indian_pii(text)
     masked_text = mask_indian_pii(text, replacement_mode=mode)
+    # Never return the raw matched values: they ARE the unmasked PII.
+    # Callers get per-type counts only; the masked text is the output.
     return {
         "masked": masked_text,
-        "detected": detected,
+        "detected_types": {k: len(v) for k, v in detected.items()},
         "pii_count": sum(len(v) for v in detected.values()),
     }
 
@@ -4962,7 +5069,7 @@ async def tool_generate_adversarial_probes(request: dict = Body(...),
     domain = str(request.get("domain", "taxation"))
     categories = request.get("categories")
     language = str(request.get("language", "hinglish"))
-    sample_count = int(request.get("sample_count", 5))
+    sample_count = _tool_int(request.get("sample_count", 5), "sample_count", 5)
 
     probes = generate_adversarial_probes(
         domain=domain,
@@ -4982,9 +5089,9 @@ async def tool_audit_contamination(request: dict = Body(...),
     current_user: User = Depends(get_current_user)):
     """Audit dataset samples against standard Indic & global LLM evaluation benchmarks."""
     from core.evaluation.contamination_checker import check_dataset_contamination
-    samples = request.get("samples") or []
+    samples = _tool_list(request.get("samples") or [], "samples")
     benchmarks = request.get("benchmarks")
-    threshold = float(request.get("similarity_threshold", 0.50))
+    threshold = _tool_float(request.get("similarity_threshold", 0.50), "similarity_threshold", 0.50)
 
     if not samples:
         raise HTTPException(status_code=400, detail="Field 'samples' must be a non-empty list of records.")
@@ -5017,8 +5124,8 @@ async def tool_semantic_density(request: dict = Body(...),
     current_user: User = Depends(get_current_user)):
     """Analyze dataset semantic density, 2D topic clusters, entropy, and outliers."""
     from core.curation.diversity_mapper import analyze_semantic_diversity
-    samples = request.get("samples") or []
-    k_clusters = int(request.get("k_clusters", 4))
+    samples = _tool_list(request.get("samples") or [], "samples")
+    k_clusters = _tool_int(request.get("k_clusters", 4), "k_clusters", 4)
     if not samples:
         raise HTTPException(status_code=400, detail="Field 'samples' must be a non-empty list of records.")
     return analyze_semantic_diversity(samples=samples, k_clusters=k_clusters)
@@ -5041,7 +5148,7 @@ async def tool_best_of_n(request: dict = Body(...),
     """Perform Best-of-N rejection sampling and consensus filtering."""
     from core.curation.best_of_n import filter_best_of_n
     instruction = str(request.get("instruction", ""))
-    candidates = request.get("candidates") or []
+    candidates = _tool_list(request.get("candidates") or [], "candidates")
     ref_ans = request.get("reference_answer")
     domain = request.get("domain")
     if not candidates:
@@ -5059,7 +5166,7 @@ async def tool_audit_representation(request: dict = Body(...),
     current_user: User = Depends(get_current_user)):
     """Audit geographic distribution, urbanicity balance, and demographic parity."""
     from core.curation.representation_balancer import audit_dataset_representation
-    samples = request.get("samples") or []
+    samples = _tool_list(request.get("samples") or [], "samples")
     if not samples:
         raise HTTPException(status_code=400, detail="Field 'samples' must be a non-empty list of records.")
     return audit_dataset_representation(samples=samples)
@@ -5070,8 +5177,8 @@ async def tool_verify_dbom(request: dict = Body(...),
     current_user: User = Depends(get_current_user)):
     """Cryptographically verify dataset against its DBOM certificate."""
     from core.export.dbom_attestor import verify_dataset_dbom
-    samples = request.get("samples") or []
-    certificate = request.get("dbom_certificate") or {}
+    samples = _tool_list(request.get("samples") or [], "samples")
+    certificate = _tool_dict(request.get("dbom_certificate") or {}, "dbom_certificate")
     if not samples or not certificate:
         raise HTTPException(status_code=400, detail="Fields 'samples' and 'dbom_certificate' are required.")
     return verify_dataset_dbom(samples=samples, dbom_certificate=certificate)
@@ -5099,8 +5206,8 @@ async def tool_rebalance_dataset(request: dict = Body(...),
     current_user: User = Depends(get_current_user)):
     """Formulate targeted prompt mutations and quotas to bridge representation deficits."""
     from core.curation.active_balancer import plan_active_rebalancing
-    audit_report = request.get("audit_report") or {}
-    target_pool = int(request.get("target_sample_pool", 100))
+    audit_report = _tool_dict(request.get("audit_report") or {}, "audit_report")
+    target_pool = _tool_int(request.get("target_sample_pool", 100), "target_sample_pool", 100)
     domain = request.get("domain")
     if not audit_report:
         raise HTTPException(status_code=400, detail="Field 'audit_report' is required.")
@@ -5117,7 +5224,7 @@ async def tool_generate_dialectic(request: dict = Body(...),
     """Synthesize structured multi-agent dialectic debate sample."""
     from core.generation.socratic_synthesizer import format_dialectic_sample, evaluate_dialectic_coherence
     topic = str(request.get("topic", ""))
-    debate_rounds = request.get("debate_rounds") or []
+    debate_rounds = _tool_list(request.get("debate_rounds") or [], "debate_rounds")
     verdict = str(request.get("verdict", ""))
     domain = request.get("domain")
     personas = request.get("personas")
@@ -5143,8 +5250,8 @@ async def tool_calibrate_judge(request: dict = Body(...),
     current_user: User = Depends(get_current_user)):
     """Calibrate LLM Judge alignment against human reviewer decisions and compute Cohen's Kappa."""
     from core.evaluation.judge_calibrator import calibrate_judge_alignment
-    evaluations = request.get("evaluations") or []
-    threshold = float(request.get("default_threshold", 0.70))
+    evaluations = _tool_list(request.get("evaluations") or [], "evaluations")
+    threshold = _tool_float(request.get("default_threshold", 0.70), "default_threshold", 0.70)
     if not evaluations:
         raise HTTPException(status_code=400, detail="Field 'evaluations' must be a non-empty list of {human_decision, judge_score}.")
     return calibrate_judge_alignment(evaluations=evaluations, default_threshold=threshold)
@@ -5155,7 +5262,7 @@ async def tool_evaluate_benchmark(request: dict = Body(...),
     current_user: User = Depends(get_current_user)):
     """Directly evaluate model outputs against a synthetic test benchmark."""
     from core.evaluation.benchmark_evaluator import evaluate_benchmark_split
-    pairs = request.get("evaluation_pairs") or []
+    pairs = _tool_list(request.get("evaluation_pairs") or [], "evaluation_pairs")
     name = str(request.get("benchmark_name", "Synthetic Indic QA"))
     target = str(request.get("target_model", "Candidate LLM"))
     if not pairs:
@@ -5172,8 +5279,8 @@ async def tool_shard_dataset(request: dict = Body(...),
     current_user: User = Depends(get_current_user)):
     """Partition dataset samples into standard Hugging Face/PyTorch sharded chunks."""
     from core.export.streaming_sharder import shard_dataset_records
-    samples = request.get("samples") or []
-    shard_size = int(request.get("shard_size", 1000))
+    samples = _tool_list(request.get("samples") or [], "samples")
+    shard_size = _tool_int(request.get("shard_size", 1000), "shard_size", 1000)
     prefix = str(request.get("prefix", "train"))
     compress = bool(request.get("compress", False))
     if not samples:

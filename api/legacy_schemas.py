@@ -251,7 +251,9 @@ class JobDetailResponse(JobResponse):
 
 class ProviderStatus(BaseModel):
     name: str
-    status: Literal["available", "degraded", "unavailable"]
+    # "unknown" = the router did not explicitly report availability;
+    # it must never be coerced to "available".
+    status: Literal["available", "degraded", "unavailable", "unknown"]
     latency_ms: Optional[float] = None
     cost_per_token: float
     requests_today: int
