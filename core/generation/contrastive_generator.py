@@ -5,6 +5,12 @@ hallucination detection, and self-correction:
 1. Systematic factual perturbation (numerical flips, statutory condition inversions, section swaps).
 2. Automated critique generation explaining the exact discrepancy.
 3. Formatted preference pairs (chosen vs. perturbed rejected) for alignment.
+
+HONESTY RULE: the input response is caller-supplied and UNVERIFIED. Critiques
+therefore describe only the difference between the input text and the
+perturbed text ("the input stated X, the perturbed version states Y"). They
+never assert what the authentic rate, the law, or any regulation actually
+says, because this module has verified none of those things.
 """
 
 import re
@@ -16,10 +22,10 @@ def build_contrastive_prompt_directive() -> str:
     return (
         "CONTRASTIVE FACTUAL CRITIQUE SPECIFICATION:\n"
         "1. 'instruction': A user question requiring factual accuracy (taxation, healthcare, legal).\n"
-        "2. 'grounded_response': A fully factual, grounded correct answer.\n"
+        "2. 'grounded_response': A caller-supplied reference answer, treated as the reference for perturbation. Its factual accuracy is NOT verified by this module.\n"
         "3. 'perturbed_negative': A subtle hallucinated variation containing an intentional factual error "
         "(swapped statutory section, wrong arithmetic rate, or inverted condition).\n"
-        "4. 'critique': A concise explanation pointing out the exact error in the perturbed negative.\n"
+        "4. 'critique': A concise explanation of the exact difference between the input response and the perturbed negative — not a claim about what the law actually says.\n"
         "5. Output valid JSON with keys: 'instruction', 'grounded_response', 'perturbed_negative', 'perturbation_type', 'critique'.\n"
     )
 
@@ -37,7 +43,8 @@ def perturb_factual_statement(response: str) -> Dict[str, Any]:
         return {
             "perturbed_text": perturbed,
             "perturbation_type": "numerical_rate_flip",
-            "critique": f"Incorrect statutory rate applied: stated '{flipped}' instead of authentic rate '{original}'.",
+            "critique": f"Perturbation applied: stated '{flipped}' where the input response stated '{original}'. The input response was not verified, so this does not establish the authentic rate.",
+            "input_verified": False,
         }
 
     # 2. Statutory condition inversion
@@ -57,7 +64,8 @@ def perturb_factual_statement(response: str) -> Dict[str, Any]:
             return {
                 "perturbed_text": perturbed,
                 "perturbation_type": "statutory_condition_inversion",
-                "critique": f"Inverted statutory obligation: stated '{inv}' when the law prescribes '{orig}'.",
+                "critique": f"Perturbation applied: stated '{inv}' where the input response stated '{orig}'. The input response was not verified, so this does not establish what the law prescribes.",
+                "input_verified": False,
             }
 
     # 3. Section swap
@@ -69,7 +77,8 @@ def perturb_factual_statement(response: str) -> Dict[str, Any]:
         return {
             "perturbed_text": perturbed,
             "perturbation_type": "section_misattribution",
-            "critique": f"Misattributed statutory section: cited Section {fake_sec} instead of Section {orig_sec}.",
+            "critique": f"Perturbation applied: cited Section {fake_sec} where the input response cited Section {orig_sec}. Neither citation was verified.",
+            "input_verified": False,
         }
 
     # Fallback negation insertion
@@ -77,7 +86,8 @@ def perturb_factual_statement(response: str) -> Dict[str, Any]:
     return {
         "perturbed_text": perturbed,
         "perturbation_type": "regulatory_contradiction",
-        "critique": "Inserted contradiction disputing authentic statutory guidelines.",
+        "critique": "Inserted contradiction disputing the input response. The input response was not verified against any regulation.",
+        "input_verified": False,
     }
 
 
@@ -93,6 +103,8 @@ def synthesize_contrastive_pair(
     return {
         "instruction": instruction.strip(),
         "grounded_response": grounded_response.strip(),
+        "grounded_response_verified": False,
+        "grounded_response_note": "Caller-supplied reference; its factual accuracy was not verified by this module.",
         "perturbed_negative": pert["perturbed_text"].strip(),
         "perturbation_type": pert["perturbation_type"],
         "critique": pert["critique"],
@@ -103,6 +115,8 @@ def synthesize_contrastive_pair(
             "metadata": {
                 "domain": domain or "general",
                 "perturbation_type": pert["perturbation_type"],
+                "provenance": "synthetic_contrastive_unverified",
+                "grounded_response_verified": False,
             }
         }
     }
