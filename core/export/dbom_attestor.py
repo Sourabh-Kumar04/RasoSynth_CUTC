@@ -59,12 +59,15 @@ def compute_merkle_root(leaf_hashes: List[str]) -> str:
     return current_level[0]
 
 
+PROJECT_LICENSE = "PolyForm-Noncommercial-1.0.0"
+
+
 def generate_dbom_attestation(
     dataset_name: str,
     samples: List[Dict[str, Any]],
     domain: Optional[str] = None,
     language: str = "en",
-    license_type: str = "Apache-2.0",
+    license_type: str = PROJECT_LICENSE,
     compliance_flags: Optional[Dict[str, Any]] = None,
     synthesis_mode: Optional[str] = "standard",
 ) -> Dict[str, Any]:
@@ -190,7 +193,7 @@ def generate_nutrition_label_markdown(dbom: Dict[str, Any]) -> str:
 | **Synthesis Mode** | `{dbom.get('synthesis_mode', 'standard')}` |
 | **Primary Language** | {dbom.get('language')} |
 | **Total Samples** | {dbom.get('total_samples'):,} records |
-| **License** | {prov.get('license', 'Apache-2.0')} |
+| **License** | {prov.get('license', PROJECT_LICENSE)} |
 | **Pipeline Engine** | {prov.get('engine')} |
 
 ---

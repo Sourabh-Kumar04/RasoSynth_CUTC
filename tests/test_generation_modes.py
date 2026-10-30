@@ -574,7 +574,6 @@ async def test_cot_reasoning_tool_calling_curriculum_and_hf_card():
         language="hinglish",
         script_mode="romanized",
         dataset_type="sft",
-        license_type="apache-2.0",
         has_dpo=True,
         has_tool_calling=True,
         has_bitext=True,
@@ -583,7 +582,7 @@ async def test_cot_reasoning_tool_calling_curriculum_and_hf_card():
     assert card.startswith("---")
     assert "language:\n- hi\n- en" in card
     assert "tool-calling" in card
-    assert "license: apache-2.0" in card
+    assert "license: PolyForm-Noncommercial-1.0.0" in card
     assert "load_dataset" in card
     assert "42%" in card
 

@@ -1,5 +1,5 @@
 import pytest
-from core.export.huggingface_exporter import generate_hf_dataset_card
+from core.export.huggingface_exporter import PROJECT_LICENSE, generate_hf_dataset_card
 from core.export.hf_hub_publisher import publish_dataset_to_hf_hub
 
 
@@ -11,7 +11,6 @@ def test_generate_hf_dataset_card_with_dbom_attestation():
         language="hi",
         script_mode="native",
         dataset_type="sft",
-        license_type="apache-2.0",
         has_dpo=True,
         has_tool_calling=False,
         has_bitext=True,
@@ -22,7 +21,7 @@ def test_generate_hf_dataset_card_with_dbom_attestation():
     )
 
     assert "---" in card
-    assert "license: apache-2.0" in card
+    assert f"license: {PROJECT_LICENSE}" in card
     assert "dpo" in card
     assert "COT" in card
     assert "Cryptographic DBOM Attestation & Data Nutrition Label" in card
@@ -31,6 +30,17 @@ def test_generate_hf_dataset_card_with_dbom_attestation():
     # P0 honesty: no DPDP compliance is claimed; the card states that explicitly.
     assert "DPDP Act Compliance" not in card
     assert "no DPDP Act compliance is claimed or verified" in card
+
+
+def test_generate_hf_dataset_card_demo_disclosure():
+    card = generate_hf_dataset_card(
+        dataset_name="Demo-Dataset",
+        domain="Demo",
+        sample_count=5,
+        is_demo=True,
+    )
+    assert "Demo Dataset Disclosure" in card
+    assert "This dataset contains synthetic demonstration records" in card
 
 
 def test_publish_dataset_to_hf_hub_requires_token(monkeypatch):

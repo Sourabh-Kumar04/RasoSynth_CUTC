@@ -7,6 +7,8 @@ data field schemas, language tags, license info, and Python `datasets.load_datas
 from typing import Any, Dict, List, Optional
 import json
 
+PROJECT_LICENSE = "PolyForm-Noncommercial-1.0.0"
+
 
 def generate_hf_dataset_card(
     dataset_name: str,
@@ -15,7 +17,7 @@ def generate_hf_dataset_card(
     language: str = "en",
     script_mode: str = "native",
     dataset_type: str = "sft",
-    license_type: str = "apache-2.0",
+    license_type: str = PROJECT_LICENSE,
     has_dpo: bool = False,
     has_tool_calling: bool = False,
     has_bitext: bool = False,
@@ -23,6 +25,7 @@ def generate_hf_dataset_card(
     synthesis_mode: str = "standard",
     merkle_root: Optional[str] = None,
     certificate_id: Optional[str] = None,
+    is_demo: bool = False,
 ) -> str:
     """Generate a fully compliant Hugging Face Dataset Card (README.md) with YAML frontmatter."""
     sample_display = f"{sample_count:,}" if sample_count is not None else "not recorded"
@@ -77,10 +80,17 @@ size_categories:
 | **Quality Gate** | `Not recorded for this dataset` |
 """
 
+    demo_disclosure_section = ""
+    if is_demo:
+        demo_disclosure_section = (
+            "\n> **Demo Dataset Disclosure**: This dataset contains synthetic demonstration records "
+            "generated for offline evaluation and testing. Not representative of full-scale production corpora.\n"
+        )
+
     content = f"""{yaml_block}
 
 # Dataset Card for {dataset_name}
-
+{demo_disclosure_section}
 Generated with **[RasoSynthTune](https://github.com/Sourabh-Kumar04/RasoSynth_CUTC)** — Autonomous Constraint-Aware Dataset Synthesis Platform.
 
 ## Dataset Summary
@@ -149,7 +159,7 @@ def generate_hf_model_card(
     merkle_root: Optional[str] = None,
     certificate_id: Optional[str] = None,
     domain: str = "General",
-    license_type: str = "apache-2.0",
+    license_type: str = PROJECT_LICENSE,
 ) -> str:
     """Generate a standard Hugging Face Model Card (README.md) for fine-tuned LoRA adapters."""
     tags = ["rasosynthtune", "peft", "lora", "fine-tuned", "text-generation"]

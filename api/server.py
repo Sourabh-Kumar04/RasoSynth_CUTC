@@ -4543,6 +4543,9 @@ async def get_dataset_huggingface_card(job_id: str,
     fertility = estimate_tokenizer_fertility(lang, script)
     savings = fertility.get("potential_token_savings_pct", 0.0)
 
+    from core.export.huggingface_exporter import PROJECT_LICENSE
+    dataset_license = config.get("license") or PROJECT_LICENSE
+
     card_markdown = generate_hf_dataset_card(
         dataset_name=domain,
         domain=domain,
@@ -4550,7 +4553,7 @@ async def get_dataset_huggingface_card(job_id: str,
         language=lang,
         script_mode=script,
         dataset_type=dataset_type,
-        license_type="apache-2.0",
+        license_type=dataset_license,
         has_dpo=has_dpo,
         has_tool_calling=has_tool,
         has_bitext=has_bitext,

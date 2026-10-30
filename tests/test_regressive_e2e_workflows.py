@@ -332,7 +332,7 @@ class TestWorkflow5PackagingAndDistribution:
             tokenizer_savings_pct=64.5,
         )
         assert "---" in card
-        assert "license: apache-2.0" in card
+        assert "license: PolyForm-Noncommercial-1.0.0" in card
         assert "64%" in card
 
     def test_training_recipe_generator(self):
@@ -615,7 +615,7 @@ class TestWorkflow6FastAPIEndpointsRegression:
         from core.export.dbom_attestor import generate_dbom_attestation
 
         sample = [{"instruction": "Test GST", "response": "Goods and Services Tax", "input": ""}]
-        dbom = generate_dbom_attestation("test_badge_dataset", sample, license_type="Apache-2.0")
+        dbom = generate_dbom_attestation("test_badge_dataset", sample)
         cert_id = dbom["certificate_id"]
 
         test_dir = Path("outputs/test_badge")

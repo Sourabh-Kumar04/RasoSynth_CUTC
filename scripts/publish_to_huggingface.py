@@ -5,8 +5,13 @@ Publishes local datasets along with cryptographic DBOM certificates,
 Data Nutrition Labels, and Apache Parquet shards to the Hugging Face Hub:
 1. Validates dataset directory integrity (JSONL/Parquet and DBOM certificate).
 2. Auto-injects cryptographic DBOM verification badges into dataset cards.
-3. Uploads directory to Hugging Face Hub via `huggingface_hub.HfApi`.
-4. Supports dry-run validation for CI/CD and air-gapped verification.
+3. Enforces PII Scrub Gate: scans all samples for Indian PII patterns (Aadhaar, PAN,
+   GSTIN, Mobile, UPI, Vehicle) using core.validation.indian_pii. If unscrubbed PII
+   is detected, refuses publish unless --auto-scrub-pii is provided or samples are confirmed scrubbed.
+4. Defaults repository visibility strictly to private (override with --public).
+5. Resolves license from DBOM provenance or defaults to PROJECT_LICENSE.
+6. Uploads directory to Hugging Face Hub via `huggingface_hub.HfApi`.
+7. Supports dry-run validation for CI/CD and air-gapped verification.
 """
 
 import argparse
@@ -14,7 +19,7 @@ import json
 import os
 import sys
 from pathlib import Path
-from typing import Any, Dict, Optional
+from typing import Any, Dict, List, Optional
 
 # Ensure project root is in sys.path
 PROJECT_ROOT = Path(__file__).parent.parent.resolve()
@@ -22,7 +27,72 @@ if str(PROJECT_ROOT) not in sys.path:
     sys.path.insert(0, str(PROJECT_ROOT))
 
 from core.export.badge_generator import generate_dbom_badge_markdown
-from core.export.huggingface_exporter import generate_hf_dataset_card
+from core.export.huggingface_exporter import PROJECT_LICENSE, generate_hf_dataset_card
+from core.validation.indian_pii import detect_indian_pii, mask_indian_pii
+
+
+def scan_and_gate_pii(
+    dataset_dir: Path,
+    jsonl_files: List[Path],
+    auto_scrub_pii: bool = False,
+) -> Dict[str, Any]:
+    """Scan dataset samples for Indian statutory/personal PII patterns and enforce scrub gate."""
+    total_pii_detected = 0
+    pii_types_detected: Dict[str, int] = {}
+    modified_files = 0
+
+    for jf in jsonl_files:
+        lines = []
+        file_had_pii = False
+        with open(jf, "r", encoding="utf-8") as f:
+            for line_no, raw_line in enumerate(f, 1):
+                raw_line = raw_line.strip()
+                if not raw_line:
+                    continue
+                try:
+                    record = json.loads(raw_line)
+                except Exception:
+                    continue
+
+                # Scan text fields
+                text_to_scan = f"{record.get('instruction', '')} {record.get('response', '')} {record.get('input', '')}"
+                found = detect_indian_pii(text_to_scan)
+                if found:
+                    file_had_pii = True
+                    for pii_type, items in found.items():
+                        total_pii_detected += len(items)
+                        pii_types_detected[pii_type] = pii_types_detected.get(pii_type, 0) + len(items)
+
+                    if auto_scrub_pii:
+                        if "instruction" in record and isinstance(record["instruction"], str):
+                            record["instruction"] = mask_indian_pii(record["instruction"])
+                        if "response" in record and isinstance(record["response"], str):
+                            record["response"] = mask_indian_pii(record["response"])
+                        if "input" in record and isinstance(record["input"], str):
+                            record["input"] = mask_indian_pii(record["input"])
+
+                lines.append(record)
+
+        if auto_scrub_pii and file_had_pii:
+            with open(jf, "w", encoding="utf-8") as f:
+                for rec in lines:
+                    f.write(json.dumps(rec) + "\n")
+            modified_files += 1
+
+    if total_pii_detected > 0 and not auto_scrub_pii:
+        raise ValueError(
+            f"PII Scrub Gate Refusal: Found {total_pii_detected} unscrubbed PII entity occurrences "
+            f"({json.dumps(pii_types_detected)}) in {dataset_dir}. "
+            "Refusing to publish unscrubbed dataset. Pass --auto-scrub-pii to scrub automatically or "
+            "sanitize samples prior to publication."
+        )
+
+    return {
+        "pii_detected_count": total_pii_detected,
+        "pii_types": pii_types_detected,
+        "auto_scrubbed": auto_scrub_pii and (total_pii_detected > 0),
+        "files_scrubbed": modified_files,
+    }
 
 
 def publish_dataset_to_hub(
@@ -35,6 +105,7 @@ def publish_dataset_to_hub(
     domain: str = "General Knowledge",
     language: str = "en",
     license_type: Optional[str] = None,
+    auto_scrub_pii: bool = False,
 ) -> Dict[str, Any]:
     """Publish dataset directory and cryptographic attestation to Hugging Face Hub."""
     p = Path(dataset_dir)
@@ -55,6 +126,9 @@ def publish_dataset_to_hub(
             f"No DBOM attestation file (*.dbom.json) found in {dataset_dir}. "
             "Refusing to publish without cryptographic provenance."
         )
+
+    # Enforce PII Scrub Gate
+    pii_gate_report = scan_and_gate_pii(p, jsonl_files, auto_scrub_pii=auto_scrub_pii)
 
     # Load DBOM
     try:
@@ -86,7 +160,7 @@ def publish_dataset_to_hub(
         raise ValueError(f"Dataset has 0 samples in {dataset_dir}. Refusing to publish empty dataset.")
 
     prov = dbom_info.get("provenance", {})
-    resolved_license = license_type or prov.get("license") or "unknown"
+    resolved_license = license_type or prov.get("license") or PROJECT_LICENSE
 
     # Ensure README.md exists and includes cryptographic DBOM verification and nutrition facts
     if not readme_file.exists():
@@ -163,6 +237,7 @@ def main():
     parser.add_argument("--dataset-dir", required=True, help="Path to local dataset directory")
     parser.add_argument("--repo-id", required=True, help="Target Hugging Face dataset repo ID (e.g. user/my-dataset)")
     parser.add_argument("--public", action="store_true", help="Set repository to public (defaults to private)")
+    parser.add_argument("--auto-scrub-pii", action="store_true", help="Automatically scrub Indian PII patterns (Aadhaar, PAN, GSTIN, UPI, Mobile) if detected")
     parser.add_argument("--dry-run", action="store_true", help="Validate dataset and DBOM files without uploading")
 
     args = parser.parse_args()
@@ -172,6 +247,7 @@ def main():
             repo_id=args.repo_id,
             private=not args.public,
             dry_run=args.dry_run,
+            auto_scrub_pii=args.auto_scrub_pii,
         )
     except Exception as e:
         print(f"\n[ERROR] {e}", file=sys.stderr)

@@ -18,7 +18,7 @@ def publish_dataset_to_hf_hub(
     readme_content: str,
     samples: List[Dict[str, Any]],
     hf_token: Optional[str] = None,
-    private: bool = False,
+    private: bool = True,
     split_name: str = "train",
 ) -> Dict[str, Any]:
     """

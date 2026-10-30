@@ -24,7 +24,7 @@ if str(PROJECT_ROOT) not in sys.path:
 
 from core.config import get_settings
 from core.export.dbom_attestor import compute_sample_hash, compute_merkle_root
-from core.export.huggingface_exporter import generate_hf_dataset_card
+from core.export.huggingface_exporter import PROJECT_LICENSE, generate_hf_dataset_card
 
 
 DEMO_DATASETS = [
@@ -120,13 +120,14 @@ def seed_demo_artifacts(output_base: str = "outputs/demo_seed") -> Dict[str, Any
             language=item["language"],
             script_mode=item["script"],
             dataset_type="sft",
-            license_type="apache-2.0",
+            license_type=PROJECT_LICENSE,
             has_dpo=False,
             has_tool_calling=(item["synthesis_mode"] == "tool_calling"),
             has_bitext=False,
             synthesis_mode=item["synthesis_mode"],
             merkle_root=merkle_root,
             certificate_id=cert_id,
+            is_demo=True,
         )
         readme_file.write_text(card_content, encoding="utf-8")
 

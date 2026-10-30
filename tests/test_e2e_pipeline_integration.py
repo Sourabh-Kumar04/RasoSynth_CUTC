@@ -72,7 +72,6 @@ async def test_e2e_cognitive_generation_to_dbom_and_hf_card():
         language="en",
         script_mode="latin",
         dataset_type="sft",
-        license_type="apache-2.0",
         has_dpo=False,
         has_tool_calling=False,
         has_bitext=False,

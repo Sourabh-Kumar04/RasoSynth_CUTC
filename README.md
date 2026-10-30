@@ -221,6 +221,6 @@ simulated/template value must be labelled as such.
 
 ## License
 
-[PolyForm Noncommercial License 1.0.0 (CC BY-NC 4.0)](LICENSE) —
+[PolyForm Noncommercial License 1.0.0](LICENSE) —
 strictly non-commercial use only. Not OSI-approved.
 
