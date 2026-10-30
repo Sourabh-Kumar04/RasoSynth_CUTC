@@ -196,90 +196,82 @@ class DatabaseManager:
             ]
 
 
-async def test_database():
+import pytest
+
+@pytest.mark.asyncio
+async def test_database(tmp_path):
     """Test database operations."""
-    try:
-        # Initialize database with SQLite URL
-        db_manager = DatabaseManager("sqlite+aiosqlite:///./data/app.db")
-        await db_manager.create_tables()
-        print("Database initialized successfully")
+    db_file = tmp_path / "test_standalone.db"
+    db_manager = DatabaseManager(f"sqlite+aiosqlite:///{db_file}")
+    await db_manager.create_tables()
 
-        # Test creating a job
-        job_result = await db_manager.create_job({
-            "config": {"test": True},
-            "status": "pending"
-        })
-        print(f"Created job: {job_result}")
+    # Test creating a job
+    job_result = await db_manager.create_job({
+        "config": {"test": True},
+        "status": "pending"
+    })
+    assert job_result is not None and "id" in job_result
+    job_id = job_result["id"]
 
-        # Test getting job status
-        job_status = await db_manager.get_job(job_result["id"])
-        print(f"Job status: {job_status}")
+    # Test getting job status
+    job_status = await db_manager.get_job(job_id)
+    assert job_status is not None
+    assert job_status["status"] == "pending"
 
-        # Test updating job
-        await db_manager.update_job(job_result["id"], status="running", progress=0.5)
-        print("Updated job status")
+    # Test updating job
+    await db_manager.update_job(job_id, status="running", progress=0.5)
 
-        # Test getting updated job
-        updated_status = await db_manager.get_job(job_result["id"])
-        print(f"Updated job status: {updated_status}")
+    # Test getting updated job
+    updated_status = await db_manager.get_job(job_id)
+    assert updated_status["status"] == "running"
+    assert updated_status["progress"] == 0.5
 
-        # Test creating dataset
-        dataset_result = await db_manager.create_dataset(
-            job_id=job_result["id"],
-            name="test_dataset",
-            type="test",
-            size=10,
-            metadata={"test": True},
-            output_path="/tmp/test_dataset.jsonl"
-        )
-        print(f"Created dataset: {dataset_result}")
+    # Test creating dataset
+    dataset_result = await db_manager.create_dataset(
+        job_id=job_id,
+        name="test_dataset",
+        type="test",
+        size=10,
+        metadata={"test": True},
+        output_path=str(tmp_path / "test_dataset.jsonl")
+    )
+    assert dataset_result is not None and "id" in dataset_result
+    dataset_id = dataset_result["id"]
 
-        # Test creating sample
-        sample_result = await db_manager.create_sample(
-            dataset_id=dataset_result["id"],
-            data={
-                "instruction": "Test instruction",
-                "response": "Test response",
-                "input": "",
-                "metadata": {},
-                "quality_score": 0.8,
-                "difficulty_tier": 3
-            }
-        )
-        print(f"Created sample: {sample_result}")
+    # Test creating sample
+    sample_result = await db_manager.create_sample(
+        dataset_id=dataset_id,
+        data={
+            "instruction": "Test instruction",
+            "response": "Test response",
+            "input": "",
+            "metadata": {},
+            "quality_score": 0.8,
+            "difficulty_tier": 3
+        }
+    )
+    assert sample_result is not None and "id" in sample_result
 
-        # Test creating multiple samples
-        samples_data = [
-            {
-                "instruction": f"Test instruction {i}",
-                "response": f"Test response {i}",
-                "input": "",
-                "metadata": {"index": i},
-                "quality_score": 0.7 + (i * 0.05),
-                "difficulty_tier": 2 + (i % 2)
-            }
-            for i in range(3)
-        ]
-        multi_samples = await db_manager.create_samples(dataset_result["id"], samples_data)
-        print(f"Created {len(multi_samples)} additional samples")
+    # Test creating multiple samples
+    samples_data = [
+        {
+            "instruction": f"Test instruction {i}",
+            "response": f"Test response {i}",
+            "input": "",
+            "metadata": {"index": i},
+            "quality_score": 0.7 + (i * 0.05),
+            "difficulty_tier": 2 + (i % 2)
+        }
+        for i in range(3)
+    ]
+    multi_samples = await db_manager.create_samples(dataset_id, samples_data)
+    assert len(multi_samples) == 3
 
-        # Test getting samples
-        samples = await db_manager.get_samples(dataset_result["id"], limit=5)
-        print(f"Retrieved {len(samples)} samples:")
-        for i, sample in enumerate(samples):
-            print(f"  Sample {i}: {sample['instruction'][:30]}... (quality: {sample['quality_score']})")
+    # Test getting samples
+    samples = await db_manager.get_samples(dataset_id, limit=5)
+    assert len(samples) == 4
+    assert samples[0]["instruction"] == "Test instruction"
 
-        print("\nAll database tests passed!")
-        return True
-
-    except Exception as e:
-        print(f"Database test failed: {e}")
-        import traceback
-        traceback.print_exc()
-        return False
-
-if __name__ == "__main__":
-    # Change to the correct directory
-    os.chdir("/mnt/d/00_Academics/RasoSynthTune Agent/ai-dataset-engineer")
-    success = asyncio.run(test_database())
-    sys.exit(0 if success else 1)
+    # Negative assertion
+    missing_job = await db_manager.get_job("non-existent-uuid")
+    assert missing_job is None

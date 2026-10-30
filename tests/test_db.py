@@ -10,71 +10,68 @@ sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 
 from core.db import AsyncDB
 
-async def test_database():
-    try:
-        # Initialize database with SQLite URL from .env
-        db = await AsyncDB.create("sqlite+aiosqlite:///./data/app.db")
-        print("Database initialized successfully")
+import pytest
+from core.db import AsyncDB
 
-        # Test creating a job
-        job_result = await db.create_job({
-            "config": {"test": True},
-            "status": "pending"
-        })
-        print(f"Created job: {job_result}")
+@pytest.mark.asyncio
+async def test_database(tmp_path):
+    db_file = tmp_path / "test_app.db"
+    db = await AsyncDB.create(f"sqlite+aiosqlite:///{db_file}")
+    assert db is not None
 
-        # Test getting job status
-        job_status = await db.get_job_status(job_result["id"])
-        print(f"Job status: {job_status}")
+    # Test creating a job
+    job_result = await db.create_job({
+        "config": {"test": True},
+        "status": "pending"
+    })
+    assert job_result is not None and "id" in job_result
+    job_id = job_result["id"]
 
-        # Test updating job
-        await db.update_job(job_result["id"], status="running", progress=0.5)
-        print("Updated job status")
+    # Test getting job status
+    job_status = await db.get_job_status(job_id)
+    assert job_status is not None
+    assert job_status["status"] == "pending"
 
-        # Test getting updated job
-        updated_status = await db.get_job_status(job_result["id"])
-        print(f"Updated job status: {updated_status}")
+    # Test updating job
+    await db.update_job(job_id, status="running", progress=0.5)
 
-        # Test creating dataset
-        dataset_result = await db.create_dataset(
-            job_id=job_result["id"],
-            name="test_dataset",
-            type="test",
-            size=10,
-            metadata={"test": True},
-            output_path="/tmp/test_dataset.jsonl"
-        )
-        print(f"Created dataset: {dataset_result}")
+    # Test getting updated job
+    updated_status = await db.get_job_status(job_id)
+    assert updated_status["status"] == "running"
+    assert updated_status["progress"] == 0.5
 
-        # Test creating sample
-        sample_result = await db.create_sample(
-            dataset_id=dataset_result["id"],
-            data={
-                "instruction": "Test instruction",
-                "response": "Test response",
-                "input": "",
-                "metadata": {},
-                "quality_score": 0.8,
-                "difficulty_tier": 3
-            }
-        )
-        print(f"Created sample: {sample_result}")
+    # Test creating dataset
+    dataset_result = await db.create_dataset(
+        job_id=job_id,
+        name="test_dataset",
+        type="test",
+        size=10,
+        metadata={"test": True},
+        output_path=str(tmp_path / "test_dataset.jsonl")
+    )
+    assert dataset_result is not None and "id" in dataset_result
+    dataset_id = dataset_result["id"]
 
-        # Test getting samples
-        samples = await db.get_samples(dataset_result["id"], limit=5)
-        print(f"Retrieved {len(samples)} samples")
+    # Test creating sample
+    sample_result = await db.create_sample(
+        dataset_id=dataset_id,
+        data={
+            "instruction": "Test instruction",
+            "response": "Test response",
+            "input": "",
+            "metadata": {},
+            "quality_score": 0.8,
+            "difficulty_tier": 3
+        }
+    )
+    assert sample_result is not None and "id" in sample_result
 
-        print("All database tests passed!")
-        return True
+    # Test getting samples
+    samples = await db.get_samples(dataset_id, limit=5)
+    assert len(samples) == 1
+    assert samples[0]["instruction"] == "Test instruction"
+    assert samples[0]["quality_score"] == 0.8
 
-    except Exception as e:
-        print(f"Database test failed: {e}")
-        import traceback
-        traceback.print_exc()
-        return False
-
-if __name__ == "__main__":
-    # Change to the correct directory
-    os.chdir("/mnt/d/00_Academics/RasoSynthTune Agent/ai-dataset-engineer")
-    success = asyncio.run(test_database())
-    sys.exit(0 if success else 1)
+    # Negative assertion
+    non_existent = await db.get_job_status("non-existent-uuid")
+    assert non_existent is None

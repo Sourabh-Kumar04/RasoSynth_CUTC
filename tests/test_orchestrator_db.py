@@ -15,81 +15,76 @@ from core.db import AsyncDB
 
 async def test_orchestrator_with_db():
     """Test orchestrator initialization with database."""
-    try:
-        # Load settings
-        settings = Settings()
-        print(f"POSTGRES_URL: {settings.postgres_url}")
-        print(f"Environment: {settings.environment}")
+    # Load settings
+    settings = Settings()
+    print(f"POSTGRES_URL: {settings.postgres_url}")
+    print(f"Environment: {settings.environment}")
 
-        # Initialize database
-        db = await AsyncDB.create(settings.postgres_url)
-        print("Database initialized successfully")
+    # Initialize database
+    db_url = settings.postgres_url or "sqlite+aiosqlite:///:memory:"
+    db = await AsyncDB.create(db_url)
+    print("Database initialized successfully")
 
-        # Initialize provider router
-        config = settings.model_dump()
-        router = ProviderRouter(config)
-        init_result = await router.initialize()
-        print(f"Provider initialization: {init_result}")
+    # Initialize provider router
+    config = settings.model_dump()
+    router = ProviderRouter(config)
+    init_result = await router.initialize()
+    print(f"Provider initialization: {init_result}")
 
-        # Test creating a job through database
-        job_result = await db.create_job({
-            "config": {"test": True, "target_domain": "machine learning"},
-            "status": "pending"
-        })
-        print(f"Created job via DB: {job_result}")
+    # Test creating a job through database
+    job_result = await db.create_job({
+        "config": {"test": True, "target_domain": "machine learning"},
+        "status": "pending"
+    })
+    print(f"Created job via DB: {job_result}")
 
-        # Test getting job status
-        job_status = await db.get_job_status(job_result["id"])
-        print(f"Job status from DB: {job_status}")
+    # Test getting job status
+    job_status = await db.get_job_status(job_result["id"])
+    print(f"Job status from DB: {job_status}")
 
-        # Test creating dataset
-        dataset_result = await db.create_dataset(
-            job_id=job_result["id"],
-            name="test_ml_dataset",
-            type="jsonl",
-            size=5,
-            metadata={"source": "test"},
-            output_path="/tmp/test_dataset.jsonl"
-        )
-        print(f"Created dataset via DB: {dataset_result}")
+    # Test creating dataset
+    dataset_result = await db.create_dataset(
+        job_id=job_result["id"],
+        name="test_ml_dataset",
+        type="jsonl",
+        size=5,
+        metadata={"source": "test"},
+        output_path="/tmp/test_dataset.jsonl"
+    )
+    print(f"Created dataset via DB: {dataset_result}")
 
-        # Test creating samples
-        samples_data = [
-            {
-                "instruction": "What is machine learning?",
-                "response": "Machine learning is a subset of AI...",
-                "input": "",
-                "metadata": {"topic": "AI"},
-                "quality_score": 0.8,
-                "difficulty_tier": 3
-            },
-            {
-                "instruction": "Explain neural networks",
-                "response": "Neural networks are computing systems...",
-                "input": "",
-                "metadata": {"topic": "deep learning"},
-                "quality_score": 0.9,
-                "difficulty_tier": 4
-            }
-        ]
+    # Test creating samples
+    samples_data = [
+        {
+            "instruction": "What is machine learning?",
+            "response": "Machine learning is a subset of AI...",
+            "input": "",
+            "metadata": {"topic": "AI"},
+            "quality_score": 0.8,
+            "difficulty_tier": 3
+        },
+        {
+            "instruction": "Explain neural networks",
+            "response": "Neural networks are computing systems...",
+            "input": "",
+            "metadata": {"topic": "deep learning"},
+            "quality_score": 0.9,
+            "difficulty_tier": 4
+        }
+    ]
 
-        samples_result = await db.create_samples(dataset_result["id"], samples_data)
-        print(f"Created {len(samples_result)} samples via DB")
+    samples_result = await db.create_samples(dataset_result["id"], samples_data)
+    print(f"Created {len(samples_result)} samples via DB")
 
-        # Test getting samples
-        samples = await db.get_samples(dataset_result["id"], limit=10)
-        print(f"Retrieved {len(samples)} samples from DB:")
-        for sample in samples:
-            print(f"  - {sample['instruction'][:50]}... (score: {sample['quality_score']})")
+    # Test getting samples
+    samples = await db.get_samples(dataset_result["id"], limit=10)
+    assert len(samples) == 2
+    assert samples[0]["instruction"] == "What is machine learning?"
+    assert samples[1]["quality_score"] == 0.9
 
-        print("\nOrchestrator-DB integration test passed!")
-        return True
-
-    except Exception as e:
-        print(f"Orchestrator-DB integration test failed: {e}")
-        import traceback
-        traceback.print_exc()
-        return False
+    # Test job status retrieval and negative check
+    assert await db.get_job_status(job_result["id"]) is not None
+    assert await db.get_job_status("non-existent-orchestrator-job") is None
 
 if __name__ == "__main__":
     # Change to the correct directory
