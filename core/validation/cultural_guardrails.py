@@ -1,8 +1,14 @@
 """Indic & Regional Cultural Safety Guardrails.
 
-Provides safety checks for regional hate speech, caste-based slurs prohibited
-under statutory frameworks (e.g., SC/ST Prevention of Atrocities Act), communal
-incitement tropes, and script conformity validation for Indian languages.
+Provides a curated regex screen for regional hate speech, caste-based
+slurs, communal incitement tropes, and script conformity validation for
+Indian languages.
+
+BOUNDARY: this module is a REGEX LIST, not a legal determination. Matching
+a pattern does not establish an offence under any statute (including the
+SC/ST Prevention of Atrocities Act, which this list does not implement),
+and not matching does not establish safety. Never present its output as
+statutory compliance or as a safety guarantee.
 """
 
 import re
@@ -43,10 +49,14 @@ _CULTURAL_SAFETY_REGEX = re.compile(
 
 
 def check_cultural_safety(text: str) -> Tuple[bool, Optional[str]]:
-    """Check text against Indic cultural safety, communal, and caste guardrails.
+    """Screen text against a curated slur-list regex (screen only, not law).
 
     Returns:
         (is_safe, violation_reason)
+
+    A False result means a listed pattern matched; it is not a legal
+    determination under any statute. A True result means no listed pattern
+    matched; it is not a guarantee of safety.
     """
     if not text:
         return True, None
@@ -54,7 +64,7 @@ def check_cultural_safety(text: str) -> Tuple[bool, Optional[str]]:
     match = _CULTURAL_SAFETY_REGEX.search(text)
     if match:
         matched_term = match.group(0)
-        return False, f"Prohibited discriminatory or communal slur detected: '{matched_term}'"
+        return False, f"Matched curated slur-list pattern: '{matched_term}' (regex screen only, not a legal determination)"
 
     return True, None
 
@@ -144,12 +154,29 @@ def validate_script_conformity(text: str, language: str, script_mode: str = "nat
 
     Returns:
         (is_conforming, reason)
+
+    Hinglish handling: Hinglish is Roman-script Hindi, so language
+    'hinglish' maps to the Devanagari script spec with the default
+    'native' mode reinterpreted as 'romanized' (a Devanagari-only text
+    labelled Hinglish fails; a Latin-script Hinglish text passes). Pass
+    language 'hi' explicitly for Devanagari Hindi.
+    Dual handling: 'dual' permits native script, Latin script, or a mix,
+    but fails text containing neither, and fails text dominated (>25% of
+    letters) by other scripts. Unknown languages have no script spec and
+    still pass — a missing spec is not a conformity failure.
     """
     if not text or not text.strip():
         return True, None
 
     lang = (language or "en").lower().strip()
     mode = (script_mode or "native").lower().strip()
+
+    # Hinglish is Roman-script Hindi: map it to the Hindi script spec and
+    # reinterpret the default 'native' mode as 'romanized' (see docstring).
+    if lang in ("hinglish", "hing", "roman_hindi"):
+        lang = "hi"
+        if mode == "native":
+            mode = "romanized"
 
     # Look up script specification for target language
     spec = None
@@ -181,6 +208,25 @@ def validate_script_conformity(text: str, language: str, script_mode: str = "nat
                 return False, (
                     f"Expected Romanized (Latin) script for {lang}, but native {script_name} script "
                     f"characters dominated ({native_count} chars)."
+                )
+
+        elif mode == "dual":
+            latin_count = sum(1 for c in text if ("a" <= c.lower() <= "z"))
+            letters = [c for c in text if c.isalpha()]
+            foreign_count = sum(
+                1 for c in letters
+                if not any(start <= c <= end for start, end in ranges)
+                and not ("a" <= c.lower() <= "z")
+            )
+            if native_count == 0 and latin_count == 0:
+                return False, (
+                    f"Expected native {script_name} and/or Latin script for {lang} (dual mode), "
+                    "but neither was found."
+                )
+            if letters and foreign_count / len(letters) > 0.25:
+                return False, (
+                    f"Expected native {script_name} and/or Latin script for {lang} (dual mode), "
+                    f"but text is dominated by other scripts ({foreign_count} of {len(letters)} letters)."
                 )
 
     return True, None
