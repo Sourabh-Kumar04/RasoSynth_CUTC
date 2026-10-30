@@ -163,7 +163,8 @@ class EnvironmentSecretsProvider(SecretsProvider):
 
     async def set(self, path: str, value: str, metadata: Optional[Dict] = None) -> SecretMetadata:
         """Set environment variable (development only)."""
-        if os.getenv("ENVIRONMENT") == "production":
+        from core.environment import is_production
+        if is_production():
             raise PermissionError("Cannot set secrets via environment in production")
         env_key = f"{self.prefix}{path.upper().replace('/', '_')}"
         os.environ[env_key] = value

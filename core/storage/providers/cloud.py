@@ -587,7 +587,7 @@ class B2StorageProvider(StorageProvider):
             print("b2sdk not installed.")
 
 
-class MinIOProvider(StorageProvider):
+class MinIOProvider(S3StorageProvider):
     """MinIO-compatible storage provider."""
 
     provider_type = StorageProviderType.MINIO
@@ -596,11 +596,18 @@ class MinIOProvider(StorageProvider):
         """Initialize MinIO client."""
         try:
             import boto3
+            access_key = self.config.credentials.get("access_key")
+            secret_key = self.config.credentials.get("secret_key")
+            if not access_key or not secret_key:
+                raise ValueError(
+                    "MinIO storage provider requires explicit access_key and secret_key credentials; "
+                    "hardcoded defaults (like minioadmin) are disabled for security."
+                )
             self._client = boto3.client(
                 's3',
                 endpoint_url=self.config.endpoint or "http://localhost:9000",
-                aws_access_key_id=self.config.credentials.get("access_key", "minioadmin"),
-                aws_secret_access_key=self.config.credentials.get("secret_key", "minioadmin"),
+                aws_access_key_id=access_key,
+                aws_secret_access_key=secret_key,
                 region_name=self.config.region,
             )
         except ImportError:

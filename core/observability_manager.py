@@ -298,7 +298,8 @@ class ObservabilityManager:
 
             # Add service info
             event_dict["service"] = "ai-dataset-engineer"
-            event_dict["environment"] = os.getenv("AI_DATASET_ENVIRONMENT", "development")
+            from core.environment import get_current_environment
+            event_dict["environment"] = get_current_environment()
 
             return event_dict
 
@@ -330,7 +331,7 @@ class ObservabilityManager:
         self._resource = Resource.create({
             SERVICE_NAME: "ai-dataset-engineer",
             "service.version": "1.0.0",
-            "deployment.environment": os.getenv("AI_DATASET_ENVIRONMENT", "development"),
+            "deployment.environment": get_current_environment(),
         })
 
         # Create tracer provider

@@ -24,7 +24,7 @@ from functools import wraps
 import jwt
 from cryptography.fernet import Fernet
 from cryptography.hazmat.primitives import hashes
-from cryptography.hazmat.primitives.kdf.pbkdf2 import PBKDF2
+from cryptography.hazmat.primitives.kdf.pbkdf2 import PBKDF2HMAC
 from cryptography.hazmat.backends import default_backend
 
 logger = logging.getLogger(__name__)
@@ -127,12 +127,16 @@ class SecretManager:
     """
 
     def __init__(self, encryption_key: Optional[str] = None):
-        # Use environment key or generate
-        key = encryption_key or os.getenv("ENCRYPTION_KEY")
+        from core.environment import is_production
+        key = (encryption_key or os.getenv("ENCRYPTION_KEY") or "").strip()
         if not key:
-            # Generate a key for development
+            if is_production():
+                raise ValueError(
+                    "CRITICAL SECURITY ERROR: ENCRYPTION_KEY environment variable is required in production. "
+                    "Ephemeral Fernet key generation is strictly forbidden in production."
+                )
             key = Fernet.generate_key().decode()
-            logger.warning("No encryption key provided, using generated key (not for production)")
+            logger.warning("No encryption key provided, using generated ephemeral key (development only, not for production)")
 
         # Derive key using PBKDF2
         self._fernet = self._create_fernet(key)
@@ -452,18 +456,18 @@ class AuditLogger:
 
 # Prompt injection patterns
 PROMPT_INJECTION_PATTERNS = [
-    r"(?i)ignore\s+(previous|above|all)\s+(instructions?|rules?|commands?)",
-    r"(?i)forget\s+(everything|all|your)\s+(instructions?|rules?|guidelines?)",
-    r"(?i)new\s+instructions?:",
-    r"(?i)system\s*:\s*",
-    r"(?i)you\s+are\s+(now|a|an)",
-    r"(?i)\{system\}",
+    r"ignore\s+(previous|above|all)\s+(instructions?|rules?|commands?)",
+    r"forget\s+(everything|all|your)\s+(instructions?|rules?|guidelines?)",
+    r"new\s+instructions?:",
+    r"system\s*:\s*",
+    r"you\s+are\s+(now|a|an)",
+    r"\{system\}",
     r"<\|system\|>",
-    r"(?i)override\s+(your|this)",
-    r"(?i)disregard\s+(your|all)",
-    r"(?i) pretend ",
-    r"(?i)roleplay",
-    r"(?i)imagine\s+(you|that)",
+    r"override\s+(your|this)",
+    r"disregard\s+(your|all)",
+    r" pretend ",
+    r"roleplay",
+    r"imagine\s+(you|that)",
 ]
 
 PROMPT_INJECTION_REGEX = re.compile("|".join(PROMPT_INJECTION_PATTERNS), re.IGNORECASE)
@@ -617,16 +621,19 @@ def get_rbac_manager() -> RBACManager:
     """Get RBAC manager singleton."""
     global _rbac_manager
     if _rbac_manager is None:
-        secret = os.getenv("JWT_SECRET", "")
-        env = os.getenv("AI_DATASET_ENVIRONMENT", "development").lower()
-        if env == "production" and (not secret or secret == "change-me-in-production"):
-            raise ValueError(
-                "CRITICAL SECURITY CONFIGURATION ERROR: "
-                "JWT_SECRET environment variable is either unset or set to the default fallback "
-                "in a production environment! To proceed, set a strong JWT_SECRET."
-            )
+        from core.environment import is_production
+        secret = os.getenv("JWT_SECRET", "").strip()
+        if is_production():
+            if not secret or secret == "change-me-in-production" or "change-me" in secret:
+                raise ValueError(
+                    "CRITICAL SECURITY CONFIGURATION ERROR: "
+                    "JWT_SECRET environment variable is unset, empty, or using an insecure fallback "
+                    "in a production environment! To proceed, set a strong JWT_SECRET."
+                )
         if not secret:
-            secret = "change-me-in-production"
+            raise ValueError(
+                "JWT_SECRET must be configured. Ephemeral or default fallback secret is disallowed."
+            )
         _rbac_manager = RBACManager(secret)
     return _rbac_manager
 

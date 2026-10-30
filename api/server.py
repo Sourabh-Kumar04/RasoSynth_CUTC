@@ -376,7 +376,8 @@ def _get_cors_origins() -> list[str]:
     in any environment, dev or production. The dev fallback below covers only
     loopback origins so we never bake a private IP into source control.
     """
-    env = os.getenv("AI_DATASET_ENVIRONMENT", "development").lower()
+    from core.environment import get_current_environment
+    env = get_current_environment()
     cors_origins = os.getenv("CORS_ALLOWED_ORIGINS", "")
 
     if cors_origins:

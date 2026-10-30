@@ -37,7 +37,8 @@ class AppFactory:
 
     def _get_cors_origins(self) -> list[str]:
         """Get CORS origins based on environment."""
-        env = os.getenv("AI_DATASET_ENVIRONMENT", "development").lower()
+        from core.environment import get_current_environment
+        env = get_current_environment()
         cors_origins = os.getenv("CORS_ALLOWED_ORIGINS", "")
 
         if cors_origins:

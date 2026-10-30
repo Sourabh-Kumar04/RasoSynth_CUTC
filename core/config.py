@@ -226,8 +226,11 @@ class Settings(BaseSettings):
     kaggle_username: Optional[str] = Field(default=None)
     kaggle_key: Optional[str] = Field(default=None)
 
-    # Environment validation
-    environment: str = Field(default="development")
+    # Environment validation (canonical: ENVIRONMENT, alias: AI_DATASET_ENVIRONMENT)
+    environment: str = Field(
+        default="development",
+        validation_alias=AliasChoices("environment", "ai_dataset_environment")
+    )
 
     @model_validator(mode="after")
     def validate_production_secrets(self) -> "Settings":
