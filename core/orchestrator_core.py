@@ -11,6 +11,7 @@ import asyncio
 import hashlib
 import json
 import os
+from pathlib import Path
 import logging
 from typing import TypedDict, Annotated, Any, Optional, AsyncGenerator
 from dataclasses import dataclass, field
@@ -2808,11 +2809,26 @@ class DatasetOrchestrator:
 
         balance_report["requested_samples"] = requested_samples
         balance_report["samples_short_of_target"] = max(0, requested_samples - len(raw_samples))
-        # Convert the final balanced dictionaries for exporter and ORM access.
+
+        # Carve stratified held-out evaluation split (after review decisions & deduplication)
+        from core.evaluation.held_out_split import create_stratified_held_out_split, save_split_artifacts
+
+        eval_floor_val = int(job_config.get("eval_floor", 1000))
+        split_result = create_stratified_held_out_split(
+            samples=raw_samples,
+            job_id=job_id,
+            floor=eval_floor_val,
+            seed=job_config.get("seed"),
+        )
+        split_decision = split_result["decision"]
+        balance_report["holdout_decision"] = split_decision
+
+        # Train samples are exported to primary train path; val/test become job artifacts
+        train_samples_raw = split_result["train"]
         from types import SimpleNamespace
         samples = [
             SimpleNamespace(**s) if isinstance(s, dict) else s
-            for s in raw_samples
+            for s in train_samples_raw
         ]
         # Multi-Agent Society: Consult StorageOptimizationAgent and DistributionAgent
         storage_opt_report = {}
@@ -2860,6 +2876,14 @@ class DatasetOrchestrator:
 
         exporter = ExportPipeline(export_config)
         export_result = await exporter.export(samples, job_id)
+
+        # Save held-out validation and test splits as job artifacts alongside primary train file
+        job_output_dir = Path(export_config.output_dir) / job_id
+        save_split_artifacts(
+            split_result,
+            job_output_dir,
+            base_filename=Path(str(export_result.get("dataset", "dataset.jsonl"))).name,
+        )
 
         # Persist dataset and samples to database
         if self.db and samples:
@@ -2916,6 +2940,12 @@ class DatasetOrchestrator:
                     "export_path": str(export_result.get("dataset", "")),
                     "balance_report": balance_report,
                     "provenance": provenance,
+                    "held_out_split": split_decision,
+                    "holdout_decision": split_decision,
+                    "train_count": split_decision.get("train_count", len(samples)),
+                    "val_count": split_decision.get("val_count", 0),
+                    "test_count": split_decision.get("test_count", 0),
+                    "eval_flag": split_decision.get("flag"),
                 }
                 try:
                     from core.export.dbom_attestor import generate_dbom_attestation
@@ -3049,6 +3079,7 @@ class DatasetOrchestrator:
                         "context_hash": context_hash,
                         "dbom": metadata_dict.get("dbom", {}),
                         "quality": state.get("quality_breakdown", {}),
+                        "held_out_split": split_decision,
                     },
                 )
                 metadata_dict["dataset_version_id"] = version["id"]
