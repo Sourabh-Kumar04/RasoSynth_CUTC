@@ -42,7 +42,7 @@ export function MerkleTreeGraph({
   
   const handleDownloadBadge = () => {
     playSuccessChime()
-    const timestamp = issuedAt || '2026-10-28T12:00:00.000Z'
+    const timestamp = issuedAt || 'Unknown'
     const svgContent = `<svg xmlns="http://www.w3.org/2000/svg" width="600" height="240" viewBox="0 0 600 240" fill="none">
   <rect width="600" height="240" rx="16" fill="#0a0a0f" stroke="#272738" stroke-width="2"/>
   <rect x="20" y="20" width="560" height="200" rx="12" fill="#12121a" stroke="#f26625" stroke-opacity="0.3"/>
@@ -74,26 +74,18 @@ export function MerkleTreeGraph({
     URL.revokeObjectURL(url)
   }
   
-  // Deterministic 64-hex SHA-256 branch and leaf derivations
-  const leftBranch = computeSha256(`branch-left:${cleanRoot}`)
-  const rightBranch = computeSha256(`branch-right:${cleanRoot}`)
-  const leaf0Hash = computeSha256(`leaf-0:${leftBranch}`)
-  const leaf1Hash = computeSha256(`leaf-1:${leftBranch}`)
-  const leaf2Hash = computeSha256(`leaf-2:${rightBranch}`)
-  const leaf3Hash = computeSha256(`leaf-3:${rightBranch}`)
-
-  const q = Math.max(1, Math.floor(totalSamples / 4))
-  const s0_label = `Leaf 0 [s0:s${q}]`
-  const s1_label = `Leaf 1 [s${q + 1}:s${q * 2}]`
-  const s2_label = `Leaf 2 [s${q * 2 + 1}:s${q * 3}]`
-  const s3_label = `Leaf 3 [s${q * 3 + 1}:s${totalSamples}]`
+  // Intermediate branches and leaves are schematics unless genuine sample hashes are supplied
+  const s0_label = 'Leaf 0 (Schematic)'
+  const s1_label = 'Leaf 1 (Schematic)'
+  const s2_label = 'Leaf 2 (Schematic)'
+  const s3_label = 'Leaf 3 (Schematic)'
 
   const leaves: MerkleNode[] = [
     {
       id: 'leaf-0',
       label: s0_label,
-      hash: leaf0Hash.slice(0, 16) + '...',
-      fullHash: leaf0Hash,
+      hash: 'Unknown',
+      fullHash: 'Unknown — requires full sample list evaluation',
       level: 2,
       parent: 'branch-left',
       sibling: 'leaf-1',
@@ -102,8 +94,8 @@ export function MerkleTreeGraph({
     {
       id: 'leaf-1',
       label: s1_label,
-      hash: leaf1Hash.slice(0, 16) + '...',
-      fullHash: leaf1Hash,
+      hash: 'Unknown',
+      fullHash: 'Unknown — requires full sample list evaluation',
       level: 2,
       parent: 'branch-left',
       sibling: 'leaf-0',
@@ -112,8 +104,8 @@ export function MerkleTreeGraph({
     {
       id: 'leaf-2',
       label: s2_label,
-      hash: leaf2Hash.slice(0, 16) + '...',
-      fullHash: leaf2Hash,
+      hash: 'Unknown',
+      fullHash: 'Unknown — requires full sample list evaluation',
       level: 2,
       parent: 'branch-right',
       sibling: 'leaf-3',
@@ -122,8 +114,8 @@ export function MerkleTreeGraph({
     {
       id: 'leaf-3',
       label: s3_label,
-      hash: leaf3Hash.slice(0, 16) + '...',
-      fullHash: leaf3Hash,
+      hash: 'Unknown',
+      fullHash: 'Unknown — requires full sample list evaluation',
       level: 2,
       parent: 'branch-right',
       sibling: 'leaf-2',
@@ -135,8 +127,8 @@ export function MerkleTreeGraph({
     'branch-left': {
       id: 'branch-left',
       label: 'Branch H(0..1)',
-      hash: leftBranch.slice(0, 16) + '...',
-      fullHash: leftBranch,
+      hash: 'Unknown',
+      fullHash: 'Unknown — derived from leaf hashes',
       level: 1,
       parent: 'root',
       sibling: 'branch-right',
@@ -145,8 +137,8 @@ export function MerkleTreeGraph({
     'branch-right': {
       id: 'branch-right',
       label: 'Branch H(2..3)',
-      hash: rightBranch.slice(0, 16) + '...',
-      fullHash: rightBranch,
+      hash: 'Unknown',
+      fullHash: 'Unknown — derived from leaf hashes',
       level: 1,
       parent: 'root',
       sibling: 'branch-left',
