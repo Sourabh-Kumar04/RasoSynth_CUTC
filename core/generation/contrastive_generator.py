@@ -43,7 +43,7 @@ def perturb_factual_statement(response: str) -> Dict[str, Any]:
         return {
             "perturbed_text": perturbed,
             "perturbation_type": "numerical_rate_flip",
-            "critique": f"Perturbation applied: stated '{flipped}' where the input response stated '{original}'. The input response was not verified, so this does not establish the authentic rate.",
+            "critique": f"Perturbation applied: stated '{flipped}' where the input response stated '{original}'. The input response was not verified.",
             "input_verified": False,
         }
 
@@ -64,7 +64,7 @@ def perturb_factual_statement(response: str) -> Dict[str, Any]:
             return {
                 "perturbed_text": perturbed,
                 "perturbation_type": "statutory_condition_inversion",
-                "critique": f"Perturbation applied: stated '{inv}' where the input response stated '{orig}'. The input response was not verified, so this does not establish what the law prescribes.",
+                "critique": f"Perturbation applied: stated '{inv}' where the input response stated '{orig}'. The input response was not verified.",
                 "input_verified": False,
             }
 
