@@ -23,7 +23,7 @@ export default function RootError({
       </div>
       <h1 className="text-xl font-bold text-white mb-2">Platform Exception Encountered</h1>
       <p className="text-xs text-[#a8a29e] max-w-md mb-6">
-        An unexpected error occurred while rendering this view. Your persisted data in PostgreSQL and active synthesis jobs remain unaffected.
+        An unexpected error occurred while rendering this view. You can retry the operation or return home.
       </p>
       {error.message && (
         <div className="max-w-md p-3 mb-6 bg-[#12121a] border border-[#272738] rounded-md text-xs text-rose-300 text-left overflow-x-auto">
