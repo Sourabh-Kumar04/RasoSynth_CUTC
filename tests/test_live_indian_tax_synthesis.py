@@ -251,11 +251,11 @@ async def test_live_tax_generation_and_collision_defense(tax_job_dir):
     samples_in_db = await db.get_samples(dataset["id"])
     assert len(samples_in_db) == 4
     dbom_cert = dataset["metadata"]["dbom"]
+    # Verify against the stored rows as-is (content + domain metadata):
+    # generation hashes content+metadata, so stripping metadata here would
+    # compute a different root whenever stored metadata is non-empty.
     verification = verify_dataset_dbom(
-        samples=[
-            {"instruction": s["instruction"], "response": s["response"], "input": s.get("input", "")}
-            for s in samples_in_db
-        ],
+        samples=samples_in_db,
         dbom_certificate=dbom_cert,
     )
     assert verification["is_valid"] is True
