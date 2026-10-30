@@ -19,11 +19,12 @@ export default function QualityOverviewCards() {
   useEffect(() => {
     api.getQualityOverview()
       .then((res: any) => {
-        // Mock-mode responses must never render as live.
+        // Mock-mode responses must never render as live. Preserve real is_live if reported by backend.
         const mockMode = typeof window !== 'undefined' && localStorage.getItem('mockMode') === 'true';
+        const backendLive = typeof res?.is_live === 'boolean' ? res.is_live : true;
         setData({
           ...res,
-          is_live: !mockMode,
+          is_live: mockMode ? false : backendLive,
         });
       })
       .catch(() => {
@@ -69,8 +70,8 @@ export default function QualityOverviewCards() {
       badge: "MT-Bench / Jury",
     },
     {
-      label: "Certified Datasets",
-      sub: "Active Repositories",
+      label: "Total Datasets",
+      sub: "Active Pipeline Jobs",
       value: (data?.total_jobs ?? '—').toString(),
       icon: Database,
       color: "text-white",
@@ -98,7 +99,7 @@ export default function QualityOverviewCards() {
       value: formatRate(data?.rejection_rate),
       icon: XCircle,
       color: "text-rose-400",
-      badge: "Zero Contam",
+      badge: "Review Queue Gate",
     },
   ];
 
