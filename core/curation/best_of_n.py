@@ -5,6 +5,14 @@ Performs automated self-consistency verification across N candidate reasoning tr
 2. Majority voting to identify the high-confidence consensus answer.
 3. Selection of the optimal 'chosen' reasoning trajectory (cleanest derivation, best step structure).
 4. Automated generation of DPO/SimPO/KTO preference pairs from rejected trajectories.
+
+Honesty rule: a preference pair is emitted ONLY when at least one candidate
+genuinely dissents from the consensus answer. When all candidates agree, no
+"rejected" example exists, so ``preference_pair`` is ``None`` and
+``rejected_responses`` is empty — an agreeing trajectory is never presented
+as a rejected example. Emitted pairs carry a ``provenance`` flag: they are
+synthetic, model-generated trajectories whose correctness was NOT verified
+beyond canonical-answer agreement.
 """
 
 import re
@@ -70,6 +78,7 @@ def filter_best_of_n(
             "consensus_rate": 0.0,
             "chosen_response": "",
             "rejected_responses": [],
+            "rejected_note": "no_candidates",
             "preference_pair": None,
         }
 
@@ -120,11 +129,13 @@ def filter_best_of_n(
         parsed_candidates.sort(key=lambda x: x["trajectory_score"], reverse=True)
         chosen = parsed_candidates[0]
 
-    # Pick best rejected candidate (erroneous answer or weakest trajectory)
+    # Rejected examples must genuinely dissent. When every candidate agrees
+    # there is no rejected example: emitting the weakest agreeing trajectory
+    # as "rejected" would teach the model to disprefer a correct answer.
     rejected_list = [c["full_text"] for c in disagreeing]
-    if not rejected_list and len(agreeing) > 1:
-        # If all agree, use the lowest-scoring agreeing trajectory as rejected
-        rejected_list = [agreeing[-1]["full_text"]]
+    rejected_note = None
+    if not rejected_list:
+        rejected_note = "all_candidates_agree_no_dissenting_rejected_example"
 
     chosen_full = chosen["full_text"]
     rejected_top = rejected_list[0] if rejected_list else ""
@@ -139,6 +150,8 @@ def filter_best_of_n(
                 "consensus_rate": consensus_rate,
                 "domain": domain or "general",
                 "target_answer": target_answer,
+                "provenance": "synthetic_best_of_n_unverified",
+                "rejected_is_dissenting": True,
             }
         }
 
@@ -151,7 +164,9 @@ def filter_best_of_n(
         "chosen_response": chosen_full,
         "chosen_trajectory_score": chosen["trajectory_score"],
         "rejected_responses": rejected_list,
+        "rejected_note": rejected_note,
         "preference_pair": preference_pair,
+        "provenance": "synthetic_cot_trajectories_unverified",
         "candidate_summary": [
             {
                 "id": c["candidate_id"],
