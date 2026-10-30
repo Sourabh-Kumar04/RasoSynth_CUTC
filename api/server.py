@@ -249,20 +249,42 @@ def _sign_approved_examples(query: str, examples: list[dict]) -> str:
     return hmac.new(shared_secret.encode(), payload.encode(), "sha256").hexdigest()
 
 
+def _get_download_signing_secret() -> str:
+    """Resolve dedicated signing secret for download and preview URLs.
+
+    Fails closed when absent: no fallback to JWT_SECRET or CSRF secret.
+    """
+    from core.config import get_settings
+    secret = (
+        os.getenv("DOWNLOAD_SIGNING_SECRET")
+        or os.getenv("PREVIEW_SIGNING_SECRET")
+        or getattr(get_settings(), "download_signing_secret", None)
+    )
+    if not secret:
+        raise RuntimeError(
+            "Dedicated download signing secret (DOWNLOAD_SIGNING_SECRET) is not configured; "
+            "presigned URL signing fails closed without JWT_SECRET fallback."
+        )
+    return str(secret).strip()
+
+
 def _sign_download_token(job_id: str, expires_at: int, user: str = "", format: str = "") -> str:
     """Generate an HMAC-SHA256 signature for presigned dataset downloads.
 
     Binds user, format, expiry, and single-purpose ("download") in the HMAC.
+    Uses dedicated signing secret; fails closed if absent.
     """
-    from core.config import get_settings
-    shared_secret = os.getenv("JWT_SECRET") or get_settings().jwt_secret or _csrf_manager._secret
-    # Canonical binding of purpose, job_id, user, format, and expires_at
+    signing_secret = _get_download_signing_secret()
     payload = f"dataset_download:{job_id}:{user}:{format}:{expires_at}"
-    return hmac.new(shared_secret.encode(), payload.encode(), "sha256").hexdigest()
+    return hmac.new(signing_secret.encode("utf-8"), payload.encode("utf-8"), "sha256").hexdigest()
 
 
 def _verify_download_token(job_id: str, token: Optional[str], expires_at: Optional[int], user: str = "", format: str = "") -> bool:
-    """Verify an ephemeral download token against expiration and HMAC signature."""
+    """Verify an ephemeral download token against expiration and HMAC signature.
+
+    Fails closed if dedicated signing secret is not configured or token is invalid.
+    No fallback to JWT_SECRET.
+    """
     if not token or expires_at is None:
         return False
     try:
@@ -274,15 +296,13 @@ def _verify_download_token(job_id: str, token: Optional[str], expires_at: Option
     if time.time() > (expires_int + 60):
         return False
 
-    # Check HMAC with binding
-    expected_sig = _sign_download_token(job_id, expires_int, user=user, format=format)
-    if hmac.compare_digest(expected_sig, str(token).strip()):
-        return True
-    # Legacy fallback verification for tokens minted without user/format binding
-    legacy_sig = hmac.new((os.getenv("JWT_SECRET") or "").encode(), f"dataset_download:{job_id}:{expires_int}".encode(), "sha256").hexdigest()
-    if hmac.compare_digest(legacy_sig, str(token).strip()):
-        return True
-    return False
+    try:
+        expected_sig = _sign_download_token(job_id, expires_int, user=user, format=format)
+    except Exception:
+        # Fail closed on missing signing secret
+        return False
+
+    return hmac.compare_digest(expected_sig, str(token).strip())
 
 
 class CSRFMiddleware(BaseHTTPMiddleware):
@@ -3524,7 +3544,10 @@ async def create_presigned_download_url(
 
     expires_at = int(time.time()) + final_ttl
     user_binding = current_user.username if current_user else ""
-    token = _sign_download_token(job_id, expires_at, user=user_binding, format=final_format)
+    try:
+        token = _sign_download_token(job_id, expires_at, user=user_binding, format=final_format)
+    except RuntimeError as sec_err:
+        raise HTTPException(status_code=503, detail=str(sec_err))
     download_path = f"/jobs/{job_id}/download?token={token}&expires={expires_at}&format={final_format}"
 
     return SignedUrlResponse(

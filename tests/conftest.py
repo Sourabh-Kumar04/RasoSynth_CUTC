@@ -9,10 +9,14 @@ import pytest
 # Ensure project root is on path
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 
-# Security: ensure JWT_SECRET is set for all tests
+# Security: ensure JWT_SECRET and DOWNLOAD_SIGNING_SECRET are set for all tests
 os.environ.setdefault(
     "JWT_SECRET",
     os.getenv("JWT_SECRET") or "K7m9pQ2vX5zL8wR1tY4uN6bC3jF0gH2sD5vA8mK1pQ9xZ4"
+)
+os.environ.setdefault(
+    "DOWNLOAD_SIGNING_SECRET",
+    os.getenv("DOWNLOAD_SIGNING_SECRET") or "D9x4pQ2vX5zL8wR1tY4uN6bC3jF0gH2sD5vA8mK1pQ9xZ8"
 )
 # Tests run with authentication ENFORCED (never AUTH_DISABLED): API tests
 # authenticate with real JWTs via the auth_headers fixtures below, and

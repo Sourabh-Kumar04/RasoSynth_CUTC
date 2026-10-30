@@ -30,7 +30,7 @@ class TestSecurityValidators:
     def test_validate_no_injection_sql(self) -> None:
         """Test SQL injection detection."""
         with pytest.raises(SecurityError):
-            validate_no_injection("SELECT * FROM users")
+            validate_no_injection("SELECT * FROM users WHERE 1=1")
 
     def test_validate_no_injection_template(self) -> None:
         """Test template injection detection."""

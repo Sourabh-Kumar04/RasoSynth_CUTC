@@ -8,11 +8,24 @@ from unittest.mock import patch
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 
-# Ensure JWT secret is set
+# Ensure JWT and dedicated download signing secrets are set
 os.environ.setdefault("JWT_SECRET", "super-secret-test-key-32-chars-length!!")
+os.environ.setdefault("DOWNLOAD_SIGNING_SECRET", "super-download-signing-secret-32-chars!!")
 
 from fastapi.testclient import TestClient
 from api.server import app, _sign_download_token, _verify_download_token
+
+
+def test_fail_closed_without_download_signing_secret():
+    """Verify preview/download signing fails closed when secret is absent, no JWT_SECRET fallback."""
+    import pytest
+    with patch.dict(os.environ, {"DOWNLOAD_SIGNING_SECRET": "", "PREVIEW_SIGNING_SECRET": ""}, clear=False):
+        with patch("core.config.get_settings") as mock_settings:
+            mock_settings.return_value.download_signing_secret = None
+            with pytest.raises(RuntimeError, match="Dedicated download signing secret"):
+                _sign_download_token("job-fail-closed", int(time.time()) + 3600)
+            # Verification also fails closed (returns False, never True)
+            assert _verify_download_token("job-fail-closed", "any-sig", int(time.time()) + 3600) is False
 
 
 def test_sign_and_verify_token():

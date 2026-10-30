@@ -118,6 +118,7 @@ class Settings(BaseSettings):
         return val
     # JWT Secret (required for security)
     jwt_secret: str = Field(default="")  # No default: JWT_SECRET env is required (see validate_production_secrets).
+    download_signing_secret: Optional[str] = Field(default=None)  # Dedicated secret for presigned download/preview URLs. Fail-closed when absent.
     qdrant_url: str = Field(default="http://qdrant:6333")
 
     # API Keys

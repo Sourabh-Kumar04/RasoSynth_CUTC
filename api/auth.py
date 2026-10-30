@@ -8,13 +8,15 @@ Security features:
 - Critical logging when auth is disabled
 - Token format validation even when auth is disabled
 - Token revocation: POST /auth/logout revokes the presented token
-  (in-memory, single-process); tokens also expire automatically after
-  JWT_EXPIRATION_HOURS (default 24, max 168) — expiry is the fallback
-  revocation story if a process restarts and the in-memory set is lost.
-- Password policy (minimal default): create_user requires >= 12 chars.
-  Lockout (minimal default): 5 consecutive failed logins lock the
-  username for 15 minutes. Both are in-memory defaults pending a
-  product decision on a persistent policy (see step-5 report).
+  (in-memory, single-process-only). Persistent revocation was deferred
+  because the SQL schema does not include a users or tokens table.
+  Tokens expire automatically after JWT_EXPIRATION_HOURS (default 24, max 168),
+  which serves as the fallback revocation boundary if the process restarts.
+- Password policy: create_user requires >= 12 chars.
+  Lockout: 5 consecutive failed logins in a 15-minute window lock the
+  username for 15 minutes (900s). Env/admin users are gated by lockout
+  to protect administrative credentials against brute force. Documented
+  escapes: the unlock_user() administrative escape method or process restart.
 - Legacy-hash login re-hashes: a successful login against a
   non-bcrypt stored hash upgrades it to bcrypt immediately.
 """
@@ -144,10 +146,12 @@ class AuthManager:
         # Load users from environment - no hardcoded credentials
         # Format: ADMIN_USER=username:password, USER_USER=username:password
         self._users: Dict[str, Dict] = {}
-        # Minimal auth-policy defaults (see module docstring): in-memory,
-        # single-process state. Lockout: 5 consecutive failed logins lock
-        # the username for 15 minutes. Revocation: logout stores a hash
-        # of the revoked token; tokens also expire via JWT exp.
+        # Lockout and revocation parameters (documented defaults):
+        # Lockout: 5 attempts, 15-minute rolling window, 15-minute duration.
+        # Env/admin users are gated by default to protect administrative credentials.
+        self.lockout_max_attempts = int(os.getenv("AUTH_LOCKOUT_MAX_ATTEMPTS", "5"))
+        self.lockout_window_seconds = float(os.getenv("AUTH_LOCKOUT_WINDOW_SECONDS", "900.0"))
+        self.lockout_duration_seconds = float(os.getenv("AUTH_LOCKOUT_DURATION_SECONDS", "900.0"))
         self._failed_attempts: Dict[str, list] = {}
         self._locked_until: Dict[str, float] = {}
         self._revoked_tokens: set = set()
@@ -316,18 +320,38 @@ class AuthManager:
         }
 
     def _record_failed_login(self, username: str) -> None:
-        """Record a failed login; lock after 5 consecutive failures (15 min)."""
+        """Record a failed login; lock after configured failures within window."""
         import time as _time
 
+        now = _time.time()
         attempts = self._failed_attempts.setdefault(username, [])
-        attempts.append(_time.time())
-        # Keep only failures inside the lockout window.
-        cutoff = _time.time() - 900
+        attempts.append(now)
+        # Keep only failures inside the lockout window (default 900s / 15m)
+        cutoff = now - self.lockout_window_seconds
         attempts = [t for t in attempts if t > cutoff]
         self._failed_attempts[username] = attempts
-        if len(attempts) >= 5:
-            self._locked_until[username] = _time.time() + 900
-            logger.warning("Account locked after repeated failed logins (15 min)")
+        if len(attempts) >= self.lockout_max_attempts:
+            self._locked_until[username] = now + self.lockout_duration_seconds
+            logger.warning(
+                "Account '%s' locked for %d seconds after %d failed logins",
+                username,
+                int(self.lockout_duration_seconds),
+                len(attempts),
+            )
+
+    def unlock_user(self, username: str) -> bool:
+        """Escape mechanism: unlock a locked user account (in-memory).
+
+        Env/admin users are gated by lockout to protect administrative credentials.
+        The documented escape mechanism is either invoking this unlock method
+        or restarting the single-process service.
+        """
+        had_lock = (username in self._locked_until) or (username in self._failed_attempts)
+        self._locked_until.pop(username, None)
+        self._failed_attempts.pop(username, None)
+        if had_lock:
+            logger.info("Account '%s' unlocked via administrative escape", username)
+        return had_lock
 
     def revoke_token(self, token: str) -> None:
         """Revoke one token (in-memory, single-process). Stores only a hash."""
