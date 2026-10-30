@@ -150,7 +150,11 @@ async def test_extract_intent_malformed_json(strict_intent):
 
 @pytest.mark.asyncio
 async def test_extract_intent_malformed_json_falls_back():
-    """With soft fallback (default), unrepairable JSON returns a usable UserIntent."""
+    """With the fail-closed default (INTENT_FALLBACK_ON_ERROR=false, P0-7),
+    unrepairable JSON raises instead of silently masking the failure as a
+    keyword-fallback intent. The soft-fallback path still exists only when
+    the operator explicitly opts in via INTENT_FALLBACK_ON_ERROR=true."""
+    from core.intent import IntentExtractionError
     mock_provider = AsyncMock()
     mock_response = MagicMock()
     mock_response.content = "definitely not json at all"
@@ -158,11 +162,8 @@ async def test_extract_intent_malformed_json_falls_back():
     redis_mock = AsyncMock()
     redis_mock.get.return_value = None
 
-    intent = await extract_intent("owasp top 10", mock_provider, redis_mock)
-    assert isinstance(intent, UserIntent)
-    assert intent.primary_task == "dataset_generation"
-    assert intent.raw_input == "owasp top 10"
-    assert intent.specialized_queries
+    with pytest.raises(IntentExtractionError, match="LLM returned non-JSON"):
+        await extract_intent("owasp top 10", mock_provider, redis_mock)
 
 
 @pytest.mark.asyncio

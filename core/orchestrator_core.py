@@ -2924,9 +2924,14 @@ class DatasetOrchestrator:
                         dataset_name=export_config.dataset_name,
                         samples=[
                             {
-                                "instruction": getattr(s, "instruction", ""),
-                                "response": getattr(s, "response", ""),
-                                "input": getattr(s, "input", "") or "",
+                                "instruction": s.get("instruction", "") if isinstance(s, dict) else getattr(s, "instruction", ""),
+                                "response": s.get("response", "") if isinstance(s, dict) else getattr(s, "response", ""),
+                                "input": (s.get("input", "") if isinstance(s, dict) else getattr(s, "input", "")) or "",
+                                "metadata": (
+                                    (s.get("metadata") or s.get("metadata_") or {})
+                                    if isinstance(s, dict)
+                                    else (getattr(s, "metadata", None) or getattr(s, "metadata_", None) or {})
+                                ),
                             }
                             for s in samples
                         ],
@@ -3075,7 +3080,12 @@ class DatasetOrchestrator:
                     compute_sample_hash({
                         "instruction": getattr(s, "instruction", "") if not isinstance(s, dict) else s.get("instruction", ""),
                         "response": getattr(s, "response", "") if not isinstance(s, dict) else s.get("response", ""),
-                        "input": getattr(s, "input", "") if not isinstance(s, dict) else s.get("input", "")
+                        "input": getattr(s, "input", "") if not isinstance(s, dict) else s.get("input", ""),
+                        "metadata": (
+                            (s.get("metadata") or s.get("metadata_") or {})
+                            if isinstance(s, dict)
+                            else (getattr(s, "metadata", None) or getattr(s, "metadata_", None) or {})
+                        ),
                     })
                     for s in samples
                 ]

@@ -239,7 +239,14 @@ def test_cli_publish_dry_run():
 
 
 def test_cli_generate_local_engine_air_gapped():
-    """Verify `rasosynthtune generate --engine vllm` operates with zero network egress."""
+    """Verify `rasosynthtune generate --engine vllm` fails closed without a live local engine.
+
+    P0-8 changed the CLI to check local-engine status and refuse to write
+    offline echo-template placeholders into dataset rows. With no live vllm
+    server at localhost:8000, the old test (which asserted 2 synthesized
+    echo rows as success) now asserts the new behaviour: non-zero exit,
+    no dataset file written, and a refusal mentioning echo-template content.
+    """
     with tempfile.TemporaryDirectory() as tmp_dir:
         gen_res = subprocess.run(
             [
@@ -257,13 +264,9 @@ def test_cli_generate_local_engine_air_gapped():
             ],
             capture_output=True,
             text=True,
-            check=True,
+            check=False,
         )
-        assert "[Engine] Utilizing local VLLM air-gapped engine" in gen_res.stdout
-        assert "[OK] Synthesized 2 samples" in gen_res.stdout
+        assert gen_res.returncode != 0
+        assert "echo-template" in (gen_res.stdout + gen_res.stderr).lower()
         out_file = Path(tmp_dir) / "dataset_distillation_2.jsonl"
-        assert out_file.exists()
-        with open(out_file, "r", encoding="utf-8") as f:
-            lines = [json.loads(l) for l in f if l.strip()]
-        assert len(lines) == 2
-        assert lines[0]["engine"] == "vllm"
+        assert not out_file.exists()

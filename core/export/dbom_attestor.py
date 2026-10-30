@@ -15,25 +15,35 @@ from datetime import datetime, timezone
 from typing import Any, Dict, List, Optional, Tuple
 
 
+def _sample_metadata(sample: Dict[str, Any]) -> Any:
+    """Return the sample's domain metadata dict (or {}), from either key spelling."""
+    md = sample.get("metadata", None)
+    if md is None:
+        md = sample.get("metadata_", None)
+    return md if isinstance(md, dict) else {}
+
+
 def compute_sample_hash(sample: Dict[str, Any]) -> str:
     """Compute deterministic SHA-256 leaf hash for a dataset record.
 
-    Includes instruction, response, input, and metadata fields.
+    Stability contract (generation <-> verification): the hash covers ONLY
+    the attested content - instruction, response, input, and the domain
+    metadata dict. Storage-assigned fields (id, dataset_id, created_at)
+    and derived fields (quality_score, difficulty_tier) are EXCLUDED:
+    they do not exist at generation time but are present on every stored
+    row, so including them makes a generation-time root unverifiable
+    against stored samples (the WS1 metadata-aware hash had exactly this
+    bug: it folded every non-content key into "metadata"). Domain
+    metadata tampering IS still detected, because the metadata dict itself
+    is hashed canonically.
     """
     canonical = {
         "instruction": str(sample.get("instruction", "")).strip(),
         "response": str(sample.get("response", "")).strip(),
         "input": str(sample.get("input", "")).strip() if sample.get("input") else "",
-        "metadata": {
-            str(k): str(v)
-            for k, v in sorted(
-                (k, v)
-                for k, v in sample.items()
-                if k not in ("instruction", "response", "input")
-            )
-        },
+        "metadata": _sample_metadata(sample),
     }
-    dumped = json.dumps(canonical, sort_keys=True, separators=(",", ":"))
+    dumped = json.dumps(canonical, sort_keys=True, separators=(",", ":"), default=str)
     return hashlib.sha256(dumped.encode("utf-8")).hexdigest()
 
 

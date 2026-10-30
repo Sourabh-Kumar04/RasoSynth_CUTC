@@ -70,12 +70,14 @@ class _FakeDB:
         item.updated_at = datetime.now(timezone.utc)
         return item
 
-    async def list_review_items(self, status=None, job_id=None, page=1, page_size=50):
+    async def list_review_items(self, status=None, job_id=None, page=1, page_size=50, owner=None):
         items = list(self._store.values())
         if status:
             items = [i for i in items if i.review_status == status]
         if job_id:
             items = [i for i in items if i.job_id == job_id]
+        if owner is not None:
+            items = [i for i in items if getattr(i, "owner", None) == owner]
         total = len(items)
         start = (page - 1) * page_size
         return items[start:start + page_size], total

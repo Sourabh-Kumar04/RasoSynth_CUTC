@@ -41,32 +41,35 @@ def test_sign_and_verify_token():
 
 
 def test_signed_url_generation_endpoints(auth_headers):
-    """Test POST and GET /jobs/{id}/signed-url."""
+    """Test POST and GET /jobs/{id}/signed-url for an UNKNOWN job (expect 404 per P0-5)."""
     client = TestClient(app)
     job_id = "job-secure-5678"
     csrf_token = client.get("/auth/csrf-token").json()["csrf_token"]
 
-    # GET signed URL
-    resp_get = client.get(f"/jobs/{job_id}/signed-url?ttl_seconds=1800&format=csv", headers=auth_headers)
-    assert resp_get.status_code == 200
-    data_get = resp_get.json()
-    assert data_get["job_id"] == job_id
-    assert data_get["format"] == "csv"
-    assert data_get["expires_in_seconds"] == 1800
-    assert "token" in data_get
-    assert f"/jobs/{job_id}/download?token=" in data_get["download_url"]
+    # P0-5 requires job/dataset existence before minting a token, so an
+    # unknown job must 404 instead of minting a token for nothing (the old
+    # expectation of 200 for job-secure-5678, which exists nowhere).
+    # NOTE: the handler only enforces existence when api.server.db is set;
+    # with db=None it mints unconditionally. Pin db to an empty mock so
+    # this test asserts the existence behaviour deterministically,
+    # regardless of which earlier test did or did not initialise the app DB.
+    from unittest.mock import AsyncMock
+    mock_db = AsyncMock()
+    mock_db.get_job_status.return_value = None
+    mock_db.get_dataset.return_value = None
+    mock_db.get_datasets_by_job.return_value = []
+    with patch("api.server.db", mock_db):
+        # GET signed URL for unknown job -> 404
+        resp_get = client.get(f"/jobs/{job_id}/signed-url?ttl_seconds=1800&format=csv", headers=auth_headers)
+        assert resp_get.status_code == 404
 
-    # POST signed URL
-    resp_post = client.post(
-        f"/jobs/{job_id}/signed-url",
-        json={"ttl_seconds": 7200, "format": "parquet"},
-        headers={"X-CSRF-Token": csrf_token, **auth_headers}
-    )
-    assert resp_post.status_code == 200
-    data_post = resp_post.json()
-    assert data_post["job_id"] == job_id
-    assert data_post["format"] == "parquet"
-    assert data_post["expires_in_seconds"] == 7200
+        # POST signed URL for unknown job -> 404
+        resp_post = client.post(
+            f"/jobs/{job_id}/signed-url",
+            json={"ttl_seconds": 7200, "format": "parquet"},
+            headers={"X-CSRF-Token": csrf_token, **auth_headers}
+        )
+        assert resp_post.status_code == 404
 
 
 def test_download_authorization_enforcement(auth_headers):

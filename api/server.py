@@ -2870,6 +2870,12 @@ async def export_dataset(dataset_id: str, request: dict = None,
     """
     from fastapi.responses import FileResponse
 
+    # Pure input validation first: an unsupported format is a 400 even when
+    # the database is unavailable (no DB access is needed to reject it).
+    export_format = (request or {}).get("format", "jsonl").lower()
+    if export_format not in {"json", "jsonl", "csv", "parquet", "zip", "tar.gz", "tar", "sql", "qdrant"}:
+        raise HTTPException(status_code=400, detail=f"Unsupported export format: {export_format}")
+
     if not db:
         raise HTTPException(status_code=503, detail="Database not available")
 
@@ -2883,10 +2889,6 @@ async def export_dataset(dataset_id: str, request: dict = None,
             dataset = datasets_for_job[0]
 
     _enforce_owner(dataset, current_user, resource_name="Dataset")
-
-    export_format = (request or {}).get("format", "jsonl").lower()
-    if export_format not in {"json", "jsonl", "csv", "parquet", "zip", "tar.gz", "tar", "sql", "qdrant"}:
-        raise HTTPException(status_code=400, detail=f"Unsupported export format: {export_format}")
 
     instruction_format = (request or {}).get("instruction_format")
     if not instruction_format:

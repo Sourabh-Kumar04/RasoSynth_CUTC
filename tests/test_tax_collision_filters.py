@@ -77,6 +77,14 @@ async def test_filtering_pipeline_rejects_foreign_and_homonyms():
         "max_length": 1000000,
     }
     pipeline = FilteringPipeline(router=None, config=config)
+    # P0-7: with no router the judge dimension is unmeasured (None) and
+    # unmeasured dimensions never pass, so a bare router=None pipeline
+    # cannot pass ANY sample on reasoning - including the valid control.
+    # Stub only the judge dimension with a measured score so this test
+    # exercises what it claims to test (domain/anti-domain discrimination),
+    # not the judge-availability rule (covered by the filtering tests).
+    from unittest.mock import AsyncMock
+    pipeline._llm_judge_quality = AsyncMock(return_value=(0.9, []))
 
     intent = UserIntent(
         primary_task="tax advisory",
