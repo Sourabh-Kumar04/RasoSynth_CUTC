@@ -1106,16 +1106,29 @@ async def get_provider_metrics(provider_name: str,
 @app.patch("/providers/{provider_name}", tags=["Providers"])
 async def update_provider(provider_name: str, payload: dict = Body(...),
     admin_user: User = Depends(require_role([UserRole.ADMIN]))):
-    """Update dynamic configuration or priority for a provider."""
+    """Replace the router's provider priority order.
+
+    The only mutable field is "priority", which must be a list of known
+    provider names; it is applied to router.config.provider_priority, which
+    route() actually consults. Anything else (e.g. a numeric priority, for
+    which the router has no per-provider field) is rejected instead of
+    returning a fake "updated" response for a no-op.
+    """
     if not router:
         raise HTTPException(status_code=503, detail="Router not initialized")
     resolved = router._resolve_alias(provider_name) if hasattr(router, "_resolve_alias") else provider_name
     if resolved not in router._providers:
         raise HTTPException(status_code=404, detail=f"Provider '{provider_name}' not found")
 
-    if "priority" in payload and isinstance(payload["priority"], (list, int)):
-        logger.info("Updated dynamic configuration for provider %s: %s", provider_name, payload)
-    return {"status": "updated", "provider": provider_name, "config": payload}
+    priority = payload.get("priority")
+    if not isinstance(priority, list) or not priority or not all(isinstance(n, str) for n in priority):
+        raise HTTPException(status_code=400, detail="payload.priority must be a non-empty list of provider names")
+    unknown = [n for n in priority if n not in router._providers]
+    if unknown:
+        raise HTTPException(status_code=400, detail=f"Unknown provider(s) in priority list: {unknown}")
+    router.config.provider_priority = list(priority)
+    logger.info("Updated provider priority order to %s (requested via provider %s)", priority, provider_name)
+    return {"status": "updated", "provider": provider_name, "provider_priority": list(priority)}
 
 
 
@@ -4198,6 +4211,10 @@ async def get_orchestration_dag(job_id: Optional[str] = Query(default=None),
                     active_stage = target_job.get("current_stage")
             except Exception:
                 pass
+        if target_job is None:
+            # Never fall back to another job's DAG, and never report an
+            # unknown job as "completed" (the old final-else branch did).
+            raise HTTPException(status_code=404, detail=f"Job '{job_id}' not found")
 
     if not active_stage:
         if orchestrator and hasattr(orchestrator, "active_jobs") and orchestrator.active_jobs:
@@ -4298,8 +4315,10 @@ async def get_orchestration_dag(job_id: Optional[str] = Query(default=None),
                 status = "pending"
                 duration = 0
         else:
-            status = "completed"
-            duration = measured_duration
+            # No active stage and no completed/failed job state: progress is
+            # unknown, never "completed" by default.
+            status = "pending"
+            duration = 0
 
         nodes.append({
             "id": step_id,
@@ -4329,7 +4348,7 @@ async def get_orchestration_dag(job_id: Optional[str] = Query(default=None),
         "nodes": nodes,
         "edges": edges,
         "job_id": job_id or (target_job.get("id") if isinstance(target_job, dict) else getattr(target_job, "id", None)),
-        "status": job_status or "completed",
+        "status": job_status or "unknown",
         "elapsed_ms": elapsed_ms,
         "elapsed_basis": elapsed_basis,
         "duration_basis_note": "Node duration_ms values are apportioned from total elapsed time using fixed stage weights, not measured per-stage timings.",
@@ -4339,12 +4358,22 @@ async def get_orchestration_dag(job_id: Optional[str] = Query(default=None),
 @app.post("/orchestration/steps/{step_id}/retry", tags=["Orchestration"])
 async def retry_orchestration_step(step_id: str, job_id: Optional[str] = Query(default=None),
     current_user: User = Depends(get_current_user)):
-    """Retry a specific step in the orchestration DAG."""
-    if db and job_id:
-        job = await db.get_job_status(job_id)
-        if job:
-            await db.update_job_status(job_id, {"status": "running", "current_stage": step_id, "error": None})
-    return {"success": True, "step_id": step_id, "job_id": job_id, "status": "retrying"}
+    """Mark a job's step for retry.
+
+    Validates first: a missing job_id, an unavailable database, or an
+    unknown job is an error, never a "retrying" success. Marking sets the
+    job row back to running at this stage; it does not itself re-execute
+    the step (re-execution happens on the orchestrator's resume path).
+    """
+    if not job_id:
+        raise HTTPException(status_code=400, detail="job_id query parameter is required")
+    if not db:
+        raise HTTPException(status_code=503, detail="Database not initialized")
+    job = await db.get_job_status(job_id)
+    if not job:
+        raise HTTPException(status_code=404, detail=f"Job '{job_id}' not found")
+    await db.update_job_status(job_id, {"status": "running", "current_stage": step_id, "error": None})
+    return {"success": True, "step_id": step_id, "job_id": job_id, "status": "marked_for_retry"}
 
 @app.get("/metrics/history", tags=["Metrics"])
 async def get_metrics_history(time_range: str = Query(default="1h", alias="range"),

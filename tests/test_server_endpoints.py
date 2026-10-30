@@ -167,13 +167,30 @@ def test_provider_endpoints(auth_headers):
 
         # PATCH /providers/{name} with CSRF token
         csrf_token = client.get("/auth/csrf-token").json().get("csrf_token", "")
+        # A numeric priority has no meaning in the router (it orders by
+        # provider_priority list), so it is now rejected instead of
+        # returning a fake "updated".
         patch_resp = client.patch(
             f"/providers/{first_name}",
             json={"priority": 1},
             headers={"x-csrf-token": csrf_token, **auth_headers},
         )
-        assert patch_resp.status_code == 200
-        assert patch_resp.json()["status"] == "updated"
+        assert patch_resp.status_code == 400
+
+        # A list of known provider names genuinely reorders routing.
+        orig_priority = list(server_mod.router.config.provider_priority)
+        try:
+            patch_resp = client.patch(
+                f"/providers/{first_name}",
+                json={"priority": [first_name]},
+                headers={"x-csrf-token": csrf_token, **auth_headers},
+            )
+            assert patch_resp.status_code == 200
+            assert patch_resp.json()["status"] == "updated"
+            assert patch_resp.json()["provider_priority"] == [first_name]
+            assert server_mod.router.config.provider_priority == [first_name]
+        finally:
+            server_mod.router.config.provider_priority = orig_priority
 
         # GET /metrics/history
         hist_resp = client.get("/metrics/history?range=1h", headers=auth_headers)
