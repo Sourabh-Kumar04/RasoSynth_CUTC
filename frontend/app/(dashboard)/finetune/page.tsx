@@ -41,6 +41,7 @@ interface FTJob {
   is_simulated?: boolean
   weights_are_placeholders?: boolean
   execution_mode?: string
+  execution_target?: string
   base_model: string; output_model_name: string; progress: number
   current_epoch: number; total_epochs: number; train_loss: number | null
   eval_loss: number | null; error: string | null; output_path: string | null
@@ -556,6 +557,9 @@ function DetailPane({ job, logs, lossHistory, onCancel, onCopy, onReconnect, log
         trainLoss={job.train_loss}
         evalLoss={job.eval_loss}
         status={job.status}
+        targetPlatform={(job.execution_target as 'local' | 'modal' | 'runpod') || 'local'}
+        gpuDeviceName={job.is_simulated || job.execution_mode === 'simulated' ? 'Simulated Container Execution' : 'Local GPU Hardware'}
+        isSimulated={Boolean(job.is_simulated || job.weights_are_placeholders || job.execution_mode === 'simulated')}
       />
 
       <Card className="bg-[#12121a] border-[#272738] rounded-md card-shadow">
@@ -1003,8 +1007,10 @@ function FineTuneContent() {
     let wsUrl: string
     if (process.env.NEXT_PUBLIC_API_URL) {
       wsUrl = `${process.env.NEXT_PUBLIC_API_URL.replace(/^http/, 'ws')}/api/finetune/jobs/${jobId}/stream`
-    } else if (typeof window !== 'undefined' && window.location.hostname !== 'localhost') {
-      wsUrl = `wss://sourabh-kumar04-rasosynthtune.hf.space/api/finetune/jobs/${jobId}/stream`
+    } else if (typeof window !== 'undefined') {
+      const loc = window.location
+      const protocol = loc.protocol === 'https:' ? 'wss:' : 'ws:'
+      wsUrl = `${protocol}//${loc.host}/api/finetune/jobs/${jobId}/stream`
     } else {
       wsUrl = `ws://localhost:8000/api/finetune/jobs/${jobId}/stream`
     }
