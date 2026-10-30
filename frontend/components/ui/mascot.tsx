@@ -1,6 +1,6 @@
 "use client"
 
-import React, { useState, useEffect, useMemo, useCallback } from "react"
+import React, { useState, useEffect, useMemo, useCallback, useRef } from "react"
 import { useReducedMotion } from "framer-motion"
 
 export type MascotSize = "large" | "medium" | "small"
@@ -15,6 +15,21 @@ export type MascotState =
   | "cheering"
   | "confused"
   | "celebrate"
+
+const ALL_POSES = [
+  "alert",
+  "celebrate",
+  "cheering",
+  "confused",
+  "idle",
+  "pointing",
+  "thinking",
+  "wave-1",
+  "wave-2",
+  "wave-3",
+  "wave-4",
+  "working",
+] as const
 
 const SIZES: Record<MascotSize, { width: number; height: number }> = {
   large: { width: 280, height: 280 },
@@ -91,6 +106,26 @@ export function Mascot({
 }: MascotProps) {
   const reduceMotion = useReducedMotion()
   const dims = SIZES[size]
+  const revertTimerRef = useRef<NodeJS.Timeout | null>(null)
+
+  // Preload all 12 pose frames on client mount to eliminate frame swap flicker
+  useEffect(() => {
+    if (typeof window !== "undefined") {
+      ALL_POSES.forEach((pose) => {
+        const img = new Image()
+        img.src = `/mascot/${pose}.webp`
+      })
+    }
+  }, [])
+
+  // Cleanup pending reaction timers on unmount
+  useEffect(() => {
+    return () => {
+      if (revertTimerRef.current) {
+        clearTimeout(revertTimerRef.current)
+      }
+    }
+  }, [])
 
   // Active state can temporarily switch on interactive triggers (click/reaction)
   const [activeState, setActiveState] = useState<MascotState>(state)
@@ -125,17 +160,19 @@ export function Mascot({
     }
     if (!interactive) return
 
+    if (revertTimerRef.current) {
+      clearTimeout(revertTimerRef.current)
+    }
+
     // Trigger celebration reaction
     const reactionState: MascotState = activeState === "confused" ? "alert" : "celebrate"
     setActiveState(reactionState)
     setFrameIndex(0)
 
-    const revertTimer = setTimeout(() => {
+    revertTimerRef.current = setTimeout(() => {
       setActiveState(state)
       setFrameIndex(0)
     }, 1800)
-
-    return () => clearTimeout(revertTimer)
   }, [onClick, interactive, activeState, state])
 
   // Frame to render

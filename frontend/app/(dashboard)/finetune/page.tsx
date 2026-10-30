@@ -25,6 +25,7 @@ import { useSearchParams } from 'next/navigation'
 import { api } from '@/lib/api/client'
 import { TelemetryChart } from '@/components/finetune/telemetry-chart'
 import { StatusStrip } from '@/components/ui/status-strip'
+import { Mascot } from '@/components/ui/mascot'
 
 const API_BASE = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000'
 
@@ -1670,9 +1671,7 @@ LORA_ALPHA = ${form.lora_alpha}`}
               : jobs.length === 0
                 ? (
                   <div className="flex flex-col items-center justify-center py-16 space-y-4 bg-[#12121a] rounded-md border border-[#272738]">
-                    <div className="w-14 h-14 rounded-lg bg-[#161622] border border-[#272738] flex items-center justify-center">
-                      <Cpu className="h-7 w-7 text-[#f26625]" />
-                    </div>
+                    <Mascot size="medium" state="working" className="mb-2" />
                     <p className="text-xs text-[#a8a29e] font-mono">No fine-tuning sessions recorded</p>
                     <Button size="sm" className="bg-[#f26625] hover:bg-[#de581a] border border-[#ea580c] text-white rounded-md font-mono text-xs" onClick={() => setTab('new')}>
                       <Plus className="h-3.5 w-3.5 mr-1 text-white" />Create first job

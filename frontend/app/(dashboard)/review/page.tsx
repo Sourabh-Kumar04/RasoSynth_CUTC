@@ -20,6 +20,7 @@ import { api } from '@/lib/api/client'
 import { MerkleTreeGraph } from '@/components/dbom/merkle-tree-graph'
 import { GroundingDiffModal } from '@/components/review/grounding-diff-modal'
 import { playSuccessChime, playClickSound } from '@/lib/audio/sound-effects'
+import { Mascot } from '@/components/ui/mascot'
 
 const API_BASE = process.env.NEXT_PUBLIC_API_URL || ''
 
@@ -599,9 +600,7 @@ export default function ReviewPage() {
             : !queue || !Array.isArray(queue.items) || queue.items.length === 0
               ? (
                 <div className="flex flex-col items-center justify-center p-8 space-y-3 bg-[#12121a] rounded-md border border-[#272738] text-center">
-                  <div className="w-10 h-10 rounded-full bg-[#161622] border border-[#272738] flex items-center justify-center text-[#f26625]">
-                    <ClipboardCheck className="h-5 w-5" />
-                  </div>
+                  <Mascot size="medium" state="celebrate" className="mb-2" />
                   <div className="space-y-1 max-w-sm">
                     <h4 className="text-xs font-bold text-white font-mono uppercase tracking-wider">
                       No Samples Awaiting Review
