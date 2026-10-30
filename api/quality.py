@@ -118,7 +118,7 @@ async def job_quality(job_id: str,
 
     job_data = _job_quality.get(job_id)
     if not job_data:
-        return {"job_id": job_id, "error": "No quality data for this job yet", "samples_count": 0}
+        raise HTTPException(status_code=404, detail="Job not found or no quality data available")
     return {"job_id": job_id, **job_data}
 
 

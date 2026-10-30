@@ -68,37 +68,47 @@ export default function DashboardPage() {
   }, [])
 
   const load = useCallback(async () => {
-    try {
-      const res = await api.getJobs({ limit: 20 })
-      const list = Array.isArray(res?.data) ? res.data : []
-      setJobs(list)
-      setJobsState('ok')
-      setSelectedJobId((prev) => prev ?? (list[0]?.id != null ? String(list[0].id) : null))
-    } catch {
-      setJobsState('unavailable')
-    }
-    try {
-      const res = await api.listFineTuneJobs(20)
-      const list = Array.isArray(res?.jobs) ? res.jobs : Array.isArray(res) ? res : []
-      setFtJobs(list)
-      setFtState('ok')
-    } catch {
-      setFtState('unavailable')
-    }
-    try {
-      const res = await api.getQualityOverview()
-      setQuality(res && typeof res === 'object' ? res : null)
-      setQualityState('ok')
-    } catch {
-      setQualityState('unavailable')
-    }
-    try {
-      const res = await api.getHealth()
-      setHealth(res && typeof res === 'object' ? res : null)
-      setHealthState('ok')
-    } catch {
-      setHealthState('unavailable')
-    }
+    await Promise.all([
+      (async () => {
+        try {
+          const res = await api.getJobs({ limit: 20 })
+          const list = Array.isArray(res?.data) ? res.data : []
+          setJobs(list)
+          setJobsState('ok')
+          setSelectedJobId((prev) => prev ?? (list[0]?.id != null ? String(list[0].id) : null))
+        } catch {
+          setJobsState('unavailable')
+        }
+      })(),
+      (async () => {
+        try {
+          const res = await api.listFineTuneJobs(20)
+          const list = Array.isArray(res?.jobs) ? res.jobs : Array.isArray(res) ? res : []
+          setFtJobs(list)
+          setFtState('ok')
+        } catch {
+          setFtState('unavailable')
+        }
+      })(),
+      (async () => {
+        try {
+          const res = await api.getQualityOverview()
+          setQuality(res && typeof res === 'object' ? res : null)
+          setQualityState('ok')
+        } catch {
+          setQualityState('unavailable')
+        }
+      })(),
+      (async () => {
+        try {
+          const res = await api.getHealth()
+          setHealth(res && typeof res === 'object' ? res : null)
+          setHealthState('ok')
+        } catch {
+          setHealthState('unavailable')
+        }
+      })(),
+    ])
     setLastUpdated(new Date().toLocaleTimeString())
   }, [])
 
@@ -374,7 +384,7 @@ export default function DashboardPage() {
               Average quality: <span className="text-white">{avgQuality !== null ? avgQuality.toFixed(3) : 'unknown'}</span>
             </span>
             <span>
-              Approval rate: <span className="text-white">{approvalRate !== null ? `${(approvalRate * 100).toFixed(1)}%` : 'unknown'}</span>
+              Approval rate: <span className="text-white">{approvalRate !== null ? (approvalRate <= 1.0 ? `${(approvalRate * 100).toFixed(1)}%` : `${approvalRate.toFixed(1)}%`) : 'unknown'}</span>
             </span>
             <span>
               Samples reviewed: <span className="text-white">{samplesReviewed !== null ? String(samplesReviewed) : 'unknown'}</span>

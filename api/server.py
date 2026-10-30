@@ -2517,10 +2517,10 @@ async def list_jobs(
                 jobs = await db.list_jobs(status=status, limit=limit + 1, owner=owner_filter)
             except Exception as retry_err:
                 logger.error(f"Failed to list jobs after table creation: {retry_err}")
-                return {"data": [], "has_more": False, "next_cursor": None}
+                raise HTTPException(status_code=500, detail="Failed to list jobs after table creation")
         else:
             logger.error(f"Failed to list jobs: {e}")
-            return {"data": [], "has_more": False, "next_cursor": None}
+            raise HTTPException(status_code=500, detail="Database query error while listing jobs")
 
     has_more = len(jobs) > limit
     page = jobs[:limit]
