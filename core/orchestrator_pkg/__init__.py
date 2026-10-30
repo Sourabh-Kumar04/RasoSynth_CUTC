@@ -1,6 +1,16 @@
-"""Orchestrator module with checkpoint and resume support."""
-# Import from core/orchestrator_core.py file (not the package)
-_orchestrator_file = __import__('core.orchestrator_core', fromlist=['DatasetOrchestrator', 'AgentState', 'Job', 'JobStatus', 'ConstraintAnalysis'])
+"""Orchestrator package with checkpoint and resume support.
+
+Canonical home of DatasetOrchestrator and orchestrator state is
+core.orchestrator_core; this package re-exports the identical objects alongside
+checkpoint and resume management.
+"""
+from core.orchestrator_core import (
+    DatasetOrchestrator,
+    AgentState,
+    Job,
+    JobStatus,
+    ConstraintAnalysis,
+)
 
 from core.orchestrator_pkg.checkpoints import (
     Checkpoint,
@@ -19,19 +29,19 @@ from core.orchestrator_pkg.resume import (
 )
 
 __all__ = [
-    # From core/orchestrator.py
+    # Canonical home: core.orchestrator_core
     "DatasetOrchestrator",
     "AgentState",
     "Job",
     "JobStatus",
     "ConstraintAnalysis",
-    # Checkpoint
+    # Checkpoint: core.orchestrator_pkg.checkpoints
     "Checkpoint",
     "CheckpointStage",
     "ProviderContext",
     "CheckpointStore",
     "CheckpointManager",
-    # Resume
+    # Resume: core.orchestrator_pkg.resume
     "ResumeStrategy",
     "ResumeContext",
     "WorkflowResumer",

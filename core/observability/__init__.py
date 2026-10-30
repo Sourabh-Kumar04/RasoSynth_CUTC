@@ -105,7 +105,7 @@ __all__ = [
     "CorrelationManager",
 
     # Tracing
-    "TraceManager",
+    "Trace",
     "Span",
     "TraceContext",
     "DistributedTracer",
