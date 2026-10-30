@@ -339,6 +339,22 @@ async def get_current_user(
     return user
 
 
+async def get_current_user_optional(
+    credentials: Optional[HTTPAuthorizationCredentials] = Security(security)
+) -> Optional[User]:
+    """Get current user from JWT token if provided, returning None if unauthenticated."""
+    if not credentials or not credentials.credentials:
+        return None
+    try:
+        auth = get_auth_manager()
+        token_data = auth.verify_token(credentials.credentials)
+        if not token_data:
+            return None
+        return auth.get_user(token_data.username)
+    except Exception:
+        return None
+
+
 async def get_current_active_user(
     current_user: User = Depends(get_current_user)
 ) -> User:

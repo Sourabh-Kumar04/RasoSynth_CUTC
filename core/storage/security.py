@@ -73,16 +73,21 @@ class SignedURLGenerator:
         expiration = expiration_seconds or (self.default_expiration * 3600)
         expires_at = int(time.time()) + expiration
 
+        claims = dict(custom_claims or {})
+        # Ensure single-purpose (download only)
+        if "purpose" not in claims:
+            claims["purpose"] = "download"
+
         # Create payload
         payload = {
             "resource": resource,
             "expires": expires_at,
-            "claims": custom_claims or {}
+            "claims": claims
         }
 
         # Sign payload
         payload_b64 = base64.urlsafe_b64encode(
-            json.dumps(payload).encode()
+            json.dumps(payload, sort_keys=True).encode()
         ).decode()
 
         signature = self._sign(payload_b64)
@@ -112,6 +117,11 @@ class SignedURLGenerator:
 
             # Check expiration
             if payload["expires"] < int(time.time()):
+                return None
+
+            # Enforce purpose if present
+            claims = payload.get("claims", {})
+            if "purpose" in claims and claims["purpose"] != "download":
                 return None
 
             return payload

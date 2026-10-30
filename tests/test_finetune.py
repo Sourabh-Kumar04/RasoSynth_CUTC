@@ -322,7 +322,7 @@ def test_finetune_gguf_export_and_download(test_client, tmp_path, auth_headers):
         export_data = export_res.json()
         assert export_data["status"] == "ready"
         assert export_data["format"] == "GGUF-Q4_K_M"
-        assert "Ollama" in export_data["runtime_compatibility"]
+        assert "compatibility not verified" in export_data["runtime_compatibility"]
 
         # 2. Test GGUF binary download
         download_res = test_client.get("/api/finetune/jobs/ft-gguf-test/download_gguf", headers=auth_headers)

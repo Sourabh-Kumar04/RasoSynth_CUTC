@@ -76,7 +76,7 @@ from core.observability import ObservabilityManager, correlation_id_var, trace_i
 from core.research_loop import ResearchLoop, TechniqueIntegrator
 from api.websocket_manager import ConnectionManager, get_ws_manager, MessageType
 from api.provider_validator import ProviderValidator
-from api.auth import get_auth_manager, UserRole, User, get_current_user, require_role
+from api.auth import get_auth_manager, UserRole, User, get_current_user, get_current_user_optional, require_role
 from api.review import router as review_router
 from api.quality import router as quality_router
 from api.finetune import router as finetune_router
@@ -241,15 +241,19 @@ def _sign_approved_examples(query: str, examples: list[dict]) -> str:
     return hmac.new(shared_secret.encode(), payload.encode(), "sha256").hexdigest()
 
 
-def _sign_download_token(job_id: str, expires_at: int) -> str:
-    """Generate an HMAC-SHA256 signature for presigned dataset downloads."""
+def _sign_download_token(job_id: str, expires_at: int, user: str = "", format: str = "") -> str:
+    """Generate an HMAC-SHA256 signature for presigned dataset downloads.
+
+    Binds user, format, expiry, and single-purpose ("download") in the HMAC.
+    """
     from core.config import get_settings
     shared_secret = os.getenv("JWT_SECRET") or get_settings().jwt_secret or _csrf_manager._secret
-    payload = f"dataset_download:{job_id}:{expires_at}"
+    # Canonical binding of purpose, job_id, user, format, and expires_at
+    payload = f"dataset_download:{job_id}:{user}:{format}:{expires_at}"
     return hmac.new(shared_secret.encode(), payload.encode(), "sha256").hexdigest()
 
 
-def _verify_download_token(job_id: str, token: Optional[str], expires_at: Optional[int]) -> bool:
+def _verify_download_token(job_id: str, token: Optional[str], expires_at: Optional[int], user: str = "", format: str = "") -> bool:
     """Verify an ephemeral download token against expiration and HMAC signature."""
     if not token or expires_at is None:
         return False
@@ -262,8 +266,15 @@ def _verify_download_token(job_id: str, token: Optional[str], expires_at: Option
     if time.time() > (expires_int + 60):
         return False
 
-    expected_sig = _sign_download_token(job_id, expires_int)
-    return hmac.compare_digest(expected_sig, str(token).strip())
+    # Check HMAC with binding
+    expected_sig = _sign_download_token(job_id, expires_int, user=user, format=format)
+    if hmac.compare_digest(expected_sig, str(token).strip()):
+        return True
+    # Legacy fallback verification for tokens minted without user/format binding
+    legacy_sig = hmac.new((os.getenv("JWT_SECRET") or "").encode(), f"dataset_download:{job_id}:{expires_int}".encode(), "sha256").hexdigest()
+    if hmac.compare_digest(legacy_sig, str(token).strip()):
+        return True
+    return False
 
 
 class CSRFMiddleware(BaseHTTPMiddleware):
@@ -2952,9 +2963,21 @@ async def export_dataset(dataset_id: str, request: dict = None,
     # Determine file to return
     if export_format in ("zip", "tar.gz", "tar"):
         # Create an archive of the output directory
+        # Cache key must include dataset version/hash/updated_at to avoid serving stale archives
         archive_type = "zip" if export_format == "zip" else "gztar"
         ext = "zip" if export_format == "zip" else "tar.gz"
-        archive_path = output_dir.parent / f"{output_dir.name}.{ext}"
+
+        version_token = str(
+            dataset.get("version_hash")
+            or dataset.get("version")
+            or dataset.get("updated_at")
+            or dataset.get("size")
+            or "v1"
+        )
+        safe_vtoken = "".join(c for c in version_token if c.isalnum() or c in ("-", "_"))[:16]
+        archive_filename = f"{output_dir.name}_{safe_vtoken}.{ext}" if safe_vtoken else f"{output_dir.name}.{ext}"
+        archive_path = output_dir.parent / archive_filename
+
         if not archive_path.exists():
             import shutil
             output_dir.mkdir(parents=True, exist_ok=True)
@@ -3247,7 +3270,7 @@ async def get_job_report(job_id: str,
 
 
 def _resolve_dynamic_disk_dataset(identifier: str) -> Optional[dict]:
-    """Dynamically scan configured output directories without path traversal."""
+    """Dynamically scan configured output directories without path traversal or substring matching."""
     from pathlib import Path
     raw_ident = identifier.strip()
     candidate_roots = [Path("outputs").resolve(), Path("data").resolve()]
@@ -3274,10 +3297,11 @@ def _resolve_dynamic_disk_dataset(identifier: str) -> Optional[dict]:
     for root in candidate_roots:
         if not root.exists():
             continue
-        # Direct folder or file match
+        # Direct folder or file match ONLY - strictly EXACT match, no substring matching
         for item in root.glob("*"):
             norm_name = item.name.lower()
-            if target == norm_name or clean_target == norm_name or (len(target) > 3 and target in norm_name):
+            norm_stem = item.stem.lower()
+            if target == norm_name or clean_target == norm_stem or clean_target == norm_name:
                 if item.is_dir():
                     # Look for data files inside
                     for ext in ("jsonl", "parquet", "csv", "xml", "json"):
@@ -3324,7 +3348,7 @@ class SignedUrlResponse(BaseModel):
 async def create_presigned_download_url(
     job_id: str,
     request: Request,
-    ttl_seconds: int = Query(3600, ge=60, le=86400, description="Token validity in seconds (default 3600)"),
+    ttl_seconds: int = Query(3600, description="Token validity in seconds (default 3600)"),
     format: Optional[str] = Query(None, description="Dataset format: jsonl, csv, xml, parquet, json"),
     current_user: User = Depends(require_role([UserRole.ADMIN, UserRole.USER]))):
     """Generate an ephemeral HMAC-SHA256 presigned token for streaming private datasets."""
@@ -3340,23 +3364,39 @@ async def create_presigned_download_url(
         if not target_obj:
             raise HTTPException(status_code=404, detail=f"Job or Dataset '{job_id}' not found")
         _enforce_owner(target_obj, current_user, resource_name="Job/Dataset")
-    final_ttl = ttl_seconds
-    final_format = (format or "jsonl").lower().strip()
 
+    parsed_req = None
     if request.method == "POST":
         try:
             raw_body = await request.body()
             if raw_body:
                 body_data = json.loads(raw_body)
-                if "ttl_seconds" in body_data and isinstance(body_data["ttl_seconds"], int):
-                    final_ttl = max(60, min(86400, body_data["ttl_seconds"]))
-                if "format" in body_data and body_data["format"]:
-                    final_format = str(body_data["format"]).lower().strip()
-        except Exception:
-            pass
+                try:
+                    parsed_req = SignedUrlRequest(**body_data)
+                except Exception as val_err:
+                    raise HTTPException(status_code=400, detail=f"Invalid SignedUrlRequest: {val_err}")
+        except HTTPException:
+            raise
+        except Exception as e:
+            raise HTTPException(status_code=400, detail=f"Malformed request body: {e}")
+
+    if parsed_req:
+        final_ttl = parsed_req.ttl_seconds
+        final_format = (parsed_req.format or "jsonl").lower().strip()
+    else:
+        # Check Query parameter TTL bounds strictly (no silent clamping)
+        if ttl_seconds < 60 or ttl_seconds > 86400:
+            raise HTTPException(status_code=400, detail="ttl_seconds must be between 60 and 86400 seconds")
+        final_ttl = ttl_seconds
+        final_format = (format or "jsonl").lower().strip()
+
+    valid_formats = {"jsonl", "csv", "xml", "parquet", "json"}
+    if final_format not in valid_formats:
+        raise HTTPException(status_code=400, detail=f"Unsupported format '{final_format}'. Allowed: {sorted(valid_formats)}")
 
     expires_at = int(time.time()) + final_ttl
-    token = _sign_download_token(job_id, expires_at)
+    user_binding = current_user.username if current_user else ""
+    token = _sign_download_token(job_id, expires_at, user=user_binding, format=final_format)
     download_path = f"/jobs/{job_id}/download?token={token}&expires={expires_at}&format={final_format}"
 
     return SignedUrlResponse(
@@ -3377,72 +3417,13 @@ async def download_job_dataset(
     token: Optional[str] = Query(None, description="Ephemeral HMAC-SHA256 presigned token"),
     expires: Optional[int] = Query(None, description="Unix timestamp expiration of signed token"),
     request: Request = None,
-
-    current_user: User = Depends(get_current_user)):
+    current_user: Optional[User] = Depends(get_current_user_optional)):
     """Download the completed dataset file for a job or dataset ID.
     
     Dynamically negotiates formats (JSONL, CSV, XML, Parquet, JSON) and resolves
     data from local storage or dynamically streams from the database.
     Requires an ephemeral presigned token or a Bearer JWT.
     """
-    # 0. Authorization check: Ephemeral Presigned Token or Bearer Auth
-    authorized = False
-    if token and expires is not None:
-        if _verify_download_token(job_id, token, expires):
-            authorized = True
-        else:
-            raise HTTPException(
-                status_code=403,
-                detail="Invalid or expired download token. Please request a new signed URL via POST /jobs/{job_id}/signed-url."
-            )
-    elif token or expires is not None:
-        raise HTTPException(
-            status_code=403,
-            detail="Both 'token' and 'expires' parameters are required for presigned dataset access."
-        )
-
-    if not authorized and request:
-        auth_header = request.headers.get("Authorization", "")
-        if auth_header.startswith("Bearer "):
-            token_str = auth_header[7:].strip()
-            try:
-                auth_mgr = get_auth_manager()
-                token_data = auth_mgr.verify_token(token_str)
-                if token_data:
-                    authorized = True
-                    # Check owner for bearer authenticated users
-                    if token_data.role != UserRole.ADMIN.value and db:
-                        target_res = await db.get_job_status(job_id)
-                        if not target_res:
-                            target_res = await db.get_dataset(job_id)
-                        if not target_res:
-                            datasets_for_job = await db.get_datasets_by_job(job_id)
-                            if datasets_for_job:
-                                target_res = datasets_for_job[0]
-                        if not target_res:
-                            raise HTTPException(status_code=404, detail="Resource not found")
-                        owner = target_res.get("owner")
-                        if not owner or owner != token_data.username:
-                            raise HTTPException(status_code=404, detail="Resource not found")
-            except HTTPException:
-                raise
-            except Exception:
-                pass
-
-    # NOTE (P0): ALLOW_ANONYMOUS_DOWNLOADS was removed. Downloads now require a
-    # valid presigned token or a Bearer JWT; there is no anonymous path.
-
-    if not authorized:
-        raise HTTPException(
-            status_code=403,
-            detail=(
-                f"Unauthorized dataset access for '{job_id}'. "
-                "Private dataset streaming requires a valid HMAC-SHA256 presigned token "
-                "(?token=...&expires=...) or Bearer token header. "
-                "Generate an ephemeral signed URL via POST /jobs/{job_id}/signed-url."
-            ),
-        )
-
     # 1. Content negotiation for requested format
     req_format = (format or "").lower().strip()
     if not req_format and request:
@@ -3460,6 +3441,86 @@ async def download_job_dataset(
 
     if req_format not in {"jsonl", "csv", "xml", "parquet", "json"}:
         req_format = "jsonl"
+
+    # 0. Authorization check: Ephemeral Presigned Token or Bearer Auth
+    # A valid Bearer must NOT be defeated by a bad query token.
+    authorized = False
+    auth_user = current_user
+
+    # First check Bearer auth
+    if auth_user:
+        authorized = True
+        if auth_user.role != UserRole.ADMIN and db:
+            target_res = await db.get_job_status(job_id)
+            if not target_res:
+                target_res = await db.get_dataset(job_id)
+            if not target_res:
+                datasets_for_job = await db.get_datasets_by_job(job_id)
+                if datasets_for_job:
+                    target_res = datasets_for_job[0]
+            if not target_res:
+                raise HTTPException(status_code=404, detail="Resource not found")
+            owner = target_res.get("owner")
+            if owner and owner != auth_user.username:
+                raise HTTPException(status_code=404, detail="Resource not found")
+
+    # If no valid Bearer auth, evaluate presigned token
+    if not authorized:
+        if token and expires is not None:
+            # Validate token against requested job_id, expires, format
+            # We check with empty user or bound user
+            if _verify_download_token(job_id, token, expires, format=req_format):
+                authorized = True
+            else:
+                # Try finding if token is valid for any owner bound to target object
+                verified_with_target = False
+                if db:
+                    target_res = await db.get_job_status(job_id)
+                    if not target_res:
+                        target_res = await db.get_dataset(job_id)
+                    if not target_res:
+                        datasets_for_job = await db.get_datasets_by_job(job_id)
+                        if datasets_for_job:
+                            target_res = datasets_for_job[0]
+                    if target_res:
+                        res_owner = target_res.get("owner") or ""
+                        if _verify_download_token(job_id, token, expires, user=res_owner, format=req_format):
+                            authorized = True
+                            verified_with_target = True
+                if not verified_with_target:
+                    raise HTTPException(
+                        status_code=403,
+                        detail="Invalid or expired download token. Please request a new signed URL via POST /jobs/{job_id}/signed-url."
+                    )
+        elif token or expires is not None:
+            raise HTTPException(
+                status_code=403,
+                detail="Both 'token' and 'expires' parameters are required for presigned dataset access."
+            )
+        else:
+            raise HTTPException(
+                status_code=401,
+                detail="Authentication required. Provide a valid Bearer token or presigned download URL (?token=...&expires=...)."
+            )
+
+    if not authorized:
+        raise HTTPException(
+            status_code=403,
+            detail=(
+                f"Unauthorized dataset access for '{job_id}'. "
+                "Private dataset streaming requires a valid HMAC-SHA256 presigned token "
+                "(?token=...&expires=...) or Bearer token header. "
+                "Generate an ephemeral signed URL via POST /jobs/{job_id}/signed-url."
+            ),
+        )
+
+    # Completion check: if job status exists, it must be 'completed'
+    if db:
+        job_status_obj = await db.get_job_status(job_id)
+        if job_status_obj:
+            status_val = job_status_obj.get("status") if isinstance(job_status_obj, dict) else getattr(job_status_obj, "status", None)
+            if status_val and status_val != "completed":
+                raise HTTPException(status_code=409, detail=f"Job '{job_id}' is not complete (current status: {status_val})")
 
     media_types = {
         "jsonl": "application/x-ndjson",
@@ -3495,18 +3556,11 @@ async def download_job_dataset(
     if not db:
         raise HTTPException(status_code=503, detail="Database not available")
 
-    # 3. Dynamic Database Resolution (No hardcoded IDs)
+    # 3. Dynamic Database Resolution (Strictly EXACT IDs only, no substring matching)
     dataset = await db.get_dataset(job_id) if hasattr(db, "get_dataset") else None
     if not dataset:
         job = await db.get_job_status(job_id)
-        if not job:
-            # Check by dataset name / alias across db
-            all_datasets = await db.get_datasets() if hasattr(db, "get_datasets") else []
-            for ds in all_datasets:
-                if job_id.lower() in (ds.get("name") or "").lower():
-                    dataset = ds
-                    break
-        else:
+        if job:
             datasets = await db.get_datasets_by_job(job_id)
             if datasets:
                 dataset = datasets[0]

@@ -109,25 +109,39 @@ def _db(request: Request):
 
 
 def _looks_like_real_weights(path: Path) -> bool:
-    """Heuristic gate against the old fabricated weight files.
+    """Rigorous gate requiring real format magic + non-trivial size.
 
-    The previous download/GGUF endpoints wrote a GGUF/safetensors magic (or
-    header length) followed by zero bytes and served the result as weights.
-    A real weights file has non-zero content past its header: this rejects
-    empty files, tiny files, and files whose sampled content after the first
-    8 bytes is all zero (the exact shape of the old fabrications). It is a
-    guard, not a format validator — real format validation belongs to the
-    loader that consumes the file.
+    Requires:
+    - Path exists and is a regular file
+    - Non-trivial file size (> 128 bytes)
+    - Magic bytes header match:
+      - GGUF: begins with b"GGUF"
+      - SafeTensors: first 8 bytes represent unsigned 64-bit little endian JSON header length (> 0 and < 100MB),
+        with valid '{' starting the header.
+    - Non-zero content beyond header.
     """
     try:
         if not path.is_file():
             return False
         size = path.stat().st_size
-        if size <= 8:
+        if size <= 128:
             return False
         with open(path, "rb") as f:
-            sample = f.read(65536)
-        return any(b != 0 for b in sample[8:])
+            header = f.read(16)
+            if len(header) < 16:
+                return False
+            # Check GGUF magic
+            if header.startswith(b"GGUF"):
+                f.seek(8)
+                sample = f.read(65536)
+                return any(b != 0 for b in sample)
+            # Check safetensors header length (uint64)
+            import struct
+            header_len = struct.unpack("<Q", header[:8])[0]
+            if 0 < header_len < 100_000_000 and header[8:9] == b"{":
+                sample = f.read(65536)
+                return any(b != 0 for b in sample)
+            return False
     except Exception:
         return False
 
@@ -354,6 +368,21 @@ async def stream_finetune_job(websocket: WebSocket, job_id: str):
             pass
 
 
+ALLOWED_FINETUNE_ARTIFACTS = {
+    "adapter_model.safetensors",
+    "adapter_config.json",
+    "special_tokens_map.json",
+    "tokenizer_config.json",
+    "tokenizer.json",
+    "vocab.json",
+    "merges.txt",
+    "added_tokens.json",
+    "README.md",
+    "training_args.bin",
+    "trainer_state.json",
+}
+
+
 @router.get("/jobs/{job_id}/download")
 async def download_finetuned_model(job_id: str, manager=Depends(_manager),
     current_user: User = Depends(get_current_user)):
@@ -361,18 +390,20 @@ async def download_finetuned_model(job_id: str, manager=Depends(_manager),
     job = await manager.get_job(job_id)
     _enforce_owner(job, current_user)
 
+    # Check job completion: incomplete -> 409
+    job_status = getattr(job, "status", None) or (job.get("status") if isinstance(job, dict) else None)
+    if job_status and job_status != "completed":
+        raise HTTPException(
+            status_code=409,
+            detail=f"Fine-tuning job '{job_id}' is not complete (status: {job_status}).",
+        )
+
     output_path = getattr(job, "output_path", None) or (job.get("output_path") if isinstance(job, dict) else None)
     if not output_path:
         # Check standard default path
         output_path = f"outputs/finetune/{job_id}"
 
     out_dir = Path(output_path)
-    zip_candidate = out_dir.parent / "finetuned_model_lora.zip" if out_dir.name == "model_weights" else out_dir / "finetuned_model_lora.zip"
-
-    # P0: never fabricate an adapter. Serve only a zip built from real
-    # adapter weights; otherwise fail with "no adapter exists". Placeholder
-    # dirs (e.g. *.PLACEHOLDER files from simulated runs) never qualify,
-    # and previously fabricated zero-byte files are rejected by the check.
     source_dir = out_dir if out_dir.is_dir() else out_dir.parent
     if not _looks_like_real_weights(source_dir / "adapter_model.safetensors"):
         raise HTTPException(
@@ -385,6 +416,9 @@ async def download_finetuned_model(job_id: str, manager=Depends(_manager),
         for root, _, files in os.walk(source_dir):
             for file in files:
                 if file.endswith(".zip"):
+                    continue
+                # Strict artifact allowlist: only declared artifact files, never stray logs/files
+                if file not in ALLOWED_FINETUNE_ARTIFACTS:
                     continue
                 fp = Path(root) / file
                 zipf.write(fp, fp.relative_to(source_dir))
@@ -512,7 +546,7 @@ async def export_gguf_quantization(job_id: str, manager=Depends(_manager),
             "format": "GGUF-Q4_K_M",
             "gguf_path": str(gguf_path),
             "file_size_mb": round(gguf_path.stat().st_size / 1_000_000, 2),
-            "runtime_compatibility": ["Ollama", "LM Studio", "vLLM", "llama.cpp"]
+            "runtime_compatibility": "file present, compatibility not verified",
         }
     # No real GGUF: quantisation requires trained weights, and no
     # quantisation backend is wired into this endpoint, so it cannot

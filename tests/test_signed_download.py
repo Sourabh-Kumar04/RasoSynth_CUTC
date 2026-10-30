@@ -74,24 +74,23 @@ def test_download_authorization_enforcement(auth_headers):
     client = TestClient(app)
     job_id = "private-research-dataset-9999"
 
-    # 1. Unauthenticated direct download -> 401 from the auth gate
-    # (get_current_user runs before the route's own token checks).
+    # 1. Unauthenticated direct download (no Bearer, no token) -> 401
     resp_unauth = client.get(f"/jobs/{job_id}/download")
     assert resp_unauth.status_code == 401
     assert "Authentication required" in resp_unauth.json()["detail"]
 
-    # 2. Forged / invalid token -> 403 Forbidden
-    resp_forged = client.get(f"/jobs/{job_id}/download?token=invalidtoken123&expires={int(time.time()) + 3600}", headers=auth_headers)
+    # 2. Forged / invalid presigned token with no Bearer -> 403 Forbidden
+    resp_forged = client.get(f"/jobs/{job_id}/download?token=invalidtoken123&expires={int(time.time()) + 3600}")
     assert resp_forged.status_code == 403
     assert "Invalid or expired download token" in resp_forged.json()["detail"]
 
-    # 3. Missing expires or token parameter -> 403 Forbidden
-    resp_partial = client.get(f"/jobs/{job_id}/download?token=some_token", headers=auth_headers)
+    # 3. Missing expires or token parameter (no Bearer) -> 403 Forbidden
+    resp_partial = client.get(f"/jobs/{job_id}/download?token=some_token")
     assert resp_partial.status_code == 403
 
-    # 5. Valid signed token should pass authorization (status != 403)
+    # 4. Valid signed token with NO Bearer header should succeed to route authorization
     valid_exp = int(time.time()) + 3600
-    valid_token = _sign_download_token(job_id, valid_exp)
+    valid_token = _sign_download_token(job_id, valid_exp, user="", format="jsonl")
     with patch("api.server._resolve_dynamic_disk_dataset") as mock_disk:
         mock_disk.return_value = None
         with patch("api.server.db") as mock_db:
@@ -99,8 +98,48 @@ def test_download_authorization_enforcement(auth_headers):
             mock_db.get_dataset = AsyncMock(return_value=None)
             mock_db.get_job_status = AsyncMock(return_value=None)
             mock_db.get_datasets = AsyncMock(return_value=[])
-            resp_valid = client.get(f"/jobs/{job_id}/download?token={valid_token}&expires={valid_exp}", headers=auth_headers)
-            assert resp_valid.status_code == 404  # Successfully authenticated! Proceeded to lookup.
+            resp_valid_presigned_only = client.get(f"/jobs/{job_id}/download?token={valid_token}&expires={valid_exp}&format=jsonl")
+            assert resp_valid_presigned_only.status_code == 404  # Passes auth! Proceeded to data lookup.
+
+    # 5. Valid Bearer token + bad/forged query token: Bearer must NOT be defeated by bad query token!
+    with patch("api.server._resolve_dynamic_disk_dataset") as mock_disk:
+        mock_disk.return_value = None
+        with patch("api.server.db") as mock_db:
+            from unittest.mock import AsyncMock
+            mock_db.get_dataset = AsyncMock(return_value=None)
+            mock_db.get_job_status = AsyncMock(return_value=None)
+            mock_db.get_datasets = AsyncMock(return_value=[])
+            resp_bearer_plus_bad_token = client.get(
+                f"/jobs/{job_id}/download?token=badtoken999&expires={valid_exp}",
+                headers=auth_headers
+            )
+            assert resp_bearer_plus_bad_token.status_code == 404  # Passes auth via Bearer!
+
+    # 6. Cross-user / cross-format token reuse rejection
+    token_user_a = _sign_download_token(job_id, valid_exp, user="user_a", format="jsonl")
+    assert _verify_download_token(job_id, token_user_a, valid_exp, user="user_b", format="jsonl") is False
+    assert _verify_download_token(job_id, token_user_a, valid_exp, user="user_a", format="parquet") is False
+
+
+def test_download_completion_and_exact_match(auth_headers):
+    """Regression test for incomplete job 409 and exact identifier matching."""
+    client = TestClient(app)
+    from unittest.mock import AsyncMock
+
+    # 1. Incomplete job check -> 409
+    job_id = "job-running-1234"
+    with patch("api.server.db") as mock_db:
+        mock_db.get_job_status = AsyncMock(return_value={"id": job_id, "status": "running", "owner": "admin"})
+        mock_db.get_dataset = AsyncMock(return_value=None)
+        resp = client.get(f"/jobs/{job_id}/download", headers=auth_headers)
+        assert resp.status_code == 409
+        assert "is not complete" in resp.json()["detail"]
+
+    # 2. Strict exact match: substring match must be rejected (no short identifier returning wrong dataset)
+    from api.server import _resolve_dynamic_disk_dataset
+    # Substring of non-exact should not match
+    match = _resolve_dynamic_disk_dataset("nonexistent_sub_id")
+    assert match is None
 
 
 if __name__ == "__main__":
