@@ -7,6 +7,16 @@ Security features:
 - Enforced minimum JWT secret length (32+ chars)
 - Critical logging when auth is disabled
 - Token format validation even when auth is disabled
+- Token revocation: POST /auth/logout revokes the presented token
+  (in-memory, single-process); tokens also expire automatically after
+  JWT_EXPIRATION_HOURS (default 24, max 168) — expiry is the fallback
+  revocation story if a process restarts and the in-memory set is lost.
+- Password policy (minimal default): create_user requires >= 12 chars.
+  Lockout (minimal default): 5 consecutive failed logins lock the
+  username for 15 minutes. Both are in-memory defaults pending a
+  product decision on a persistent policy (see step-5 report).
+- Legacy-hash login re-hashes: a successful login against a
+  non-bcrypt stored hash upgrades it to bcrypt immediately.
 """
 import os
 import logging
@@ -85,9 +95,23 @@ class AuthManager:
                 "Generate one with: python -c \"import secrets; print(secrets.token_urlsafe(64))\""
             )
 
-        # Reject weak/common secrets
+        # Reject weak/common secrets. A legitimately random secret may
+        # contain a substring like "test" by chance, so substring matching
+        # alone must not reject it: exact (or punctuation-stripped exact)
+        # weak values are rejected at any length, while substring
+        # rejection applies only to short (<48 char) secrets, where a
+        # phrase-like secret is plausible. Long random secrets are gated
+        # by the length and character-diversity checks below instead.
         weak_patterns = ["password", "secret", "changeme", "demo", "test", "1234", "0000", "qwerty", "abcdef"]
-        if any(p in self.secret.lower() for p in weak_patterns):
+        _secret_lower = self.secret.lower()
+        _secret_stripped = re.sub(r"[^a-z]", "", _secret_lower)
+        if _secret_lower in weak_patterns or _secret_stripped in weak_patterns:
+            raise ValueError(
+                "JWT_SECRET is a known weak value. "
+                "Generate a cryptographically random secret with: "
+                "python -c \"import secrets; print(secrets.token_urlsafe(64))\""
+            )
+        if len(self.secret) < 48 and any(p in _secret_lower for p in weak_patterns):
             raise ValueError(
                 "JWT_SECRET contains common/weak patterns. "
                 "Generate a cryptographically random secret with: "
@@ -120,6 +144,13 @@ class AuthManager:
         # Load users from environment - no hardcoded credentials
         # Format: ADMIN_USER=username:password, USER_USER=username:password
         self._users: Dict[str, Dict] = {}
+        # Minimal auth-policy defaults (see module docstring): in-memory,
+        # single-process state. Lockout: 5 consecutive failed logins lock
+        # the username for 15 minutes. Revocation: logout stores a hash
+        # of the revoked token; tokens also expire via JWT exp.
+        self._failed_attempts: Dict[str, list] = {}
+        self._locked_until: Dict[str, float] = {}
+        self._revoked_tokens: set = set()
 
         admin_user = os.getenv("ADMIN_USER")
         if admin_user and ":" in admin_user:
@@ -199,7 +230,11 @@ class AuthManager:
             return hmac.compare_digest(stored_hash, password)
 
     def create_token(self, user_id: str, username: str, role: UserRole) -> str:
-        """Create JWT token for user."""
+        """Create JWT token for user.
+
+        Tokens expire after ``expiration_hours`` (default 24, max 168);
+        expiry is the fallback revocation story alongside /auth/logout.
+        """
         exp = datetime.now(timezone.utc) + timedelta(hours=self.expiration_hours)
 
         payload = {
@@ -215,6 +250,8 @@ class AuthManager:
         """Verify and decode JWT token."""
         try:
             payload = jwt.decode(token, self.secret, algorithms=[self.algorithm])
+            if self.is_token_revoked(token):
+                raise HTTPException(status_code=401, detail="Token has been revoked")
             return TokenData(
                 user_id=payload["user_id"],
                 username=payload["username"],
@@ -234,6 +271,12 @@ class AuthManager:
         - Constant-time comparison
         - Configurable cost factor (work factor)
         """
+        import time as _time
+
+        # Lockout: a locked username fails closed without revealing the
+        # lock (same generic failure as a bad password).
+        if _time.time() < self._locked_until.get(username, 0):
+            return None
         user_data = self._users.get(username)
         if not user_data:
             # Prevent timing attacks - always perform equivalent work
@@ -243,11 +286,25 @@ class AuthManager:
                 _bcrypt.checkpw(b"dummy", dummy_hash)
             else:
                 hashlib.pbkdf2_hmac('sha256', password.encode(), os.urandom(32), 600000)
+            self._record_failed_login(username)
             return None
 
         stored_hash = user_data["password_hash"]
         if not self._verify_password(password, stored_hash):
+            self._record_failed_login(username)
             return None
+        self._failed_attempts.pop(username, None)
+        self._locked_until.pop(username, None)
+        # Real re-hash on legacy-hash login: a successful login against
+        # a non-bcrypt stored hash (plaintext legacy or PBKDF2 fallback)
+        # upgrades the stored hash to bcrypt immediately, so the legacy
+        # form does not survive the login.
+        if not stored_hash.startswith(_BCRYPT_PREFIX) and HAS_BCRYPT and _bcrypt is not None:
+            try:
+                user_data["password_hash"] = self._hash_password(password)
+                logger.info("Upgraded legacy password hash to bcrypt on login")
+            except Exception:
+                logger.warning("Legacy password hash upgrade failed; login still succeeded")
 
         return {
             "user_id": user_data["user_id"],
@@ -256,8 +313,37 @@ class AuthManager:
             "email": user_data.get("email")
         }
 
+    def _record_failed_login(self, username: str) -> None:
+        """Record a failed login; lock after 5 consecutive failures (15 min)."""
+        import time as _time
+
+        attempts = self._failed_attempts.setdefault(username, [])
+        attempts.append(_time.time())
+        # Keep only failures inside the lockout window.
+        cutoff = _time.time() - 900
+        attempts = [t for t in attempts if t > cutoff]
+        self._failed_attempts[username] = attempts
+        if len(attempts) >= 5:
+            self._locked_until[username] = _time.time() + 900
+            logger.warning("Account locked after repeated failed logins (15 min)")
+
+    def revoke_token(self, token: str) -> None:
+        """Revoke one token (in-memory, single-process). Stores only a hash."""
+        self._revoked_tokens.add(hashlib.sha256(token.encode("utf-8")).hexdigest())
+
+    def is_token_revoked(self, token: str) -> bool:
+        """Check whether a token was revoked via logout."""
+        return hashlib.sha256(token.encode("utf-8")).hexdigest() in self._revoked_tokens
+
     def create_user(self, username: str, password: str, role: UserRole = UserRole.USER, email: Optional[str] = None) -> str:
-        """Create a new user with hashed password."""
+        """Create a new user with hashed password.
+
+        Minimal password policy (default, pending product confirmation):
+        at least 12 characters. Env-configured users at startup are not
+        gated here, to avoid boot failures on operator-set credentials.
+        """
+        if len(password) < 12:
+            raise ValueError("Password must be at least 12 characters")
         user_id = f"{username}-{len(self._users) + 1:03d}"
         self._users[username] = {
             "user_id": user_id,
