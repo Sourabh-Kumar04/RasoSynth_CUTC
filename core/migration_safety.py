@@ -1,3 +1,4 @@
+import re
 """Migration safety system for RasoSynthTune database schema changes.
 
 Provides transaction-wrapped migrations, pre-flight safety checks,
@@ -33,6 +34,16 @@ class MigrationResult:
     duration_ms: float = 0.0
 
 
+
+_IDENTIFIER_RE = re.compile(r"^[a-zA-Z_][a-zA-Z0-9_]*$")
+
+def quote_identifier(name: str) -> str:
+    """Validate that a SQL identifier is safe and wrap it in double quotes."""
+    clean = str(name).strip()
+    if not _IDENTIFIER_RE.match(clean):
+        raise ValueError(f"Invalid SQL identifier: {name!r}")
+    return f'"{clean}"'
+
 def add_column(
     table: str,
     column: str,
@@ -40,9 +51,11 @@ def add_column(
     default: Optional[str] = None,
 ) -> MigrationStep:
     """Build a MigrationStep to add a column safely."""
+    q_table = quote_identifier(table)
+    q_column = quote_identifier(column)
     default_clause = f" DEFAULT {default}" if default is not None else ""
-    sql = f"ALTER TABLE {table} ADD COLUMN {column} {col_type}{default_clause}"
-    rollback_sql = f"ALTER TABLE {table} DROP COLUMN {column}"
+    sql = f"ALTER TABLE {q_table} ADD COLUMN {q_column} {col_type}{default_clause}"
+    rollback_sql = f"ALTER TABLE {q_table} DROP COLUMN {q_column}"
     return MigrationStep(
         sql=sql,
         description=f"Add column {column} to {table}",
@@ -52,8 +65,11 @@ def add_column(
 
 def create_index(index_name: str, table: str, column: str) -> MigrationStep:
     """Build a MigrationStep to create an index safely."""
-    sql = f"CREATE INDEX IF NOT EXISTS {index_name} ON {table} ({column})"
-    rollback_sql = f"DROP INDEX IF EXISTS {index_name}"
+    q_index = quote_identifier(index_name)
+    q_table = quote_identifier(table)
+    q_column = quote_identifier(column)
+    sql = f"CREATE INDEX IF NOT EXISTS {q_index} ON {q_table} ({q_column})"
+    rollback_sql = f"DROP INDEX IF EXISTS {q_index}"
     return MigrationStep(
         sql=sql,
         description=f"Create index {index_name} on {table}({column})",
@@ -63,8 +79,9 @@ def create_index(index_name: str, table: str, column: str) -> MigrationStep:
 
 def create_table(table: str, schema_sql: str) -> MigrationStep:
     """Build a MigrationStep to create a table safely."""
-    sql = f"CREATE TABLE IF NOT EXISTS {table} ({schema_sql})"
-    rollback_sql = f"DROP TABLE IF EXISTS {table}"
+    q_table = quote_identifier(table)
+    sql = f"CREATE TABLE IF NOT EXISTS {q_table} ({schema_sql})"
+    rollback_sql = f"DROP TABLE IF EXISTS {q_table}"
     return MigrationStep(
         sql=sql,
         description=f"Create table {table}",

@@ -1,3 +1,4 @@
+from core.storage.traversal import validate_identifier
 """Export pipeline with support for massive-scale and streaming."""
 import json
 import csv
@@ -107,6 +108,7 @@ class ExportPipeline:
         format: str | None = None
     ) -> dict[str, Path | str]:
         """Export samples in specified format(s)."""
+        job_id = validate_identifier(job_id)
         export_format = format or self.config.format
 
         # Create output directory for this job
@@ -148,6 +150,7 @@ class ExportPipeline:
         format: str | None = None
     ) -> Path:
         """Export samples in streaming fashion."""
+        job_id = validate_identifier(job_id)
         export_format = format or self.config.format
         output_path = self.output_dir / f"{job_id}.jsonl"
 

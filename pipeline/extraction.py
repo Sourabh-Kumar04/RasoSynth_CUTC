@@ -16,7 +16,7 @@ from core.provider_router import TaskType
 logger = logging.getLogger(__name__)
 
 
-def _is_safe_url(url: str) -> tuple[bool, str]:
+def _is_safe_url(url: str, allowed_ports: Optional[set[int]] = None) -> tuple[bool, str]:
     """Validate URL is not targeting internal/private infrastructure.
 
     Returns (is_safe, reason).
@@ -24,11 +24,11 @@ def _is_safe_url(url: str) -> tuple[bool, str]:
     Fail-closed: if the hostname cannot be resolved, the URL is REJECTED
     (a previous version allowed it with a warning, which let unresolvable
     names through to the fetcher).
-    NOTE (accepted risk): this is a check-then-fetch guard — DNS rebinding
-    between this check and the HTTP connect (TOCTOU) is not eliminated,
-    because httpx connects by hostname. The direct fetch paths mitigate it
-    by disabling redirects (follow_redirects=False), so a response cannot
-    smuggle the client onto a private target.
+    RESIDUAL RISK (DNS-rebinding TOCTOU): This is a check-then-fetch guard.
+    DNS rebinding between this pre-fetch check and the underlying socket connect
+    is a known residual risk because HTTP client libraries connect by hostname.
+    Callers reduce this exposure by disabling automatic redirects (follow_redirects=False)
+    and validating target URLs at every redirect hop.
     """
     try:
         parsed = httpx.URL(url)
@@ -36,6 +36,13 @@ def _is_safe_url(url: str) -> tuple[bool, str]:
         # Block non-HTTP(S)
         if parsed.scheme not in ("http", "https"):
             return False, f"Unsupported scheme: {parsed.scheme}"
+
+        # Port validation: enforce standard web ports (80, 443, 8080, 8443) unless explicitly allowed
+        port = parsed.port
+        if port is not None:
+            valid_ports = allowed_ports if allowed_ports is not None else {80, 443, 8080, 8443}
+            if port not in valid_ports:
+                return False, f"Disallowed port: {port}"
 
         # Block local/loopback hostnames
         hostname = parsed.host.lower()
@@ -62,15 +69,15 @@ def _is_safe_url(url: str) -> tuple[bool, str]:
                 else:
                     ip = ipaddress.ip_address(ip)
 
-                # Block private, loopback, link-local, multicast
+                # Block private, loopback, link-local, multicast, unspecified
                 if (ip.is_private or ip.is_loopback or ip.is_link_local or
-                        ip.is_multicast or ip.is_reserved):
+                        ip.is_multicast or ip.is_reserved or ip.is_unspecified):
                     return False, f"Resolved to unsafe IP: {ip}"
         except (socket.gaierror, OSError):
             # Fail closed: an unresolvable hostname must not reach the fetcher.
             return False, f"DNS resolution failed for {hostname}"
 
-        # Block URLs with credentials or unusual ports
+        # Block URLs with credentials
         if parsed.username or parsed.password:
             return False, "URL contains embedded credentials"
 
@@ -649,21 +656,54 @@ class ExtractionPipeline:
         try:
             async with httpx.AsyncClient(
                 timeout=httpx.Timeout(self.timeout),
-                follow_redirects=False,  # Disabled: let the caller track redirects for SSRF safety
+                follow_redirects=False,  # Disabled: track redirects manually for SSRF validation
                 headers={
                     "User-Agent": "Mozilla/5.0 (compatible; AI-Dataset-Engineer/1.0)",
                     "Accept": "text/html,application/xhtml+xml,application/xml,*/*"
                 }
             ) as client:
-                response = await client.get(url)
-                if response.status_code >= 400:
+                curr_url = url
+                response = None
+                for _ in range(5):
+                    response = await client.get(curr_url)
+                    if 300 <= response.status_code < 400:
+                        loc = response.headers.get("Location")
+                        if not loc:
+                            yield ExtractedContent(
+                                content="",
+                                content_type="error",
+                                url=curr_url,
+                                confidence=0.0,
+                                quality_score=0.0,
+                                extraction_warnings=[f"HTTP {response.status_code} redirect without Location header"]
+                            )
+                            return
+                        from urllib.parse import urljoin
+                        target_url = urljoin(curr_url, loc)
+                        safe_redir, redir_reason = _is_safe_url(target_url)
+                        if not safe_redir:
+                            yield ExtractedContent(
+                                content="",
+                                content_type="error",
+                                url=target_url,
+                                confidence=0.0,
+                                quality_score=0.0,
+                                extraction_warnings=[f"Redirect blocked by SSRF protection: {redir_reason}"]
+                            )
+                            return
+                        curr_url = target_url
+                    else:
+                        break
+
+                if response is None or response.status_code >= 400:
+                    status = response.status_code if response else "no_response"
                     yield ExtractedContent(
                         content="",
                         content_type="error",
-                        url=url,
+                        url=curr_url,
                         confidence=0.0,
                         quality_score=0.0,
-                        extraction_warnings=[f"HTTP {response.status_code} error from source"]
+                        extraction_warnings=[f"HTTP {status} error from source"]
                     )
                     return
 

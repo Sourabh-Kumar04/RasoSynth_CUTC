@@ -279,6 +279,14 @@ async def health_check_urls(
     async def _check(source: "DiscoveredSource") -> "DiscoveredSource | None":
         async with sem:
             try:
+                from pipeline.extraction import _is_safe_url
+                safe, reason = _is_safe_url(source.url)
+                if not safe:
+                    source.metadata["health_checked"] = True
+                    source.metadata["health_status"] = 0
+                    source.metadata["health_error"] = f"SSRF guard blocked: {reason}"
+                    return None
+
                 async with httpx.AsyncClient(
                     timeout=httpx.Timeout(timeout), follow_redirects=True,
                 ) as client:
@@ -3453,6 +3461,12 @@ class DiscoveryPipeline:
         """
         results: list[DiscoveredSource] = []
         try:
+            from pipeline.extraction import _is_safe_url
+            safe, reason = _is_safe_url(url)
+            if not safe:
+                self._LOG.warning(f"SSRF guard rejected schema.org parse URL {url}: {reason}")
+                return results
+
             async with self._rate_limiter.acquire(url):
                 async with httpx.AsyncClient(
                     timeout=httpx.Timeout(15.0), follow_redirects=True,
@@ -3630,19 +3644,23 @@ class DiscoveryPipeline:
         return sources
 
     def _is_domain_allowed(self, url: str) -> bool:
-        """Check if domain is allowed based on allowlist/blocklist."""
+        """Check if domain is allowed based on suffix allowlist/blocklist matching."""
         try:
             parsed = urlparse(url)
-            domain = parsed.netloc.lower()
+            domain = (parsed.hostname or "").lower()
+            if not domain:
+                return False
 
             if self.domain_blocklist:
                 for blocked in self.domain_blocklist:
-                    if blocked in domain:
+                    b = blocked.lower().strip()
+                    if domain == b or domain.endswith("." + b):
                         return False
 
             if self.domain_allowlist:
                 for allowed in self.domain_allowlist:
-                    if allowed in domain:
+                    a = allowed.lower().strip()
+                    if domain == a or domain.endswith("." + a):
                         return True
                 return False
 
@@ -3651,8 +3669,12 @@ class DiscoveryPipeline:
             return False
 
     async def _extract_title_from_url(self, client: httpx.AsyncClient, url: str) -> str | None:
-        """Extract title from URL."""
+        """Extract title from URL with SSRF protection."""
         try:
+            from pipeline.extraction import _is_safe_url
+            safe, _ = _is_safe_url(url)
+            if not safe:
+                return None
             response = await client.get(url, timeout=5.0, headers={"User-Agent": "Mozilla/5.0"})
             if response.status_code == 200:
                 title_match = re.search(r'<title>(.*?)</title>', response.text, re.IGNORECASE)

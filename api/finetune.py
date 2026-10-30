@@ -163,6 +163,42 @@ async def create_finetune_job(
     payload = body.model_dump()
     payload["owner"] = current_user.username
 
+    # Validate dataset_path containment if provided by client
+    if payload.get("dataset_path"):
+        from core.storage.traversal import ensure_contained_path
+        allowed_roots = [
+            os.path.abspath("outputs"),
+            os.path.abspath("data"),
+            os.path.abspath(tempfile.gettempdir()),
+        ]
+        # Allow persistent data dir if mounted
+        if os.path.isdir("/data"):
+            allowed_roots.append(os.path.abspath("/data"))
+        path_to_check = os.path.abspath(payload["dataset_path"])
+        contained = False
+        for root in allowed_roots:
+            try:
+                ensure_contained_path(path_to_check, root)
+                contained = True
+                break
+            except ValueError:
+                continue
+        if not contained:
+            raise HTTPException(
+                status_code=400,
+                detail=f"dataset_path {payload['dataset_path']!r} escapes allowed dataset root directories."
+            )
+
+    # Validate webhook_url SSRF/allowlist
+    if payload.get("webhook_url"):
+        from finetuning.job_manager import _webhook_allowed_and_safe
+        ok, reason = _webhook_allowed_and_safe(payload["webhook_url"])
+        if not ok:
+            raise HTTPException(
+                status_code=400,
+                detail=f"webhook_url rejected: {reason}"
+            )
+
     # Preferred path: resolve an immutable version. This prevents a training
     # job from silently consuming a changed "latest" export.
     version_id = str(payload.get("dataset_version_id") or "").strip()
@@ -267,7 +303,12 @@ async def create_finetune_job(
             raise HTTPException(status_code=404, detail=f"Dataset or Job ID '{raw_id}' could not be resolved to a training file.")
 
     try:
-        return await manager.create_job(payload)
+        job_result = await manager.create_job(payload)
+        if isinstance(job_result, dict):
+            job_result.pop("hf_token", None)
+            if "config" in job_result and isinstance(job_result["config"], dict):
+                job_result["config"].pop("hf_token", None)
+        return job_result
     except Exception as exc:
         logger.exception("Failed to create fine-tune job")
         raise HTTPException(status_code=500, detail=str(exc))
