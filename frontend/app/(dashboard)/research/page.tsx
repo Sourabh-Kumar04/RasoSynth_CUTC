@@ -43,7 +43,7 @@ const DEFAULT_HEURISTICS: HeuristicDef[] = [
     name: 'MinHash LSH De-duplication',
     plain: 'Fast approximate nearest neighbors to eliminate near-duplicate synthetic instructions.',
     desc: 'Jaccard similarity threshold with 128 hash permutation bands for near-duplicate rejection.',
-    impact: '-42.8% Token Redundancy',
+    impact: 'Estimated: -42.8% Token Redundancy',
     params: { threshold: 0.85, num_perm: 128 },
     color: 'text-[#10b981]'
   },
@@ -52,7 +52,7 @@ const DEFAULT_HEURISTICS: HeuristicDef[] = [
     name: 'Perplexity & Fluency Filtering',
     plain: 'Filters out garbled, unnatural, or low-fluency synthetic text using n-gram perplexity.',
     desc: 'Perplexity cutoff threshold with length penalty normalization to reject low-signal crawls.',
-    impact: '-34.2% Hallucination Risk',
+    impact: 'Estimated: -34.2% Hallucination Risk',
     params: { max_perplexity: 45.0, length_penalty: 1.2 },
     color: 'text-[#f26625]'
   },
@@ -61,7 +61,7 @@ const DEFAULT_HEURISTICS: HeuristicDef[] = [
     name: 'Self-Instruct Diversification',
     plain: 'Bootstraps small seed instructions into thousands of diverse domain tasks.',
     desc: 'Evolutionary prompt task expansion and constraint deepening across taxonomy domains.',
-    impact: '+28.5% Task Diversity',
+    impact: 'Estimated: +28.5% Task Diversity',
     params: { max_depth: 4, temperature: 0.8 },
     color: 'text-amber-400'
   },
@@ -70,7 +70,7 @@ const DEFAULT_HEURISTICS: HeuristicDef[] = [
     name: 'Evolutionary Prompt Mutation',
     plain: 'Mutates and evolves prompts genetically to discover complex multi-step reasoning variations.',
     desc: 'PromptBreeder genetic operators for mutation, fitness selection, and multi-turn reasoning.',
-    impact: '+18.4% Reasoning Depth',
+    impact: 'Estimated: +18.4% Reasoning Depth',
     params: { mutation_rate: 0.4, generations: 5 },
     color: 'text-[#f26625]'
   },
@@ -79,7 +79,7 @@ const DEFAULT_HEURISTICS: HeuristicDef[] = [
     name: 'Cross-Lingual Indic Alignment',
     plain: 'Translates and aligns instructions across 22 Indian languages while preserving statutory terms.',
     desc: 'AI Kosh and Bhashini multi-lingual alignment with script preservation across 22 Indic languages.',
-    impact: '+31.2% Vernacular Fidelity',
+    impact: 'Estimated: +31.2% Vernacular Fidelity',
     params: { supported_languages: 22, bhashini_enabled: true },
     color: 'text-emerald-400'
   },
@@ -88,7 +88,7 @@ const DEFAULT_HEURISTICS: HeuristicDef[] = [
     name: 'AST Code Sandbox Verification',
     plain: 'Parses Python code into Abstract Syntax Trees to guarantee generated code compiles cleanly.',
     desc: 'Python AST syntax parsing, sandbox compilation, and error recovery for coding datasets.',
-    impact: '100% Code Executability',
+    impact: 'Heuristic Target: 100% Syntax Validity',
     params: { ast_check: true, sandbox_timeout_sec: 5 },
     color: 'text-[#f26625]'
   },
@@ -97,7 +97,7 @@ const DEFAULT_HEURISTICS: HeuristicDef[] = [
     name: 'Pedagogical Curriculum Sorting',
     plain: 'Sorts training data from basic recall to hard deduction to optimize neural convergence.',
     desc: 'Staged difficulty sequencing (Tier 1-2 Foundations -> Tier 3-4 -> Tier 5) with anti-forgetting replay buffer.',
-    impact: '+24.1% Convergence Rate',
+    impact: 'Estimated: +24.1% Convergence Rate',
     params: { mode: 'staged_curriculum', replay_ratio: 0.15 },
     color: 'text-[#f26625]'
   },
@@ -106,7 +106,7 @@ const DEFAULT_HEURISTICS: HeuristicDef[] = [
     name: 'Benchmark Contamination Guard',
     plain: 'Checks synthetic samples against evaluation benchmarks to prevent fake memorization scores.',
     desc: 'N-gram cryptographic canary verification against IndicGLUE, MMLU-Hindi, GSM8K, and ARC.',
-    impact: '0.00% Benchmark Leakage',
+    impact: 'Heuristic Target: 0.00% Benchmark Leakage',
     params: { ngram_size: 8, similarity_threshold: 0.50 },
     color: 'text-rose-400'
   },
@@ -115,7 +115,7 @@ const DEFAULT_HEURISTICS: HeuristicDef[] = [
     name: 'Adversarial Statutory Jailbreak Probes',
     plain: 'Probes generated outputs for tax evasion, compliance exploits, and harmful instructions.',
     desc: 'Proactive red-teaming for tax fraud, fake GST invoicing, and transliterated vernacular attacks.',
-    impact: '-88.0% Vulnerability Rate',
+    impact: 'Estimated: -88.0% Vulnerability Rate',
     params: { probe_categories: 4, compliance_check: true },
     color: 'text-amber-300'
   },
@@ -190,7 +190,7 @@ export default function ResearchPage() {
     try {
       const res = await api.getQualityBenchmarks()
       setBenchmarks(res?.benchmark_data)
-      showToast('Live quality benchmark audit complete')
+      showToast('Benchmark metrics updated from backend')
     } catch (e: any) {
       showToast(e?.message ?? 'Failed to run benchmark audit', false)
     } finally {
