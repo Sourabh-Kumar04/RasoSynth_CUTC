@@ -101,6 +101,10 @@ class ProviderCapability(Enum):
     MULTILINGUAL = "multilingual"
     FUNCTION_CALLING = "function_calling"
     FAST_INFERENCE = "fast_inference"
+    JSON_MODE = "json_mode"
+    MARKDOWN = "markdown"
+    LOCAL_INFERENCE = "local_inference"
+    EMBEDDING_COMPATIBLE = "embedding_compatible"
 
 
 @dataclass

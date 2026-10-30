@@ -46,6 +46,13 @@ class AgentRegistry:
         return cls._instance
 
     @classmethod
+    def reset(cls) -> None:
+        """Reset singleton instances and state for clean isolation."""
+        cls._instance = None
+        cls._instances.clear()
+        cls._type_instances.clear()
+
+    @classmethod
     def register(
         cls,
         agent_type: AgentType,

@@ -208,14 +208,15 @@ def construct_task(self, job_id: str, filtered: list[dict], config: dict):
 def export_task(self, job_id: str, samples: list[dict], format: str, config: dict):
     """Export task - export dataset in configured format."""
     from pipeline.export import ExportPipeline, ExportConfig
-    from pathlib import Path
+    from core.storage.traversal import validate_identifier
     import asyncio
 
     try:
+        clean_job_id = validate_identifier(job_id)
         export_config = ExportConfig(
             format=format,
             output_dir=config.get("output_dir", "outputs"),
-            dataset_name=f"dataset_{job_id}",
+            dataset_name=f"dataset_{clean_job_id}",
         )
 
         exporter = ExportPipeline(export_config)
@@ -231,12 +232,9 @@ def export_task(self, job_id: str, samples: list[dict], format: str, config: dic
                 "curriculum_order": item.get("curriculum_order", 0),
             })())
 
-        loop = asyncio.new_event_loop()
-        asyncio.set_event_loop(loop)
-        result = loop.run_until_complete(exporter.export(constructed_samples, job_id))
-        loop.close()
+        result = asyncio.run(exporter.export(constructed_samples, clean_job_id))
 
-        return {"job_id": job_id, "output": str(result), "count": len(samples)}
+        return {"job_id": clean_job_id, "output": str(result), "count": len(samples)}
 
     except Exception as e:
         return {"job_id": job_id, "error": str(e)}
@@ -428,8 +426,13 @@ def on_worker_shutdown(**kwargs):
 @celery_app.task(name="workers.tasks.dead_letter")
 def dead_letter_task(task_id: str, exc: str, args: list = None, kwargs: dict = None):
     """Dead letter queue receiver for failed tasks."""
-    logger.error("DLQ: Task %s permanently failed: %s | args=%s kwargs=%s", task_id, exc, args, kwargs)
-    return {"dlq_task_id": task_id, "error": exc, "status": "dead_lettered"}
+    from core.storage.traversal import validate_identifier
+    try:
+        clean_task_id = validate_identifier(task_id, allow_empty=True)
+    except Exception:
+        clean_task_id = "invalid-task-id"
+    logger.error("DLQ: Task %s permanently failed: %s | args=%s kwargs=%s", clean_task_id, exc, args, kwargs)
+    return {"dlq_task_id": clean_task_id, "error": exc, "status": "dead_lettered"}
 
 
 if __name__ == "__main__":

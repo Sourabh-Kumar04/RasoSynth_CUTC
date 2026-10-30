@@ -66,24 +66,18 @@ class DiscoveryWorker:
 
         types = [type_map.get(t, SourceType.WEB_PAGE) for t in source_types]
 
-        loop = asyncio.new_event_loop()
-        asyncio.set_event_loop(loop)
-
         async def run():
+            res = []
             async for source in discovery.discover(query, domain, types):
-                sources.append({
+                res.append({
                     "url": source.url,
                     "source_type": source.source_type.value,
                     "title": source.title,
                     "metadata": source.metadata,
                 })
+            return res
 
-        try:
-            loop.run_until_complete(run())
-        finally:
-            loop.close()
-
-        return sources
+        return asyncio.run(run())
 
 
 @ray.remote
@@ -98,12 +92,9 @@ class ExtractionWorker:
         from pipeline.extraction import ExtractionPipeline
 
         extraction = ExtractionPipeline(self.config)
-        extracted = []
-
-        loop = asyncio.new_event_loop()
-        asyncio.set_event_loop(loop)
 
         async def run():
+            extracted = []
             for source in sources:
                 url = source.get("url", "")
                 try:
@@ -116,13 +107,9 @@ class ExtractionWorker:
                         })
                 except Exception:
                     continue
+            return extracted
 
-        try:
-            loop.run_until_complete(run())
-        finally:
-            loop.close()
-
-        return extracted
+        return asyncio.run(run())
 
 
 @ray.remote
@@ -141,12 +128,8 @@ class QualityWorker:
         router = ProviderRouter(self.router_config)
         filtering = FilteringPipeline(router, self.config)
 
-        results = []
-
-        loop = asyncio.new_event_loop()
-        asyncio.set_event_loop(loop)
-
         async def run():
+            results = []
             for item in items:
                 sample = type('Content', (), item)()
                 result = await filtering.filter(sample, self.config.get("target_domain", ""))
@@ -158,13 +141,9 @@ class QualityWorker:
                         "toxicity_score": result.toxicity_score,
                         "issues": result.issues,
                     })
+            return results
 
-        try:
-            loop.run_until_complete(run())
-        finally:
-            loop.close()
-
-        return results
+        return asyncio.run(run())
 
 
 @ray.remote
@@ -183,12 +162,8 @@ class ConstructionWorker:
         router = ProviderRouter(self.router_config)
         construction = ConstructionPipeline(router, self.config)
 
-        samples = []
-
-        loop = asyncio.new_event_loop()
-        asyncio.set_event_loop(loop)
-
         async def run():
+            samples = []
             for item in filtered:
                 sample = type('Sample', (), {
                     "content": item["content"],
@@ -204,13 +179,9 @@ class ConstructionWorker:
                         "difficulty_tier": constructed.difficulty_tier,
                         "curriculum_order": constructed.curriculum_order,
                     })
+            return samples
 
-        try:
-            loop.run_until_complete(run())
-        finally:
-            loop.close()
-
-        return samples
+        return asyncio.run(run())
 
 
 class RayPipeline:
@@ -316,6 +287,8 @@ class RayPipeline:
 
     def run_full_pipeline(self, job_id: str, queries: List[str], domain: str) -> Dict:
         """Run the full pipeline using Ray."""
+        from core.storage.traversal import validate_identifier
+        clean_job_id = validate_identifier(job_id)
         source_types = ["web_page", "github_repo", "arxiv_paper"]
 
         sources = self.run_discovery(queries, domain, source_types)
@@ -327,7 +300,7 @@ class RayPipeline:
         samples = self.run_construction(filtered)
 
         return {
-            "job_id": job_id,
+            "job_id": clean_job_id,
             "sources": len(sources),
             "extracted": len(extracted),
             "filtered": len(filtered),

@@ -14,29 +14,7 @@ from enum import Enum
 logger = logging.getLogger(__name__)
 
 
-class ProviderCapability(Enum):
-    """Extended provider capabilities for migration."""
-    # Generation capabilities
-    TEXT_GENERATION = "text_generation"
-    TEXT_EMBEDDING = "text_embedding"
-    VISION = "vision"
-    FUNCTION_CALLING = "function_calling"
-    TOOL_CALLING = "tool_calling"
-
-    # Format capabilities
-    JSON_MODE = "json_mode"
-    STRUCTURED_OUTPUT = "structured_output"
-    MARKDOWN = "markdown"
-
-    # Performance capabilities
-    LONG_CONTEXT = "long_context"
-    FAST_INFERENCE = "fast_inference"
-    REASONING = "reasoning"
-
-    # Deployment capabilities
-    LOCAL_INFERENCE = "local_inference"
-    STREAMING = "streaming"
-    EMBEDDING_COMPATIBLE = "embedding_compatible"
+from providers.core_lib.base import ProviderCapability
 
 
 @dataclass
