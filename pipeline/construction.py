@@ -145,6 +145,32 @@ def _extract_json_array(raw_text: str) -> list:
     return objs
 
 
+def _extract_json_object(raw_text: str) -> Optional[dict]:
+    """Robustly extract a single JSON object from raw LLM output with preamble or fences."""
+    if not raw_text:
+        return None
+    cleaned = re.sub(r'```(?:json)?\s*', '', raw_text, flags=re.IGNORECASE)
+    cleaned = re.sub(r'```\s*$', '', cleaned).strip()
+    try:
+        data = json.loads(cleaned)
+        if isinstance(data, dict):
+            return data
+        if isinstance(data, list) and data and isinstance(data[0], dict):
+            return data[0]
+    except Exception:
+        pass
+
+    m = re.search(r'(\{[\s\S]*\})', raw_text)
+    if m:
+        try:
+            data = json.loads(m.group(1))
+            if isinstance(data, dict):
+                return data
+        except Exception:
+            pass
+    return None
+
+
 @dataclass
 class SchemaSpec:
     """Specification for custom dataset schemas."""
@@ -856,12 +882,7 @@ Output strictly in JSON format as a list of objects:
                         temperature=0.4,
                     )
                     if resp and resp.content:
-                        raw = resp.content.strip()
-                        cleaned = re.sub(r'```(?:json)?\s*', '', raw, flags=re.IGNORECASE)
-                        cleaned = re.sub(r'```\s*$', '', cleaned).strip()
-                        data = json.loads(cleaned)
-                        if isinstance(data, list) and data:
-                            data = data[0]
+                        data = _extract_json_object(resp.content)
                         if isinstance(data, dict) and "debate_rounds" in data and "verdict" in data:
                             eval_res = evaluate_dialectic_coherence(data["debate_rounds"], data["verdict"])
                             sample = format_dialectic_sample(
@@ -1048,12 +1069,7 @@ Output strictly in JSON format as a list of objects:
                         temperature=0.35,
                     )
                     if resp and resp.content:
-                        raw = resp.content.strip()
-                        cleaned = re.sub(r'```(?:json)?\s*', '', raw, flags=re.IGNORECASE)
-                        cleaned = re.sub(r'```\s*$', '', cleaned).strip()
-                        data = json.loads(cleaned)
-                        if isinstance(data, list) and data:
-                            data = data[0]
+                        data = _extract_json_object(resp.content)
                         if isinstance(data, dict) and "turns" in data and len(data["turns"]) >= 2:
                             sample = format_multi_turn_sample(data["turns"], format_type=self.config.get("instruction_format", "sharegpt"), metadata={"domain": target_domain})
                             s = ConstructedSample(

@@ -1,90 +1,48 @@
 """Core module exports with enterprise reliability patterns."""
+from __future__ import annotations
 
-from core.config import Settings, get_settings, SecurityError
-from core.provider_router import ProviderRouter, TaskType, RouterConfig, RouterStats
-# Import from core/orchestrator.py (file, not package)
-from core.orchestrator_core import DatasetOrchestrator, AgentState, Job, JobStatus, ConstraintAnalysis
-from core.db import AsyncDB, DatabaseManager
-from core.cache import CacheManager, ProviderCache
-from core.observability_manager import ObservabilityManager
-from core.research_loop import ResearchLoop, TechniqueIntegrator
+import importlib
+from typing import Any
 
-# Resilience Patterns
-try:
-    from core.resilience import (
-        CircuitBreaker,
-        CircuitBreakerConfig,
-        CircuitState,
-        CircuitBreakerOpenError,
-        CircuitBreakerManager,
-        get_circuit_breaker_manager,
-        RetryPolicy,
-        get_retry_decorator,
-        Bulkhead,
-        BulkheadConfig,
-        BulkheadRejectedError,
-        BulkheadManager,
-        get_bulkhead_manager,
-        ConnectionPool,
-        PoolConfig,
-        PooledConnection,
-        PoolExhaustedError,
-    )
-    RESILIENCE_AVAILABLE = True
-except ImportError:
-    RESILIENCE_AVAILABLE = False
-
-# Pagination & Streaming
-try:
-    from core.pagination import (
-        Cursor,
-        PaginationResult,
-        StreamProgress,
-        BackpressureIterator,
-        BatchedAsyncIterator,
-        chunked_async_iter,
-        paginated_async_iter,
-        concurrency_limited_iter,
-        create_cursor,
-        calculate_pagination,
-    )
-    PAGINATION_AVAILABLE = True
-except ImportError:
-    PAGINATION_AVAILABLE = False
-
-# Singleton set by api/server.py lifespan; read by orchestrator HITL node.
-# Stays None until the server has fully started.
-_review_service_instance = None
-
-__all__ = [
+_ATTR_TO_MODULE = {
     # Config
-    "Settings",
-    "get_settings",
-    "SecurityError",
-
+    "Settings": "core.config",
+    "get_settings": "core.config",
+    "SecurityError": "core.config",
     # Router
-    "ProviderRouter",
-    "TaskType",
-    "RouterConfig",
-    "RouterStats",
-
+    "ProviderRouter": "core.provider_router",
+    "TaskType": "core.provider_router",
+    "RouterConfig": "core.provider_router",
+    "RouterStats": "core.provider_router",
     # Orchestration
-    "DatasetOrchestrator",
-    "AgentState",
-    "Job",
-    "JobStatus",
-    "ConstraintAnalysis",
-
+    "DatasetOrchestrator": "core.orchestrator_core",
+    "AgentState": "core.orchestrator_core",
+    "Job": "core.orchestrator_core",
+    "JobStatus": "core.orchestrator_core",
+    "ConstraintAnalysis": "core.orchestrator_core",
     # Database
-    "AsyncDB",
-    "DatabaseManager",
-
+    "AsyncDB": "core.db",
+    "DatabaseManager": "core.db",
     # Cache
-    "CacheManager",
-    "ProviderCache",
-
+    "CacheManager": "core.cache",
+    "ProviderCache": "core.cache",
     # Observability
-    "ObservabilityManager",
-    "ResearchLoop",
-    "TechniqueIntegrator",
-]
+    "ObservabilityManager": "core.observability_manager",
+    "ResearchLoop": "core.research_loop",
+    "TechniqueIntegrator": "core.research_loop",
+}
+
+_review_service_instance = None
+RESILIENCE_AVAILABLE = True
+PAGINATION_AVAILABLE = True
+
+__all__ = list(_ATTR_TO_MODULE.keys())
+
+
+def __getattr__(name: str) -> Any:
+    if name in _ATTR_TO_MODULE:
+        mod = importlib.import_module(_ATTR_TO_MODULE[name])
+        val = getattr(mod, name)
+        globals()[name] = val
+        return val
+    raise AttributeError(f"module {__name__!r} has no attribute {name!r}")

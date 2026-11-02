@@ -1,8 +1,13 @@
 """
 Multi-Agent Orchestrator - Dynamic agent lifecycle and workflow management
 
-Orchestrates multi-agent workflows with intelligent scheduling, load balancing,
+Orchestrates multi-agent workflows with scheduling, load balancing,
 and adaptive execution strategies.
+
+Architectural Note:
+Production dataset pipeline execution is driven by `core.orchestrator_core.DatasetOrchestrator`.
+This module provides the multi-agent graph DAG coordinator (`MultiAgentOrchestrator`)
+for standalone agent-society workflows.
 """
 
 from typing import Dict, List, Optional, Any, Callable, Set

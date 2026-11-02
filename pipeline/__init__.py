@@ -1,13 +1,8 @@
 """Pipeline module for data processing stages."""
-from pipeline.discovery import DiscoveryPipeline, DiscoveredSource, SourceType
-from pipeline.extraction import ExtractionPipeline, ExtractedContent
-from pipeline.filtering import FilteringPipeline, FilteredSample
-from pipeline.construction import ConstructionPipeline, ConstructedSample, DatasetType
-from pipeline.export import ExportPipeline, ExportConfig
-from pipeline.quality_scorer import QualityScorer, QualityScore
-from pipeline.deduplication import DeduplicationEngine, DuplicateResult
-from pipeline.diversity import DatasetDiversityAnalyzer, DiversityMetrics
-from pipeline.hallucination_detector import HallucinationDetector, HallucinationResult
+from __future__ import annotations
+
+import importlib
+from typing import Any
 
 __all__ = [
     "DiscoveryPipeline", "DiscoveredSource", "SourceType",
@@ -20,3 +15,35 @@ __all__ = [
     "DatasetDiversityAnalyzer", "DiversityMetrics",
     "HallucinationDetector", "HallucinationResult",
 ]
+
+_ATTR_TO_MODULE = {
+    "DiscoveryPipeline": "pipeline.discovery",
+    "DiscoveredSource": "pipeline.discovery",
+    "SourceType": "pipeline.discovery",
+    "ExtractionPipeline": "pipeline.extraction",
+    "ExtractedContent": "pipeline.extraction",
+    "FilteringPipeline": "pipeline.filtering",
+    "FilteredSample": "pipeline.filtering",
+    "ConstructionPipeline": "pipeline.construction",
+    "ConstructedSample": "pipeline.construction",
+    "DatasetType": "pipeline.construction",
+    "ExportPipeline": "pipeline.export",
+    "ExportConfig": "pipeline.export",
+    "QualityScorer": "pipeline.quality_scorer",
+    "QualityScore": "pipeline.quality_scorer",
+    "DeduplicationEngine": "pipeline.deduplication",
+    "DuplicateResult": "pipeline.deduplication",
+    "DatasetDiversityAnalyzer": "pipeline.diversity",
+    "DiversityMetrics": "pipeline.diversity",
+    "HallucinationDetector": "pipeline.hallucination_detector",
+    "HallucinationResult": "pipeline.hallucination_detector",
+}
+
+
+def __getattr__(name: str) -> Any:
+    if name in _ATTR_TO_MODULE:
+        mod = importlib.import_module(_ATTR_TO_MODULE[name])
+        val = getattr(mod, name)
+        globals()[name] = val
+        return val
+    raise AttributeError(f"module {__name__!r} has no attribute {name!r}")

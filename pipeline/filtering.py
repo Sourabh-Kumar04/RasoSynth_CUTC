@@ -12,7 +12,20 @@ import logging
 
 logger = logging.getLogger(__name__)
 
-from core.provider_router import TaskType
+try:
+    from core.provider_router import TaskType
+except Exception:
+    try:
+        from providers.core_lib.base import TaskType
+    except Exception:
+        from enum import Enum
+        class TaskType(str, Enum):
+            CHAT = "chat"
+            COMPLETION = "completion"
+            EMBEDDING = "embedding"
+            CLASSIFICATION = "classification"
+            STRUCTURED_OUTPUT = "structured_output"
+            RERANK = "rerank"
 from core.intent import UserIntent
 from pipeline.quality_scorer import QualityScorer
 from pipeline.hallucination_detector import HallucinationDetector

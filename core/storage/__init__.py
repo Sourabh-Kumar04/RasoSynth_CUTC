@@ -1,79 +1,12 @@
 """
 Dataset Output & Distribution System
 
-A comprehensive, scalable framework for handling large dataset delivery
-across multiple storage providers and formats.
-
-Architecture:
-- Storage abstraction layer for multiple providers
-- Intelligent packaging and compression
-- Streaming and chunked transfers
-- Secure access control
-- Versioning and incremental updates
-- Multi-platform distribution
+A scalable framework for handling dataset delivery across multiple storage providers.
 """
+from __future__ import annotations
 
-from core.storage.base import (
-    StorageProvider,
-    StorageConfig,
-    StorageResult,
-    StorageMetadata,
-    DeliveryStrategy,
-)
-from core.storage.providers import (
-    # Cloud Providers
-    S3StorageProvider,
-    GCSStorageProvider,
-    R2StorageProvider,
-    AzureBlobProvider,
-    B2StorageProvider,
-    MinIOProvider,
-    # Consumer Cloud
-    GoogleDriveProvider,
-    DropboxProvider,
-    OneDriveProvider,
-    MegaProvider,
-    # AI Platforms
-    HuggingFaceProvider,
-    KaggleProvider,
-    GitHubReleasesProvider,
-    DVCProvider,
-    # Messaging
-    TelegramProvider,
-    DiscordProvider,
-    SlackProvider,
-    EmailProvider,
-    WebhookProvider,
-)
-from core.storage.packaging import (
-    DatasetPackager,
-    CompressionType,
-    PartitionStrategy,
-    ShardStrategy,
-)
-from core.storage.streaming import (
-    StreamManager,
-    ChunkIterator,
-    RangeRequestHandler,
-)
-from core.storage.delivery import (
-    DeliveryManager,
-    DeliveryStatus,
-    ProgressTracker,
-)
-from core.storage.security import (
-    AccessController,
-    EncryptionManager,
-    SignedURLGenerator,
-)
-from core.storage.versioning import (
-    DatasetVersionManager,
-    IncrementalUpdater,
-)
-from core.storage.strategy import (
-    DeliveryStrategySelector,
-    SmartRouter,
-)
+import importlib
+from typing import Any
 
 __all__ = [
     # Base
@@ -133,3 +66,59 @@ __all__ = [
     "DeliveryStrategySelector",
     "SmartRouter",
 ]
+
+_ATTR_TO_MODULE = {
+    # Base
+    "StorageProvider": "core.storage.base",
+    "StorageConfig": "core.storage.base",
+    "StorageResult": "core.storage.base",
+    "StorageMetadata": "core.storage.base",
+    "DeliveryStrategy": "core.storage.base",
+
+    # Packaging
+    "DatasetPackager": "core.storage.packaging",
+    "CompressionType": "core.storage.packaging",
+    "PartitionStrategy": "core.storage.packaging",
+    "ShardStrategy": "core.storage.packaging",
+
+    # Streaming
+    "StreamManager": "core.storage.streaming",
+    "ChunkIterator": "core.storage.streaming",
+    "RangeRequestHandler": "core.storage.streaming",
+
+    # Delivery
+    "DeliveryManager": "core.storage.delivery",
+    "DeliveryStatus": "core.storage.delivery",
+    "ProgressTracker": "core.storage.delivery",
+
+    # Security
+    "AccessController": "core.storage.security",
+    "EncryptionManager": "core.storage.security",
+    "SignedURLGenerator": "core.storage.security",
+
+    # Versioning
+    "DatasetVersionManager": "core.storage.versioning",
+    "IncrementalUpdater": "core.storage.versioning",
+
+    # Strategy
+    "DeliveryStrategySelector": "core.storage.strategy",
+    "SmartRouter": "core.storage.strategy",
+}
+
+
+def __getattr__(name: str) -> Any:
+    if name in _ATTR_TO_MODULE:
+        mod = importlib.import_module(_ATTR_TO_MODULE[name])
+        val = getattr(mod, name)
+        globals()[name] = val
+        return val
+    # Fallback for cloud providers
+    try:
+        providers_mod = importlib.import_module("core.storage.providers")
+        if hasattr(providers_mod, name):
+            val = getattr(providers_mod, name)
+            globals()[name] = val
+            return val
+    except Exception:
+        pass
+    raise AttributeError(f"module {__name__!r} has no attribute {name!r}")
