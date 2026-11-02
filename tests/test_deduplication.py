@@ -80,3 +80,24 @@ def test_duplicate_result_dataclass():
     assert dr.is_duplicate
     assert dr.match_type == "fuzzy"
     assert dr.cluster_id == "cluster1"
+
+
+@pytest.mark.asyncio
+async def test_minhash_linear_permutation_fuzzy_matching():
+    """Verify Broder linear permutation MinHash detects near duplicates with estimated Jaccard."""
+    engine = DeduplicationEngine(config={"fuzzy_threshold": 0.80, "num_permutations": 128})
+    t1 = "Under Section 16(2) of the CGST Act 2017, a registered person can claim ITC only if they hold a valid tax invoice or debit note."
+    t2 = "Under Section 16(2) of the CGST Act 2017, a registered person can claim ITC only if they hold a valid tax invoice."
+    t3 = "Photosynthesis is the biological process by which green plants convert sunlight into biochemical energy."
+
+    await engine.add(t1, "sample-1")
+    res_fuzzy = await engine.check(t2, "sample-2")
+    res_diff = await engine.check(t3, "sample-3")
+
+    assert res_fuzzy.is_duplicate is True
+    assert res_fuzzy.match_type == "fuzzy"
+    assert res_fuzzy.matched_id == "sample-1"
+    assert res_fuzzy.similarity >= 0.80
+
+    assert res_diff.is_duplicate is False
+    assert res_diff.match_type == "none"

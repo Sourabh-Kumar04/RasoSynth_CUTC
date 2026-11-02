@@ -100,16 +100,23 @@ class DeduplicationEngine:
         self.embedding_threshold = config.get("embedding_threshold", 0.92)
         self.cluster_threshold = config.get("cluster_threshold", 0.85)
 
-        # MinHash settings
+        # MinHash settings (Broder's linear permutation theorem)
         self._num_permutations = config.get("num_permutations", 128)
         self._minhash_seed = config.get("minhash_seed", 42)
+
+        # Precompute fixed pseudo-random hash coefficients (a_i, b_i) using Mersenne prime 2^31 - 1
+        import random
+        rng = random.Random(self._minhash_seed)
+        self._prime = 2147483647
+        self._hash_a = [rng.randint(1, self._prime - 1) for _ in range(self._num_permutations)]
+        self._hash_b = [rng.randint(0, self._prime - 1) for _ in range(self._num_permutations)]
 
         # Level 1: Exact-match cache (text_hash -> sample_id)
         self._exact_cache: dict[str, str] = {}
 
         # Level 2: MinHash signature cache
-        #   sig_hash (MD5 of sorted signature) -> (signature set, sample_id)
-        self._minhash_cache: dict[str, tuple[frozenset[str], str]] = {}
+        #   sig_hash -> (signature_tuple, sample_id)
+        self._minhash_cache: dict[str, tuple[tuple[int, ...], str]] = {}
 
         # Level 3: Embedding sliding buffer
         #   Each entry: (sample_id, embedding_vector, text_hash)
@@ -232,9 +239,9 @@ class DeduplicationEngine:
         # Level 2: MinHash signature
         sig = self._compute_minhash(text)
         sig_hash = hashlib.md5(
-            str(sorted(sig)).encode(), usedforsecurity=False
+            repr(sig).encode(), usedforsecurity=False
         ).hexdigest()
-        self._minhash_cache[sig_hash] = (frozenset(sig), sample_id)
+        self._minhash_cache[sig_hash] = (sig, sample_id)
 
         # Level 3: Embedding buffer & optional Qdrant index
         if self.router is not None:
@@ -332,50 +339,79 @@ class DeduplicationEngine:
     # Level 2: Fuzzy Match (MinHash)
     # =========================================================================
 
-    def _compute_minhash(self, text: str, ngram_size: int = 5) -> set[str]:
-        """Compute a MinHash signature as a set of n-gram hashes.
+    def _compute_minhash(self, text: str, ngram_size: int = 5) -> tuple[int, ...]:
+        """Compute a deterministic MinHash signature vector using linear permutations.
 
-        For short texts (<= 2000 characters after normalisation), character
-        n-grams of length *ngram_size* are used.  For longer texts, word
-        tri-grams are used instead and the result is capped at
-        ``num_permutations`` entries.
+        Implements Broder's theorem:
+            h_i(x) = (a_i * x + b_i) mod p
+        where p is the Mersenne prime 2^31 - 1, and (a_i, b_i) are fixed pseudo-random
+        coefficients generated from `minhash_seed`.
+
+        For shorter texts (<= 2000 chars), character n-grams of length `ngram_size`
+        are extracted. For longer texts, word tri-grams are extracted. The signature
+        is the vector of minimal hash values across shingles for each permutation.
         """
         normalized = re.sub(r"\s+", " ", text.lower().strip())
+        if not normalized:
+            return tuple(0 for _ in range(self._num_permutations))
 
+        # Extract shingles
+        shingles: list[str] = []
         if len(normalized) > 2000:
-            # Word tri-grams for long texts
             words = normalized.split()
-            hashes: set[str] = set()
-            for i in range(len(words) - 2):
-                ng = " ".join(words[i : i + 3])
-                hashes.add(
-                    hashlib.md5(ng.encode(), usedforsecurity=False).hexdigest()[:8]
-                )
-            # Subsample to the configured number of permutations
-            return set(list(hashes)[: self._num_permutations])
+            if len(words) >= 3:
+                shingles = [" ".join(words[i : i + 3]) for i in range(len(words) - 2)]
+            else:
+                shingles = [normalized]
+        else:
+            if len(normalized) >= ngram_size:
+                shingles = [
+                    normalized[i : i + ngram_size]
+                    for i in range(len(normalized) - ngram_size + 1)
+                ]
+            else:
+                shingles = [normalized]
 
-        # Character n-grams for shorter texts
-        ngrams: set[str] = set()
-        for i in range(len(normalized) - ngram_size + 1):
-            ng = normalized[i : i + ngram_size]
-            ngrams.add(
-                hashlib.md5(ng.encode(), usedforsecurity=False).hexdigest()[:8]
-            )
-        return ngrams
+        # Convert shingles to 31-bit integer hash representations
+        shingle_hashes = [
+            int.from_bytes(hashlib.md5(sh.encode(), usedforsecurity=False).digest()[:4], "big") & 0x7FFFFFFF
+            for sh in shingles
+        ]
+        if not shingle_hashes:
+            return tuple(0 for _ in range(self._num_permutations))
+
+        p = self._prime
+        sig = []
+        for a, b in zip(self._hash_a, self._hash_b):
+            min_val = min((a * h + b) % p for h in shingle_hashes)
+            sig.append(min_val)
+        return tuple(sig)
 
     def _check_fuzzy(
         self, text: str
     ) -> tuple[bool, float, str | None, float]:
         """Check for a fuzzy (MinHash Jaccard) duplicate.
 
+        Under Broder's theorem:
+            Pr[h_i(A) == h_i(B)] = Jaccard(A, B)
+        Thus, the fraction of matching hash values across permutations provides
+        an unbiased estimator of the Jaccard similarity.
+
         Returns a 4-tuple
         ``(is_duplicate, duplicate_score, matched_id, similarity)``.
         """
         sig = self._compute_minhash(text)
+        if not sig:
+            return False, 0.0, None, 0.0
+
         for cached_sig, cached_id in self._minhash_cache.values():
-            jaccard = len(sig & cached_sig) / max(len(sig | cached_sig), 1)
+            if len(sig) != len(cached_sig):
+                continue
+            matches = sum(1 for a, b in zip(sig, cached_sig) if a == b)
+            jaccard = matches / len(sig)
             if jaccard >= self.fuzzy_threshold:
                 return True, jaccard, cached_id, jaccard
+
         return False, 0.0, None, 0.0
 
     # =========================================================================

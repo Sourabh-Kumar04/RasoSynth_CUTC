@@ -197,7 +197,8 @@ async def test_finetune_webhook_dispatch():
         webhook_url="https://discord.com/api/webhooks/test-hook",
     )
 
-    with patch("httpx.AsyncClient.post", new_callable=AsyncMock) as mock_post:
+    with patch("httpx.AsyncClient.post", new_callable=AsyncMock) as mock_post, \
+         patch("socket.getaddrinfo", return_value=[(2, 1, 6, "", ("162.159.135.232", 0))]):
         mock_post.return_value = MagicMock(status_code=204)
         await manager._dispatch_webhook(
             config.webhook_url,

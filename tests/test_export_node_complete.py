@@ -136,6 +136,9 @@ async def test_export_node_with_db():
         print("✓ Calling _export_node with mocked exporter...")
         result = await orchestrator._export_node(state)
 
+    if orchestrator._db_update_tasks:
+        await asyncio.gather(*list(orchestrator._db_update_tasks), return_exceptions=True)
+
     print("✓ Export node completed without errors")
 
     # Use a fresh SQLAlchemy query to find the dataset for this job
@@ -158,7 +161,7 @@ async def test_export_node_with_db():
     # Verify job was updated in database
     job_record = await db.get_job(job_id)
     assert job_record is not None
-    assert job_record.status == "running"  # _export_node is one pipeline stage; it does not mark the job completed
+    assert job_record.status == "completed"  # _export_node marks job completed on successful export
 
     # Negative assertion
     missing = await db.get_job("non-existent-uuid")

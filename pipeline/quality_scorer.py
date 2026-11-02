@@ -10,7 +10,17 @@ import logging
 from dataclasses import dataclass, field
 from typing import Optional
 
-from core.provider_router import TaskType
+try:
+    from providers.core_lib.base import TaskType
+except (ImportError, ModuleNotFoundError):
+    try:
+        from core.provider_router import TaskType
+    except (ImportError, ModuleNotFoundError):
+        from enum import Enum
+        class TaskType(Enum):  # type: ignore
+            TEXT_GENERATION = "text_generation"
+            QUALITY_CHECK = "quality_check"
+            EMBEDDING = "embedding"
 
 logger = logging.getLogger(__name__)
 
@@ -153,6 +163,8 @@ class QualityScorer:
                 subtopic_synonyms.extend(["cancer", "tumor", "t-cell", "patient", "therapy", "cell", "lung", "disease", "treatment", "diagnosis"])
             if any(k in domain_lower for k in ["distributed", "system", "code", "algorithm", "software"]):
                 subtopic_synonyms.extend(["raft", "consensus", "leader", "node", "cluster", "log", "server", "process", "lock", "thread"])
+            if any(k in domain_lower for k in ["tax", "taxation", "gst", "customs", "fiscal"]):
+                subtopic_synonyms.extend(["tax", "gst", "cgst", "sgst", "itc", "invoice", "credit", "cess", "return", "exemption"])
             if any(k in domain_lower for k in ["economic", "finance", "macro", "market"]):
                 subtopic_synonyms.extend(["yield", "rate", "bank", "inflation", "curve", "borrowing", "money", "policy", "interest", "credit"])
             if any(k in domain_lower for k in ["legal", "compliance", "law", "privacy"]):
@@ -308,9 +320,9 @@ class QualityScorer:
         else:
             details["response_has_substance"] = False
 
-        # Structural depth
+        # Structural depth (paragraphs)
         if "\n\n" in response:
-            score += 0.1
+            score += 0.05
             details["has_paragraphs"] = True
         else:
             details["has_paragraphs"] = False
@@ -322,15 +334,34 @@ class QualityScorer:
         else:
             details["has_structured_markers"] = False
 
-        # Vocabulary diversity
-        unique_ratio = len(set(w.lower() for w in resp_words)) / max(
-            len(resp_words), 1
-        )
-        if 0.3 < unique_ratio < 0.9:
-            score += 0.1
+        # Distinct-1 (Type-Token Ratio) and Distinct-2 Bigram Diversity
+        lowered_resp = [w.lower() for w in resp_words]
+        n_words = len(lowered_resp)
+        if n_words > 1:
+            distinct_1 = len(set(lowered_resp)) / n_words
+            bigrams = [f"{lowered_resp[i]}_{lowered_resp[i+1]}" for i in range(n_words - 1)]
+            distinct_2 = len(set(bigrams)) / len(bigrams)
+            
+            # Shannon entropy over word frequency distribution
+            from collections import Counter
+            import math
+            counts = Counter(lowered_resp)
+            entropy = -sum((c / n_words) * math.log2(c / n_words) for c in counts.values())
+            
+            details["distinct_1"] = round(distinct_1, 4)
+            details["distinct_2"] = round(distinct_2, 4)
+            details["token_entropy"] = round(entropy, 4)
+            
+            # Penalize degenerate repetition (distinct-2 < 0.50 means repetitive looping)
+            if distinct_2 < 0.50:
+                score -= 0.25
+                details["repetition_penalty"] = True
+            elif distinct_1 > 0.40 and distinct_2 > 0.70:
+                score += 0.10
         else:
-            score -= 0.1
-        details["unique_ratio"] = round(unique_ratio, 4)
+            details["distinct_1"] = 0.0
+            details["distinct_2"] = 0.0
+            details["token_entropy"] = 0.0
 
         return max(0.0, min(1.0, score)), details
 
@@ -361,6 +392,8 @@ class QualityScorer:
             subtopic_synonyms.extend(["cancer", "tumor", "t-cell", "patient", "therapy", "cell", "lung", "disease", "treatment", "diagnosis"])
         if any(k in domain_lower for k in ["distributed", "system", "code", "algorithm", "software"]):
             subtopic_synonyms.extend(["raft", "consensus", "leader", "node", "cluster", "log", "server", "process", "lock", "thread"])
+        if any(k in domain_lower for k in ["tax", "taxation", "gst", "customs", "fiscal"]):
+            subtopic_synonyms.extend(["tax", "gst", "cgst", "sgst", "itc", "invoice", "credit", "cess", "return", "exemption"])
         if any(k in domain_lower for k in ["economic", "finance", "macro", "market"]):
             subtopic_synonyms.extend(["yield", "rate", "bank", "inflation", "curve", "borrowing", "money", "policy", "interest", "credit"])
         if any(k in domain_lower for k in ["legal", "compliance", "law", "privacy"]):
