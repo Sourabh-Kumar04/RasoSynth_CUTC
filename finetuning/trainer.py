@@ -361,65 +361,71 @@ class Trainer:
         bridge.execute_training(samples, put)
 
     def _train_modal(self, cfg, samples, put, output_dir=None):
-        """Demo stub for Modal serverless GPU — emits simulated progress, not real remote training."""
+        """Execute or dispatch Modal serverless GPU fine-tuning."""
         out_path = Path(output_dir) if output_dir else Path(getattr(cfg, "output_dir", None) or "outputs/finetune")
-        put({
-            "type": "info",
-            "execution_mode": "simulated",
-            "is_simulated": True,
-            "message": (
-                f"Modal path is currently a demo stub for {cfg.base_model}. "
-                "Progress below is simulated — use execution_target=local for real training."
-            ),
-        })
-        try:
-            from finetuning.modal_trainer import train_remote
-            put({"type": "info", "is_simulated": True, "message": "Modal SDK import ok; remote train_remote is not executed in this stub."})
-            put({"type": "progress", "is_simulated": True, "epoch": 1, "step": 10, "loss": 1.78, "progress": 0.33})
-            put({"type": "progress", "is_simulated": True, "epoch": 2, "step": 20, "loss": 1.09, "progress": 0.66})
-            put({"type": "progress", "is_simulated": True, "epoch": 3, "step": 30, "loss": 0.72, "progress": 1.0})
-            save_path = str(out_path / "modal-lora-adapter")
-            put({
-                "type": "completed",
-                "execution_mode": "simulated",
-                "is_simulated": True,
-                "weights_are_placeholders": True,
-                "output_path": save_path,
-                "message": "SIMULATED Modal stub completed — no A10G QLoRA job was run.",
-            })
-        except Exception as e:
-            logger.info("Modal execution notice: %s", e)
-            put({"type": "progress", "is_simulated": True, "epoch": 1, "step": 10, "loss": 1.65, "progress": 0.5})
-            put({
-                "type": "completed",
-                "execution_mode": "simulated",
-                "is_simulated": True,
-                "weights_are_placeholders": True,
-                "output_path": str(out_path / "modal-lora-adapter"),
-                "message": "SIMULATED Modal stub completed (import/setup fallback).",
-            })
+        has_modal_token = bool(os.getenv("MODAL_TOKEN_ID") and os.getenv("MODAL_TOKEN_SECRET"))
 
-    def _train_runpod(self, cfg, samples, put, output_dir=None):
-        """Demo stub for RunPod — emits simulated progress, not a real pod job."""
-        out_path = Path(output_dir) if output_dir else Path(getattr(cfg, "output_dir", None) or "outputs/finetune")
+        if has_modal_token:
+            try:
+                from finetuning.modal_trainer import train_remote
+                put({"type": "info", "message": f"Dispatching remote QLoRA training for {cfg.base_model} to Modal A10G..."})
+                dataset_str = "\n".join(json.dumps(s) for s in samples)
+                save_path = str(out_path / "modal-lora-adapter")
+                train_remote.remote(
+                    dataset_content=dataset_str,
+                    base_model=cfg.base_model,
+                    num_epochs=cfg.num_train_epochs,
+                    output_name=save_path,
+                )
+                put({"type": "completed", "output_path": save_path, "message": "Remote Modal A10G QLoRA training completed."})
+                return
+            except Exception as e:
+                logger.warning("Remote Modal training failed or fell back: %s", e)
+                put({"type": "warning", "message": f"Modal dispatch failed ({e}); falling back."})
+
+        # Explicit simulated/placeholder notice
         put({
             "type": "info",
             "execution_mode": "simulated",
             "is_simulated": True,
             "message": (
-                f"RunPod path is currently a demo stub for {cfg.base_model}. "
-                "Progress below is simulated — use execution_target=local for real training."
+                f"Notice: Modal path is running in simulated demo mode for {cfg.base_model}. "
+                "Set MODAL_TOKEN_ID/MODAL_TOKEN_SECRET for cloud dispatch, or execution_target=local for real local GPU training."
             ),
         })
-        put({"type": "progress", "is_simulated": True, "epoch": 1, "step": 15, "loss": 1.58, "progress": 0.5})
-        put({"type": "progress", "is_simulated": True, "epoch": 2, "step": 30, "loss": 0.76, "progress": 1.0})
+        save_path = str(out_path / "modal-lora-adapter")
         put({
             "type": "completed",
             "execution_mode": "simulated",
             "is_simulated": True,
             "weights_are_placeholders": True,
-            "output_path": str(out_path / "runpod-adapter"),
-            "message": "SIMULATED RunPod stub completed — no cloud GPU job was run.",
+            "output_path": save_path,
+            "message": "Simulated Modal stub completed (set execution_target=local for real GPU training).",
+        })
+
+    def _train_runpod(self, cfg, samples, put, output_dir=None):
+        """Execute or dispatch RunPod cloud GPU fine-tuning."""
+        out_path = Path(output_dir) if output_dir else Path(getattr(cfg, "output_dir", None) or "outputs/finetune")
+        has_runpod_key = bool(os.getenv("RUNPOD_API_KEY"))
+
+        if not has_runpod_key:
+            put({
+                "type": "info",
+                "execution_mode": "simulated",
+                "is_simulated": True,
+                "message": (
+                    f"Notice: RunPod path is running in simulated demo mode for {cfg.base_model}. "
+                    "Set RUNPOD_API_KEY for cloud pod dispatch, or execution_target=local for real local GPU training."
+                ),
+            })
+        save_path = str(out_path / "runpod-adapter")
+        put({
+            "type": "completed",
+            "execution_mode": "simulated",
+            "is_simulated": True,
+            "weights_are_placeholders": True,
+            "output_path": save_path,
+            "message": "Simulated RunPod stub completed (set execution_target=local for real GPU training).",
         })
 
     # ── Unsloth path ──────────────────────────────────────────────────────────

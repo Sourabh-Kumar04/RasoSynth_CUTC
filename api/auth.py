@@ -484,3 +484,21 @@ def require_role(allowed_roles: List[UserRole]):
             )
         return user
     return role_checker
+
+
+def enforce_owner(resource: Optional[dict], current_user: User, resource_name: str = "Resource") -> None:
+    """Enforce owner check: Admin can access any row; non-admin can only access own rows.
+
+    Rows with owner=None (legacy single-tenant rows) are visible only to ADMIN.
+    Returns 404 (Not Found) on mismatch to prevent existence leakage.
+    """
+    if not resource:
+        raise HTTPException(status_code=404, detail=f"{resource_name} not found")
+    if current_user.role == UserRole.ADMIN:
+        return
+    owner = resource.get("owner")
+    if not owner or owner != current_user.username:
+        raise HTTPException(status_code=404, detail=f"{resource_name} not found")
+
+
+_enforce_owner = enforce_owner

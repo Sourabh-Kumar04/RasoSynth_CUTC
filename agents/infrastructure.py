@@ -13,7 +13,7 @@ from agents.base import Agent, AgentConfig, AgentType, AgentState, TaskResult, A
 
 
 class GPUSchedulingAgent(Agent):
-    """Agent for optimizing GPU allocation and scheduling."""
+    """Heuristic planning agent for memory-balanced GPU task allocation simulation."""
 
     def __init__(self, config: AgentConfig):
         super().__init__(config)
@@ -125,7 +125,7 @@ class GPUSchedulingAgent(Agent):
 
 
 class StorageOptimizationAgent(Agent):
-    """Agent for dataset sharding and compression optimization."""
+    """Heuristic planning agent for dataset sharding and compression estimation."""
 
     def __init__(self, config: AgentConfig):
         super().__init__(config)
