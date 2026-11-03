@@ -217,14 +217,6 @@
   }
 }
 
-/* Animated mascot: smooth vertical floating motion with organic bob.
-   Frame cycling is handled by the component. Keyframes below provide gentle floating. */
-.mascot-bob { animation: mascot-bob 3.2s ease-in-out infinite; }
-@keyframes mascot-bob {
-  0%, 100% { transform: translateY(0); }
-  50% { transform: translateY(-8px); }
-}
-@media (prefers-reduced-motion: reduce) {
-  .mascot-bob { animation: none !important; }
-}
+/* Mascot: stable, clean display without jitter or bobbing */
+.mascot-bob { animation: none !important; }
 

@@ -1,7 +1,6 @@
 "use client"
 
-import React, { useState, useEffect, useMemo, useCallback, useRef } from "react"
-import { useReducedMotion } from "framer-motion"
+import React, { useState, useEffect, useCallback, useRef } from "react"
 
 export type MascotSize = "large" | "medium" | "small"
 
@@ -49,44 +48,17 @@ const ALT_DESCRIPTIONS: Record<MascotState, string> = {
   celebrate: "Raso, the RasoSynthTune mascot, celebrating dataset completion with joyful dancing",
 }
 
-// Animation cycles built from the 12 extracted pose frames
-const ANIMATION_CYCLES: Record<MascotState, { frames: string[]; intervalMs: number }> = {
-  wave: {
-    frames: ["wave-1", "wave-2", "wave-3", "wave-4", "wave-3", "wave-2"],
-    intervalMs: 250,
-  },
-  thinking: {
-    frames: ["thinking", "thinking", "alert", "working", "working", "alert"],
-    intervalMs: 480,
-  },
-  idle: {
-    frames: ["idle", "idle", "idle", "alert"],
-    intervalMs: 900,
-  },
-  alert: {
-    frames: ["alert", "idle"],
-    intervalMs: 700,
-  },
-  working: {
-    frames: ["working", "alert", "working", "thinking"],
-    intervalMs: 380,
-  },
-  pointing: {
-    frames: ["pointing", "pointing", "alert", "idle"],
-    intervalMs: 500,
-  },
-  cheering: {
-    frames: ["cheering", "wave-2", "cheering", "celebrate"],
-    intervalMs: 260,
-  },
-  confused: {
-    frames: ["confused", "confused", "alert", "confused"],
-    intervalMs: 650,
-  },
-  celebrate: {
-    frames: ["celebrate", "cheering", "wave-2", "celebrate"],
-    intervalMs: 220,
-  },
+// Canonical single-pose mapping for each state (clean, stable, no frantic flipbook cycling)
+const STATE_FRAMES: Record<MascotState, string> = {
+  wave: "wave-1",
+  thinking: "thinking",
+  idle: "idle",
+  alert: "alert",
+  working: "working",
+  pointing: "pointing",
+  cheering: "cheering",
+  confused: "confused",
+  celebrate: "celebrate",
 }
 
 export interface MascotProps {
@@ -104,7 +76,6 @@ export function Mascot({
   interactive = true,
   onClick,
 }: MascotProps) {
-  const reduceMotion = useReducedMotion()
   const dims = SIZES[size]
   const revertTimerRef = useRef<NodeJS.Timeout | null>(null)
 
@@ -129,29 +100,11 @@ export function Mascot({
 
   // Active state can temporarily switch on interactive triggers (click/reaction)
   const [activeState, setActiveState] = useState<MascotState>(state)
-  const [frameIndex, setFrameIndex] = useState(0)
 
-  // Keep activeState in sync when prop changes unless a reaction is playing
+  // Keep activeState in sync when prop changes
   useEffect(() => {
     setActiveState(state)
-    setFrameIndex(0)
   }, [state])
-
-  const cycle = useMemo(() => ANIMATION_CYCLES[activeState], [activeState])
-
-  // Pose frame animation loop
-  useEffect(() => {
-    if (reduceMotion) {
-      setFrameIndex(0)
-      return
-    }
-
-    const timer = setInterval(() => {
-      setFrameIndex((prev) => (prev + 1) % cycle.frames.length)
-    }, cycle.intervalMs)
-
-    return () => clearInterval(timer)
-  }, [cycle, reduceMotion])
 
   // Interactive reaction: click triggers a celebration or cheer burst, then reverts
   const handleClick = useCallback(() => {
@@ -164,25 +117,22 @@ export function Mascot({
       clearTimeout(revertTimerRef.current)
     }
 
-    // Trigger celebration reaction
+    // Trigger subtle reaction
     const reactionState: MascotState = activeState === "confused" ? "alert" : "celebrate"
     setActiveState(reactionState)
-    setFrameIndex(0)
 
     revertTimerRef.current = setTimeout(() => {
       setActiveState(state)
-      setFrameIndex(0)
-    }, 1800)
+    }, 1200)
   }, [onClick, interactive, activeState, state])
 
-  // Frame to render
-  const currentFrame = reduceMotion ? cycle.frames[0] : cycle.frames[frameIndex] || cycle.frames[0]
+  // Frame to render (stable, high-fidelity canonical pose)
+  const currentFrame = STATE_FRAMES[activeState] || "idle"
   const imageSrc = `/mascot/${currentFrame}.webp`
   const altText = ALT_DESCRIPTIONS[activeState]
 
   const outerClass = [
     className,
-    reduceMotion ? "" : "mascot-bob",
     interactive ? "cursor-pointer select-none transition-transform duration-200 hover:scale-105 active:scale-95" : "",
   ]
     .filter(Boolean)
