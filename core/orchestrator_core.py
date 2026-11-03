@@ -1,11 +1,9 @@
 """
-CANONICAL ORCHESTRATOR - This is the only production orchestrator.
+CANONICAL ORCHESTRATOR - This is the primary production workflow execution engine.
 
-References:
-- core/orchestrator_checkpoint_integrated.py (STUB/REFERENCE - nodes are stubs)
-- orchestrator/autonomous_orchestrator.py (EXPERIMENTAL - not connected to API)
-
-Enhanced orchestrator with intelligent reasoning and constraint handling.
+Multi-stage LangGraph workflow orchestrator managing constraint analysis, query optimization,
+source discovery, parallel content extraction, quality filtering, grounded synthesis,
+quality evaluation, HITL review, balanced sampling, and ADR-002 export.
 """
 import asyncio
 import hashlib
