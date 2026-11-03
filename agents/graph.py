@@ -85,6 +85,7 @@ class ExecutionPlan:
     graph_id: str = ""
     node_order: List[str] = field(default_factory=list)
     parallel_groups: List[List[str]] = field(default_factory=list)
+    node_dependencies: Dict[str, List[str]] = field(default_factory=dict)
     estimated_duration_ms: float = 0.0
     required_capabilities: Set[str] = field(default_factory=set)
     resource_requirements: Dict[str, Any] = field(default_factory=dict)
@@ -102,8 +103,9 @@ class ExecutionPlan:
         return ready
 
     def _is_ready(self, node_id: str, completed: Set[str]) -> bool:
-        """Check if node is ready to execute."""
-        return True  # Simplified - would check dependencies
+        """Check if node is ready to execute based on upstream dependencies."""
+        deps = self.node_dependencies.get(node_id, [])
+        return all(d in completed for d in deps)
 
 
 @dataclass
@@ -234,10 +236,16 @@ class AgentGraph:
         order = self.get_execution_order()
         parallel_groups = self.get_parallel_groups()
 
+        deps_map = {nid: list(node.dependencies) for nid, node in self.nodes.items()}
+        for edge in self.edges:
+            if edge.target_id in deps_map and edge.source_id not in deps_map[edge.target_id]:
+                deps_map[edge.target_id].append(edge.source_id)
+
         plan = ExecutionPlan(
             graph_id=self.graph_id,
             node_order=order,
-            parallel_groups=parallel_groups
+            parallel_groups=parallel_groups,
+            node_dependencies=deps_map,
         )
 
         # Estimate duration. Edge weights are planning weights, not

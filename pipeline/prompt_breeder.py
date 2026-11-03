@@ -171,5 +171,6 @@ class PromptBreeder:
         if domain.lower() in prompt.lower():
             score += 0.15
 
-        # Bound score between 0.0 and 1.0
-        return min(1.0, max(0.0, score + random.uniform(-0.02, 0.02)))
+        # Structural length penalty to prefer concise, information-dense prompts
+        length_penalty = min(0.05, max(0.0, abs(len(prompt) - 350) / 3500.0))
+        return min(1.0, max(0.0, score - length_penalty))

@@ -1,13 +1,26 @@
 import * as React from 'react'
 import { clsx } from 'clsx'
 
+function cleanBoxCardClasses(className?: string): string {
+  if (!className) return ''
+  return className
+    .replace(/\bborder(-[#a-zA-Z0-9_/]+)?\b/g, '')
+    .replace(/\bbg-\[#12121a\](\/[0-9]+)?\b/g, '')
+    .replace(/\bbg-surface\b/g, '')
+    .replace(/\bcard-shadow\b/g, '')
+    .replace(/\brounded(-md|-lg|-xl|-2xl)?\b/g, '')
+    .replace(/\bglow-card-hover\b/g, '')
+    .replace(/\s+/g, ' ')
+    .trim()
+}
+
 const Card = React.forwardRef<HTMLDivElement, React.HTMLAttributes<HTMLDivElement>>(
   ({ className, ...props }, ref) => (
     <div
       ref={ref}
       className={clsx(
-        'rounded-md border border-[#272738] bg-[#12121a] text-[#f5f2ea] transition-colors duration-200',
-        className
+        'bg-transparent text-[#f5f2ea] border-0 shadow-none',
+        cleanBoxCardClasses(className)
       )}
       {...props}
     />
@@ -19,7 +32,7 @@ const CardHeader = React.forwardRef<HTMLDivElement, React.HTMLAttributes<HTMLDiv
   ({ className, ...props }, ref) => (
     <div
       ref={ref}
-      className={clsx('flex flex-col space-y-1.5 p-5 sm:p-6 lg:p-7', className)}
+      className={clsx('flex flex-col space-y-1.5 pb-3 border-0', cleanBoxCardClasses(className))}
       {...props}
     />
   )
@@ -50,7 +63,7 @@ CardDescription.displayName = 'CardDescription'
 
 const CardContent = React.forwardRef<HTMLDivElement, React.HTMLAttributes<HTMLDivElement>>(
   ({ className, ...props }, ref) => (
-    <div ref={ref} className={clsx('p-5 sm:p-6 lg:p-7 pt-0', className)} {...props} />
+    <div ref={ref} className={clsx('pt-0 border-0', cleanBoxCardClasses(className))} {...props} />
   )
 )
 CardContent.displayName = 'CardContent'
@@ -59,7 +72,7 @@ const CardFooter = React.forwardRef<HTMLDivElement, React.HTMLAttributes<HTMLDiv
   ({ className, ...props }, ref) => (
     <div
       ref={ref}
-      className={clsx('flex items-center p-5 sm:p-6 lg:p-7 pt-0', className)}
+      className={clsx('flex items-center pt-3 border-0', cleanBoxCardClasses(className))}
       {...props}
     />
   )

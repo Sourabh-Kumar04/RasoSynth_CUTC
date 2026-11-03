@@ -249,7 +249,7 @@ export default function DashboardPage() {
       </section>
 
       {/* Interactive pipeline visualization */}
-      <section aria-label="Pipeline" className="rounded-md border border-[#272738] bg-[#12121a] p-4 sm:p-5">
+      <section aria-label="Pipeline" className="py-6 px-1 bg-transparent">
         <div className="mb-4 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
           <div>
             <h2 className="font-display text-xl font-bold text-white">Synthesis Pipeline</h2>
@@ -261,10 +261,10 @@ export default function DashboardPage() {
               <select
                 value={selectedJob ? String(selectedJob.id) : ''}
                 onChange={(e) => setSelectedJobId(e.target.value)}
-                className="rounded-md border border-[#272738] bg-[#161622] px-2 py-1.5 font-mono text-xs text-white"
+                className="bg-transparent border-b border-[#272738] px-2 py-1.5 font-mono text-xs text-white focus:outline-none"
               >
                 {jobs.map((j) => (
-                  <option key={String(j.id)} value={String(j.id)}>
+                  <option key={String(j.id)} value={String(j.id)} className="bg-[#0a0a0f] text-white">
                     {jobLabel(j)}
                   </option>
                 ))}
@@ -297,21 +297,21 @@ export default function DashboardPage() {
           <p className="mt-4 text-xs text-[#a8a29e]">{jobsState === 'loading' ? 'Loading jobs.' : 'No job selected: no live job data was returned.'}</p>
         )}
         <div className="mt-4 flex flex-wrap gap-2">
-          <Link href="/orchestration" className="rounded-md border border-[#272738] px-3 py-1.5 font-mono text-xs text-[#a8a29e] hover:text-white">
+          <Link href="/orchestration" className="px-3 py-1.5 font-mono text-xs text-[#a8a29e] hover:text-white border-b border-[#272738] hover:border-white transition-colors">
             Open Pipelines
           </Link>
-          <Link href="/quality" className="rounded-md border border-[#272738] px-3 py-1.5 font-mono text-xs text-[#a8a29e] hover:text-white">
+          <Link href="/quality" className="px-3 py-1.5 font-mono text-xs text-[#a8a29e] hover:text-white border-b border-[#272738] hover:border-white transition-colors">
             Open Quality Inspector
           </Link>
-          <Link href="/finetune" className="rounded-md border border-[#272738] px-3 py-1.5 font-mono text-xs text-[#a8a29e] hover:text-white">
+          <Link href="/finetune" className="px-3 py-1.5 font-mono text-xs text-[#a8a29e] hover:text-white border-b border-[#272738] hover:border-white transition-colors">
             Open Model Training
           </Link>
         </div>
       </section>
 
       {/* Job lists */}
-      <section className="grid grid-cols-1 gap-4 lg:grid-cols-2">
-        <div className="rounded-md border border-[#272738] bg-[#12121a] p-4">
+      <section className="grid grid-cols-1 gap-6 lg:grid-cols-2">
+        <div className="py-6 px-1 bg-transparent">
           <h2 className="font-display text-lg font-bold text-white">Dataset Jobs</h2>
           <p className="mt-1 text-xs text-[#a8a29e]">Latest jobs from /jobs. Status and stage are shown exactly as returned.</p>
           {jobsState === 'loading' ? (
@@ -338,7 +338,7 @@ export default function DashboardPage() {
           )}
         </div>
 
-        <div className="rounded-md border border-[#272738] bg-[#12121a] p-4">
+        <div className="py-6 px-1 bg-transparent">
           <h2 className="font-display text-lg font-bold text-white">Fine-Tuning Jobs</h2>
           <p className="mt-1 text-xs text-[#a8a29e]">Latest jobs from /api/finetune/jobs. Training loss is shown only when the backend returns it.</p>
           {ftState === 'loading' ? (
@@ -372,7 +372,7 @@ export default function DashboardPage() {
       </section>
 
       {/* Quality detail — only values the backend actually returned */}
-      <section aria-label="Quality detail" className="rounded-md border border-[#272738] bg-[#12121a] p-4">
+      <section aria-label="Quality detail" className="py-6 px-1 bg-transparent">
         <h2 className="font-display text-lg font-bold text-white">Dataset Quality</h2>
         {qualityState === 'loading' ? (
           <p className="mt-2 text-xs text-[#a8a29e]">Loading.</p>
