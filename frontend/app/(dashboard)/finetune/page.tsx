@@ -187,7 +187,7 @@ function LogRow({ line }: { line: LogLine }) {
 
 function JobSkeleton() {
   return (
-    <div className="rounded-md border-l-4 border-l-[#3b3b52] border border-[#272738] bg-[#12121a] p-3 space-y-2">
+    <div className="py-3 px-1 space-y-2 bg-transparent border-b border-[#272738]/30">
       <div className="flex justify-between">
         <Skeleton className="h-3.5 w-32 bg-[#161622]" />
         <Skeleton className="h-4 w-14 rounded-full bg-[#161622]" />

@@ -59,7 +59,7 @@ export default function LoginPage() {
         purpose="Enter your RasoSynthTune credentials to access datasets, training jobs, and system administration."
       />
 
-      <div className="rounded-md border border-[#272738] bg-[#12121a] p-6 shadow-xl">
+      <div className="py-6 px-1 bg-transparent">
         <form onSubmit={handleLogin} className="space-y-4">
           {error && (
             <div className="flex items-start gap-2.5 p-3 rounded-md bg-rose-500/10 border border-rose-500/30 text-rose-300 text-xs font-mono">

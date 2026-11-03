@@ -427,7 +427,7 @@ export default function QualityDashboardPage() {
                   </div>
                 </div>
 
-                <div className="divide-y divide-[#272738] rounded-md border border-[#272738] bg-[#12121a]">
+                <div className="divide-y divide-[#272738]/40 bg-transparent">
                   {[
                     { label: "Groundedness", val: judgeResult.groundedness },
                     { label: "Authenticity", val: judgeResult.authenticity },

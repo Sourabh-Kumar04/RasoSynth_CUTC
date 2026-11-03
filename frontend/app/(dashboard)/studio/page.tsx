@@ -516,7 +516,7 @@ function StudioContent() {
             ))}
           </div>
 
-          <div className="divide-y divide-[#272738] rounded-md border border-[#272738] bg-[#12121a] overflow-hidden">
+          <div className="divide-y divide-[#272738]/40 bg-transparent overflow-hidden">
             {INDUSTRY_PRESETS.filter(p => selectedCategory === 'all' || (p as any).category === selectedCategory).map((preset) => {
               const isSelected = activePreset === preset.id
               return (

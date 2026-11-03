@@ -589,7 +589,7 @@ export default function ReviewPage() {
         <div className="md:col-span-2 space-y-2">
           {loading
             ? Array.from({ length: 6 }).map((_, i) => (
-              <div key={i} className="rounded-md border-l-4 border-l-[#3b3b52] border border-[#272738] bg-[#12121a] p-3 space-y-2 animate-pulse">
+              <div key={i} className="py-3 px-1 space-y-2 bg-transparent border-b border-[#272738]/30 animate-pulse">
                 <Skeleton className="h-3 w-full bg-[#161622]" />
                 <Skeleton className="h-3 w-3/4 bg-[#161622]" />
                 <div className="flex gap-1">
