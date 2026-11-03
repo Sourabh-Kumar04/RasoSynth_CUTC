@@ -18,24 +18,28 @@ def _is_valid_uuid(val: any) -> bool:
         return False
 from sqlalchemy.ext.asyncio import create_async_engine, AsyncSession, async_sessionmaker
 from sqlalchemy.orm import declarative_base, relationship
-from sqlalchemy import Column, String, Integer, Float, DateTime, JSON, Text, ForeignKey, Boolean, delete
+from sqlalchemy import Column, String, Integer, Float, DateTime, JSON, Text, ForeignKey, Boolean, delete, Index
 
 Base = declarative_base()
 
-# Use appropriate UUID type based on database
+# Use appropriate UUID and JSON/JSONB document types based on database dialect
 try:
-    # Try to import PostgreSQL UUID first
-    from sqlalchemy.dialects.postgresql import UUID as PG_UUID
+    # Try to import PostgreSQL native types first
+    from sqlalchemy.dialects.postgresql import UUID as PG_UUID, JSONB as PG_JSONB
+    # Native NoSQL JSONB document storage for PostgreSQL; fallback to standard JSON for SQLite
+    JSON_DOCUMENT = JSON().with_variant(PG_JSONB, "postgresql")
 except ImportError:
-    # Fallback to standard UUID for SQLite
+    # Fallback to standard types for SQLite
     from sqlalchemy.types import UUID as PG_UUID
+    JSON_DOCUMENT = JSON
 
 
 class Job(Base):
     """Job model for tracking dataset generation jobs."""
     __tablename__ = "jobs"
     __table_args__ = (
-        # Index for filtering jobs by status (common query pattern)
+        # GIN index for high-speed NoSQL config queries in PostgreSQL
+        Index("ix_jobs_config_gin", "config", postgresql_using="gin"),
         {"mysql_charset": "utf8mb4", "mysql_collate": "utf8mb4_unicode_ci"},
     )
 
@@ -43,7 +47,7 @@ class Job(Base):
     status = Column(String, nullable=False, default="pending", index=True)
     created_at = Column(DateTime, default=utc_now)
     updated_at = Column(DateTime, default=utc_now, onupdate=utc_now)
-    config = Column(JSON)
+    config = Column(JSON_DOCUMENT)
     progress = Column(Float, default=0.0)
     current_stage = Column(String)
     samples_processed = Column(Integer, default=0)
@@ -83,6 +87,10 @@ class Job(Base):
 class Dataset(Base):
     """Dataset model for storing generated datasets."""
     __tablename__ = "datasets"
+    __table_args__ = (
+        # GIN index for high-speed NoSQL metadata queries in PostgreSQL
+        Index("ix_datasets_metadata_gin", "metadata", postgresql_using="gin"),
+    )
 
     id = Column(PG_UUID(as_uuid=False), primary_key=True, default=lambda: str(uuid.uuid4()))
     job_id = Column(PG_UUID(as_uuid=False), ForeignKey("jobs.id", ondelete="CASCADE"), index=True)
@@ -90,7 +98,7 @@ class Dataset(Base):
     type = Column(String)
     size = Column(Integer)
     created_at = Column(DateTime, default=utc_now)
-    metadata_ = Column("metadata", JSON)
+    metadata_ = Column("metadata", JSON_DOCUMENT)
     output_path = Column(String)
     owner = Column(String(255), nullable=True, index=True)
     is_simulated = Column(Boolean, default=False)
@@ -109,7 +117,7 @@ class DatasetVersion(Base):
     status = Column(String(32), nullable=False, default="approved", index=True)
     sample_count = Column(Integer, nullable=False, default=0)
     content_hash = Column(String(64), nullable=False, index=True)
-    manifest = Column(JSON, default=dict)
+    manifest = Column(JSON_DOCUMENT, default=dict)
     output_path = Column(String(512), nullable=False)
     created_at = Column(DateTime, default=utc_now)
 
@@ -131,7 +139,7 @@ class ContextBundle(Base):
     job_id = Column(PG_UUID(as_uuid=False), ForeignKey("jobs.id", ondelete="CASCADE"), nullable=False, index=True)
     content_hash = Column(String(64), nullable=False, index=True)
     source_count = Column(Integer, default=0)
-    evidence = Column(JSON, default=list)
+    evidence = Column(JSON_DOCUMENT, default=list)
     created_at = Column(DateTime, default=utc_now)
 
     def to_dict(self) -> dict:
@@ -147,7 +155,7 @@ class ReviewCalibrationReport(Base):
     __tablename__ = "review_calibration_reports"
 
     id = Column(PG_UUID(as_uuid=False), primary_key=True, default=lambda: str(uuid.uuid4()))
-    report = Column(JSON, nullable=False)
+    report = Column(JSON_DOCUMENT, nullable=False)
     created_at = Column(DateTime, default=utc_now, index=True)
 
     def to_dict(self) -> dict:
@@ -166,7 +174,7 @@ class WorkflowSchedule(Base):
     name = Column(String(255), nullable=False)
     workflow_type = Column(String(64), nullable=False, index=True)
     interval_seconds = Column(Integer, nullable=False)
-    workflow_config = Column(JSON, default=dict)
+    workflow_config = Column(JSON_DOCUMENT, default=dict)
     enabled = Column(Integer, nullable=False, default=1, index=True)
     next_run_at = Column(DateTime, nullable=False, index=True)
     last_run_at = Column(DateTime)
@@ -192,7 +200,7 @@ class WorkflowScheduleRun(Base):
     schedule_id = Column(PG_UUID(as_uuid=False), ForeignKey("workflow_schedules.id", ondelete="CASCADE"), nullable=False, index=True)
     job_id = Column(PG_UUID(as_uuid=False), ForeignKey("jobs.id", ondelete="SET NULL"), index=True)
     status = Column(String(32), nullable=False, default="queued", index=True)
-    detail = Column(JSON, default=dict)
+    detail = Column(JSON_DOCUMENT, default=dict)
     started_at = Column(DateTime, default=utc_now)
     finished_at = Column(DateTime)
 
@@ -217,7 +225,7 @@ class SourceSnapshot(Base):
     content_type = Column(String(128))
     license = Column(String)
     content = Column(Text, nullable=False, default="")
-    metadata_ = Column("metadata", JSON, default=dict)
+    metadata_ = Column("metadata", JSON_DOCUMENT, default=dict)
     retrieved_at = Column(DateTime, default=utc_now)
 
     def to_dict(self) -> dict:
@@ -238,7 +246,7 @@ class EvidenceChunk(Base):
     chunk_index = Column(Integer, nullable=False)
     content_hash = Column(String(64), nullable=False, index=True)
     content = Column(Text, nullable=False)
-    metadata_ = Column("metadata", JSON, default=dict)
+    metadata_ = Column("metadata", JSON_DOCUMENT, default=dict)
     created_at = Column(DateTime, default=utc_now)
 
     def to_dict(self) -> dict:
@@ -252,13 +260,17 @@ class EvidenceChunk(Base):
 class Sample(Base):
     """Sample model for individual training samples."""
     __tablename__ = "samples"
+    __table_args__ = (
+        # GIN index for high-performance NoSQL document queries in PostgreSQL
+        Index("ix_samples_metadata_gin", "metadata", postgresql_using="gin"),
+    )
 
     id = Column(PG_UUID(as_uuid=False), primary_key=True, default=lambda: str(uuid.uuid4()))
     dataset_id = Column(PG_UUID(as_uuid=False), ForeignKey("datasets.id", ondelete="CASCADE"), index=True)
     instruction = Column(Text)
     response = Column(Text)
     input = Column(Text)
-    metadata_ = Column("metadata", JSON)
+    metadata_ = Column("metadata", JSON_DOCUMENT)
     quality_score = Column(Float, index=True)
     difficulty_tier = Column(Integer)
     created_at = Column(DateTime, default=utc_now, index=True)
@@ -275,7 +287,7 @@ class Source(Base):
     url = Column(String)
     source_type = Column(String)
     title = Column(String)
-    metadata_ = Column("metadata", JSON)
+    metadata_ = Column("metadata", JSON_DOCUMENT)
     discovered_at = Column(DateTime, default=utc_now)
     license = Column(String)
 
@@ -306,7 +318,7 @@ class FineTuneJob(Base):
     base_model = Column(String(255), nullable=False)          # e.g. "unsloth/llama-3-8b"
     output_model_name = Column(String(255))                   # HF Hub repo or local path
     # config payload – lora_r, lora_alpha, epochs, batch_size, lr, push_to_hub, etc.
-    config = Column(JSON, default=dict)
+    config = Column(JSON_DOCUMENT, default=dict)
     # results
     progress = Column(Float, default=0.0)
     current_epoch = Column(Integer, default=0)
@@ -374,7 +386,7 @@ class ReviewQueueItem(Base):
     edited_instruction = Column(Text)
     edited_response = Column(Text)
     review_version = Column(Integer, default=0)
-    extra_metadata = Column(JSON, default=dict)
+    extra_metadata = Column(JSON_DOCUMENT, default=dict)
     owner = Column(String(255), nullable=True, index=True)
     is_simulated = Column(Boolean, default=False)
     # timestamps
@@ -415,13 +427,21 @@ class DatabaseManager:
 
     def __init__(self, database_url: str):
         connect_args = {}
+        engine_kwargs = {}
         if "postgresql" in database_url:
             if "sslmode=" in database_url:
                 database_url = database_url.replace("sslmode=", "ssl=")
             # Disable prepared statement caching for Supabase Connection Pooler / pgbouncer
             connect_args["statement_cache_size"] = 0
             connect_args["prepared_statement_cache_size"] = 0
-        self.engine = create_async_engine(database_url, echo=False, connect_args=connect_args)
+            # Production PostgreSQL connection pooling and health checks
+            engine_kwargs["pool_size"] = 10
+            engine_kwargs["max_overflow"] = 20
+            engine_kwargs["pool_pre_ping"] = True
+            engine_kwargs["pool_recycle"] = 3600
+        else:
+            connect_args["check_same_thread"] = False
+        self.engine = create_async_engine(database_url, echo=False, connect_args=connect_args, **engine_kwargs)
         self.session_maker = async_sessionmaker(self.engine, class_=AsyncSession, expire_on_commit=False)
 
     async def close(self):
@@ -437,10 +457,20 @@ class DatabaseManager:
 
     async def create_tables(self):
         """Create all database tables, apply safe schema migrations, and
-        set performance-oriented SQLite pragmas."""
+        set performance-oriented SQLite pragmas and PostgreSQL extensions."""
         async with self.engine.begin() as conn:
-            # ── SQLite performance / durability settings ──────────────
+            from sqlalchemy import text
             database_url = str(self.engine.url)
+
+            # ── PostgreSQL NoSQL GIN / full-text extension settings ───
+            if "postgresql" in database_url:
+                try:
+                    await conn.execute(text("CREATE EXTENSION IF NOT EXISTS pg_trgm"))
+                    await conn.execute(text("CREATE EXTENSION IF NOT EXISTS btree_gin"))
+                except Exception:
+                    pass
+
+            # ── SQLite performance / durability settings ──────────────
             if "sqlite" in database_url:
                 try:
                     await conn.execute(text("PRAGMA journal_mode=WAL"))
@@ -459,7 +489,6 @@ class DatabaseManager:
                     raise
 
             # ── Safe schema migration for existing deployments ─────────
-            from sqlalchemy import text
 
             if "sqlite" in database_url:
                 for col, coltype in (
@@ -797,6 +826,105 @@ class DatabaseManager:
             for s in samples:
                 _ = (s.id, s.dataset_id, s.instruction, s.response, s.quality_score, s.metadata_)
             return samples
+
+    async def query_samples_by_document(
+        self,
+        dataset_id: str,
+        document_filter: dict,
+        min_quality: Optional[float] = None,
+        limit: int = 100,
+        offset: int = 0,
+    ) -> list[Sample]:
+        """Query dataset samples by arbitrary NoSQL document metadata attributes.
+
+        Uses PostgreSQL JSONB containment (@>) accelerated by GIN index when running on PostgreSQL,
+        and in-memory document matching when running on SQLite.
+        """
+        async with self.session_maker() as session:
+            from sqlalchemy import select
+            stmt = select(Sample).filter(Sample.dataset_id == dataset_id)
+            if min_quality is not None:
+                stmt = stmt.filter(Sample.quality_score >= min_quality)
+
+            database_url = str(self.engine.url)
+            # Use native PostgreSQL JSONB containment if on PostgreSQL and filter provided
+            if "postgresql" in database_url and document_filter and hasattr(Sample.metadata_, "contains"):
+                stmt = stmt.filter(Sample.metadata_.contains(document_filter))
+
+            stmt = stmt.order_by(Sample.created_at, Sample.id).offset(max(0, offset)).limit(limit)
+            result = await session.execute(stmt)
+            samples = list(result.scalars().all())
+
+            # For SQLite fallback, evaluate containment in-memory
+            if "postgresql" not in database_url and document_filter:
+                def _matches(meta: dict) -> bool:
+                    if not isinstance(meta, dict):
+                        return False
+                    for k, v in document_filter.items():
+                        if meta.get(k) != v:
+                            return False
+                    return True
+                samples = [s for s in samples if _matches(s.metadata_)]
+
+            for s in samples:
+                _ = (s.id, s.dataset_id, s.instruction, s.response, s.quality_score, s.metadata_)
+            return samples
+
+    async def patch_sample_document(
+        self,
+        sample_id: str,
+        patch: dict,
+    ) -> Optional[Sample]:
+        """Apply a partial NoSQL document update (patch) to sample metadata."""
+        if not _is_valid_uuid(sample_id):
+            return None
+        async with self.session_maker() as session:
+            from sqlalchemy import select
+            result = await session.execute(select(Sample).filter(Sample.id == sample_id))
+            sample = result.scalars().first()
+            if not sample:
+                return None
+            curr_meta = dict(sample.metadata_ or {})
+            curr_meta.update(patch)
+            sample.metadata_ = curr_meta
+            await self._commit_with_retry(session)
+            _ = (sample.id, sample.dataset_id, sample.instruction, sample.response, sample.quality_score, sample.metadata_)
+            return sample
+
+    async def query_jobs_by_document(
+        self,
+        config_filter: dict,
+        status: Optional[str] = None,
+        limit: int = 50,
+    ) -> list[Job]:
+        """Query jobs by arbitrary NoSQL config attributes."""
+        async with self.session_maker() as session:
+            from sqlalchemy import select
+            stmt = select(Job)
+            if status:
+                stmt = stmt.filter(Job.status == status)
+
+            database_url = str(self.engine.url)
+            if "postgresql" in database_url and config_filter and hasattr(Job.config, "contains"):
+                stmt = stmt.filter(Job.config.contains(config_filter))
+
+            stmt = stmt.order_by(Job.created_at.desc()).limit(limit)
+            result = await session.execute(stmt)
+            jobs = list(result.scalars().all())
+
+            if "postgresql" not in database_url and config_filter:
+                def _matches(cfg: dict) -> bool:
+                    if not isinstance(cfg, dict):
+                        return False
+                    for k, v in config_filter.items():
+                        if cfg.get(k) != v:
+                            return False
+                    return True
+                jobs = [j for j in jobs if _matches(j.config)]
+
+            for j in jobs:
+                _ = (j.id, j.status, j.created_at, j.updated_at, j.config, j.progress, j.current_stage)
+            return jobs
 
     async def create_source(self, url: str, source_type: str, title: str, metadata: dict, license: Optional[str] = None) -> Source:
         """Create a new source."""

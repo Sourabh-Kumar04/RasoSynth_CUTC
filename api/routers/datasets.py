@@ -129,6 +129,69 @@ async def get_dataset_records(
         raise HTTPException(status_code=500, detail="Failed to get records")
 
 
+@router.post("/datasets/{dataset_id}/records/query")
+async def query_dataset_records(
+    dataset_id: str,
+    payload: dict,
+    req: Request,
+    limit: int = Query(default=50, ge=1, le=500),
+    offset: int = Query(default=0, ge=0),
+    current_user: User = Depends(get_current_user),
+):
+    """NoSQL document query against dataset sample metadata (accelerated by PostgreSQL JSONB GIN index)."""
+    db = _get_db(req)
+    if not db:
+        raise HTTPException(status_code=503, detail="Database not available")
+
+    try:
+        dataset = await db.get_dataset(dataset_id)
+        if not dataset:
+            datasets_for_job = await db.get_datasets_by_job(dataset_id)
+            if datasets_for_job:
+                dataset = datasets_for_job[0]
+
+        enforce_owner(dataset, current_user, resource_name="Dataset")
+
+        doc_filter = payload.get("filter", {}) if isinstance(payload, dict) else {}
+        min_quality = payload.get("min_quality") if isinstance(payload, dict) else None
+
+        if hasattr(db, "query_samples_by_document"):
+            samples = await db.query_samples_by_document(
+                dataset["id"],
+                document_filter=doc_filter,
+                min_quality=min_quality,
+                limit=limit,
+                offset=offset,
+            )
+        else:
+            samples = await db.get_samples(dataset["id"], limit=limit, offset=offset)
+
+        records = []
+        for sample in samples:
+            records.append({
+                "id": sample["id"] if isinstance(sample, dict) else getattr(sample, "id", None),
+                "dataset_id": sample["dataset_id"] if isinstance(sample, dict) else getattr(sample, "dataset_id", None),
+                "instruction": sample.get("instruction", "") if isinstance(sample, dict) else getattr(sample, "instruction", ""),
+                "response": sample.get("response", "") if isinstance(sample, dict) else getattr(sample, "response", ""),
+                "input": sample.get("input") if isinstance(sample, dict) else getattr(sample, "input", None),
+                "quality_score": sample.get("quality_score") if isinstance(sample, dict) else getattr(sample, "quality_score", None),
+                "difficulty_tier": sample.get("difficulty_tier") if isinstance(sample, dict) else getattr(sample, "difficulty_tier", None),
+                "metadata": sample.get("metadata", {}) if isinstance(sample, dict) else getattr(sample, "metadata_", {}),
+            })
+        return {
+            "records": records,
+            "count": len(records),
+            "filter": doc_filter,
+            "offset": offset,
+            "limit": limit,
+        }
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Error querying dataset records for {dataset_id}: {e}", exc_info=True)
+        raise HTTPException(status_code=500, detail="Failed to query dataset records")
+
+
 @router.delete("/datasets/{dataset_id}")
 async def delete_dataset_endpoint(
     dataset_id: str,
