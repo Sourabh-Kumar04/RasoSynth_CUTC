@@ -441,6 +441,9 @@ class DatabaseManager:
             engine_kwargs["pool_recycle"] = 3600
         else:
             connect_args["check_same_thread"] = False
+            if ":memory:" in database_url:
+                from sqlalchemy.pool import StaticPool
+                engine_kwargs["poolclass"] = StaticPool
         self.engine = create_async_engine(database_url, echo=False, connect_args=connect_args, **engine_kwargs)
         self.session_maker = async_sessionmaker(self.engine, class_=AsyncSession, expire_on_commit=False)
 
@@ -804,6 +807,8 @@ class DatabaseManager:
         sample_dict = dict(data)
         if "metadata" in sample_dict and "metadata_" not in sample_dict:
             sample_dict["metadata_"] = sample_dict.pop("metadata")
+        if "id" not in sample_dict or not sample_dict["id"]:
+            sample_dict["id"] = str(uuid.uuid4())
         async with self.session_maker() as session:
             sample = Sample(dataset_id=dataset_id, **sample_dict)
             session.add(sample)

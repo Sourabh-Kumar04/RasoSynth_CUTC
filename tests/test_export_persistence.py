@@ -157,7 +157,7 @@ async def test_export_persistence():
 
     # Test that we can create a dataset directly to verify the method works
     test_dataset = await db.create_dataset(
-        job_id="test-direct-456",
+        job_id=job_id,
         name="direct_test_dataset",
         type="jsonl",
         size=1,

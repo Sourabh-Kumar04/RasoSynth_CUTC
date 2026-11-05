@@ -1,17 +1,23 @@
-"""Orchestrator package with checkpoint and resume support.
+"""Orchestrator package with modular nodes, checkpoints, and resume support.
 
-Canonical home of DatasetOrchestrator and orchestrator state is
-core.orchestrator_core; this package re-exports the identical objects alongside
-checkpoint and resume management.
+Decomposed modular architecture:
+- `core.orchestrator_pkg.state`: AgentState, Job, JobStatus, ConstraintAnalysis
+- `core.orchestrator_pkg.constraint_analyzer`: ConstraintAnalyzer
+- `core.orchestrator_pkg.nodes`: Preview, Discovery, Synthesis, Evaluation, Export, Resilience mixins
+- `core.orchestrator_pkg.orchestrator`: DatasetOrchestrator
+- `core.orchestrator_pkg.checkpoints`: Checkpoint management
+- `core.orchestrator_pkg.resume`: Crash-safe resume and streaming recovery
 """
-from core.orchestrator_core import (
-    DatasetOrchestrator,
+from core.orchestrator_pkg.state import (
     AgentState,
     Job,
     JobStatus,
     ConstraintAnalysis,
+    _sanitize_metadata,
+    _json_safe,
 )
-
+from core.orchestrator_pkg.constraint_analyzer import ConstraintAnalyzer
+from core.orchestrator_pkg.orchestrator import DatasetOrchestrator
 from core.orchestrator_pkg.checkpoints import (
     Checkpoint,
     CheckpointStage,
@@ -29,19 +35,19 @@ from core.orchestrator_pkg.resume import (
 )
 
 __all__ = [
-    # Canonical home: core.orchestrator_core
     "DatasetOrchestrator",
     "AgentState",
     "Job",
     "JobStatus",
     "ConstraintAnalysis",
-    # Checkpoint: core.orchestrator_pkg.checkpoints
+    "ConstraintAnalyzer",
+    "_sanitize_metadata",
+    "_json_safe",
     "Checkpoint",
     "CheckpointStage",
     "ProviderContext",
     "CheckpointStore",
     "CheckpointManager",
-    # Resume: core.orchestrator_pkg.resume
     "ResumeStrategy",
     "ResumeContext",
     "WorkflowResumer",
