@@ -444,6 +444,8 @@ class DatabaseManager:
             if ":memory:" in database_url:
                 from sqlalchemy.pool import StaticPool
                 engine_kwargs["poolclass"] = StaticPool
+        self.database_url = database_url
+        self.is_postgresql = "postgresql" in database_url
         self.engine = create_async_engine(database_url, echo=False, connect_args=connect_args, **engine_kwargs)
         self.session_maker = async_sessionmaker(self.engine, class_=AsyncSession, expire_on_commit=False)
 
@@ -816,6 +818,83 @@ class DatabaseManager:
             _ = (sample.id, sample.dataset_id, sample.instruction, sample.response, sample.quality_score, sample.metadata_)
             return sample
 
+    async def create_nosql_path_index(
+        self,
+        table_name: str,
+        column_name: str,
+        json_path: str,
+        index_name: Optional[str] = None,
+    ) -> dict:
+        """Create a targeted expression index on a specific JSON path attribute.
+
+        On PostgreSQL: CREATE INDEX IF NOT EXISTS ix_{table}_{col}_{path} ON {table} ((( {col}->>'{path}' )));
+        On SQLite: CREATE INDEX IF NOT EXISTS ix_{table}_{col}_{path} ON {table} (( json_extract({col}, '$.{path}') ));
+        """
+        import re
+        from sqlalchemy import text
+
+        clean_table = re.sub(r"[^a-zA-Z0-9_]", "", table_name)
+        clean_col = re.sub(r"[^a-zA-Z0-9_]", "", column_name)
+        clean_path = re.sub(r"[^a-zA-Z0-9_]", "", json_path)
+        idx_name = index_name or f"ix_{clean_table}_{clean_col}_{clean_path}"
+        idx_name = re.sub(r"[^a-zA-Z0-9_]", "", idx_name)[:63]
+
+        if self.is_postgresql:
+            sql_stmt = f'CREATE INDEX IF NOT EXISTS "{idx_name}" ON "{clean_table}" ((("{clean_col}"->>\'{clean_path}\')));'
+        else:
+            sql_stmt = f'CREATE INDEX IF NOT EXISTS "{idx_name}" ON "{clean_table}" ((json_extract("{clean_col}", \'$.{clean_path}\')));'
+
+        async with self.session_maker() as session:
+            await session.execute(text(sql_stmt))
+            await self._commit_with_retry(session)
+
+        return {
+            "index_name": idx_name,
+            "table": clean_table,
+            "column": clean_col,
+            "path": clean_path,
+            "type": "expression_index",
+            "dialect": "postgresql" if self.is_postgresql else "sqlite",
+            "created": True,
+        }
+
+    async def create_nosql_path_ops_index(
+        self,
+        table_name: str,
+        column_name: str,
+        index_name: Optional[str] = None,
+    ) -> dict:
+        """Create a specialized jsonb_path_ops GIN index on PostgreSQL.
+
+        jsonb_path_ops GIN indexes are up to 3x smaller and significantly faster
+        for JSONB containment queries (@>) on large production datasets.
+        """
+        import re
+        from sqlalchemy import text
+
+        clean_table = re.sub(r"[^a-zA-Z0-9_]", "", table_name)
+        clean_col = re.sub(r"[^a-zA-Z0-9_]", "", column_name)
+        idx_name = index_name or f"ix_{clean_table}_{clean_col}_path_ops"
+        idx_name = re.sub(r"[^a-zA-Z0-9_]", "", idx_name)[:63]
+
+        if self.is_postgresql:
+            sql_stmt = f'CREATE INDEX IF NOT EXISTS "{idx_name}" ON "{clean_table}" USING gin ("{clean_col}" jsonb_path_ops);'
+            async with self.session_maker() as session:
+                await session.execute(text(sql_stmt))
+                await self._commit_with_retry(session)
+            created = True
+        else:
+            created = False
+
+        return {
+            "index_name": idx_name,
+            "table": clean_table,
+            "column": clean_col,
+            "type": "jsonb_path_ops",
+            "dialect": "postgresql" if self.is_postgresql else "sqlite",
+            "created": created,
+        }
+
     async def get_samples(self, dataset_id: str, limit: int = 1000, offset: int = 0) -> list[Sample]:
         """Get samples for a dataset."""
         async with self.session_maker() as session:
@@ -831,6 +910,66 @@ class DatabaseManager:
             for s in samples:
                 _ = (s.id, s.dataset_id, s.instruction, s.response, s.quality_score, s.metadata_)
             return samples
+
+    async def create_samples_batch(
+        self,
+        dataset_id: str,
+        samples_data: list[dict],
+        batch_size: int = 1000,
+    ) -> list[dict]:
+        """High-performance batch insertion for dataset samples.
+
+        Leverages SQLAlchemy Core batched insert execution with chunking
+        and retry resilience for PostgreSQL JSONB and SQLite.
+        """
+        if not samples_data:
+            return []
+
+        from sqlalchemy import insert
+        now = utc_now()
+        records = []
+        result_meta = []
+
+        for raw in samples_data:
+            d = dict(raw)
+            sample_id = d.get("id") or str(uuid.uuid4())
+            meta = d.pop("metadata_", None) or d.pop("metadata", {})
+            if isinstance(meta, str):
+                try:
+                    meta = json.loads(meta)
+                except Exception:
+                    meta = {}
+
+            record = {
+                "id": sample_id,
+                "dataset_id": dataset_id,
+                "instruction": d.get("instruction", ""),
+                "response": d.get("response", ""),
+                "input": d.get("input", ""),
+                "metadata_": meta,
+                "quality_score": d.get("quality_score"),
+                "difficulty_tier": d.get("difficulty_tier"),
+                "created_at": d.get("created_at") or now,
+            }
+            records.append(record)
+            result_meta.append({"id": sample_id, "dataset_id": dataset_id})
+
+        async with self.session_maker() as session:
+            for i in range(0, len(records), batch_size):
+                chunk = records[i:i + batch_size]
+                await session.execute(insert(Sample), chunk)
+            await self._commit_with_retry(session)
+
+        return result_meta
+
+    async def create_samples(
+        self,
+        dataset_id: str,
+        samples_data: list[dict],
+        batch_size: int = 1000,
+    ) -> list[dict]:
+        """Create multiple samples for a dataset using batch execution."""
+        return await self.create_samples_batch(dataset_id, samples_data, batch_size=batch_size)
 
     async def query_samples_by_document(
         self,
@@ -895,6 +1034,83 @@ class DatabaseManager:
             await self._commit_with_retry(session)
             _ = (sample.id, sample.dataset_id, sample.instruction, sample.response, sample.quality_score, sample.metadata_)
             return sample
+
+    async def create_nosql_path_index(
+        self,
+        table_name: str,
+        column_name: str,
+        json_path: str,
+        index_name: Optional[str] = None,
+    ) -> dict:
+        """Create a targeted expression index on a specific JSON path attribute.
+
+        On PostgreSQL: CREATE INDEX IF NOT EXISTS ix_{table}_{col}_{path} ON {table} ((( {col}->>'{path}' )));
+        On SQLite: CREATE INDEX IF NOT EXISTS ix_{table}_{col}_{path} ON {table} (( json_extract({col}, '$.{path}') ));
+        """
+        import re
+        from sqlalchemy import text
+
+        clean_table = re.sub(r"[^a-zA-Z0-9_]", "", table_name)
+        clean_col = re.sub(r"[^a-zA-Z0-9_]", "", column_name)
+        clean_path = re.sub(r"[^a-zA-Z0-9_]", "", json_path)
+        idx_name = index_name or f"ix_{clean_table}_{clean_col}_{clean_path}"
+        idx_name = re.sub(r"[^a-zA-Z0-9_]", "", idx_name)[:63]
+
+        if self.is_postgresql:
+            sql_stmt = f'CREATE INDEX IF NOT EXISTS "{idx_name}" ON "{clean_table}" ((("{clean_col}"->>\'{clean_path}\')));'
+        else:
+            sql_stmt = f'CREATE INDEX IF NOT EXISTS "{idx_name}" ON "{clean_table}" ((json_extract("{clean_col}", \'$.{clean_path}\')));'
+
+        async with self.session_maker() as session:
+            await session.execute(text(sql_stmt))
+            await self._commit_with_retry(session)
+
+        return {
+            "index_name": idx_name,
+            "table": clean_table,
+            "column": clean_col,
+            "path": clean_path,
+            "type": "expression_index",
+            "dialect": "postgresql" if self.is_postgresql else "sqlite",
+            "created": True,
+        }
+
+    async def create_nosql_path_ops_index(
+        self,
+        table_name: str,
+        column_name: str,
+        index_name: Optional[str] = None,
+    ) -> dict:
+        """Create a specialized jsonb_path_ops GIN index on PostgreSQL.
+
+        jsonb_path_ops GIN indexes are up to 3x smaller and significantly faster
+        for JSONB containment queries (@>) on large production datasets.
+        """
+        import re
+        from sqlalchemy import text
+
+        clean_table = re.sub(r"[^a-zA-Z0-9_]", "", table_name)
+        clean_col = re.sub(r"[^a-zA-Z0-9_]", "", column_name)
+        idx_name = index_name or f"ix_{clean_table}_{clean_col}_path_ops"
+        idx_name = re.sub(r"[^a-zA-Z0-9_]", "", idx_name)[:63]
+
+        if self.is_postgresql:
+            sql_stmt = f'CREATE INDEX IF NOT EXISTS "{idx_name}" ON "{clean_table}" USING gin ("{clean_col}" jsonb_path_ops);'
+            async with self.session_maker() as session:
+                await session.execute(text(sql_stmt))
+                await self._commit_with_retry(session)
+            created = True
+        else:
+            created = False
+
+        return {
+            "index_name": idx_name,
+            "table": clean_table,
+            "column": clean_col,
+            "type": "jsonb_path_ops",
+            "dialect": "postgresql" if self.is_postgresql else "sqlite",
+            "created": created,
+        }
 
     async def query_jobs_by_document(
         self,
@@ -1552,18 +1768,18 @@ class AsyncDB:
             for sample in samples
         ]
 
+    async def create_samples_batch(self, dataset_id: str, samples_data: list[dict], batch_size: int = 1000) -> list[dict]:
+        """High-performance bulk insert of sample records using batch chunking."""
+        return await self.db.create_samples_batch(dataset_id, samples_data, batch_size=batch_size)
+
     async def create_samples(self, dataset_id: str, samples_data: list[dict]) -> list[dict]:
         """Create multiple samples for a dataset."""
-        samples = []
-        async with self.db.session_maker() as session:
-            for raw_sample_data in samples_data:
-                sample_data = dict(raw_sample_data)
-                if "metadata" in sample_data and "metadata_" not in sample_data:
-                    sample_data["metadata_"] = sample_data.pop("metadata")
-                if "id" not in sample_data:
-                    sample_data["id"] = str(uuid.uuid4())
-                sample = Sample(dataset_id=dataset_id, **sample_data)
-                session.add(sample)
-                samples.append(sample)
-            await self.db._commit_with_retry(session)
-            return [{"id": s.id, "dataset_id": s.dataset_id} for s in samples]
+        return await self.db.create_samples_batch(dataset_id, samples_data)
+
+    async def create_nosql_path_index(self, table_name: str, column_name: str, json_path: str, index_name: Optional[str] = None) -> dict:
+        """Create a targeted expression index on a specific JSON path attribute."""
+        return await self.db.create_nosql_path_index(table_name, column_name, json_path, index_name=index_name)
+
+    async def create_nosql_path_ops_index(self, table_name: str, column_name: str, index_name: Optional[str] = None) -> dict:
+        """Create a specialized jsonb_path_ops GIN index on PostgreSQL."""
+        return await self.db.create_nosql_path_ops_index(table_name, column_name, index_name=index_name)

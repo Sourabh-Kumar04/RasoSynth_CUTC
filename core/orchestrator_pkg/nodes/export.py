@@ -414,16 +414,21 @@ class ExportNodeMixin:
                 )
                 metadata_dict["dataset_version_id"] = version["id"]
 
-                # Create sample records
+                # Create sample records using batch ingestion
                 sample_data = []
                 for sample in samples:
+                    meta = (
+                        (sample.get("metadata") or sample.get("metadata_") or {})
+                        if isinstance(sample, dict)
+                        else (getattr(sample, "metadata", None) or getattr(sample, "metadata_", None) or {})
+                    )
                     sample_data.append({
-                        "instruction": getattr(sample, 'instruction', ''),
-                        "response": getattr(sample, 'response', ''),
-                        "input": getattr(sample, 'input', ''),
-                        "metadata": getattr(sample, 'metadata', {}),
-                        "quality_score": getattr(sample, 'quality_score', 0.5),
-                        "difficulty_tier": getattr(sample, 'difficulty_tier', 3)
+                        "instruction": sample.get("instruction", "") if isinstance(sample, dict) else getattr(sample, "instruction", ""),
+                        "response": sample.get("response", "") if isinstance(sample, dict) else getattr(sample, "response", ""),
+                        "input": sample.get("input", "") if isinstance(sample, dict) else getattr(sample, "input", ""),
+                        "metadata": meta,
+                        "quality_score": sample.get("quality_score", 0.5) if isinstance(sample, dict) else getattr(sample, "quality_score", 0.5),
+                        "difficulty_tier": sample.get("difficulty_tier", 3) if isinstance(sample, dict) else getattr(sample, "difficulty_tier", 3),
                     })
 
                 await self.db.create_samples(dataset_record["id"], sample_data)

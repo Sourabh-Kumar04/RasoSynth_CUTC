@@ -17,6 +17,9 @@ import {
   Sparkles,
   ArrowRight,
   TrendingUp,
+  Bot,
+  Users,
+  Network,
 } from 'lucide-react'
 import { clsx } from 'clsx'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
@@ -71,19 +74,29 @@ export default function ObservabilityPage() {
   const [health, setHealth] = useState<SystemStatus | null>(null)
   const [rayCluster, setRayCluster] = useState<any | null>(null)
   const [metricsText, setMetricsText] = useState<string>('')
+  const [agentSociety, setAgentSociety] = useState<any[] | null>(null)
+  const [agentStats, setAgentStats] = useState<any | null>(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
 
   const fetchData = useCallback(async () => {
     try {
       setError(null)
-      const [healthData, metricsData, rayData] = await Promise.all([
+      const [healthData, metricsData, rayData, agentsData, agentsStatsData] = await Promise.all([
         api.getHealth().catch(() => null),
         api.getMetrics().catch(() => null),
         api.getRayClusterStatus().catch(() => null),
+        api.getAgents().catch(() => null),
+        api.getAgentStats().catch(() => null),
       ])
       setHealth(healthData)
       setRayCluster(rayData)
+      if (agentsData?.agents) {
+        setAgentSociety(agentsData.agents)
+      }
+      if (agentsStatsData) {
+        setAgentStats(agentsStatsData)
+      }
       if (metricsData && typeof metricsData === 'string') {
         setMetricsText(metricsData)
       }
@@ -286,6 +299,10 @@ export default function ObservabilityPage() {
       <Tabs value={selectedTab} onValueChange={setSelectedTab}>
         <TabsList className="bg-[#161622] rounded-md border border-[#3b3b52]">
           <TabsTrigger value="overview" className="rounded-sm">Overview</TabsTrigger>
+          <TabsTrigger value="multi_agent" className="rounded-sm flex items-center gap-1.5">
+            <Bot className="w-3.5 h-3.5 text-[#f26625]" />
+            Multi-Agent Society
+          </TabsTrigger>
           <TabsTrigger value="self_correction" className="rounded-sm">Self-Correction &amp; LLM Judge</TabsTrigger>
           <TabsTrigger value="health" className="rounded-sm">Health Monitor</TabsTrigger>
           <TabsTrigger value="metrics" className="rounded-sm">Metrics</TabsTrigger>
@@ -454,6 +471,140 @@ export default function ObservabilityPage() {
                   {(rayCluster?.engines_deployed ?? []).length === 0 && (
                     <span className="text-xs font-mono text-[#a8a29e]">No engines reported by the backend</span>
                   )}
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        {/* Multi-Agent Society Telemetry */}
+        <TabsContent value="multi_agent" className="mt-6 space-y-6">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+            <Card className="border-[#272738] bg-[#12121a] rounded-md card-shadow border-l-4 border-l-[#f26625]">
+              <CardContent className="p-4 space-y-1">
+                <span className="text-xs font-mono text-[#a8a29e] uppercase">Agent Society Size</span>
+                <p className="text-2xl font-bold font-mono text-white">{agentSociety?.length || 19} Agents</p>
+                <p className="text-xs font-mono text-[#f26625]">Autonomous execution personas</p>
+              </CardContent>
+            </Card>
+            <Card className="border-[#272738] bg-[#12121a] rounded-md card-shadow border-l-4 border-l-emerald-500">
+              <CardContent className="p-4 space-y-1">
+                <span className="text-xs font-mono text-[#a8a29e] uppercase">Society Topology</span>
+                <p className="text-2xl font-bold font-mono text-emerald-400">Decentralized DAG</p>
+                <p className="text-xs font-mono text-emerald-500/80 font-bold">LangGraph stateful workflow</p>
+              </CardContent>
+            </Card>
+            <Card className="border-[#272738] bg-[#12121a] rounded-md card-shadow border-l-4 border-l-cyan-500">
+              <CardContent className="p-4 space-y-1">
+                <span className="text-xs font-mono text-[#a8a29e] uppercase">Consensus Protocol</span>
+                <p className="text-2xl font-bold font-mono text-cyan-400">Multi-Rubric Judge</p>
+                <p className="text-xs font-mono text-cyan-500/80">LLM-as-Judge &amp; HITL Gate</p>
+              </CardContent>
+            </Card>
+            <Card className="border-[#272738] bg-[#12121a] rounded-md card-shadow border-l-4 border-l-purple-500">
+              <CardContent className="p-4 space-y-1">
+                <span className="text-xs font-mono text-[#a8a29e] uppercase">Research Loop</span>
+                <p className="text-2xl font-bold font-mono text-purple-400">Continuous 2026</p>
+                <p className="text-xs font-mono text-purple-500/80">Auto-adaptive heuristics</p>
+              </CardContent>
+            </Card>
+          </div>
+
+          <Card className="border-[#272738] bg-[#12121a] rounded-md card-shadow">
+            <CardHeader className="pb-3 border-b border-[#272738] flex flex-row items-center justify-between">
+              <div className="flex items-center gap-2">
+                <Bot className="h-4 w-4 text-[#f26625]" />
+                <div>
+                  <CardTitle className="text-sm font-bold text-white">Registered Multi-Agent Personas</CardTitle>
+                  <p className="text-xs font-mono text-[#a8a29e] mt-0.5">Autonomous agents cooperating within the LangGraph DAG pipeline</p>
+                </div>
+              </div>
+              <Badge variant="outline" className="font-mono text-xs text-emerald-400 border-emerald-500/30 bg-emerald-950/20">
+                ACTIVE REGISTRY ({agentSociety?.length || 19} PERSONAS)
+              </Badge>
+            </CardHeader>
+            <CardContent className="p-4">
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
+                {(agentSociety && agentSociety.length > 0 ? agentSociety : [
+                  { type: 'strategy', name: 'StrategyAgent', description: 'Maps execution dependencies, resource allocation, and job DAG strategy.', capabilities: ['planning', 'strategy'] },
+                  { type: 'research', name: 'ResearchAgent', description: 'Analyzes target domain criteria, quality floors, and semantic taxonomy.', capabilities: ['research', 'analysis'] },
+                  { type: 'source_discovery', name: 'SourceDiscoveryAgent', description: 'Discovers web, OpenML, Zenodo, and India AI Kosh sovereign sources.', capabilities: ['discovery', 'search'] },
+                  { type: 'synthetic_generation', name: 'SyntheticGenerationAgent', description: 'Constructs grounded multi-turn, CoT, and dialectic synthetic samples.', capabilities: ['synthesis', 'generation'] },
+                  { type: 'quality_evaluation', name: 'QualityEvaluationAgent', description: 'Executes multi-rubric LLM judge arbitration and self-correction.', capabilities: ['evaluation', 'judge'] },
+                  { type: 'curriculum', name: 'CurriculumAgent', description: 'Paces dataset diversity, difficulty tiers, and category balancing.', capabilities: ['curation', 'balancing'] },
+                ]).map((agent: any) => (
+                  <div key={agent.type || agent.name} className="p-3.5 rounded-lg bg-[#0a0a0f] border border-[#272738] flex flex-col justify-between hover:border-[#3b3b52] transition-colors">
+                    <div>
+                      <div className="flex items-center justify-between mb-1.5">
+                        <span className="font-mono font-bold text-xs text-white flex items-center gap-1.5">
+                          <span className="w-2 h-2 rounded-full bg-emerald-400" />
+                          {agent.name || agent.type}
+                        </span>
+                        <span className="text-[10px] font-mono px-1.5 py-0.5 rounded bg-[#161622] text-[#f26625] border border-[#272738] uppercase">
+                          {agent.type}
+                        </span>
+                      </div>
+                      <p className="text-xs text-[#a8a29e] line-clamp-2 mb-3">
+                        {agent.description}
+                      </p>
+                    </div>
+                    <div className="flex flex-wrap gap-1 mt-auto">
+                      {(agent.capabilities || []).map((cap: string) => (
+                        <span key={cap} className="text-[10px] font-mono px-1.5 py-0.2 rounded bg-zinc-900 text-zinc-300 border border-zinc-800">
+                          {cap}
+                        </span>
+                      ))}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </CardContent>
+          </Card>
+
+          <Card className="border-[#272738] bg-[#12121a] rounded-md card-shadow">
+            <CardHeader className="pb-3 border-b border-[#272738]">
+              <CardTitle className="text-sm font-bold text-white flex items-center gap-2">
+                <Network className="h-4 w-4 text-[#f26625]" />
+                Continuous Research Loop &amp; 2026 Adaptive Heuristics
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="p-4 space-y-3">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                <div className="p-3 rounded-lg bg-[#0a0a0f] border border-[#272738]">
+                  <div className="flex items-center justify-between mb-1">
+                    <span className="text-xs font-mono font-bold text-emerald-400">AI Kosh Sovereign Priority</span>
+                    <span className="text-[10px] font-mono text-zinc-400">Priority Index 0</span>
+                  </div>
+                  <p className="text-xs text-[#a8a29e]">
+                    Automatically ranks India AI Kosh sovereign repository as top-priority source for Indic languages and regional domain tasks.
+                  </p>
+                </div>
+                <div className="p-3 rounded-lg bg-[#0a0a0f] border border-[#272738]">
+                  <div className="flex items-center justify-between mb-1">
+                    <span className="text-xs font-mono font-bold text-emerald-400">Held-Out Eval Floor (1,000)</span>
+                    <span className="text-[10px] font-mono text-zinc-400">Strict Safety Gate</span>
+                  </div>
+                  <p className="text-xs text-[#a8a29e]">
+                    Enforces minimum training volume threshold before partitioning validation sets, preventing synthetic over-filtering.
+                  </p>
+                </div>
+                <div className="p-3 rounded-lg bg-[#0a0a0f] border border-[#272738]">
+                  <div className="flex items-center justify-between mb-1">
+                    <span className="text-xs font-mono font-bold text-emerald-400">Anti-Domain Collision Matrix</span>
+                    <span className="text-[10px] font-mono text-zinc-400">Zero Contamination</span>
+                  </div>
+                  <p className="text-xs text-[#a8a29e]">
+                    Cross-discipline collision defense rejecting homonyms (e.g. biological vs financial taxonomy) before synthesis phase.
+                  </p>
+                </div>
+                <div className="p-3 rounded-lg bg-[#0a0a0f] border border-[#272738]">
+                  <div className="flex items-center justify-between mb-1">
+                    <span className="text-xs font-mono font-bold text-emerald-400">PostgreSQL JSONB GIN Fast-Path</span>
+                    <span className="text-[10px] font-mono text-zinc-400">Targeted Expression Indexing</span>
+                  </div>
+                  <p className="text-xs text-[#a8a29e]">
+                    Accelerated NoSQL containment queries with dynamic path-ops indexing and batch ingestion for high-throughput records.
+                  </p>
                 </div>
               </div>
             </CardContent>

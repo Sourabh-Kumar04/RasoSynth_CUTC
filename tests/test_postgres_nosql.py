@@ -121,3 +121,55 @@ async def test_nosql_document_queries_and_patch(tmp_path):
 
     await db.close()
 
+
+@pytest.mark.asyncio
+async def test_batch_sample_ingestion_and_index_optimization(tmp_path):
+    """Verify high-throughput batch sample ingestion and dynamic expression index autotuning."""
+    from core.db import DatabaseManager
+    from api.routers.datasets import router
+
+    # Verify optimize endpoint is registered
+    route_paths = [r.path for r in router.routes]
+    assert "/datasets/{dataset_id}/indexes/optimize" in route_paths
+
+    db_path = tmp_path / "test_batch.db"
+    db = DatabaseManager(f"sqlite+aiosqlite:///{db_path}")
+    await db.create_tables()
+
+    job = await db.create_job(config={"domain": "biomedical"})
+    ds = await db.create_dataset(job_id=job.id, name="BioCorpus", type="jsonl", size=200, metadata={}, output_path="/tmp/bio.jsonl")
+
+    # Generate 150 batch samples
+    samples_payload = [
+        {
+            "instruction": f"Biomedical prompt #{i}",
+            "response": f"Clinical response #{i}",
+            "input": "",
+            "metadata": {"gene": f"BRCA{i % 5}", "organism": "human", "batch_idx": i},
+            "quality_score": 0.80 + (i % 20) * 0.01,
+            "difficulty_tier": (i % 3) + 1,
+        }
+        for i in range(150)
+    ]
+
+    # Ingest in chunks of 50
+    inserted = await db.create_samples_batch(ds.id, samples_payload, batch_size=50)
+    assert len(inserted) == 150
+
+    # Retrieve samples
+    samples = await db.get_samples(ds.id, limit=200)
+    assert len(samples) == 150
+    assert samples[0].metadata_["organism"] == "human"
+
+    # Test dynamic targeted expression index creation
+    idx_result = await db.create_nosql_path_index("samples", "metadata", "gene")
+    assert idx_result["created"] is True
+    assert idx_result["path"] == "gene"
+
+    # Test path_ops index creation
+    path_ops_result = await db.create_nosql_path_ops_index("samples", "metadata")
+    assert "index_name" in path_ops_result
+
+    await db.close()
+
+

@@ -192,6 +192,59 @@ async def query_dataset_records(
         raise HTTPException(status_code=500, detail="Failed to query dataset records")
 
 
+@router.post("/datasets/{dataset_id}/indexes/optimize")
+async def optimize_dataset_indexes(
+    dataset_id: str,
+    req: Request,
+    payload: dict = Body(default_factory=dict),
+    current_user: User = Depends(require_role([UserRole.ADMIN, UserRole.USER])),
+):
+    """Dynamically tune and create targeted expression / jsonb_path_ops indexes for dataset metadata attributes."""
+    db = _get_db(req)
+    if not db:
+        raise HTTPException(status_code=503, detail="Database not available")
+
+    dataset = await db.get_dataset(dataset_id)
+    if not dataset:
+        datasets_for_job = await db.get_datasets_by_job(dataset_id)
+        if datasets_for_job:
+            dataset = datasets_for_job[0]
+
+    if not dataset:
+        raise HTTPException(status_code=404, detail=f"Dataset {dataset_id} not found")
+
+    enforce_owner(dataset, current_user, resource_name="Dataset")
+
+    paths = payload.get("paths", ["topic", "language", "curriculum_order"])
+    enable_path_ops = payload.get("enable_path_ops", True)
+
+    results = []
+    # Create targeted path indexes
+    for p in paths:
+        if isinstance(p, str) and p.strip():
+            try:
+                res = await db.create_nosql_path_index("samples", "metadata", p.strip())
+                results.append(res)
+            except Exception as e:
+                logger.warning(f"Could not create path index for {p}: {e}")
+                results.append({"path": p, "created": False, "error": str(e)})
+
+    # Optionally create jsonb_path_ops GIN index on PostgreSQL
+    if enable_path_ops:
+        try:
+            path_ops_res = await db.create_nosql_path_ops_index("samples", "metadata")
+            results.append(path_ops_res)
+        except Exception as e:
+            logger.warning(f"Could not create path_ops index: {e}")
+            results.append({"type": "jsonb_path_ops", "created": False, "error": str(e)})
+
+    return {
+        "dataset_id": dataset["id"],
+        "optimized_indexes": results,
+        "status": "success",
+    }
+
+
 @router.delete("/datasets/{dataset_id}")
 async def delete_dataset_endpoint(
     dataset_id: str,
