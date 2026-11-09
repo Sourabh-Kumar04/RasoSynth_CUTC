@@ -31,5 +31,16 @@ spec:
               value: "postgresql+asyncpg://{{ .Values.postgres.user }}:$(POSTGRES_PASSWORD)@{{ .Values.postgres.host }}:{{ .Values.postgres.port }}/{{ .Values.postgres.database }}"
             - name: REDIS_URL
               value: "redis://{{ .Values.redis.host }}:{{ .Values.redis.port }}/0"
+            - name: PLAYWRIGHT_BROWSERS_PATH
+              value: "/ms-playwright"
+            - name: ENABLE_BROWSER_ESCALATION
+              value: "true"
+          volumeMounts:
+            - name: dshm
+              mountPath: /dev/shm
           resources:
             {{- toYaml .Values.worker.resources | nindent 12 }}
+      volumes:
+        - name: dshm
+          emptyDir:
+            medium: Memory

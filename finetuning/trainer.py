@@ -293,6 +293,73 @@ def export_to_ollama(
     return manifest
 
 
+def generate_hf_model_card(cfg: FineTuneConfig, output_dir: Path | str) -> str:
+    """Synthesizes a Hugging Face Model Card README.md with YAML metadata and deployment instructions."""
+    out_dir = Path(output_dir)
+    out_dir.mkdir(parents=True, exist_ok=True)
+    card_path = out_dir / "README.md"
+
+    yaml_header = f"""---
+base_model: {cfg.base_model}
+library_name: peft
+tags:
+  - rasosynthtune
+  - {cfg.training_method.lower()}
+  - lora
+  - alignment
+pipeline_tag: text-generation
+license: apache-2.0
+---
+
+# {cfg.output_model_name or "Fine-Tuned Aligned Model"}
+
+This model is a PEFT LoRA adapter aligned using the **RasoSynthTune** pipeline.
+
+## Model Specifications
+- **Base Model**: `{cfg.base_model}`
+- **Training Method**: `{cfg.training_method.upper()}`
+- **LoRA Rank (r)**: `{cfg.lora_r}`
+- **LoRA Alpha**: `{cfg.lora_alpha}`
+- **Quantization**: `{"4-bit NF4 (QLoRA)" if cfg.load_in_4bit else "16-bit"}`
+- **Chat Template**: `{cfg.chat_template}`
+- **Epochs**: `{cfg.num_train_epochs}`
+- **Learning Rate**: `{cfg.learning_rate}`
+"""
+    if cfg.training_method.lower() in ("dpo", "orpo"):
+        yaml_header += f"""
+## DPO Alignment Configuration
+- **DPO Beta**: `{getattr(cfg, 'dpo_beta', 0.1)}`
+- **DPO Loss Type**: `{getattr(cfg, 'dpo_loss_type', 'sigmoid')}`
+- **Max Prompt Length**: `{getattr(cfg, 'max_prompt_length', 512)}`
+"""
+
+    yaml_header += f"""
+## Quickstart with Transformers & PEFT
+
+```python
+import torch
+from transformers import AutoModelForCausalLM, AutoTokenizer
+from peft import PeftModel
+
+base_model = "{cfg.base_model}"
+adapter = "{cfg.hf_org}/{cfg.output_model_name}" if "{cfg.hf_org}" else "{cfg.output_model_name}"
+
+tokenizer = AutoTokenizer.from_pretrained(base_model)
+model = AutoModelForCausalLM.from_pretrained(base_model, torch_dtype=torch.bfloat16, device_map="auto")
+model = PeftModel.from_pretrained(model, adapter)
+```
+
+## Quickstart with Ollama CLI
+
+```bash
+ollama create {cfg.output_model_name or "my-model"} -f Modelfile
+ollama run {cfg.output_model_name or "my-model"}
+```
+"""
+    card_path.write_text(yaml_header, encoding="utf-8")
+    return str(card_path)
+
+
 def evaluate_finetuned_model(
     job_id: str,
     base_model: str,
@@ -852,6 +919,7 @@ class Trainer:
             token = cfg.hf_token or os.environ.get("HF_TOKEN", "")
             repo = f"{cfg.hf_org}/{cfg.output_model_name}" if cfg.hf_org else cfg.output_model_name
             try:
+                generate_hf_model_card(cfg, output_dir)
                 model.push_to_hub(repo, token=token)
                 tokenizer.push_to_hub(repo, token=token)
                 hf_url = f"https://huggingface.co/{repo}"

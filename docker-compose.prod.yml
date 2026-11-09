@@ -122,6 +122,9 @@ services:
       - AWS_ACCESS_KEY_ID=${MINIO_ROOT_USER:-raso_minio_admin}
       - AWS_SECRET_ACCESS_KEY=${MINIO_ROOT_PASSWORD:-raso_minio_secret_key}
       - WORKER_CAPACITY=8
+      - PLAYWRIGHT_BROWSERS_PATH=/ms-playwright
+      - ENABLE_BROWSER_ESCALATION=true
+    shm_size: '2gb'
     depends_on:
       postgres:
         condition: service_healthy

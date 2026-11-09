@@ -756,6 +756,10 @@ function FineTuneContent() {
     base_model: 'sarvamai/sarvam-2b-v0.5',
     output_model_name: datasetParam ? `finetune-${datasetParam.slice(0, 8)}` : '',
     training_method: 'sft',
+    dpo_beta: 0.1,
+    dpo_loss_type: 'sigmoid',
+    max_prompt_length: 512,
+    packing: false,
     lora_r: 16, lora_alpha: 32,
     num_train_epochs: 3, per_device_train_batch_size: 4,
     gradient_accumulation_steps: 4, learning_rate: 0.0002,
@@ -1533,6 +1537,63 @@ function FineTuneContent() {
                       </SelectContent>
                     </Select>
                   </div>
+                  {(form.training_method === 'dpo' || form.training_method === 'orpo') && (
+                    <div className="p-3 rounded-md bg-[#0a0a0f] border border-[#f26625]/40 space-y-2.5 font-mono">
+                      <div className="flex items-center justify-between text-xs font-bold text-white uppercase border-b border-[#272738] pb-1.5">
+                        <span className="flex items-center gap-1.5 text-[#f26625]">
+                          <Sparkles className="w-3.5 h-3.5" /> DPO Alignment Parameters
+                        </span>
+                        <span className="text-[10px] text-zinc-400 font-normal">Reference Model Shared LoRA</span>
+                      </div>
+                      <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 text-xs">
+                        <div>
+                          <label className="text-[10px] text-zinc-400 block mb-1">DPO Beta (KL Penalty)</label>
+                          <Input
+                            type="number"
+                            step="0.01"
+                            min="0.01"
+                            max="1.0"
+                            value={form.dpo_beta}
+                            onChange={e => f('dpo_beta', parseFloat(e.target.value) || 0.1)}
+                            className="bg-[#12121a] border-[#272738] text-white text-xs h-7 font-mono"
+                          />
+                        </div>
+                        <div>
+                          <label className="text-[10px] text-zinc-400 block mb-1">Loss Type</label>
+                          <Select value={form.dpo_loss_type} onValueChange={v => f('dpo_loss_type', v)}>
+                            <SelectTrigger className="rounded-md border-[#272738] bg-[#12121a] text-white text-xs font-mono h-7"><SelectValue /></SelectTrigger>
+                            <SelectContent className="bg-[#12121a] border-[#272738] text-white text-xs font-mono">
+                              <SelectItem value="sigmoid">Sigmoid (Standard)</SelectItem>
+                              <SelectItem value="hinge">Hinge</SelectItem>
+                              <SelectItem value="ipo">IPO (Identity Preference)</SelectItem>
+                              <SelectItem value="kto_pair">KTO Pair</SelectItem>
+                            </SelectContent>
+                          </Select>
+                        </div>
+                        <div>
+                          <label className="text-[10px] text-zinc-400 block mb-1">Max Prompt Len</label>
+                          <Input
+                            type="number"
+                            step="64"
+                            min="64"
+                            max="2048"
+                            value={form.max_prompt_length}
+                            onChange={e => f('max_prompt_length', parseInt(e.target.value) || 512)}
+                            className="bg-[#12121a] border-[#272738] text-white text-xs h-7 font-mono"
+                          />
+                        </div>
+                      </div>
+                    </div>
+                  )}
+                  {form.training_method === 'sft' && (
+                    <div className="flex items-center justify-between p-2.5 rounded-md bg-[#0a0a0f] border border-[#272738]">
+                      <div>
+                        <div className="text-xs font-bold text-white font-mono">Sample Packing</div>
+                        <div className="text-[10px] text-zinc-400 font-mono">Pack multiple samples into 2048-token chunks (3x faster throughput, zero padding waste)</div>
+                      </div>
+                      <Switch checked={form.packing} onCheckedChange={v => f('packing', v)} />
+                    </div>
+                  )}
                   <div>
                     <label className="text-xs mb-1 block font-bold font-mono uppercase text-[#a8a29e]">Chat template</label>
                     <Select value={form.chat_template}

@@ -254,6 +254,10 @@ export default function SettingsPage() {
           <TabsTrigger value="observability" className="rounded-sm text-xs font-mono data-[state=active]:bg-[#f26625] data-[state=active]:text-white data-[state=active]">Observability</TabsTrigger>
           <TabsTrigger value="security" className="rounded-sm text-xs font-mono data-[state=active]:bg-[#f26625] data-[state=active]:text-white data-[state=active]">Security</TabsTrigger>
           <TabsTrigger value="limits" className="rounded-sm text-xs font-mono data-[state=active]:bg-[#f26625] data-[state=active]:text-white data-[state=active]">Limits &amp; Caps</TabsTrigger>
+          <TabsTrigger value="crawler" className="rounded-sm text-xs font-mono data-[state=active]:bg-[#f26625] data-[state=active]:text-white data-[state=active] flex items-center gap-1.5">
+            <Shield className="w-3.5 h-3.5" />
+            Crawler &amp; Stealth
+          </TabsTrigger>
           <TabsTrigger value="hitl" className="rounded-sm text-xs font-mono data-[state=active]:bg-[#f26625] data-[state=active]:text-white data-[state=active]">HITL Gate</TabsTrigger>
         </TabsList>
 
@@ -726,6 +730,41 @@ export default function SettingsPage() {
                     <p className="text-xs text-[#a8a29e]">{desc}</p>
                   </div>
                   <code className="text-xs font-mono bg-[#0a0a0f] px-2.5 py-0.5 rounded-md border border-[#272738] text-[#f26625] shrink-0 ml-4">{env}</code>
+                </div>
+              ))}
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        {/* Crawler & Anti-Blocking */}
+        <TabsContent value="crawler" className="mt-4 space-y-4">
+          <Card className="bg-[#12121a] border-[#272738] rounded-md card-shadow">
+            <CardHeader className="pb-3 border-b border-[#272738]">
+              <CardTitle className="text-sm font-bold text-white flex items-center gap-2">
+                <Shield className="w-4 h-4 text-[#f26625]" />
+                Stealth Web Crawler &amp; Anti-Bot Protection
+              </CardTitle>
+              <CardDescription className="text-xs text-[#a8a29e]">
+                Tiered extraction engine bypassing Cloudflare Turnstile, Akamai, DataDome, and CAPTCHA walls
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="p-0 divide-y divide-[#272738]">
+              {[
+                { label: 'Playwright Stealth Escalation', env: 'ENABLE_BROWSER_ESCALATION', desc: 'Tier-2 headless Chromium escalation when HTTP client encounters Cloudflare or JavaScript walls', def: 'true (Enabled)' },
+                { label: 'Browser Fingerprint Rotator', env: 'STEALTH_HEADERS_ENABLED', desc: 'Synthesizes coherent User-Agent, Sec-Ch-Ua, and Client Hints per request', def: 'Dynamic (Chrome 125/macOS, Win11)' },
+                { label: 'Adaptive Circuit Breaker Cooldown', env: 'DOMAIN_CIRCUIT_COOLDOWN', desc: 'Quarantine duration (seconds) when target domain returns consecutive 429/403 blocks', def: '45.0s (Decorrelated Jitter)' },
+                { label: 'Rotating Proxy Gateway Pool', env: 'ROTATING_PROXY_POOL', desc: 'Comma-separated proxy list or gateway URL (HTTP/HTTPS/SOCKS5)', def: 'Configured via .env' },
+                { label: 'Headless Browser Timeout', env: 'BROWSER_TIMEOUT_MS', desc: 'Maximum time allotted for single-page DOM hydration and anti-bot challenge solving', def: '30,000 ms' },
+              ].map(({ label, env, desc, def }) => (
+                <div key={env} className="flex flex-col sm:flex-row sm:items-center justify-between px-5 py-3.5 gap-2">
+                  <div>
+                    <div className="flex items-center gap-2">
+                      <p className="text-xs font-bold text-white">{label}</p>
+                      <span className="text-[10px] font-mono px-1.5 py-0.5 rounded bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">{def}</span>
+                    </div>
+                    <p className="text-xs text-[#a8a29e] mt-0.5">{desc}</p>
+                  </div>
+                  <code className="text-xs font-mono bg-[#0a0a0f] px-2.5 py-0.5 rounded-md border border-[#272738] text-[#f26625] shrink-0">{env}</code>
                 </div>
               ))}
             </CardContent>

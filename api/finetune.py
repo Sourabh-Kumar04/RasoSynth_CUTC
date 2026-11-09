@@ -498,6 +498,44 @@ async def get_job_benchmark_endpoint(
     return benchmark
 
 
+@router.post("/jobs/{job_id}/evaluate-judge")
+async def evaluate_job_with_judge_endpoint(
+    job_id: str,
+    req: Request,
+    payload: dict = Body(default_factory=dict),
+    current_user: User = Depends(get_current_user),
+    manager=Depends(_manager),
+):
+    """Run automated comparative LLM-as-a-judge A/B benchmark between base and aligned model."""
+    job = await manager.get_job(job_id)
+    if not job:
+        raise HTTPException(status_code=404, detail="Fine-tune job not found")
+    _enforce_owner(job.to_dict() if hasattr(job, "to_dict") else job, current_user)
+
+    from core.evaluation.alignment_judge import AlignmentJudge
+
+    base_model = getattr(getattr(job, "config", None), "base_model", "sarvamai/sarvam-2b-v0.5")
+    aligned_model = getattr(getattr(job, "config", None), "output_model_name", "aligned-model")
+
+    test_prompts = payload.get("test_prompts")
+    if not test_prompts:
+        test_prompts = [
+            {"prompt": "Summarize the primary benefits of Direct Preference Optimization vs standard SFT."},
+            {"prompt": "Write a clean Python function with error handling to parse ISO timestamps."},
+            {"prompt": "Explain how LoRA reduces fine-tuning memory by factoring weight update matrices."},
+            {"prompt": "Describe how to prevent SSRF vulnerabilities when crawling untrusted web targets."},
+            {"prompt": "Provide instructions for configuring headless Chromium stealth evasions against WAFs."},
+        ]
+
+    result = AlignmentJudge.compare_models(
+        job_id=job_id,
+        test_prompts=test_prompts,
+        base_model_name=base_model,
+        aligned_model_name=aligned_model,
+    )
+    return result.to_dict()
+
+
 @router.post("/jobs/{job_id}/export-bundle")
 async def export_job_deployment_bundle(
     job_id: str,

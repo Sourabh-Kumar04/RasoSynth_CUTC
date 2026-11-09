@@ -40,15 +40,16 @@ try:
         lora_r: int = 16,
         lora_alpha: int = 32,
         output_name: str = "rasosynthtune-lora",
+        training_method: str = "sft",
+        dpo_beta: float = 0.1,
     ):
-        """Execute QLoRA fine-tuning on a dedicated serverless A10G GPU."""
+        """Execute QLoRA or DPO fine-tuning on a dedicated serverless A10G GPU."""
         import json
         from datasets import Dataset
-        from trl import SFTTrainer
         from transformers import TrainingArguments
         from unsloth import FastLanguageModel
 
-        print(f"Loading base model {base_model} on NVIDIA A10G...")
+        print(f"Loading base model {base_model} on NVIDIA A10G (method={training_method})...")
         model, tokenizer = FastLanguageModel.from_pretrained(
             model_name=base_model,
             max_seq_length=2048,
@@ -64,33 +65,63 @@ try:
         )
 
         samples = [json.loads(line) for line in dataset_content.strip().split("\n") if line.strip()]
-        texts = [
-            f"### Instruction:\n{s.get('instruction','')}\n\n### Response:\n{s.get('output', s.get('response',''))}{tokenizer.eos_token}"
-            for s in samples
-        ]
-        hf_dataset = Dataset.from_dict({"text": texts})
 
-        trainer = SFTTrainer(
-            model=model,
-            tokenizer=tokenizer,
-            train_dataset=hf_dataset,
-            dataset_text_field="text",
-            max_seq_length=2048,
-            args=TrainingArguments(
-                per_device_train_batch_size=4,
-                gradient_accumulation_steps=4,
-                num_train_epochs=num_epochs,
-                learning_rate=2e-4,
-                fp16=True,
-                logging_steps=10,
-                output_dir="/tmp/output",
-            ),
-        )
+        if training_method.lower() in ("dpo", "orpo"):
+            from trl import DPOTrainer, DPOConfig
+            dpo_pairs = []
+            for s in samples:
+                p = s.get("prompt") or s.get("instruction") or ""
+                c = s.get("chosen") or ""
+                r = s.get("rejected") or ""
+                if p and c and r:
+                    dpo_pairs.append({"prompt": str(p), "chosen": str(c), "rejected": str(r)})
+            hf_dataset = Dataset.from_list(dpo_pairs)
+            trainer = DPOTrainer(
+                model=model,
+                ref_model=None,
+                tokenizer=tokenizer,
+                train_dataset=hf_dataset,
+                args=DPOConfig(
+                    output_dir="/tmp/output",
+                    beta=dpo_beta,
+                    per_device_train_batch_size=2,
+                    gradient_accumulation_steps=8,
+                    num_train_epochs=num_epochs,
+                    learning_rate=1e-4,
+                    fp16=True,
+                    logging_steps=10,
+                ),
+            )
+        else:
+            from trl import SFTTrainer
+            texts = [
+                f"### Instruction:\n{s.get('instruction','')}\n\n### Response:\n{s.get('output', s.get('response',''))}{tokenizer.eos_token}"
+                for s in samples
+            ]
+            hf_dataset = Dataset.from_dict({"text": texts})
+
+            trainer = SFTTrainer(
+                model=model,
+                tokenizer=tokenizer,
+                train_dataset=hf_dataset,
+                dataset_text_field="text",
+                max_seq_length=2048,
+                args=TrainingArguments(
+                    per_device_train_batch_size=4,
+                    gradient_accumulation_steps=4,
+                    num_train_epochs=num_epochs,
+                    learning_rate=2e-4,
+                    fp16=True,
+                    logging_steps=10,
+                    output_dir="/tmp/output",
+                ),
+            )
         trainer.train()
         print("Training complete! Saving model...")
-        model.save_pretrained(f"/tmp/{output_name}")
-        tokenizer.save_pretrained(f"/tmp/{output_name}")
-        return {"status": "completed", "samples_trained": len(samples)}
+        out_target = f"/tmp/{output_name}"
+        model.save_pretrained(out_target)
+        tokenizer.save_pretrained(out_target)
+        return {"status": "completed", "samples_trained": len(samples), "training_method": training_method}
 
 except ImportError:
     # Modal not installed locally; file is ready for serverless deployment
