@@ -13,7 +13,11 @@ from dataclasses import dataclass, field
 from datetime import datetime, timezone
 import asyncio
 import hashlib
+import json
+import logging
 import numpy as np
+
+logger = logging.getLogger(__name__)
 
 
 # Define dataclasses FIRST (before they're referenced)
@@ -71,12 +75,16 @@ class SemanticCacheManager:
         vector_dim: int = 384,
         similarity_threshold: float = 0.95,
         enable_partial_reuse: bool = True,
-        min_hash_size: int = 128
+        min_hash_size: int = 128,
+        redis_client: Optional[Any] = None,
+        ttl: int = 86400,
     ):
         self.vector_dim = vector_dim
         self.similarity_threshold = similarity_threshold
         self.enable_partial_reuse = enable_partial_reuse
         self.min_hash_size = min_hash_size
+        self.redis_client = redis_client
+        self.ttl = ttl
 
         self._cache: Dict[str, SemanticEntry] = {}
         self._embeddings: Dict[str, np.ndarray] = {}
@@ -153,6 +161,24 @@ class SemanticCacheManager:
                 response=response
             )
 
+        if self.redis_client:
+            try:
+                payload = json.dumps({
+                    "key": key,
+                    "query": query,
+                    "response": response,
+                    "embedding": entry.embedding,
+                    "semantic_hash": entry.semantic_hash,
+                    "created_at": entry.created_at.isoformat(),
+                    "metadata": entry.metadata,
+                    "partial_content": entry.partial_content,
+                })
+                res = self.redis_client.set(f"semantic_cache:{key}", payload, ex=self.ttl)
+                if asyncio.iscoroutine(res):
+                    await res
+            except Exception as e:
+                logger.warning(f"Failed to persist semantic cache entry to Redis: {e}")
+
     async def get(
         self,
         key: str,
@@ -166,6 +192,38 @@ class SemanticCacheManager:
             self._hits += 1
             return entry.response
 
+        if self.redis_client:
+            try:
+                res = self.redis_client.get(f"semantic_cache:{key}")
+                raw = await res if asyncio.iscoroutine(res) else res
+                if raw:
+                    data = json.loads(raw if isinstance(raw, str) else raw.decode())
+                    entry = SemanticEntry(
+                        key=data["key"],
+                        query=data["query"],
+                        response=data["response"],
+                        embedding=data["embedding"],
+                        semantic_hash=data["semantic_hash"],
+                        created_at=datetime.fromisoformat(data["created_at"]),
+                        metadata=data.get("metadata", {}),
+                        partial_content=data.get("partial_content"),
+                    )
+                    self._cache[key] = entry
+                    self._embeddings[key] = np.array(entry.embedding)
+                    self._semantic_hashes[key] = entry.semantic_hash
+                    if entry.partial_content and self.enable_partial_reuse:
+                        self._partial_responses[key] = PartialResponse(
+                            key=key,
+                            segments=entry.partial_content,
+                            response=entry.response,
+                        )
+                    entry.access_count += 1
+                    entry.last_access = datetime.now(timezone.utc)
+                    self._hits += 1
+                    return entry.response
+            except Exception as e:
+                logger.warning(f"Failed to load semantic cache entry from Redis: {e}")
+
         return None
 
     async def invalidate(self, key: str) -> None:
@@ -174,6 +232,14 @@ class SemanticCacheManager:
         self._embeddings.pop(key, None)
         self._semantic_hashes.pop(key, None)
         self._partial_responses.pop(key, None)
+
+        if self.redis_client:
+            try:
+                res = self.redis_client.delete(f"semantic_cache:{key}")
+                if asyncio.iscoroutine(res):
+                    await res
+            except Exception as e:
+                logger.warning(f"Failed to delete semantic cache entry from Redis: {e}")
 
     async def get_partial_reuse(
         self,

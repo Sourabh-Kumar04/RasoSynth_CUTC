@@ -8,13 +8,18 @@ Added vs v1:
 
 from __future__ import annotations
 
+import json
+import logging
+import time
+from pathlib import Path
 from typing import Optional
 
-from fastapi import APIRouter, Depends, HTTPException, Query, Request
+from fastapi import APIRouter, Body, Depends, HTTPException, Query, Request
 from api.auth import User, UserRole, get_current_user, require_role
 from fastapi.responses import StreamingResponse
 from pydantic import BaseModel
 
+logger = logging.getLogger(__name__)
 router = APIRouter(prefix="/api/review", tags=["review"])
 
 
@@ -145,6 +150,85 @@ async def export_dpo_pairs_endpoint(
     owner_filter = None if current_user.role == UserRole.ADMIN else current_user.username
     pairs = await svc.export_dpo_pairs(job_id=job_id, owner=owner_filter)
     return {"pairs": pairs, "count": len(pairs)}
+
+
+class TriggerDpoFinetuneRequest(BaseModel):
+    base_model: str = "sarvamai/sarvam-2b-v0.5"
+    training_method: str = "dpo"
+    output_model_name: Optional[str] = None
+    num_train_epochs: int = 3
+    learning_rate: float = 0.0002
+    lora_r: int = 16
+    lora_alpha: int = 32
+
+
+@router.post("/jobs/{job_id}/trigger-dpo-finetune")
+async def trigger_dpo_finetune_endpoint(
+    job_id: str,
+    request: Request,
+    body: TriggerDpoFinetuneRequest = Body(...),
+    current_user: User = Depends(require_role([UserRole.ADMIN, UserRole.USER])),
+    svc=Depends(_svc),
+):
+    """
+    Closed-loop alignment trigger:
+    Extracts mined DPO preference pairs for `job_id`,
+    persists them as a JSONL training dataset, and creates an automated fine-tuning job.
+    """
+    owner_filter = None if current_user.role == UserRole.ADMIN else current_user.username
+    pairs = await svc.export_dpo_pairs(job_id=job_id, owner=owner_filter)
+    if not pairs:
+        raise HTTPException(
+            status_code=400,
+            detail=f"No DPO preference pairs mined for job '{job_id}'. Edit items in the review queue to produce chosen/rejected pairs."
+        )
+
+    out_dir = Path("outputs/finetune")
+    out_dir.mkdir(parents=True, exist_ok=True)
+    dpo_filename = f"dpo_{job_id}_{int(time.time())}.jsonl"
+    dpo_path = out_dir / dpo_filename
+
+    with open(dpo_path, "w", encoding="utf-8") as f:
+        for p in pairs:
+            f.write(json.dumps(p, ensure_ascii=False) + "\n")
+
+    output_model_name = body.output_model_name or f"dpo-aligned-{job_id[:8]}"
+
+    manager = getattr(request.app.state, "ft_manager", None)
+    if manager is None:
+        try:
+            from finetuning.job_manager import FinetuneJobManager
+            from core.db import DatabaseManager
+            db_mgr = getattr(request.app.state, "db", None) or DatabaseManager()
+            manager = FinetuneJobManager(db_manager=db_mgr)
+            request.app.state.ft_manager = manager
+        except Exception as e:
+            logger.warning("Could not instantiate FinetuneJobManager: %s", e)
+
+    job_result = None
+    if manager:
+        payload = {
+            "dataset_path": str(dpo_path),
+            "base_model": body.base_model,
+            "training_method": body.training_method,
+            "output_model_name": output_model_name,
+            "num_train_epochs": body.num_train_epochs,
+            "learning_rate": body.learning_rate,
+            "lora_r": body.lora_r,
+            "lora_alpha": body.lora_alpha,
+            "owner": current_user.username,
+        }
+        job_result = await manager.create_job(payload)
+
+    return {
+        "status": "launched" if job_result else "dataset_prepared",
+        "job_id": job_id,
+        "finetune_job_id": job_result.get("id") if isinstance(job_result, dict) else str(job_result or ""),
+        "preference_pairs_count": len(pairs),
+        "dataset_path": str(dpo_path),
+        "output_model_name": output_model_name,
+        "finetune_job": job_result,
+    }
 
 
 @router.get("/queue/{item_id}")

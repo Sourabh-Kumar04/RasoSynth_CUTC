@@ -689,3 +689,36 @@ class DatasetOrchestrator(
     def get_active_jobs(self) -> list[dict]:
         """Get all active jobs."""
         return [job.to_dict() for job in self.active_jobs.values()]
+
+    async def trigger_dpo_finetune(
+        self,
+        job_id: str,
+        base_model: str = "sarvamai/sarvam-2b-v0.5",
+        training_method: str = "dpo",
+        output_model_name: Optional[str] = None,
+        owner: Optional[str] = None,
+        review_service: Optional[Any] = None,
+    ) -> Dict[str, Any]:
+        """Closed-loop alignment trigger: mines DPO pairs and prepares fine-tuning dataset."""
+        from core.review_service import ReviewService
+        svc = review_service or self.review_service or ReviewService(db=self.db_manager or getattr(self.db, "db", self.db))
+        pairs = await svc.export_dpo_pairs(job_id=job_id, owner=owner)
+
+        out_dir = Path("outputs/finetune")
+        out_dir.mkdir(parents=True, exist_ok=True)
+        dpo_path = out_dir / f"dpo_{job_id}_{int(time.time())}.jsonl"
+
+        with open(dpo_path, "w", encoding="utf-8") as f:
+            for p in pairs:
+                f.write(json.dumps(p, ensure_ascii=False) + "\n")
+
+        model_name = output_model_name or f"dpo-aligned-{job_id[:8]}"
+        return {
+            "status": "dataset_prepared",
+            "job_id": job_id,
+            "preference_pairs_count": len(pairs),
+            "dataset_path": str(dpo_path),
+            "output_model_name": model_name,
+            "base_model": base_model,
+            "training_method": training_method,
+        }

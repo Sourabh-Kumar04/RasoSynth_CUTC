@@ -1783,6 +1783,53 @@ dataset_samples_generated_total 4520`
           runtime_compatibility: ['Ollama', 'LM Studio', 'vLLM', 'llama.cpp']
         });
       }
+      if (endpoint.includes('/benchmark')) {
+        return parse({
+          job_id: 'demo-benchmark',
+          base_model: 'sarvamai/sarvam-2b-v0.5',
+          evaluated_samples: 25,
+          win_rate_pct: 84.0,
+          base_model_mean_quality: 0.76,
+          finetuned_mean_quality: 0.89,
+          quality_delta: 0.13,
+          grounding_faithfulness: 0.95,
+          format_compliance: 0.98,
+          verdict: 'significant_improvement',
+        });
+      }
+      if (endpoint.includes('/export-bundle')) {
+        return parse({
+          status: 'ready',
+          format: 'vllm',
+          config_path: 'outputs/finetune/job/vllm_config.json',
+          instructions: 'vLLM and Ollama bundle prepared successfully',
+        });
+      }
+      if (endpoint.startsWith('/api/finetune/estimate-vram')) {
+        return parse({
+          breakdown: {
+            base_model: 'sarvamai/sarvam-2b-v0.5',
+            estimated_parameters_billion: 2.0,
+            weight_memory_gb: 1.1,
+            lora_optimizer_memory_gb: 0.16,
+            activation_memory_gb: 0.64,
+            cuda_overhead_gb: 1.2,
+            total_estimated_vram_gb: 3.1,
+            recommended_gpu_vram_gb: 8.0,
+            supported_on_16gb_gpu: true,
+            supported_on_24gb_gpu: true,
+          },
+          recommended_hyperparameters: {
+            load_in_4bit: true,
+            bf16: true,
+            per_device_train_batch_size: 4,
+            gradient_accumulation_steps: 4,
+            lora_r: 16,
+            lora_alpha: 32,
+            max_seq_length: 2048,
+          },
+        });
+      }
       if (method === 'POST') {
         const bodyObj = options.body ? JSON.parse(options.body as string) : {};
         return parse({
@@ -1859,6 +1906,20 @@ dataset_samples_generated_total 4520`
         rejected: 12,
         pending: 15,
         paused_jobs_count: 2,
+      });
+    }
+
+    if (endpoint.startsWith('/api/review/queue/export-dpo')) {
+      return parse({
+        pairs: [
+          {
+            prompt: 'Analyze patient symptoms of acute respiratory distress and suggest diagnostic protocol.',
+            chosen: '1. Immediate pulse oximetry and arterial blood gas (ABG) evaluation.\n2. High-flow nasal cannula oxygenation.',
+            rejected: '1. Give water and observe patient in room air.',
+            source_review_id: 'rev-item-001',
+          },
+        ],
+        count: 1,
       });
     }
 
@@ -1958,6 +2019,32 @@ dataset_samples_generated_total 4520`
     return this.request<string>(`/api/finetune/jobs/${jobId}/modelfile`)
   }
 
+  async estimateVram(payload: Record<string, any>) {
+    return this.request<{
+      breakdown: any
+      recommended_hyperparameters: any
+    }>('/api/finetune/estimate-vram', {
+      method: 'POST',
+      body: JSON.stringify(payload),
+    })
+  }
+
+  async getFinetuneBenchmark(jobId: string) {
+    return this.request<any>(`/api/finetune/jobs/${jobId}/benchmark`)
+  }
+
+  async exportDeploymentBundle(jobId: string, format = 'vllm') {
+    return this.request<any>(`/api/finetune/jobs/${jobId}/export-bundle`, {
+      method: 'POST',
+      params: { format },
+    })
+  }
+
+  async getReviewDpoPairs(jobId?: string) {
+    const params = jobId ? { job_id: jobId } : undefined
+    return this.request<{ pairs: any[]; count: number }>('/api/review/queue/export-dpo', { params })
+  }
+
   async getSignedDownloadUrl(
     jobOrDatasetId: string,
     options?: { ttlSeconds?: number; format?: string }
@@ -1987,7 +2074,7 @@ dataset_samples_generated_total 4520`
 
   // ── Review API ────────────────────────────────────────────────────────────
 
-  async getReviewQueue(params?: { status?: string; job_id?: string; page?: number; page_size?: number }) {
+  async getReviewQueue(params?: { status?: string; job_id?: string; page?: number; page_size?: number; strategy?: string }) {
     return this.request<any>('/api/review/queue', { params: params as any })
   }
 

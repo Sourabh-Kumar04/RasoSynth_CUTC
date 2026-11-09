@@ -130,9 +130,11 @@ export default function ReviewPage() {
   const [loading, setLoading]       = useState(true)
   const [actionLoading, setAction]  = useState(false)
   const [statusFilter, setStatus]   = useState('pending')
+  const [strategy, setStrategy]     = useState<'uncertainty' | 'entropy' | 'quality_asc' | 'quality_desc' | 'fifo'>('uncertainty')
   const [jobFilter, setJobFilter]   = useState('')
   const [page, setPage]             = useState(1)
   const [mobileSheet, setSheet]     = useState(false)
+  const [exportingDpo, setExportingDpo] = useState(false)
 
   // Edit state
   const [editing, setEditing]               = useState(false)
@@ -154,6 +156,27 @@ export default function ReviewPage() {
 
   const { toasts, push: toast } = useToast()
   const PAGE_SIZE = 20
+
+  const handleExportDpo = async () => {
+    setExportingDpo(true)
+    try {
+      const res = await api.getReviewDpoPairs(jobFilter || undefined)
+      const blob = new Blob([res.pairs.map((p: any) => JSON.stringify(p)).join('\n')], { type: 'application/x-ndjson' })
+      const url = URL.createObjectURL(blob)
+      const a = document.createElement('a')
+      a.href = url
+      a.download = `dpo_preference_pairs_${Date.now()}.jsonl`
+      document.body.appendChild(a)
+      a.click()
+      document.body.removeChild(a)
+      URL.revokeObjectURL(url)
+      toast(`Exported ${res.count} DPO preference pairs`, 'success')
+    } catch (err: any) {
+      toast(`Export failed: ${err?.message ?? err}`, 'error')
+    } finally {
+      setExportingDpo(false)
+    }
+  }
 
   // ── Load reviewer name from localStorage ─────────────────────────────────
 
@@ -180,10 +203,11 @@ export default function ReviewPage() {
         status: statusFilter && statusFilter !== 'all' ? statusFilter : undefined,
         job_id: jobFilter || undefined,
         page, page_size: PAGE_SIZE,
+        strategy,
       })
       if (r) setQueue(r)
     } catch {}
-  }, [statusFilter, jobFilter, page])
+  }, [statusFilter, jobFilter, page, strategy])
 
   const fetchPaused = useCallback(async () => {
     try {
@@ -484,6 +508,17 @@ export default function ReviewPage() {
             <Download className="h-3.5 w-3.5 mr-1 text-[#10b981]" />
             Export Approved JSONL ({stats ? stats.approved : 0})
           </Button>
+          <Button
+            variant="outline"
+            size="sm"
+            disabled={exportingDpo}
+            className="rounded-md border-purple-500/40 text-purple-300 hover:text-white hover:bg-purple-950/40 font-mono text-xs"
+            onClick={handleExportDpo}
+            title="Export pairwise DPO preference pairs (prompt, chosen, rejected) mined from human reviewer edits"
+          >
+            {exportingDpo ? <Loader2 className="h-3.5 w-3.5 mr-1 animate-spin text-purple-400" /> : <GitCompare className="h-3.5 w-3.5 mr-1 text-purple-400" />}
+            Export DPO Pairs (.jsonl)
+          </Button>
           <Button variant="outline" size="sm" className="rounded-md border-[#272738] text-[#a8a29e] hover:text-white hover:bg-[#161622] font-mono text-xs" onClick={async () => {
             setLoading(true)
             await Promise.all([fetchStats(), fetchQueue(), fetchPaused()])
@@ -735,6 +770,18 @@ export default function ReviewPage() {
             <SelectItem value="flagged">Flagged</SelectItem>
           </SelectContent>
         </Select>
+        <Select value={strategy} onValueChange={v => { setStrategy(v as any); setPage(1) }}>
+          <SelectTrigger className="w-56 h-8 text-xs rounded-md border-[#272738] bg-[#0a0a0f] text-white font-mono">
+            <SelectValue placeholder="Sort Strategy" />
+          </SelectTrigger>
+          <SelectContent className="bg-[#12121a] border-[#272738] text-white text-xs font-mono">
+            <SelectItem value="uncertainty">⚡ Uncertainty (Active Learning)</SelectItem>
+            <SelectItem value="entropy">Highest Entropy</SelectItem>
+            <SelectItem value="quality_asc">Lowest Quality (Priority)</SelectItem>
+            <SelectItem value="quality_desc">Highest Quality</SelectItem>
+            <SelectItem value="fifo">FIFO (Oldest First)</SelectItem>
+          </SelectContent>
+        </Select>
         <Input placeholder="Filter by Job ID" className="w-52 h-8 text-xs rounded-md border-[#272738] bg-[#0a0a0f] text-white font-mono focus:border-[#f26625]"
           value={jobFilter} onChange={e => { setJobFilter(e.target.value); setPage(1) }} />
         {jobFilter && (
@@ -847,6 +894,11 @@ export default function ReviewPage() {
                                 {item.metadata.parallel_en && (
                                   <span className="text-xs font-mono px-1.5 py-0.2 rounded bg-[#f26625]/10 text-[#f26625] border border-[#f26625]/30">
                                     Bitext
+                                  </span>
+                                )}
+                                {item.metadata.uncertainty_score !== undefined && (
+                                  <span className="text-xs font-mono font-bold px-1.5 py-0.2 rounded bg-purple-950/40 text-purple-300 border border-purple-800">
+                                    {(item.metadata.uncertainty_score * 100).toFixed(0)}% Entropy · Active Learning
                                   </span>
                                 )}
                                 {item.metadata.rejected_response && (
