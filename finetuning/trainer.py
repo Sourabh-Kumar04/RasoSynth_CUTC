@@ -17,6 +17,7 @@ from __future__ import annotations
 import json
 import logging
 import os
+import time
 import asyncio
 from dataclasses import dataclass, field
 from pathlib import Path
@@ -95,6 +96,20 @@ class FineTuneConfig:
     # Training method: sft (Supervised Fine-Tuning), dpo (Direct Preference), orpo
     training_method: str = "sft"
 
+    # DPO (Direct Preference Optimization) parameters
+    dpo_beta: float = 0.1
+    dpo_loss_type: str = "sigmoid"
+    max_prompt_length: int = 512
+    max_target_length: int = 1024
+
+    # Optimization & Throughput
+    packing: bool = False
+    auto_scale_vram: bool = True
+
+    # Ollama & Quantization Export
+    export_ollama: bool = False
+    system_prompt: str = ""
+
     # Execution target — default is real local PEFT/Unsloth (not the Colab simulator)
     execution_target: str = "local"
 
@@ -134,8 +149,9 @@ def estimate_vram_requirement(
     gradient_accumulation_steps: int = 4,
     load_in_4bit: bool = True,
     load_in_8bit: bool = False,
+    training_method: str = "sft",
 ) -> dict[str, Any]:
-    """Calculates detailed GPU VRAM footprint estimates for LLM fine-tuning."""
+    """Calculates detailed GPU VRAM footprint estimates for LLM fine-tuning (SFT & DPO)."""
     lower = base_model.lower()
     if "70b" in lower:
         params_b = 70.0
@@ -165,14 +181,19 @@ def estimate_vram_requirement(
     lora_gb = (lora_params_m * 1e6 * 16) / (1024 ** 3)
     seq_scale = max_seq_length / 2048.0
     batch_scale = per_device_train_batch_size / 4.0
-    activation_gb = 1.2 * seq_scale * batch_scale * (params_b / 7.0) ** 0.5
-    cuda_overhead_gb = 1.2
+
+    # DPO processes chosen + rejected pairs through policy and reference models
+    is_dpo = training_method.lower() in ("dpo", "orpo")
+    activation_multiplier = 2.0 if is_dpo else 1.0
+    activation_gb = 1.2 * seq_scale * batch_scale * ((params_b / 7.0) ** 0.5) * activation_multiplier
+    cuda_overhead_gb = 1.5 if is_dpo else 1.2
 
     total_est_gb = weight_gb + lora_gb + activation_gb + cuda_overhead_gb
     recommended_gpu_gb = 8.0 if total_est_gb <= 6.5 else 16.0 if total_est_gb <= 14.0 else 24.0 if total_est_gb <= 22.0 else 40.0 if total_est_gb <= 36.0 else 80.0
 
     return {
         "base_model": base_model,
+        "training_method": training_method.lower(),
         "estimated_parameters_billion": params_b,
         "weight_memory_gb": round(weight_gb, 2),
         "lora_optimizer_memory_gb": round(lora_gb, 2),
@@ -219,6 +240,57 @@ def recommend_hyperparameters(base_model: str, target_gpu_vram_gb: float = 16.0)
             "lora_alpha": 32,
             "max_seq_length": 2048,
         }
+
+
+def export_to_ollama(
+    model_dir: str | Path,
+    output_name: str = "finetuned-model",
+    template: str = "alpaca",
+    system_prompt: str = "",
+) -> dict[str, Any]:
+    """Generates an Ollama Modelfile and export manifest for local edge deployment."""
+    path = Path(model_dir)
+    path.mkdir(parents=True, exist_ok=True)
+    modelfile_path = path / "Modelfile"
+
+    # Define standard chat templates for Ollama
+    if template.lower() == "chatml":
+        ollama_template = '"""{{ if .System }}<|im_start|>system\n{{ .System }}<|im_end|>\n{{ end }}{{ if .Prompt }}<|im_start|>user\n{{ .Prompt }}<|im_end|>\n{{ end }}<|im_start|>assistant\n{{ .Response }}<|im_end|>"""'
+    elif template.lower() == "sharegpt":
+        ollama_template = '"""{{ if .System }}<<SYS>>\n{{ .System }}\n<</SYS>>\n\n{{ end }}{{ if .Prompt }}[INST] {{ .Prompt }} [/INST]{{ end }} {{ .Response }}"""'
+    else:  # Alpaca default
+        ollama_template = '"""{{ if .System }}### Instruction:\n{{ .System }}\n\n{{ end }}### Instruction:\n{{ .Prompt }}\n\n### Response:\n{{ .Response }}"""'
+
+    modelfile_content = [
+        f"# Ollama Modelfile for {output_name}",
+        f"# Exported by RasoSynthTune Alignment Engine",
+        f"FROM {path.resolve()}",
+        f"TEMPLATE {ollama_template}",
+        "PARAMETER temperature 0.7",
+        "PARAMETER top_p 0.9",
+        "PARAMETER stop <|im_end|>",
+        "PARAMETER stop </s>",
+    ]
+    if system_prompt:
+        modelfile_content.append(f'SYSTEM """{system_prompt}"""')
+
+    full_text = "\n".join(modelfile_content) + "\n"
+    with open(modelfile_path, "w", encoding="utf-8") as f:
+        f.write(full_text)
+
+    manifest = {
+        "model_name": output_name,
+        "modelfile_path": str(modelfile_path.resolve()),
+        "base_directory": str(path.resolve()),
+        "template": template,
+        "cli_command": f"ollama create {output_name} -f {modelfile_path.resolve()}",
+        "exported_at": time.time(),
+    }
+    manifest_path = path / "ollama_manifest.json"
+    with open(manifest_path, "w", encoding="utf-8") as f:
+        json.dump(manifest, f, indent=2)
+
+    return manifest
 
 
 def evaluate_finetuned_model(
@@ -631,7 +703,6 @@ class Trainer:
     def _train_hf(self, cfg, samples, put, output_dir):
         try:
             from peft import LoraConfig, get_peft_model, TaskType  # type: ignore
-            from trl import SFTTrainer  # type: ignore
             from transformers import (  # type: ignore
                 AutoModelForCausalLM, AutoTokenizer, TrainingArguments, BitsAndBytesConfig,
             )
@@ -672,18 +743,30 @@ class Trainer:
             )
             model = get_peft_model(model, lora_config)
 
-            texts = [format_sample(s, cfg.chat_template) + tokenizer.eos_token for s in samples]
-            hf_dataset = HFDataset.from_dict({"text": texts})
             cb = _ProgressCallback(put, cfg.num_train_epochs)
 
-            trainer = SFTTrainer(
-                model=model,
-                tokenizer=tokenizer,
-                train_dataset=hf_dataset,
-                dataset_text_field="text",
-                max_seq_length=cfg.max_seq_length,
-                args=TrainingArguments(
+            # Direct Preference Optimization (DPO) path
+            if getattr(cfg, "training_method", "sft").lower() in ("dpo", "orpo"):
+                from trl import DPOTrainer, DPOConfig  # type: ignore
+
+                dpo_records = []
+                for s in samples:
+                    prompt = s.get("prompt") or s.get("instruction") or s.get("input") or ""
+                    chosen = s.get("chosen") or ""
+                    rejected = s.get("rejected") or ""
+                    if prompt and chosen and rejected:
+                        dpo_records.append({"prompt": str(prompt), "chosen": str(chosen), "rejected": str(rejected)})
+
+                if not dpo_records:
+                    raise ValueError("No valid DPO pairs (prompt, chosen, rejected) found in training dataset.")
+
+                hf_dataset = HFDataset.from_list(dpo_records)
+                dpo_args = DPOConfig(
                     output_dir=str(output_dir),
+                    beta=getattr(cfg, "dpo_beta", 0.1),
+                    loss_type=getattr(cfg, "dpo_loss_type", "sigmoid"),
+                    max_prompt_length=getattr(cfg, "max_prompt_length", 512),
+                    max_length=cfg.max_seq_length,
                     num_train_epochs=cfg.num_train_epochs,
                     per_device_train_batch_size=cfg.per_device_train_batch_size,
                     gradient_accumulation_steps=cfg.gradient_accumulation_steps,
@@ -696,9 +779,46 @@ class Trainer:
                     save_steps=cfg.save_steps,
                     report_to="none",
                     max_steps=cfg.max_steps if cfg.max_steps > 0 else -1,
-                ),
-                callbacks=[cb],
-            )
+                )
+                trainer = DPOTrainer(
+                    model=model,
+                    ref_model=None,  # Shares base model across policy & reference via adapter toggling
+                    tokenizer=tokenizer,
+                    train_dataset=hf_dataset,
+                    args=dpo_args,
+                    callbacks=[cb],
+                )
+            else:
+                # Supervised Fine-Tuning (SFT) path with optional sample packing
+                from trl import SFTTrainer  # type: ignore
+                texts = [format_sample(s, cfg.chat_template) + tokenizer.eos_token for s in samples]
+                hf_dataset = HFDataset.from_dict({"text": texts})
+
+                trainer = SFTTrainer(
+                    model=model,
+                    tokenizer=tokenizer,
+                    train_dataset=hf_dataset,
+                    dataset_text_field="text",
+                    max_seq_length=cfg.max_seq_length,
+                    packing=getattr(cfg, "packing", False),
+                    args=TrainingArguments(
+                        output_dir=str(output_dir),
+                        num_train_epochs=cfg.num_train_epochs,
+                        per_device_train_batch_size=cfg.per_device_train_batch_size,
+                        gradient_accumulation_steps=cfg.gradient_accumulation_steps,
+                        learning_rate=cfg.learning_rate,
+                        warmup_ratio=cfg.warmup_ratio,
+                        lr_scheduler_type=cfg.lr_scheduler_type,
+                        fp16=cfg.fp16 and not cfg.bf16,
+                        bf16=cfg.bf16,
+                        logging_steps=cfg.logging_steps,
+                        save_steps=cfg.save_steps,
+                        report_to="none",
+                        max_steps=cfg.max_steps if cfg.max_steps > 0 else -1,
+                    ),
+                    callbacks=[cb],
+                )
+
             try:
                 trainer.train()
             except Exception as exc:
@@ -714,6 +834,18 @@ class Trainer:
         model.save_pretrained(str(output_dir))
         tokenizer.save_pretrained(str(output_dir))
         put({"type": "saved", "path": str(output_dir)})
+
+        if getattr(cfg, "export_ollama", False):
+            try:
+                manifest = export_to_ollama(
+                    output_dir,
+                    output_name=cfg.output_model_name or "finetuned-model",
+                    template=cfg.chat_template,
+                    system_prompt=getattr(cfg, "system_prompt", ""),
+                )
+                put({"type": "ollama_exported", "manifest": manifest})
+            except Exception as e:
+                put({"type": "warning", "message": f"Ollama export failed: {e}"})
 
         hf_url = None
         if cfg.push_to_hub and cfg.output_model_name:

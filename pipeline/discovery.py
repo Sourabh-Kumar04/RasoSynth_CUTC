@@ -745,10 +745,14 @@ class DiscoveryPipeline:
 
         Usage:  response = await self._fetch("https://api.example.com/data", params={"q": "..."})
         """
-        default_headers = {
-            "User-Agent": "RasoSynthTune/2.0 (+https://github.com/raso/dataset-engineer)",
-            "Accept": "application/json, text/html, */*",
-        }
+        try:
+            from core.crawler.stealth import StealthHeaderGenerator
+            default_headers = StealthHeaderGenerator.generate()
+        except Exception:
+            default_headers = {
+                "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36",
+                "Accept": "application/json, text/html, */*",
+            }
         if headers:
             default_headers.update(headers)
 

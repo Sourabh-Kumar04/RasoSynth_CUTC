@@ -296,6 +296,12 @@ class ContentAnalyzer:
         """Detect anti-bot, CAPTCHA, Cloudflare, or crawler-challenge text."""
         if not text:
             return False
+        try:
+            from core.crawler.stealth import AntiBotDetector
+            if AntiBotDetector.inspect(200, {}, text).detected:
+                return True
+        except Exception:
+            pass
         patterns = [
             r"javascript\s+is\s+disabled",
             r"javascript\s+not\s+enabled",
@@ -402,6 +408,22 @@ class ExtractionPipeline:
         self.analyzer = ContentAnalyzer(router)
         self.timeout = config.get("timeout", 120)
         self._LOG = logger
+
+        from core.crawler.stealth import (
+            AdaptiveDomainCircuitBreaker,
+            PlaywrightStealthDriver,
+            ProxyRotator,
+        )
+        self.circuit_breaker = config.get("circuit_breaker") or AdaptiveDomainCircuitBreaker(
+            base_delay=float(config.get("base_delay", 1.0)),
+            max_delay=float(config.get("max_delay", 60.0)),
+        )
+        self.proxy_rotator = config.get("proxy_rotator") or ProxyRotator(config.get("proxies"))
+        self.stealth_driver = PlaywrightStealthDriver(
+            headless=config.get("headless", True),
+            timeout_ms=int(config.get("browser_timeout_ms", 30000)),
+        )
+        self.enable_browser_escalation = config.get("enable_browser_escalation", True)
 
     async def extract(self, source) -> AsyncGenerator[ExtractedContent, None]:
         """Extract content from various source types."""
@@ -639,7 +661,7 @@ class ExtractionPipeline:
             )
 
     async def extract_from_url(self, url: str) -> AsyncGenerator[ExtractedContent, None]:
-        """Extract content from URL with intelligent type detection."""
+        """Extract content from URL with intelligent type detection and stealth anti-blocking tiers."""
         # SSRF protection: reject internal/private targets
         is_safe, reason = _is_safe_url(url)
         if not is_safe:
@@ -653,14 +675,34 @@ class ExtractionPipeline:
             )
             return
 
+        # Adaptive domain circuit breaker check
+        allowed, wait_sec = await self.circuit_breaker.can_request(url)
+        if not allowed:
+            yield ExtractedContent(
+                content="",
+                content_type="error",
+                url=url,
+                confidence=0.0,
+                quality_score=0.0,
+                extraction_warnings=[f"Domain circuit breaker open: cooling down for {wait_sec:.1f}s"]
+            )
+            return
+
+        from core.crawler.stealth import AntiBotDetector, StealthHeaderGenerator
+
         try:
+            stealth_headers = StealthHeaderGenerator.generate()
+            if "headers" in self.config and isinstance(self.config["headers"], dict):
+                stealth_headers.update(self.config["headers"])
+
+            proxy = await self.proxy_rotator.get_proxy()
+            proxy_mounts = {"http://": proxy, "https://": proxy} if proxy else None
+
             async with httpx.AsyncClient(
                 timeout=httpx.Timeout(self.timeout),
                 follow_redirects=False,  # Disabled: track redirects manually for SSRF validation
-                headers={
-                    "User-Agent": "Mozilla/5.0 (compatible; AI-Dataset-Engineer/1.0)",
-                    "Accept": "text/html,application/xhtml+xml,application/xml,*/*"
-                }
+                headers=stealth_headers,
+                mounts=proxy_mounts,
             ) as client:
                 curr_url = url
                 response = None
@@ -695,6 +737,49 @@ class ExtractionPipeline:
                     else:
                         break
 
+                raw_content = response.text if response else ""
+                status_code = response.status_code if response else 500
+
+                # Inspect response for WAF challenges or bot blocking
+                inspection = AntiBotDetector.inspect(
+                    status_code=status_code,
+                    headers=dict(response.headers) if response else {},
+                    body_text=raw_content,
+                )
+
+                if inspection.detected:
+                    await self.circuit_breaker.record_block(curr_url, retry_after=inspection.retry_after)
+
+                    # Tier 2: Headless Playwright Stealth Browser Escalation
+                    if self.enable_browser_escalation and inspection.should_escalate_to_browser:
+                        self._LOG.info("Escalating to Playwright stealth driver for %s (reason: %s)", curr_url, inspection.category.value)
+                        b_ok, b_html, b_meta = await self.stealth_driver.render_page(curr_url, proxy=proxy)
+                        if b_ok and b_html and not self.analyzer._detect_anti_bot_garbage(b_html):
+                            await self.circuit_breaker.record_success(curr_url)
+                            async for content in self._extract_html(b_html, curr_url, "utf-8"):
+                                content.extraction_warnings.append(
+                                    f"Extracted via Playwright stealth browser escalation tier ({inspection.category.value} bypassed)"
+                                )
+                                yield content
+                            return
+
+                    # Return anti-bot failure content
+                    category_label = inspection.category.value
+                    warning = (
+                        "anti_bot_garbage: Anti-bot verification page detected (CAPTCHA/Cloudflare)"
+                        if "anti_bot_garbage" in inspection.matched_pattern or inspection.category.value in ("cloudflare", "captcha")
+                        else f"anti_bot_garbage: Anti-bot verification page detected ({category_label})"
+                    )
+                    yield ExtractedContent(
+                        content="",
+                        content_type="error",
+                        url=curr_url,
+                        confidence=0.0,
+                        quality_score=0.0,
+                        extraction_warnings=[warning]
+                    )
+                    return
+
                 if response is None or response.status_code >= 400:
                     status = response.status_code if response else "no_response"
                     yield ExtractedContent(
@@ -707,23 +792,13 @@ class ExtractionPipeline:
                     )
                     return
 
+                # Record successful extraction on circuit breaker
+                await self.circuit_breaker.record_success(curr_url)
+
                 content_type = response.headers.get("content-type", "")
 
                 # Detect encoding
                 encoding = response.encoding or 'utf-8'
-                raw_content = response.text
-
-                # Immediate anti-bot verification check on raw response text
-                if self.analyzer._detect_anti_bot_garbage(raw_content):
-                    yield ExtractedContent(
-                        content="",
-                        content_type="error",
-                        url=url,
-                        confidence=0.0,
-                        quality_score=0.0,
-                        extraction_warnings=["anti_bot_garbage: Anti-bot verification page detected (CAPTCHA/Cloudflare)"]
-                    )
-                    return
 
                 # Extract based on content type
                 if "text/html" in content_type:

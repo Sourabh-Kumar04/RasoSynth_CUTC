@@ -78,6 +78,12 @@ class CreateFineTuneJobRequest(BaseModel):
     hf_org: str = ""
     chat_template: str = Field("alpaca", pattern="^(alpaca|chatml|llama3|sharegpt|openai_jsonl)$")
     training_method: str = Field("sft", pattern="^(sft|dpo|orpo)$")
+    dpo_beta: float = Field(0.1, ge=0.01, le=1.0)
+    dpo_loss_type: str = Field("sigmoid", pattern="^(sigmoid|hinge|ipo|kto_pair)$")
+    max_prompt_length: int = Field(512, ge=64, le=4096)
+    packing: bool = Field(False, description="Enable sample packing for high throughput")
+    export_ollama: bool = Field(False, description="Generate Ollama Modelfile upon completion")
+    system_prompt: str = Field("", description="System prompt for template")
     execution_target: str = Field(
         "local",
         pattern="^(local|modal|runpod|serverless|colab|cloud_accelerated)$",
@@ -449,6 +455,7 @@ async def estimate_vram_endpoint(
     grad_accum = payload.get("gradient_accumulation_steps", 4)
     load_in_4bit = payload.get("load_in_4bit", True)
     target_vram = payload.get("target_gpu_vram_gb", 16.0)
+    training_method = payload.get("training_method", "sft")
 
     breakdown = estimate_vram_requirement(
         base_model=base_model,
@@ -457,6 +464,7 @@ async def estimate_vram_endpoint(
         per_device_train_batch_size=batch_size,
         gradient_accumulation_steps=grad_accum,
         load_in_4bit=load_in_4bit,
+        training_method=training_method,
     )
     recommendations = recommend_hyperparameters(base_model, target_gpu_vram_gb=target_vram)
     return {
@@ -511,17 +519,18 @@ async def export_job_deployment_bundle(
     out_name = getattr(getattr(job, "config", None), "output_model_name", "custom-model")
     seq_len = getattr(getattr(job, "config", None), "max_seq_length", 2048)
 
-    if format == "gguf":
-        modelfile_path = model_dir / "Modelfile"
-        modelfile_path.write_text(
-            f"FROM ./model.gguf\nTEMPLATE \"\"\"{{{{ .Prompt }}}}\"\"\"\nPARAMETER stop \"<|im_end|>\"\n"
-        )
+    if format in ("gguf", "ollama"):
+        from finetuning.trainer import export_to_ollama
+        template = getattr(getattr(job, "config", None), "chat_template", "alpaca")
+        system_prompt = getattr(getattr(job, "config", None), "system_prompt", "")
+        manifest = export_to_ollama(model_dir, output_name=out_name, template=template, system_prompt=system_prompt)
         return {
             "job_id": job_id,
             "format": "gguf",
-            "modelfile": str(modelfile_path),
+            "modelfile": manifest["modelfile_path"],
             "status": "ready",
-            "instructions": f"Run 'ollama create {out_name} -f {modelfile_path}'",
+            "manifest": manifest,
+            "instructions": manifest["cli_command"],
         }
     else:
         vllm_config = model_dir / "vllm_config.json"
@@ -540,6 +549,48 @@ async def export_job_deployment_bundle(
             "status": "ready",
             "instructions": f"Serve with 'python -m vllm.entrypoints.openai.api_server --model {model_dir}'",
         }
+
+
+@router.post("/jobs/{job_id}/export-ollama")
+async def export_job_ollama_endpoint(
+    job_id: str,
+    req: Request,
+    payload: dict = Body(default_factory=dict),
+    current_user: User = Depends(get_current_user),
+    manager=Depends(_manager),
+):
+    """Export fine-tuned adapter/model to Ollama Modelfile format for local inference."""
+    job = await manager.get_job(job_id)
+    if not job:
+        raise HTTPException(status_code=404, detail="Fine-tune job not found")
+    _enforce_owner(job.to_dict() if hasattr(job, "to_dict") else job, current_user)
+
+    from finetuning.trainer import export_to_ollama
+
+    out_dir_base = getattr(getattr(job, "config", None), "output_dir", "outputs/finetune")
+    model_dir = Path(out_dir_base) / job_id
+    model_dir.mkdir(parents=True, exist_ok=True)
+
+    out_name = payload.get("output_model_name") or getattr(getattr(job, "config", None), "output_model_name", None) or f"raso-{job_id[:8]}"
+    template = payload.get("chat_template") or getattr(getattr(job, "config", None), "chat_template", "alpaca")
+    system_prompt = payload.get("system_prompt", "") or getattr(getattr(job, "config", None), "system_prompt", "")
+
+    manifest = export_to_ollama(
+        model_dir=model_dir,
+        output_name=out_name,
+        template=template,
+        system_prompt=system_prompt,
+    )
+    modelfile_content = (model_dir / "Modelfile").read_text(encoding="utf-8") if (model_dir / "Modelfile").exists() else ""
+
+    return {
+        "job_id": job_id,
+        "model_name": out_name,
+        "modelfile": manifest["modelfile_path"],
+        "modelfile_content": modelfile_content,
+        "manifest": manifest,
+        "cli_command": manifest["cli_command"],
+    }
 
 
 ALLOWED_FINETUNE_ARTIFACTS = {
