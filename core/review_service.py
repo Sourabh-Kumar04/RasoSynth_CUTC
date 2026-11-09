@@ -385,6 +385,81 @@ class ReviewService:
                 break
             page += 1
 
+    async def export_dpo_pairs(self, job_id: Optional[str] = None, owner: Optional[str] = None) -> list[dict]:
+        """
+        Extract pairwise preference records for DPO/ORPO training from human review edits.
+        The human-edited text is 'chosen'; the original LLM generation is 'rejected'.
+        """
+        pairs = []
+        page = 1
+        while True:
+            items, total = await self.db.list_review_items(
+                job_id=job_id, page=page, page_size=500, owner=owner
+            )
+            for item in items:
+                d = item.to_dict()
+                edited_resp = d.get("edited_response")
+                orig_resp = d.get("response")
+                if edited_resp and orig_resp and edited_resp.strip() != orig_resp.strip():
+                    pairs.append({
+                        "prompt": d.get("edited_instruction") or d.get("instruction") or "",
+                        "chosen": edited_resp.strip(),
+                        "rejected": orig_resp.strip(),
+                        "source_review_id": d["id"],
+                        "job_id": d.get("job_id"),
+                        "quality_score": d.get("quality_score"),
+                    })
+            if page * 500 >= total or not items:
+                break
+            page += 1
+        return pairs
+
+    async def get_prioritized_queue(
+        self,
+        strategy: str = "fifo",
+        status: str = "pending",
+        job_id: Optional[str] = None,
+        page: int = 1,
+        page_size: int = 50,
+        owner: Optional[str] = None,
+    ) -> tuple[list[dict], int]:
+        """
+        Retrieve review queue sorted by strategy:
+        - fifo: order by creation timestamp ascending
+        - uncertainty: active learning entropy/uncertainty sampling
+        - quality_asc: lowest quality first
+        - quality_desc: highest quality first
+        """
+        fetch_size = 1000 if strategy in ("uncertainty", "entropy") else page_size
+        items, total = await self.db.list_review_items(
+            status=status,
+            job_id=job_id,
+            page=1 if strategy in ("uncertainty", "entropy") else page,
+            page_size=fetch_size,
+            owner=owner,
+        )
+        dict_items = [i.to_dict() for i in items]
+
+        if strategy in ("uncertainty", "entropy"):
+            for it in dict_items:
+                q = it.get("quality_score") or 0.70
+                distance_to_boundary = abs(q - 0.70)
+                uncertainty = max(0.0, 1.0 - (distance_to_boundary * 2.5))
+                meta = it.get("metadata") or {}
+                if meta.get("reason_codes"):
+                    uncertainty = min(1.0, uncertainty + 0.15)
+                it["uncertainty_score"] = round(uncertainty, 4)
+
+            dict_items.sort(key=lambda x: x.get("uncertainty_score", 0.0), reverse=True)
+            start = (page - 1) * page_size
+            dict_items = dict_items[start : start + page_size]
+        elif strategy == "quality_asc":
+            dict_items.sort(key=lambda x: x.get("quality_score", 0.0))
+        elif strategy == "quality_desc":
+            dict_items.sort(key=lambda x: x.get("quality_score", 0.0), reverse=True)
+
+        return dict_items, total
+
     # ── HITL pause / resume ───────────────────────────────────────────────────
 
     async def pause_job_for_review(self, job_id: str) -> asyncio.Event:

@@ -94,10 +94,21 @@ async def list_queue(
     current_user: User = Depends(get_current_user),
     status: Optional[str] = Query(None),
     job_id: Optional[str] = Query(None),
+    strategy: str = Query("fifo", pattern="^(fifo|uncertainty|entropy|quality_asc|quality_desc)$"),
     page: int = Query(1, ge=1),
     page_size: int = Query(50, ge=1, le=500),
     svc=Depends(_svc)):
     owner_filter = None if current_user.role == UserRole.ADMIN else current_user.username
+    if strategy in ("uncertainty", "entropy", "quality_asc", "quality_desc"):
+        items, total = await svc.get_prioritized_queue(
+            strategy=strategy,
+            status=status or "pending",
+            job_id=job_id,
+            page=page,
+            page_size=page_size,
+            owner=owner_filter,
+        )
+        return {"items": items, "total": total, "page": page, "page_size": page_size, "strategy": strategy}
     return await svc.get_queue(status=status, job_id=job_id, page=page, page_size=page_size, owner=owner_filter)
 
 
@@ -120,6 +131,20 @@ async def export_approved(
         media_type="application/x-ndjson",
         headers={"Content-Disposition": 'attachment; filename="approved_samples.jsonl"'},
     )
+
+
+@router.get("/queue/export-dpo")
+async def export_dpo_pairs_endpoint(
+    current_user: User = Depends(get_current_user),
+    job_id: Optional[str] = Query(None, description="Filter by dataset job ID"),
+    svc=Depends(_svc)):
+    """
+    Export pairwise DPO/ORPO training records mined from human reviewer edits.
+    Each row: {"prompt": ..., "chosen": ..., "rejected": ..., "source_review_id": ...}
+    """
+    owner_filter = None if current_user.role == UserRole.ADMIN else current_user.username
+    pairs = await svc.export_dpo_pairs(job_id=job_id, owner=owner_filter)
+    return {"pairs": pairs, "count": len(pairs)}
 
 
 @router.get("/queue/{item_id}")

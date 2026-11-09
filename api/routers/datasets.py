@@ -275,6 +275,8 @@ async def hybrid_search_dataset_records(
 
     doc_filter = payload.get("filter")
     min_quality = payload.get("min_quality")
+    text_query = payload.get("text_query")
+    alpha = float(payload.get("alpha", 0.7))
 
     try:
         results = await db.hybrid_search_samples(
@@ -282,12 +284,15 @@ async def hybrid_search_dataset_records(
             query_embedding=query_embedding,
             document_filter=doc_filter,
             min_quality=min_quality,
+            text_query=text_query,
+            alpha=alpha,
             limit=limit,
         )
         return {
             "results": results,
             "count": len(results),
             "filter": doc_filter,
+            "text_query": text_query,
             "limit": limit,
         }
     except Exception as e:

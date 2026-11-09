@@ -1016,12 +1016,14 @@ class DatabaseManager:
         query_embedding: list[float],
         document_filter: Optional[dict] = None,
         min_quality: Optional[float] = None,
+        text_query: Optional[str] = None,
+        alpha: float = 0.7,
         limit: int = 20,
     ) -> list[dict]:
-        """Hybrid search combining NoSQL document metadata filtering and vector similarity.
+        """Hybrid search combining NoSQL document metadata filtering, text matching, and vector similarity.
 
         On PostgreSQL: Executes native pgvector cosine distance (<=>) combined with JSONB containment (@>).
-        On SQLite: Evaluates document filtering in SQL, then performs cosine similarity ranking in Python.
+        On SQLite / Standalone: Evaluates document filtering in SQL, then performs fused cosine similarity and lexical ranking in Python.
         """
         import numpy as np
 
@@ -1041,6 +1043,9 @@ class DatabaseManager:
                 import json
                 where_clauses.append("metadata @> :doc_filter::jsonb")
                 params["doc_filter"] = json.dumps(document_filter)
+            if text_query:
+                where_clauses.append("(instruction ILIKE :text_q OR response ILIKE :text_q)")
+                params["text_q"] = f"%{text_query}%"
 
             where_sql = " AND ".join(where_clauses)
             raw_sql = f"""
@@ -1057,6 +1062,8 @@ class DatabaseManager:
                 rows = result.fetchall()
                 records = []
                 for r in rows:
+                    dist = float(r.distance or 0.0)
+                    sim = float(1.0 - dist)
                     records.append({
                         "id": str(r.id),
                         "dataset_id": str(r.dataset_id),
@@ -1066,12 +1073,11 @@ class DatabaseManager:
                         "metadata": r.metadata if isinstance(r.metadata, dict) else {},
                         "quality_score": r.quality_score,
                         "difficulty_tier": r.difficulty_tier,
-                        "similarity_score": float(1.0 - (r.distance or 0.0)),
-                        "distance": float(r.distance or 0.0),
+                        "similarity_score": round(sim, 4),
+                        "distance": round(dist, 4),
                     })
                 return records
         else:
-            # SQLite fallback: fetch candidates matching document_filter and compute cosine similarity in numpy
             candidates = await self.query_samples_by_document(
                 dataset_id,
                 document_filter=document_filter or {},
@@ -1080,6 +1086,8 @@ class DatabaseManager:
             )
             q = np.array(query_embedding, dtype=np.float32)
             q_norm = np.linalg.norm(q)
+
+            text_terms = text_query.lower().split() if text_query else []
 
             scored = []
             for s in candidates:
@@ -1092,6 +1100,16 @@ class DatabaseManager:
                     sim = 0.0
                 else:
                     sim = float(np.dot(q, v) / (q_norm * v_norm))
+
+                # Lexical scoring bonus if text query provided
+                lexical_score = 0.0
+                if text_terms:
+                    text_blob = f"{s.instruction} {s.response}".lower()
+                    matches = sum(1 for term in text_terms if term in text_blob)
+                    lexical_score = matches / len(text_terms)
+
+                fused_score = (alpha * sim) + ((1.0 - alpha) * lexical_score) if text_terms else sim
+
                 scored.append({
                     "id": str(s.id),
                     "dataset_id": str(s.dataset_id),
@@ -1101,10 +1119,11 @@ class DatabaseManager:
                     "metadata": s.metadata_ if isinstance(s.metadata_, dict) else {},
                     "quality_score": s.quality_score,
                     "difficulty_tier": s.difficulty_tier,
-                    "similarity_score": sim,
-                    "distance": float(1.0 - sim),
+                    "similarity_score": round(fused_score, 4),
+                    "vector_similarity": round(sim, 4),
+                    "distance": round(float(1.0 - sim), 4),
                 })
-            scored.sort(key=lambda x: x["distance"])
+            scored.sort(key=lambda x: x["similarity_score"], reverse=True)
             return scored[:limit]
 
     async def get_samples(self, dataset_id: str, limit: int = 1000, offset: int = 0) -> list[Sample]:
@@ -1967,6 +1986,8 @@ class AsyncDB:
         query_embedding: list[float],
         document_filter: Optional[dict] = None,
         min_quality: Optional[float] = None,
+        text_query: Optional[str] = None,
+        alpha: float = 0.7,
         limit: int = 20,
     ) -> list[dict]:
         """Hybrid search combining NoSQL document metadata filtering and vector similarity."""
@@ -1975,5 +1996,7 @@ class AsyncDB:
             query_embedding,
             document_filter=document_filter,
             min_quality=min_quality,
+            text_query=text_query,
+            alpha=alpha,
             limit=limit,
         )

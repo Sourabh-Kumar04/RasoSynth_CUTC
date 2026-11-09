@@ -116,6 +116,69 @@ class TechniqueKnowledge:
         return self.LATEST_2026_TECHNIQUES.get(category, [])
 
 
+@dataclass
+class TenantBudgetUsage:
+    """Tracks token consumption, dollar cost, and request timestamps per tenant."""
+    tenant_id: str
+    tokens_consumed: int = 0
+    total_cost_usd: float = 0.0
+    monthly_budget_usd: float = 100.0
+    request_timestamps: list[float] = field(default_factory=list)
+
+    def record_usage(self, tokens: int, cost_usd: float) -> None:
+        self.tokens_consumed += tokens
+        self.total_cost_usd += cost_usd
+
+    def is_rate_limited(self, max_requests_per_minute: int = 60) -> bool:
+        now = time.time()
+        self.request_timestamps = [t for t in self.request_timestamps if now - t < 60.0]
+        if len(self.request_timestamps) >= max_requests_per_minute:
+            return True
+        self.request_timestamps.append(now)
+        return False
+
+    def is_budget_exceeded(self, estimated_additional_cost: float = 0.0) -> bool:
+        return (self.total_cost_usd + estimated_additional_cost) > self.monthly_budget_usd
+
+
+class TenantBudgetLimiter:
+    """Sliding-window rate limiter and per-tenant cost budget enforcer."""
+
+    def __init__(self, default_budget_usd: float = 100.0, default_rpm: int = 60):
+        self.default_budget_usd = default_budget_usd
+        self.default_rpm = default_rpm
+        self.tenants: dict[str, TenantBudgetUsage] = {}
+
+    def get_or_create(self, tenant_id: str) -> TenantBudgetUsage:
+        if tenant_id not in self.tenants:
+            self.tenants[tenant_id] = TenantBudgetUsage(
+                tenant_id=tenant_id,
+                monthly_budget_usd=self.default_budget_usd,
+            )
+        return self.tenants[tenant_id]
+
+    def check_and_record_request(
+        self,
+        tenant_id: str,
+        estimated_cost: float = 0.0,
+        max_rpm: Optional[int] = None,
+    ) -> tuple[bool, str]:
+        usage = self.get_or_create(tenant_id)
+        rpm = max_rpm or self.default_rpm
+
+        if usage.is_rate_limited(rpm):
+            return False, f"Rate limit exceeded ({rpm} req/min) for tenant {tenant_id}"
+
+        if usage.is_budget_exceeded(estimated_cost):
+            return False, f"Monthly budget limit (${usage.monthly_budget_usd:.2f}) exceeded for tenant {tenant_id}"
+
+        return True, "ok"
+
+    def record_tokens_and_cost(self, tenant_id: str, tokens: int, cost_usd: float) -> None:
+        usage = self.get_or_create(tenant_id)
+        usage.record_usage(tokens, cost_usd)
+
+
 class ProviderRouter:
     """Intelligent provider router with self-improvement and research capabilities."""
 
@@ -148,6 +211,7 @@ class ProviderRouter:
         self.cache_hits: dict[str, int] = {}
         self.cache_misses: dict[str, int] = {}
         self.knowledge = TechniqueKnowledge()
+        self.budget_limiter = TenantBudgetLimiter()
         self._providers: dict[str, AbstractProviderPlugin] = {}
         self._provider_configs: dict[str, dict] = {}
         self._success_rates: dict[str, list[bool]] = {}

@@ -114,9 +114,14 @@ class DeduplicationEngine:
         # Level 1: Exact-match cache (text_hash -> sample_id)
         self._exact_cache: dict[str, str] = {}
 
-        # Level 2: MinHash signature cache
+        # Level 2: MinHash signature cache and LSH index
         #   sig_hash -> (signature_tuple, sample_id)
         self._minhash_cache: dict[str, tuple[tuple[int, ...], str]] = {}
+        self._num_bands = config.get("num_bands", 16)
+        self._rows_per_band = max(1, self._num_permutations // self._num_bands)
+        self._lsh_index: list[dict[int, list[tuple[str, tuple[int, ...]]]]] = [
+            {} for _ in range(self._num_bands)
+        ]
 
         # Level 3: Embedding sliding buffer
         #   Each entry: (sample_id, embedding_vector, text_hash)
@@ -236,12 +241,19 @@ class DeduplicationEngine:
         # Level 1: Exact cache
         self._exact_cache[text_hash] = sample_id
 
-        # Level 2: MinHash signature
+        # Level 2: MinHash signature and LSH banding
         sig = self._compute_minhash(text)
         sig_hash = hashlib.md5(
             repr(sig).encode(), usedforsecurity=False
         ).hexdigest()
         self._minhash_cache[sig_hash] = (sig, sample_id)
+
+        for b in range(self._num_bands):
+            start = b * self._rows_per_band
+            band_slice = sig[start : start + self._rows_per_band]
+            band_key = hash(band_slice)
+            bucket = self._lsh_index[b].setdefault(band_key, [])
+            bucket.append((sample_id, sig))
 
         # Level 3: Embedding buffer & optional Qdrant index
         if self.router is not None:
@@ -404,13 +416,30 @@ class DeduplicationEngine:
         if not sig:
             return False, 0.0, None, 0.0
 
-        for cached_sig, cached_id in self._minhash_cache.values():
-            if len(sig) != len(cached_sig):
+        # Fast sub-linear candidate retrieval via LSH bands
+        candidates: dict[str, tuple[int, ...]] = {}
+        for b in range(self._num_bands):
+            start = b * self._rows_per_band
+            band_slice = sig[start : start + self._rows_per_band]
+            band_key = hash(band_slice)
+            bucket = self._lsh_index[b].get(band_key)
+            if bucket:
+                for cand_id, cand_sig in bucket:
+                    candidates[cand_id] = cand_sig
+
+        target_candidates: list[tuple[str, tuple[int, ...]]] = (
+            list(candidates.items())
+            if candidates
+            else [(cid, csig) for csig, cid in self._minhash_cache.values()]
+        )
+
+        for cand_id, cand_sig in target_candidates:
+            if len(sig) != len(cand_sig):
                 continue
-            matches = sum(1 for a, b in zip(sig, cached_sig) if a == b)
+            matches = sum(1 for a, b in zip(sig, cand_sig) if a == b)
             jaccard = matches / len(sig)
             if jaccard >= self.fuzzy_threshold:
-                return True, jaccard, cached_id, jaccard
+                return True, jaccard, cand_id, jaccard
 
         return False, 0.0, None, 0.0
 
