@@ -35,7 +35,9 @@ async def test_export_tar_gz_archive_handling(tmp_path, auth_headers):
     ]
 
     orig_db = server_mod.db
+    orig_state_db = getattr(app.state, "db", None)
     server_mod.db = mock_db
+    app.state.db = mock_db
     try:
         client = TestClient(app)
         csrf_token = client.get("/auth/csrf-token", headers=auth_headers).json()["csrf_token"]
@@ -53,3 +55,7 @@ async def test_export_tar_gz_archive_handling(tmp_path, auth_headers):
         assert len(res.content) > 0
     finally:
         server_mod.db = orig_db
+        if orig_state_db is not None:
+            app.state.db = orig_state_db
+        elif hasattr(app.state, "db"):
+            delattr(app.state, "db")
