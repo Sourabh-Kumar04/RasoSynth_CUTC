@@ -76,9 +76,14 @@ ingress:
   enabled: true
   className: "nginx"
   annotations:
+    cert-manager.io/cluster-issuer: "letsencrypt-prod"
     nginx.ingress.kubernetes.io/proxy-read-timeout: "3600"
     nginx.ingress.kubernetes.io/proxy-send-timeout: "3600"
     nginx.ingress.kubernetes.io/websocket-services: "rasosynthtune-api"
+  tls:
+    - hosts:
+        - app.rasosynthtune.internal
+      secretName: rasosynthtune-tls
   hosts:
     - host: app.rasosynthtune.internal
       paths:
@@ -88,3 +93,11 @@ ingress:
         - path: /
           pathType: Prefix
           service: frontend
+
+secrets:
+  create: true
+  hfToken: ""
+  modalTokenId: ""
+  modalTokenSecret: ""
+  s3AccessKey: "raso_minio_admin"
+  s3SecretKey: "raso_minio_secret_key"

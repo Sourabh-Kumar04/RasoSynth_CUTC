@@ -923,3 +923,45 @@ async def get_dbom_badge_svg_endpoint(certificate_id: str):
         verified=verified,
     )
     return Response(content=svg_content, media_type="image/svg+xml")
+
+
+@router.post("/datasets/synthesize-preference")
+@router.post("/api/datasets/synthesize-preference")
+async def synthesize_preference_dataset_endpoint(
+    req: Request,
+    payload: dict = Body(default_factory=dict),
+    current_user: User = Depends(get_current_user),
+):
+    """Synthesize DPO/KTO/SimPO preference pairs from provided contexts or instructions."""
+    from pipeline.preference_pipeline import PreferenceDatasetSynthesizer
+
+    domain = payload.get("domain", "general")
+    contexts = payload.get("contexts", [])
+    topics = payload.get("topics", [])
+
+    synthesizer = PreferenceDatasetSynthesizer(domain=domain)
+    raw_pairs = []
+
+    if contexts:
+        for ctx in contexts:
+            seed = ctx.get("instruction") if isinstance(ctx, dict) else None
+            text = ctx.get("context", "") if isinstance(ctx, dict) else str(ctx)
+            raw_pairs.append(synthesizer.synthesize_pair_from_context(text, instruction_seed=seed))
+    elif topics:
+        for t in topics:
+            raw_pairs.append(synthesizer.synthesize_multi_turn_pair(str(t)))
+    else:
+        raw_pairs.append(synthesizer.synthesize_pair_from_context(
+            "LoRA freezes base model weights and trains rank decomposition matrices to drastically reduce memory."
+        ))
+        raw_pairs.append(synthesizer.synthesize_multi_turn_pair("Distributed DPO Trainer"))
+
+    valid_pairs = synthesizer.validate_and_filter(raw_pairs)
+    return {
+        "status": "success",
+        "domain": domain,
+        "total_synthesized": len(raw_pairs),
+        "total_valid": len(valid_pairs),
+        "pairs": [p.to_dict() for p in valid_pairs],
+    }
+

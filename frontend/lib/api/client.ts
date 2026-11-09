@@ -502,6 +502,10 @@ class APIClient {
     return this.request<any>('/metrics/history', { params: { range } })
   }
 
+  async getCrawlerTelemetry() {
+    return this.request<any>('/observability/crawler-telemetry')
+  }
+
   // === Enhanced Health API ===
 
   // Basic liveness check
@@ -1367,6 +1371,29 @@ dataset_samples_generated_total 4520`
       );
     }
 
+    if (endpoint.includes('crawler-telemetry')) {
+      return parse({
+        status: 'healthy',
+        playwright_stealth_enabled: true,
+        browser_escalation_enabled: true,
+        active_browsers: 3,
+        max_concurrent_browsers: 8,
+        shared_memory: { total_mb: 2048, used_mb: 142, free_mb: 1906, usage_pct: 6.9 },
+        circuit_breakers: [
+          { domain: 'target-a.gov.in', state: 'CLOSED', failure_count: 0, cooldown_seconds_left: 0 },
+          { domain: 'court-bulletin.nic.in', state: 'HALF_OPEN', failure_count: 2, cooldown_seconds_left: 14 },
+          { domain: 'law-records.org', state: 'CLOSED', failure_count: 0, cooldown_seconds_left: 0 },
+        ],
+        challenges_mitigated: {
+          cloudflare_turnstile: 42,
+          datadome_slider: 18,
+          aws_waf_captcha: 7,
+          bypass_success_rate: 96.4,
+        },
+        proxy_pool: { total_proxies: 12, healthy_proxies: 11, avg_latency_ms: 184, active_protocol: 'SOCKS5/HTTP Round-Robin' },
+      });
+    }
+
     if (endpoint.startsWith('/research/status')) {
       return parse({
         enabled: true,
@@ -1805,6 +1832,47 @@ dataset_samples_generated_total 4520`
           instructions: 'vLLM and Ollama bundle prepared successfully',
         });
       }
+      if (endpoint.includes('/evaluate-judge')) {
+        return parse({
+          job_id: 'demo-judge',
+          base_model_name: 'sarvamai/sarvam-2b-v0.5',
+          aligned_model_name: 'aligned-model',
+          total_evaluated: 5,
+          aligned_win_count: 4,
+          base_win_count: 1,
+          tie_count: 0,
+          win_rate_pct: 80.0,
+          verdict: 'SIGNIFICANT_IMPROVEMENT',
+          rubric_averages: {
+            aligned: { accuracy: 4.8, coherence: 4.6, safety: 4.9, conciseness: 4.5 },
+            base: { accuracy: 3.4, coherence: 3.8, safety: 4.2, conciseness: 3.5 },
+          },
+          comparisons: [
+            {
+              prompt: 'Summarize the primary benefits of Direct Preference Optimization vs standard SFT.',
+              winner: 'aligned',
+              reason: 'Direct mathematical alignment of policy without unstable reward model training.',
+              base_response: 'DPO aligns language models by optimizing weights directly using pairwise probabilities.',
+              aligned_response: 'DPO optimizes policy weights directly via closed-form preference loss, avoiding RL instability.',
+              scores: { aligned_total: 18.8, base_total: 14.9 },
+            },
+          ],
+        });
+      }
+      if (endpoint.includes('/export-quant')) {
+        return parse({
+          status: 'ready',
+          job_id: 'demo-job',
+          model_name: 'custom-model',
+          format: 'gguf',
+          quant_type: 'q4_k_m',
+          plan: {
+            reduction_pct: 70.0,
+            quant_vram_gb: 1.35,
+            serving_command: 'llama-server -m custom-model-Q4_K_M.gguf -c 2048 --port 8080',
+          },
+        });
+      }
       if (endpoint.startsWith('/api/finetune/estimate-vram')) {
         return parse({
           breakdown: {
@@ -2037,6 +2105,27 @@ dataset_samples_generated_total 4520`
     return this.request<any>(`/api/finetune/jobs/${jobId}/export-bundle`, {
       method: 'POST',
       params: { format },
+    })
+  }
+
+  async evaluateJobWithJudge(jobId: string, payload?: { test_prompts?: any[] }) {
+    return this.request<any>(`/api/finetune/jobs/${jobId}/evaluate-judge`, {
+      method: 'POST',
+      body: JSON.stringify(payload || {}),
+    })
+  }
+
+  async exportQuantRecipe(jobId: string, payload?: { target_format?: string; quant_type?: string }) {
+    return this.request<any>(`/api/finetune/jobs/${jobId}/export-quant`, {
+      method: 'POST',
+      body: JSON.stringify(payload || {}),
+    })
+  }
+
+  async synthesizePreferenceDataset(payload: { domain?: string; contexts?: any[]; topics?: string[] }) {
+    return this.request<any>('/api/datasets/synthesize-preference', {
+      method: 'POST',
+      body: JSON.stringify(payload),
     })
   }
 

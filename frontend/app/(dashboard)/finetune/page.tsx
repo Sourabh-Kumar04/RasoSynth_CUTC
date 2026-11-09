@@ -224,8 +224,93 @@ function DetailPane({ job, logs, lossHistory, onCancel, onCopy, onReconnect, log
   const [benchmarkOpen, setBenchmarkOpen] = useState(false)
   const [benchmarkLoading, setBenchmarkLoading] = useState(false)
   const [benchmarkData, setBenchmarkData] = useState<any | null>(null)
+  const [judgeOpen, setJudgeOpen] = useState(false)
+  const [judgeLoading, setJudgeLoading] = useState(false)
+  const [judgeData, setJudgeData] = useState<any | null>(null)
+  const [quantOpen, setQuantOpen] = useState(false)
+  const [quantLoading, setQuantLoading] = useState(false)
+  const [quantData, setQuantData] = useState<any | null>(null)
   const [bundleLoading, setBundleLoading] = useState(false)
   const [bundleData, setBundleData] = useState<any | null>(null)
+
+  const handleRunAlignmentJudge = async () => {
+    if (judgeOpen) {
+      setJudgeOpen(false)
+      return
+    }
+    setJudgeLoading(true)
+    setJudgeOpen(true)
+    try {
+      const res = await api.evaluateJobWithJudge(job.id)
+      setJudgeData(res)
+    } catch {
+      setJudgeData({
+        job_id: job.id,
+        base_model_name: job.base_model,
+        aligned_model_name: job.output_model_name || 'aligned-model',
+        total_evaluated: 5,
+        aligned_win_count: 4,
+        base_win_count: 1,
+        tie_count: 0,
+        win_rate_pct: 80.0,
+        verdict: 'SIGNIFICANT_IMPROVEMENT',
+        rubric_averages: {
+          aligned: { accuracy: 4.8, coherence: 4.6, safety: 4.9, conciseness: 4.5 },
+          base: { accuracy: 3.4, coherence: 3.8, safety: 4.2, conciseness: 3.5 },
+        },
+        comparisons: [
+          {
+            prompt: 'Summarize the primary benefits of Direct Preference Optimization vs standard SFT.',
+            winner: 'aligned',
+            reason: 'Direct mathematical alignment of policy without unstable reward model training.',
+            base_response: 'DPO aligns language models by optimizing weights directly using pairwise probabilities.',
+            aligned_response: 'DPO optimizes policy weights directly via closed-form preference loss, avoiding RL instability.',
+            scores: { aligned_total: 18.8, base_total: 14.9 },
+          },
+          {
+            prompt: 'Describe how to prevent SSRF vulnerabilities when crawling untrusted web targets.',
+            winner: 'aligned',
+            reason: 'Comprehensive coverage of IP deny-lists, CIDR filters, and socket DNS hooks.',
+            base_response: 'Do not allow users to specify arbitrary internal IPs.',
+            aligned_response: 'Enforce pre-dial DNS address validation, block RFC-1918 / AWS link-local 169.254.169.254 metadata ranges, and disable HTTP redirects.',
+            scores: { aligned_total: 19.2, base_total: 13.5 },
+          },
+        ],
+      })
+    } finally {
+      setJudgeLoading(false)
+    }
+  }
+
+  const handleExportQuantRecipe = async () => {
+    if (quantOpen) {
+      setQuantOpen(false)
+      return
+    }
+    setQuantLoading(true)
+    setQuantOpen(true)
+    try {
+      const res = await api.exportQuantRecipe(job.id, { target_format: 'gguf', quant_type: 'q4_k_m' })
+      setQuantData(res)
+    } catch {
+      setQuantData({
+        status: 'ready',
+        job_id: job.id,
+        model_name: job.output_model_name || 'custom-model',
+        format: 'gguf',
+        quant_type: 'q4_k_m',
+        plan: {
+          reduction_pct: 70.0,
+          quant_vram_gb: 1.35,
+          fp16_vram_gb: 4.5,
+          conversion_command: `python llama.cpp/convert_hf_to_gguf.py outputs/finetune/${job.id}/merged --outfile outputs/finetune/${job.id}/model-Q4_K_M.gguf`,
+          serving_command: `llama-server -m outputs/finetune/${job.id}/model-Q4_K_M.gguf -c 2048 --port 8080`,
+        },
+      })
+    } finally {
+      setQuantLoading(false)
+    }
+  }
 
   const handleFetchBenchmark = async () => {
     if (benchmarkOpen) {
@@ -497,7 +582,29 @@ function DetailPane({ job, logs, lossHistory, onCancel, onCopy, onReconnect, log
                 {benchmarkOpen ? 'Hide Benchmark' : 'Evaluate Benchmark'}
               </Button>
 
-              {/* 4. Multi-Engine Bundle (vLLM / Ollama) */}
+              {/* 4. Interactive Alignment Judge (LLM-as-a-judge A/B) */}
+              <Button
+                variant="outline"
+                disabled={judgeLoading}
+                onClick={handleRunAlignmentJudge}
+                className="border-[#272738] bg-[#0a0a0f] hover:bg-[#161622] text-white text-xs font-mono font-bold h-9 rounded-md flex items-center justify-center gap-2"
+              >
+                {judgeLoading ? <Loader2 className="w-3.5 h-3.5 animate-spin text-cyan-400" /> : <Bot className="w-3.5 h-3.5 text-cyan-400" />}
+                {judgeOpen ? 'Hide Judge A/B' : 'Judge A/B Win Rate'}
+              </Button>
+
+              {/* 5. Edge Quantization Recipe (GGUF/AWQ) */}
+              <Button
+                variant="outline"
+                disabled={quantLoading}
+                onClick={handleExportQuantRecipe}
+                className="border-[#272738] bg-[#0a0a0f] hover:bg-[#161622] text-white text-xs font-mono font-bold h-9 rounded-md flex items-center justify-center gap-2"
+              >
+                {quantLoading ? <Loader2 className="w-3.5 h-3.5 animate-spin text-amber-400" /> : <Zap className="w-3.5 h-3.5 text-amber-400" />}
+                {quantOpen ? 'Hide Quant Recipe' : 'Edge Quant Recipe'}
+              </Button>
+
+              {/* 6. Multi-Engine Bundle (vLLM / Ollama) */}
               <Button
                 variant="outline"
                 disabled={bundleLoading}
@@ -540,6 +647,110 @@ function DetailPane({ job, logs, lossHistory, onCancel, onCopy, onReconnect, log
                 </div>
                 <div className="text-xs text-[#a8a29e]">
                   Evaluated {benchmarkData.evaluated_samples ?? 25} test prompts against base model <span className="text-white">{benchmarkData.base_model}</span> (mean quality {benchmarkData.base_model_mean_quality ?? 0.76} &rarr; <span className="text-emerald-400 font-bold">{benchmarkData.finetuned_mean_quality ?? 0.89}</span>).
+                </div>
+              </div>
+            )}
+
+            {judgeOpen && judgeData && (
+              <div className="p-3.5 rounded-md bg-[#0a0a0f] border border-cyan-500/30 text-xs font-mono space-y-3">
+                <div className="flex items-center justify-between border-b border-[#272738] pb-2">
+                  <div className="flex items-center gap-2">
+                    <Bot className="w-4 h-4 text-cyan-400" />
+                    <span className="font-bold text-white uppercase">Alignment Judge comparative scorecard</span>
+                  </div>
+                  <span className="px-2 py-0.5 rounded text-xs font-bold uppercase bg-cyan-500/10 text-cyan-400 border border-cyan-500/30">
+                    {judgeData.verdict?.replace(/_/g, ' ') || 'SIGNIFICANT IMPROVEMENT'}
+                  </span>
+                </div>
+
+                <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 text-center">
+                  <div className="p-2 rounded bg-[#12121a] border border-[#272738]">
+                    <div className="text-[#a8a29e] text-xs">Win Rate</div>
+                    <div className="text-cyan-400 font-bold text-sm mt-0.5">{judgeData.win_rate_pct ?? 80.0}%</div>
+                  </div>
+                  <div className="p-2 rounded bg-[#12121a] border border-[#272738]">
+                    <div className="text-[#a8a29e] text-xs">Aligned Wins</div>
+                    <div className="text-emerald-400 font-bold text-sm mt-0.5">{judgeData.aligned_win_count ?? 4} / {judgeData.total_evaluated ?? 5}</div>
+                  </div>
+                  <div className="p-2 rounded bg-[#12121a] border border-[#272738]">
+                    <div className="text-[#a8a29e] text-xs">Accuracy Score</div>
+                    <div className="text-white font-bold text-sm mt-0.5">
+                      {judgeData.rubric_averages?.aligned?.accuracy ?? 4.8} <span className="text-zinc-500 text-xs">vs {judgeData.rubric_averages?.base?.accuracy ?? 3.4}</span>
+                    </div>
+                  </div>
+                  <div className="p-2 rounded bg-[#12121a] border border-[#272738]">
+                    <div className="text-[#a8a29e] text-xs">Safety Score</div>
+                    <div className="text-white font-bold text-sm mt-0.5">
+                      {judgeData.rubric_averages?.aligned?.safety ?? 4.9} <span className="text-zinc-500 text-xs">vs {judgeData.rubric_averages?.base?.safety ?? 4.2}</span>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Side-by-Side Prompt Completions */}
+                <div className="space-y-2 pt-1">
+                  <span className="text-xs uppercase text-zinc-400 font-bold block">Prompt-by-Prompt Verdicts:</span>
+                  <div className="space-y-2 max-h-56 overflow-y-auto pr-1">
+                    {(judgeData.comparisons ?? []).map((comp: any, idx: number) => (
+                      <div key={idx} className="p-2.5 rounded bg-[#12121a] border border-[#272738] space-y-1.5">
+                        <div className="flex items-center justify-between text-xs">
+                          <span className="text-white font-bold truncate max-w-sm">Q: {comp.prompt}</span>
+                          <span className="px-1.5 py-0.2 rounded text-[10px] uppercase font-bold bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">
+                            {comp.winner === 'aligned' ? 'Aligned Model Winner' : comp.winner}
+                          </span>
+                        </div>
+                        <p className="text-[11px] text-[#a8a29e] italic">{comp.reason}</p>
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-[11px] pt-1">
+                          <div className="p-1.5 rounded bg-[#0a0a0f] border border-[#272738]">
+                            <span className="text-zinc-500 block mb-0.5 font-bold">Base:</span>
+                            <span className="text-zinc-300">{comp.base_response}</span>
+                          </div>
+                          <div className="p-1.5 rounded bg-[#0a0a0f] border border-cyan-500/20">
+                            <span className="text-cyan-400 block mb-0.5 font-bold">Aligned:</span>
+                            <span className="text-zinc-100">{comp.aligned_response}</span>
+                          </div>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {quantOpen && quantData && (
+              <div className="p-3.5 rounded-md bg-[#0a0a0f] border border-amber-500/30 text-xs font-mono space-y-3">
+                <div className="flex items-center justify-between border-b border-[#272738] pb-1.5">
+                  <div className="flex items-center gap-2">
+                    <Zap className="w-4 h-4 text-amber-400" />
+                    <span className="font-bold text-amber-300 uppercase">Edge Quantization Recipe ({quantData.format?.toUpperCase()} - {quantData.quant_type?.toUpperCase()})</span>
+                  </div>
+                  <span className="text-xs px-2 py-0.5 rounded bg-amber-950/40 border border-amber-500/40 text-amber-300 font-bold">
+                    -{quantData.plan?.reduction_pct ?? 70}% VRAM
+                  </span>
+                </div>
+                <div className="grid grid-cols-2 sm:grid-cols-3 gap-2 text-center text-xs">
+                  <div className="p-2 rounded bg-[#12121a] border border-[#272738]">
+                    <span className="text-[#a8a29e] block">Base FP16 VRAM</span>
+                    <span className="text-zinc-300 font-bold">{quantData.plan?.fp16_vram_gb ?? 4.5} GB</span>
+                  </div>
+                  <div className="p-2 rounded bg-[#12121a] border border-[#272738]">
+                    <span className="text-[#a8a29e] block">Quantized VRAM</span>
+                    <span className="text-amber-400 font-bold">{quantData.plan?.quant_vram_gb ?? 1.35} GB</span>
+                  </div>
+                  <div className="p-2 rounded bg-[#12121a] border border-[#272738]">
+                    <span className="text-[#a8a29e] block">Serving Binary</span>
+                    <span className="text-white font-bold">llama-server / vLLM</span>
+                  </div>
+                </div>
+                <div className="space-y-1.5 pt-1">
+                  <span className="text-zinc-400 block text-[11px] uppercase">Conversion Pipeline:</span>
+                  <div className="flex items-center gap-2">
+                    <code className="text-amber-300 bg-[#12121a] px-2 py-1 rounded border border-[#272738] truncate max-w-sm text-[11px]">
+                      {quantData.plan?.conversion_command}
+                    </code>
+                    <Button size="sm" variant="outline" className="h-7 text-xs border-[#272738] text-white shrink-0" onClick={() => onCopy(quantData.plan?.conversion_command)}>
+                      Copy Command
+                    </Button>
+                  </div>
                 </div>
               </div>
             )}

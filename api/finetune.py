@@ -631,6 +631,46 @@ async def export_job_ollama_endpoint(
     }
 
 
+@router.post("/jobs/{job_id}/export-quant")
+async def export_job_quant_endpoint(
+    job_id: str,
+    req: Request,
+    payload: dict = Body(default_factory=dict),
+    current_user: User = Depends(get_current_user),
+    manager=Depends(_manager),
+):
+    """Export fine-tuned adapter to edge quantization recipe (GGUF, AWQ, GPTQ)."""
+    job = await manager.get_job(job_id)
+    if not job:
+        raise HTTPException(status_code=404, detail="Fine-tune job not found")
+    _enforce_owner(job.to_dict() if hasattr(job, "to_dict") else job, current_user)
+
+    from finetuning.export_quant import QuantizationExporter
+
+    out_dir_base = getattr(getattr(job, "config", None), "output_dir", "outputs/finetune")
+    model_dir = Path(out_dir_base) / job_id
+    model_dir.mkdir(parents=True, exist_ok=True)
+
+    out_name = getattr(getattr(job, "config", None), "output_model_name", "custom-model")
+    target_format = payload.get("target_format", "gguf")
+    quant_type = payload.get("quant_type", "q4_k_m")
+
+    bundle = QuantizationExporter.write_conversion_bundle(
+        model_name=out_name,
+        output_dir=model_dir,
+        target_format=target_format,
+        quant_type=quant_type,
+    )
+    return {
+        "job_id": job_id,
+        "model_name": out_name,
+        "format": target_format,
+        "quant_type": quant_type,
+        **bundle,
+    }
+
+
+
 ALLOWED_FINETUNE_ARTIFACTS = {
     "adapter_model.safetensors",
     "adapter_config.json",
