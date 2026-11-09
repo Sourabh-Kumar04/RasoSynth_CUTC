@@ -245,6 +245,56 @@ async def optimize_dataset_indexes(
     }
 
 
+@router.post("/datasets/{dataset_id}/records/hybrid-search")
+async def hybrid_search_dataset_records(
+    dataset_id: str,
+    req: Request,
+    payload: dict = Body(...),
+    limit: int = Query(default=20, ge=1, le=200),
+    current_user: User = Depends(require_role([UserRole.ADMIN, UserRole.USER])),
+):
+    """Hybrid semantic vector and NoSQL document containment search."""
+    db = _get_db(req)
+    if not db:
+        raise HTTPException(status_code=503, detail="Database not available")
+
+    dataset = await db.get_dataset(dataset_id)
+    if not dataset:
+        datasets_for_job = await db.get_datasets_by_job(dataset_id)
+        if datasets_for_job:
+            dataset = datasets_for_job[0]
+
+    if not dataset:
+        raise HTTPException(status_code=404, detail=f"Dataset {dataset_id} not found")
+
+    enforce_owner(dataset, current_user, resource_name="Dataset")
+
+    query_embedding = payload.get("embedding")
+    if not query_embedding or not isinstance(query_embedding, list):
+        raise HTTPException(status_code=400, detail="Missing or invalid 'embedding' vector list in payload")
+
+    doc_filter = payload.get("filter")
+    min_quality = payload.get("min_quality")
+
+    try:
+        results = await db.hybrid_search_samples(
+            dataset_id=dataset["id"],
+            query_embedding=query_embedding,
+            document_filter=doc_filter,
+            min_quality=min_quality,
+            limit=limit,
+        )
+        return {
+            "results": results,
+            "count": len(results),
+            "filter": doc_filter,
+            "limit": limit,
+        }
+    except Exception as e:
+        logger.error(f"Hybrid search failed for dataset {dataset_id}: {e}", exc_info=True)
+        raise HTTPException(status_code=500, detail="Failed to execute hybrid search")
+
+
 @router.delete("/datasets/{dataset_id}")
 async def delete_dataset_endpoint(
     dataset_id: str,
@@ -293,7 +343,7 @@ async def export_dataset(
 ):
     """Download an existing dataset file in the requested format."""
     export_format = (request or {}).get("format", "jsonl").lower()
-    if export_format not in {"json", "jsonl", "csv", "parquet", "zip", "tar.gz", "tar", "sql", "qdrant"}:
+    if export_format not in {"json", "jsonl", "csv", "parquet", "arrow", "feather", "zip", "tar.gz", "tar", "sql", "qdrant"}:
         raise HTTPException(status_code=400, detail=f"Unsupported export format: {export_format}")
 
     db = _get_db(req)
@@ -421,7 +471,7 @@ async def export_dataset(
             )
         ):
             file_path = Path(output_path)
-        elif export_format in {"jsonl", "csv", "parquet", "sql", "qdrant"}:
+        elif export_format in {"jsonl", "csv", "parquet", "arrow", "feather", "sql", "qdrant"}:
             samples = await db.get_samples(dataset["id"], limit=MAX_SAMPLE_LOAD_LIMIT)
             if not samples:
                 raise HTTPException(status_code=404, detail="No samples found for this dataset")
@@ -440,6 +490,8 @@ async def export_dataset(
                 file_path = await exp._export_csv(samples, output_dir.name, output_dir)
             elif export_format == "parquet":
                 file_path = await exp._export_parquet(samples, output_dir.name, output_dir)
+            elif export_format in {"arrow", "feather"}:
+                file_path = await exp._export_arrow(samples, output_dir.name, output_dir)
             else:
                 file_path = await exp._export_jsonl(samples, output_dir.name, output_dir)
         else:
@@ -452,6 +504,8 @@ async def export_dataset(
             "jsonl": "application/x-ndjson",
             "csv": "text/csv",
             "parquet": "application/octet-stream",
+            "arrow": "application/vnd.apache.arrow.file",
+            "feather": "application/vnd.apache.arrow.file",
             "sql": "application/sql",
             "qdrant": "application/json",
         }

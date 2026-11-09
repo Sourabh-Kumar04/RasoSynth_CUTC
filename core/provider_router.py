@@ -139,7 +139,8 @@ class ProviderRouter:
         TaskType.ENTITY_EXTRACTION: ["fireworks", "featherless", "together", "google_gemini", "anthropic", "openai", "huggingface"],
     }
 
-    def __init__(self, config: dict[str, Any]):
+    def __init__(self, config: Optional[dict[str, Any]] = None):
+        cfg = config or {}
         self.config = RouterConfig()
         self.stats: dict[str, RouterStats] = {}
         self.cache: OrderedDict = OrderedDict()
@@ -165,12 +166,14 @@ class ProviderRouter:
         # Synchronously register providers without awaiting initialize().
         # Call await router.initialize() from the async lifespan handler.
         self._provider_last_failure: dict[str, float] = {}
-        self._register_providers(config)
+        self._register_providers(cfg)
 
-    def _register_providers(self, config: dict[str, Any]):
+    def _register_providers(self, config: Optional[dict[str, Any]] = None):
         """Instantiate provider objects and store their configs — no I/O performed here."""
         import os
         from providers import PluginRegistry
+
+        cfg = config or {}
 
         # Map provider IDs to possible config keys & environment variable aliases
         provider_env_aliases = {
@@ -193,7 +196,7 @@ class ProviderRouter:
         for provider_id, alias_keys in provider_env_aliases.items():
             api_key = ""
             for ak in alias_keys:
-                val = config.get(ak) or os.environ.get(ak)
+                val = cfg.get(ak) or os.environ.get(ak)
                 if val:
                     api_key = str(val).strip()
                     break
@@ -203,14 +206,14 @@ class ProviderRouter:
                     provider_class = PluginRegistry.get(provider_id)
                     if provider_class:
                         base_url = (
-                            config.get(f"{provider_id}_base_url")
+                            cfg.get(f"{provider_id}_base_url")
                             or os.environ.get(f"{provider_id.upper()}_BASE_URL")
                             or ""
                         ).rstrip("/")
                         provider = provider_class({
                             "api_key": api_key,
                             "base_url": base_url,
-                            "timeout": config.get("timeout", 60),
+                            "timeout": cfg.get("timeout", 60),
                         })
                         self._providers[provider_id] = provider
                         self._provider_configs[provider_id] = {
@@ -235,6 +238,10 @@ class ProviderRouter:
                         self._success_rates[provider_id] = []
                 except Exception:
                     pass
+
+    def get_available_providers(self) -> list[str]:
+        """Return list of registered provider IDs."""
+        return list(self._providers.keys())
 
     async def initialize(self):
         """Async provider initialization — must be awaited from the app lifespan."""

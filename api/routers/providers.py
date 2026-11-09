@@ -16,13 +16,25 @@ logger = logging.getLogger(__name__)
 router = APIRouter(tags=["Providers"])
 
 
+def _get_router(request: Request):
+    """Retrieve router instance from app.state or global server module fallback."""
+    inst = getattr(request.app.state, "router", None) or getattr(request.app.state, "provider_router", None)
+    if inst is not None:
+        return inst
+    try:
+        import api.server as server_mod
+        return getattr(server_mod, "router", None)
+    except Exception:
+        return None
+
+
 @router.get("/providers", response_model=list[ProviderStatus])
 async def list_providers(
     request: Request,
     current_user: User = Depends(get_current_user),
 ):
     """List all configured providers with performance stats."""
-    router_inst = getattr(request.app.state, "router", None)
+    router_inst = _get_router(request)
     if not router_inst:
         raise HTTPException(status_code=503, detail="Router not initialized")
 
@@ -67,7 +79,7 @@ async def get_provider_techniques(
     current_user: User = Depends(get_current_user),
 ):
     """Get recommended techniques for each task type."""
-    router_inst = getattr(request.app.state, "router", None)
+    router_inst = _get_router(request)
     if not router_inst:
         return {}
 
@@ -102,7 +114,7 @@ async def get_provider(
     current_user: User = Depends(get_current_user),
 ):
     """Get single provider status and performance statistics."""
-    router_inst = getattr(request.app.state, "router", None)
+    router_inst = _get_router(request)
     if not router_inst:
         raise HTTPException(status_code=503, detail="Router not initialized")
     stats = router_inst.get_stats()
@@ -136,7 +148,7 @@ async def get_provider_metrics(
     current_user: User = Depends(get_current_user),
 ):
     """Get granular performance metrics for a specific provider."""
-    router_inst = getattr(request.app.state, "router", None)
+    router_inst = _get_router(request)
     failover_engine = getattr(request.app.state, "failover_engine", None)
     if not router_inst:
         raise HTTPException(status_code=503, detail="Router not initialized")
@@ -164,7 +176,7 @@ async def update_provider(
     admin_user: User = Depends(require_role([UserRole.ADMIN])),
 ):
     """Replace the router's provider priority order."""
-    router_inst = getattr(request.app.state, "router", None)
+    router_inst = _get_router(request)
     if not router_inst:
         raise HTTPException(status_code=503, detail="Router not initialized")
     resolved = router_inst._resolve_alias(provider_name) if hasattr(router_inst, "_resolve_alias") else provider_name
@@ -189,7 +201,7 @@ async def test_provider(
     current_user: User = Depends(get_current_user),
 ):
     """Test connectivity to a specific provider."""
-    router_inst = getattr(fastapi_request.app.state, "router", None)
+    router_inst = _get_router(fastapi_request)
     if not router_inst:
         raise HTTPException(status_code=500, detail="Router not initialized")
 

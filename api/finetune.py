@@ -17,6 +17,7 @@ import glob
 import json
 import logging
 import os
+import sys
 import tempfile
 import zipfile
 from pathlib import Path
@@ -97,6 +98,20 @@ class CreateFineTuneJobRequest(BaseModel):
 def _manager(request: Request):
     m = getattr(request.app.state, "ft_manager", None)
     if m is None:
+        try:
+            from finetuning.job_manager import FinetuneJobManager
+            db = getattr(request.app.state, "db", None)
+            db_mgr = getattr(db, "db", db)
+            if db_mgr is None:
+                server_mod = sys.modules.get("api.server")
+                if server_mod and getattr(server_mod, "db", None):
+                    db_mgr = getattr(server_mod.db, "db", server_mod.db)
+            if db_mgr is not None:
+                m = FinetuneJobManager(db_manager=db_mgr)
+                request.app.state.ft_manager = m
+                return m
+        except Exception:
+            pass
         raise HTTPException(status_code=503, detail="Fine-tune manager not initialised")
     return m
 
@@ -104,6 +119,11 @@ def _manager(request: Request):
 def _db(request: Request):
     d = getattr(request.app.state, "db", None)
     if d is None:
+        server_mod = sys.modules.get("api.server")
+        if server_mod and getattr(server_mod, "db", None):
+            d = server_mod.db
+            request.app.state.db = d
+            return d
         raise HTTPException(status_code=503, detail="Database not initialised")
     return d
 
@@ -157,9 +177,9 @@ async def list_supported_models(current_user: User = Depends(get_current_user)):
 async def create_finetune_job(
     body: CreateFineTuneJobRequest,
     request: Request,
+    current_user: User = Depends(require_role([UserRole.ADMIN, UserRole.USER])),
     manager=Depends(_manager),
-    db=Depends(_db),
-    current_user: User = Depends(require_role([UserRole.ADMIN, UserRole.USER]))):
+    db=Depends(_db)):
     payload = body.model_dump()
     payload["owner"] = current_user.username
 
@@ -170,6 +190,8 @@ async def create_finetune_job(
             os.path.abspath("outputs"),
             os.path.abspath("data"),
             os.path.abspath(tempfile.gettempdir()),
+            "/tmp",
+            "/var/tmp",
         ]
         # Allow persistent data dir if mounted
         if os.path.isdir("/data"):
@@ -316,10 +338,10 @@ async def create_finetune_job(
 
 @router.get("/jobs")
 async def list_finetune_jobs(
+    current_user: User = Depends(get_current_user),
     limit: int = Query(50, ge=1, le=500),
     offset: int = Query(0, ge=0),
-    manager=Depends(_manager),
-    current_user: User = Depends(get_current_user)):
+    manager=Depends(_manager)):
     owner_filter = None if current_user.role == UserRole.ADMIN else current_user.username
     all_jobs = await manager.list_jobs(limit=1000, owner=owner_filter)
     paged = all_jobs[offset : offset + limit]
@@ -333,16 +355,18 @@ async def list_finetune_jobs(
 
 
 @router.get("/jobs/{job_id}")
-async def get_finetune_job(job_id: str, manager=Depends(_manager),
-    current_user: User = Depends(get_current_user)):
+async def get_finetune_job(job_id: str,
+    current_user: User = Depends(get_current_user),
+    manager=Depends(_manager)):
     job = await manager.get_job(job_id)
     _enforce_owner(job, current_user)
     return job
 
 
 @router.delete("/jobs/{job_id}")
-async def cancel_finetune_job(job_id: str, manager=Depends(_manager),
-    current_user: User = Depends(require_role([UserRole.ADMIN, UserRole.USER]))):
+async def cancel_finetune_job(job_id: str,
+    current_user: User = Depends(require_role([UserRole.ADMIN, UserRole.USER])),
+    manager=Depends(_manager)):
     job = await manager.get_job(job_id)
     _enforce_owner(job, current_user)
     if not await manager.cancel_job(job_id):
@@ -353,9 +377,9 @@ async def cancel_finetune_job(job_id: str, manager=Depends(_manager),
 @router.get("/jobs/{job_id}/logs")
 async def get_finetune_logs(
     job_id: str,
+    current_user: User = Depends(get_current_user),
     limit: int = Query(200, ge=1, le=500),
-    manager=Depends(_manager),
-    current_user: User = Depends(get_current_user)):
+    manager=Depends(_manager)):
     """Return the last N training log events from the in-memory ring buffer."""
     job = await manager.get_job(job_id)
     _enforce_owner(job, current_user)
@@ -425,8 +449,9 @@ ALLOWED_FINETUNE_ARTIFACTS = {
 
 
 @router.get("/jobs/{job_id}/download")
-async def download_finetuned_model(job_id: str, manager=Depends(_manager),
-    current_user: User = Depends(get_current_user)):
+async def download_finetuned_model(job_id: str,
+    current_user: User = Depends(get_current_user),
+    manager=Depends(_manager)):
     """Download zipped fine-tuned LoRA adapter weights and model artifacts."""
     job = await manager.get_job(job_id)
     _enforce_owner(job, current_user)
@@ -472,8 +497,9 @@ async def download_finetuned_model(job_id: str, manager=Depends(_manager),
 
 
 @router.get("/jobs/{job_id}/model_card")
-async def get_model_card(job_id: str, manager=Depends(_manager),
-    current_user: User = Depends(get_current_user)):
+async def get_model_card(job_id: str,
+    current_user: User = Depends(get_current_user),
+    manager=Depends(_manager)):
     """Return Hugging Face Model Card with DBOM Merkle verification proof."""
     job = await manager.get_job(job_id)
     _enforce_owner(job, current_user)
@@ -577,8 +603,9 @@ async def get_model_card(job_id: str, manager=Depends(_manager),
 
 
 @router.post("/jobs/{job_id}/export_gguf")
-async def export_gguf_quantization(job_id: str, manager=Depends(_manager),
-    current_user: User = Depends(require_role([UserRole.ADMIN, UserRole.USER]))):
+async def export_gguf_quantization(job_id: str,
+    current_user: User = Depends(require_role([UserRole.ADMIN, UserRole.USER])),
+    manager=Depends(_manager)):
     """Generate 4-bit GGUF quantization (Q4_K_M) for edge and local LM deployment."""
     job = await manager.get_job(job_id)
     _enforce_owner(job, current_user)
@@ -612,8 +639,9 @@ async def export_gguf_quantization(job_id: str, manager=Depends(_manager),
 
 
 @router.get("/jobs/{job_id}/download_gguf")
-async def download_gguf_file(job_id: str, manager=Depends(_manager),
-    current_user: User = Depends(get_current_user)):
+async def download_gguf_file(job_id: str,
+    current_user: User = Depends(get_current_user),
+    manager=Depends(_manager)):
     """Download quantized GGUF binary for edge/local LM deployment (Ollama / LM Studio)."""
     job = await manager.get_job(job_id)
     _enforce_owner(job, current_user)
@@ -638,8 +666,9 @@ async def download_gguf_file(job_id: str, manager=Depends(_manager),
 
 
 @router.get("/jobs/{job_id}/modelfile")
-async def get_ollama_modelfile(job_id: str, manager=Depends(_manager),
-    current_user: User = Depends(get_current_user)):
+async def get_ollama_modelfile(job_id: str,
+    current_user: User = Depends(get_current_user),
+    manager=Depends(_manager)):
     """Generate an Ollama-compatible Modelfile with optimal chat prompt template and stopping criteria."""
     job = await manager.get_job(job_id)
     _enforce_owner(job, current_user)

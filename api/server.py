@@ -356,6 +356,7 @@ async def lifespan(app: FastAPI):
     # 6. ProviderRouter
     try:
         router = ProviderRouter()
+        app.state.router = router
         app.state.provider_router = router
         logger.info(f"  ✓ ProviderRouter initialized with {len(router.get_available_providers())} provider(s)")
     except Exception as e:

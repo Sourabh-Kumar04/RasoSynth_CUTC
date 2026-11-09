@@ -121,6 +121,8 @@ class ExportPipeline:
             output_path = await self._export_csv(samples, job_id, job_output_dir)
         elif export_format == "parquet":
             output_path = await self._export_parquet(samples, job_id, job_output_dir)
+        elif export_format in {"arrow", "feather"}:
+            output_path = await self._export_arrow(samples, job_id, job_output_dir)
         elif export_format == "sql":
             output_path = await self._export_sql(samples, job_id, job_output_dir)
         elif export_format == "qdrant":
@@ -261,6 +263,45 @@ class ExportPipeline:
             pq.write_table(table, output_path)
             return output_path
         except Exception:
+            records = [self._sample_to_dict(s) for s in samples]
+            with open(output_path, 'w', encoding='utf-8') as f:
+                for record in records:
+                    f.write(json.dumps(record, ensure_ascii=False) + '\n')
+            return output_path
+
+    async def _export_arrow(
+        self,
+        samples: list,
+        job_id: str,
+        output_dir: Path,
+    ) -> Path:
+        """Export samples using zero-copy PyArrow IPC / Feather format."""
+        output_path = output_dir / f"{job_id}.arrow"
+
+        try:
+            import pyarrow as pa
+            import pyarrow.ipc as ipc
+
+            records = [self._sample_to_dict(s) for s in samples]
+            sanitized_records = []
+            for record in records:
+                sanitized = {}
+                for key, value in record.items():
+                    if value is None:
+                        sanitized[key] = ""
+                    elif isinstance(value, (dict, list)):
+                        sanitized[key] = json.dumps(value)
+                    else:
+                        sanitized[key] = str(value)
+                sanitized_records.append(sanitized)
+
+            table = pa.Table.from_pylist(sanitized_records)
+            with pa.OSFile(str(output_path), "wb") as sink:
+                with ipc.new_file(sink, table.schema) as writer:
+                    writer.write_table(table)
+            return output_path
+        except Exception as e:
+            logger.warning(f"PyArrow IPC export failed, falling back to JSONL: {e}")
             records = [self._sample_to_dict(s) for s in samples]
             with open(output_path, 'w', encoding='utf-8') as f:
                 for record in records:
@@ -630,21 +671,21 @@ class ExportPipeline:
         output_dir = output_dir or self.output_dir
 
         num_samples = len(samples)
-        avg_instruction_len = sum(len(s.instruction) for s in samples) / max(num_samples, 1)
-        avg_response_len = sum(len(s.response) for s in samples) / max(num_samples, 1)
+        avg_instruction_len = sum(len(_get_field(s, "instruction", "")) for s in samples) / max(num_samples, 1)
+        avg_response_len = sum(len(_get_field(s, "response", "")) for s in samples) / max(num_samples, 1)
 
         difficulty_dist = self._stats["by_difficulty"].copy()
 
         # Format distribution
         format_dist = {}
         for s in samples:
-            fmt = getattr(s, 'format', 'alpaca')
+            fmt = _get_field(s, 'format', 'alpaca')
             format_dist[fmt] = format_dist.get(fmt, 0) + 1
 
         # Quality distribution
         quality_dist = {"high": 0, "medium": 0, "low": 0}
         for s in samples:
-            tier = getattr(s, 'difficulty_tier', 3)
+            tier = _get_field(s, 'difficulty_tier', 3)
             if tier >= 4:
                 quality_dist["high"] += 1
             elif tier >= 2:
@@ -672,23 +713,23 @@ class ExportPipeline:
 
 ### High Difficulty (Tier 4-5)
 ```
-{samples[-1].instruction if samples else 'N/A'}
+{_get_field(samples[-1], 'instruction', 'N/A') if samples else 'N/A'}
 ---
-{samples[-1].response[:200] if samples else 'N/A'}...
+{_get_field(samples[-1], 'response', 'N/A')[:200] if samples else 'N/A'}...
 ```
 
 ### Medium Difficulty (Tier 2-3)
 ```
-{samples[len(samples)//2].instruction if samples else 'N/A'}
+{_get_field(samples[len(samples)//2], 'instruction', 'N/A') if samples else 'N/A'}
 ---
-{samples[len(samples)//2].response[:200] if samples else 'N/A'}...
+{_get_field(samples[len(samples)//2], 'response', 'N/A')[:200] if samples else 'N/A'}...
 ```
 
 ### Low Difficulty (Tier 1)
 ```
-{samples[0].instruction if samples else 'N/A'}
+{_get_field(samples[0], 'instruction', 'N/A') if samples else 'N/A'}
 ---
-{samples[0].response[:200] if samples else 'N/A'}...
+{_get_field(samples[0], 'response', 'N/A')[:200] if samples else 'N/A'}...
 ```
 
 ## Usage
@@ -731,24 +772,24 @@ MIT
 
         quality_metrics = {
             "total_samples": len(samples),
-            "avg_instruction_length": sum(len(s.instruction) for s in samples) / max(len(samples), 1),
-            "avg_response_length": sum(len(s.response) for s in samples) / max(len(samples), 1),
+            "avg_instruction_length": sum(len(_get_field(s, "instruction", "")) for s in samples) / max(len(samples), 1),
+            "avg_response_length": sum(len(_get_field(s, "response", "")) for s in samples) / max(len(samples), 1),
             "difficulty_distribution": self._stats["by_difficulty"].copy(),
             "quality_indicators": {
-                "high_quality": sum(1 for s in samples if getattr(s, 'difficulty_tier', 3) >= 4),
-                "medium_quality": sum(1 for s in samples if 2 <= getattr(s, 'difficulty_tier', 3) < 4),
-                "low_quality": sum(1 for s in samples if getattr(s, 'difficulty_tier', 3) < 2),
+                "high_quality": sum(1 for s in samples if _get_field(s, 'difficulty_tier', 3) >= 4),
+                "medium_quality": sum(1 for s in samples if 2 <= _get_field(s, 'difficulty_tier', 3) < 4),
+                "low_quality": sum(1 for s in samples if _get_field(s, 'difficulty_tier', 3) < 2),
             },
             "metadata_fields": list(set(
                 field
                 for s in samples
-                for field in (getattr(s, 'metadata', {}) or {}).keys()
+                for field in (_get_field(s, 'metadata', {}) or {}).keys()
             )),
         }
 
         # Calculate diversity metrics
-        unique_instructions = len(set(s.instruction for s in samples))
-        unique_responses = len(set(s.response for s in samples))
+        unique_instructions = len(set(_get_field(s, "instruction", "") for s in samples))
+        unique_responses = len(set(_get_field(s, "response", "") for s in samples))
 
         quality_metrics["diversity"] = {
             "unique_instructions_ratio": unique_instructions / max(len(samples), 1),
@@ -756,7 +797,7 @@ MIT
         }
 
         # Content length distribution
-        lengths = [len(s.response) for s in samples]
+        lengths = [len(_get_field(s, "response", "")) for s in samples]
         if lengths:
             import statistics
             quality_metrics["response_length_stats"] = {
@@ -783,8 +824,8 @@ MIT
 
         sources = {}
         for sample in samples:
-            metadata = getattr(sample, 'metadata', None) or getattr(sample, 'metadata_', None) or {}
-            source = metadata.get("source_url", "unknown")
+            metadata = _get_field(sample, 'metadata', None) or _get_field(sample, 'metadata_', None) or {}
+            source = metadata.get("source_url", "unknown") if isinstance(metadata, dict) else "unknown"
             sources[source] = sources.get(source, 0) + 1
 
         lineage = {

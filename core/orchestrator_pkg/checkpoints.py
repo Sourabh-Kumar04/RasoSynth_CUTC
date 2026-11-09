@@ -103,15 +103,20 @@ class CheckpointStore:
 
     def __init__(
         self,
-        postgres_url: str,
-        redis_url: str,
+        postgres_url: Optional[str] = None,
+        redis_url: Optional[str] = None,
         checkpoint_ttl_seconds: int = 86400 * 7,  # 7 days
     ):
-        self.postgres_url = postgres_url.replace("postgresql+asyncpg://", "postgresql://", 1)
-        self.redis_url = redis_url
+        self.postgres_url = (postgres_url or "").replace("postgresql+asyncpg://", "postgresql://", 1)
+        self.redis_url = redis_url or ""
         self.checkpoint_ttl = checkpoint_ttl_seconds
         self._pool: Optional[asyncpg.Pool] = None
         self._redis: Optional[redis.Redis] = None
+        self._in_memory_store: Dict[str, Any] = {}
+
+    async def initialize(self) -> None:
+        """Alias for connect() to initialize store."""
+        await self.connect()
 
     async def connect(self) -> None:
         """Initialize connections with graceful in-memory fallback."""
@@ -365,8 +370,9 @@ class CheckpointManager:
     Coordinates checkpoint creation, retrieval, and cleanup.
     """
 
-    def __init__(self, store: CheckpointStore):
+    def __init__(self, store: CheckpointStore, db: Any = None):
         self.store = store
+        self.db = db
 
     async def create_checkpoint(
         self,

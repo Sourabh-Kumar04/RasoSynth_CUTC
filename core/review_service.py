@@ -26,8 +26,11 @@ class ReviewService:
     One instance stored on app.state.review_service.
     """
 
-    def __init__(self, db_manager: DatabaseManager):
-        self.db = db_manager
+    def __init__(self, db_manager: Optional[DatabaseManager] = None, db: Optional[DatabaseManager] = None):
+        manager = db_manager or db
+        if manager is None:
+            raise ValueError("db_manager must be provided to ReviewService")
+        self.db = manager
         # job_id -> asyncio.Event (set when reviewer calls resume_job)
         self._resume_events: dict[str, asyncio.Event] = {}
 
@@ -272,6 +275,25 @@ class ReviewService:
         items, _ = await self.db.list_review_items(job_id=job_id, page=1, page_size=10000, owner=owner)
         dict_items = [i.to_dict() for i in items]
         return ReviewCalibrationTracker.compute_inter_annotator_calibration(dict_items)
+
+    async def rebalance_rubrics(self, job_id: Optional[str] = None, owner: Optional[str] = None) -> dict:
+        """Calculate latest calibration metrics, dynamically rebalance rubric weights, and persist report."""
+        stats = await self.get_calibration_stats(job_id=job_id, owner=owner)
+        report_record = await self.db.create_review_calibration_report(stats)
+        report_id = report_record.get("id") if isinstance(report_record, dict) else getattr(report_record, "id", None)
+        return {
+            "report_id": report_id,
+            "calibration": stats,
+            "rebalanced_rubrics": stats.get("rubric_weights", {}),
+            "status": "rebalanced",
+        }
+
+    async def get_calibration_history(self, limit: int = 50) -> list[dict]:
+        """Fetch past persisted calibration reports."""
+        if hasattr(self.db, "list_calibration_reports"):
+            records = await self.db.list_calibration_reports(limit=limit)
+            return [r.to_dict() if hasattr(r, "to_dict") else r for r in records]
+        return []
 
     async def export_approved(self, job_id: Optional[str] = None, owner: Optional[str] = None) -> AsyncGenerator[str, None]:
         """Yield JSONL lines of all approved items (optionally filtered by job/owner)."""

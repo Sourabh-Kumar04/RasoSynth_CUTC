@@ -456,6 +456,43 @@ export default function OrchestrationPage() {
                   </div>
                 </div>
 
+                {/* Live Multi-Agent Society Coordinator Telemetry */}
+                <div className="p-3 rounded-lg bg-[#12121a] border border-[#272738] space-y-2.5 font-mono text-xs">
+                  <div className="flex items-center justify-between border-b border-[#1c1c28] pb-2">
+                    <div className="flex items-center gap-2">
+                      <div className="h-6 w-6 rounded bg-[#f26625]/10 border border-[#f26625]/30 flex items-center justify-center text-[#f26625]">
+                        <Bot className="w-3.5 h-3.5 animate-pulse" />
+                      </div>
+                      <div>
+                        <span className="font-bold text-white flex items-center gap-2">
+                          Active Persona: {selectedJob.active_agent?.agent || (
+                            selectedJob.current_stage === 'plan' ? 'StrategyAgent' :
+                            selectedJob.current_stage === 'query_optimizer' ? 'SearchOptimizationAgent' :
+                            selectedJob.current_stage === 'discover' ? 'SourceDiscoveryAgent' :
+                            selectedJob.current_stage === 'extract' ? 'WebCrawlerAgent' :
+                            selectedJob.current_stage === 'filter' ? 'ContextBundleAgent' :
+                            selectedJob.current_stage === 'construct' ? 'SyntheticGenerationAgent' :
+                            selectedJob.current_stage === 'quality_eval' ? 'ReviewEnsembleAgent' :
+                            selectedJob.current_stage === 'balance' ? 'CurriculumAgent' :
+                            selectedJob.current_stage === 'export' ? 'DBOMAttestorAgent' : 'Autonomous Coordinator'
+                          )}
+                        </span>
+                      </div>
+                    </div>
+                    <Badge variant="outline" className="text-[10px] bg-emerald-950/40 text-emerald-400 border-emerald-500/30 font-bold">
+                      EXECUTION LOCK HELD
+                    </Badge>
+                  </div>
+                  <div className="flex flex-wrap items-center justify-between gap-2 text-xs text-[#a8a29e]">
+                    <span>
+                      Task Responsibility: <strong className="text-zinc-200 font-normal">{selectedJob.active_agent?.role || 'Decentralized LangGraph state transition'}</strong>
+                    </span>
+                    <span className="flex items-center gap-1 text-[11px] text-[#f26625]">
+                      <GitMerge className="w-3 h-3" /> Consensus Protocol: Multi-Agent Quorum
+                    </span>
+                  </div>
+                </div>
+
                 {/* Synthesis Cognitive Engine & Domain Telemetry */}
                 <div className="flex flex-wrap items-center gap-2.5 p-2.5 rounded bg-[#0a0a0f]/80 border border-[#272738] text-xs font-mono">
                   <span className="text-[#a8a29e] text-xs uppercase font-bold flex items-center gap-1">

@@ -38,6 +38,13 @@ def _enforce_owner(resource: Optional[dict], current_user: User, resource_name: 
 def _svc(request: Request):
     svc = getattr(request.app.state, "review_service", None)
     if svc is None:
+        db = getattr(request.app.state, "db", None)
+        if db is not None:
+            from core.review_service import ReviewService
+            db_mgr = getattr(db, "db", db)
+            svc = ReviewService(db=db_mgr)
+            request.app.state.review_service = svc
+            return svc
         raise HTTPException(status_code=503, detail="Review service not initialised")
     return svc
 
@@ -84,21 +91,21 @@ class BulkAction(BaseModel):
 
 @router.get("/queue")
 async def list_queue(
+    current_user: User = Depends(get_current_user),
     status: Optional[str] = Query(None),
     job_id: Optional[str] = Query(None),
     page: int = Query(1, ge=1),
     page_size: int = Query(50, ge=1, le=500),
-    svc=Depends(_svc),
-    current_user: User = Depends(get_current_user)):
+    svc=Depends(_svc)):
     owner_filter = None if current_user.role == UserRole.ADMIN else current_user.username
     return await svc.get_queue(status=status, job_id=job_id, page=page, page_size=page_size, owner=owner_filter)
 
 
 @router.get("/queue/export")
 async def export_approved(
+    current_user: User = Depends(get_current_user),
     job_id: Optional[str] = Query(None, description="Filter by dataset job ID"),
-    svc=Depends(_svc),
-    current_user: User = Depends(get_current_user)):
+    svc=Depends(_svc)):
     """
     Stream all approved review items as a JSONL file suitable for fine-tuning.
     Each line: {"instruction": ..., "response": ..., "input": "", ...}
@@ -116,16 +123,18 @@ async def export_approved(
 
 
 @router.get("/queue/{item_id}")
-async def get_item(item_id: str, svc=Depends(_svc),
-    current_user: User = Depends(get_current_user)):
+async def get_item(item_id: str,
+    current_user: User = Depends(get_current_user),
+    svc=Depends(_svc)):
     item = await svc.get_item(item_id)
     _enforce_owner(item, current_user)
     return item
 
 
 @router.post("/queue", status_code=201)
-async def submit_for_review(body: SubmitRequest, svc=Depends(_svc),
-    current_user: User = Depends(require_role([UserRole.ADMIN, UserRole.USER]))):
+async def submit_for_review(body: SubmitRequest,
+    current_user: User = Depends(require_role([UserRole.ADMIN, UserRole.USER])),
+    svc=Depends(_svc)):
     return await svc.submit(
         instruction=body.instruction,
         response=body.response,
@@ -142,8 +151,9 @@ async def submit_for_review(body: SubmitRequest, svc=Depends(_svc),
 
 
 @router.post("/queue/{item_id}/approve")
-async def approve_item(item_id: str, action: ReviewAction, svc=Depends(_svc),
-    current_user: User = Depends(require_role([UserRole.ADMIN, UserRole.USER]))):
+async def approve_item(item_id: str, action: ReviewAction,
+    current_user: User = Depends(require_role([UserRole.ADMIN, UserRole.USER])),
+    svc=Depends(_svc)):
     item = await svc.get_item(item_id)
     _enforce_owner(item, current_user)
     result = await svc.approve(item_id, current_user.username, action.notes)
@@ -153,8 +163,9 @@ async def approve_item(item_id: str, action: ReviewAction, svc=Depends(_svc),
 
 
 @router.post("/queue/{item_id}/reject")
-async def reject_item(item_id: str, action: ReviewAction, svc=Depends(_svc),
-    current_user: User = Depends(require_role([UserRole.ADMIN, UserRole.USER]))):
+async def reject_item(item_id: str, action: ReviewAction,
+    current_user: User = Depends(require_role([UserRole.ADMIN, UserRole.USER])),
+    svc=Depends(_svc)):
     item = await svc.get_item(item_id)
     _enforce_owner(item, current_user)
     codes = action.reason_codes or ([action.reason_code] if action.reason_code else None)
@@ -165,8 +176,9 @@ async def reject_item(item_id: str, action: ReviewAction, svc=Depends(_svc),
 
 
 @router.post("/queue/{item_id}/edit")
-async def edit_item(item_id: str, action: EditAction, svc=Depends(_svc),
-    current_user: User = Depends(require_role([UserRole.ADMIN, UserRole.USER]))):
+async def edit_item(item_id: str, action: EditAction,
+    current_user: User = Depends(require_role([UserRole.ADMIN, UserRole.USER])),
+    svc=Depends(_svc)):
     item = await svc.get_item(item_id)
     _enforce_owner(item, current_user)
     codes = action.reason_codes or ([action.reason_code] if action.reason_code else None)
@@ -183,8 +195,9 @@ async def edit_item(item_id: str, action: EditAction, svc=Depends(_svc),
 
 
 @router.post("/queue/{item_id}/flag")
-async def flag_item(item_id: str, action: ReviewAction, svc=Depends(_svc),
-    current_user: User = Depends(require_role([UserRole.ADMIN, UserRole.USER]))):
+async def flag_item(item_id: str, action: ReviewAction,
+    current_user: User = Depends(require_role([UserRole.ADMIN, UserRole.USER])),
+    svc=Depends(_svc)):
     item = await svc.get_item(item_id)
     _enforce_owner(item, current_user)
     result = await svc.flag(item_id, current_user.username, action.notes)
@@ -194,8 +207,9 @@ async def flag_item(item_id: str, action: ReviewAction, svc=Depends(_svc),
 
 
 @router.post("/queue/bulk")
-async def bulk_action(action: BulkAction, svc=Depends(_svc),
-    current_user: User = Depends(require_role([UserRole.ADMIN]))):
+async def bulk_action(action: BulkAction,
+    current_user: User = Depends(require_role([UserRole.ADMIN])),
+    svc=Depends(_svc)):
     # Copy to avoid mutating the pydantic model's dict
     filters = dict(action.filters)
     action_type = filters.pop("action", "approve")
@@ -207,16 +221,17 @@ async def bulk_action(action: BulkAction, svc=Depends(_svc),
 
 
 @router.get("/stats")
-async def review_stats(svc=Depends(_svc),
-    current_user: User = Depends(get_current_user)):
+async def review_stats(
+    current_user: User = Depends(get_current_user),
+    svc=Depends(_svc)):
     return await svc.get_stats()
 
 
 @router.get("/signals")
 async def review_signals(
+    current_user: User = Depends(get_current_user),
     job_id: Optional[str] = Query(None),
     svc=Depends(_svc),
-    current_user: User = Depends(get_current_user),
 ):
     """Return aggregated structured reason feedback signals for dataset stratification."""
     owner_filter = None if current_user.role == UserRole.ADMIN else current_user.username
@@ -225,20 +240,42 @@ async def review_signals(
 
 @router.get("/calibration")
 async def review_calibration(
+    current_user: User = Depends(get_current_user),
     job_id: Optional[str] = Query(None),
     svc=Depends(_svc),
-    current_user: User = Depends(get_current_user),
 ):
     """Return reviewer calibration and inter-annotator disagreement metrics."""
     owner_filter = None if current_user.role == UserRole.ADMIN else current_user.username
     return await svc.get_calibration_stats(job_id=job_id, owner=owner_filter)
 
 
+@router.post("/calibration/rebalance")
+async def review_calibration_rebalance(
+    current_user: User = Depends(require_role([UserRole.ADMIN, UserRole.USER])),
+    job_id: Optional[str] = Query(None),
+    svc=Depends(_svc),
+):
+    """Trigger automated continuous calibration and dynamic rubric reweighting."""
+    owner_filter = None if current_user.role == UserRole.ADMIN else current_user.username
+    return await svc.rebalance_rubrics(job_id=job_id, owner=owner_filter)
+
+
+@router.get("/calibration/history")
+async def review_calibration_history(
+    current_user: User = Depends(get_current_user),
+    limit: int = Query(20, ge=1, le=100),
+    svc=Depends(_svc),
+):
+    """Retrieve historical review calibration reports."""
+    return await svc.get_calibration_history(limit=limit)
+
+
 # ── HITL endpoints ────────────────────────────────────────────────────────────
 
 @router.get("/paused")
-async def list_paused_jobs(svc=Depends(_svc),
-    current_user: User = Depends(get_current_user)):
+async def list_paused_jobs(
+    current_user: User = Depends(get_current_user),
+    svc=Depends(_svc)):
     """Return list of dataset job IDs currently paused at the HITL gate."""
     paused = set(svc.get_paused_jobs())
     if hasattr(svc, "db") and svc.db:
@@ -257,8 +294,9 @@ async def list_paused_jobs(svc=Depends(_svc),
 
 
 @router.get("/jobs/{job_id}/status")
-async def hitl_job_status(job_id: str, svc=Depends(_svc),
-    current_user: User = Depends(get_current_user)):
+async def hitl_job_status(job_id: str,
+    current_user: User = Depends(get_current_user),
+    svc=Depends(_svc)):
     if hasattr(svc, "db") and svc.db:
         job = await svc.db.get_job(job_id)
         if job:
@@ -275,8 +313,9 @@ async def hitl_job_status(job_id: str, svc=Depends(_svc),
 
 
 @router.post("/jobs/{job_id}/resume")
-async def hitl_resume_job(job_id: str, svc=Depends(_svc),
-    current_user: User = Depends(require_role([UserRole.ADMIN, UserRole.USER]))):
+async def hitl_resume_job(job_id: str,
+    current_user: User = Depends(require_role([UserRole.ADMIN, UserRole.USER])),
+    svc=Depends(_svc)):
     if hasattr(svc, "db") and svc.db:
         job = await svc.db.get_job(job_id)
         if job:

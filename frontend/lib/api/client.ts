@@ -2013,6 +2013,16 @@ dataset_samples_generated_total 4520`
     return this.request<any>('/api/review/stats')
   }
 
+  async getReviewCalibration(jobId?: string) {
+    const query = jobId ? `?job_id=${encodeURIComponent(jobId)}` : ''
+    return this.request<any>(`/api/review/calibration${query}`)
+  }
+
+  async rebalanceReviewCalibration(jobId?: string) {
+    const query = jobId ? `?job_id=${encodeURIComponent(jobId)}` : ''
+    return this.request<any>(`/api/review/calibration/rebalance${query}`, { method: 'POST' })
+  }
+
   async resumeHITLJob(jobId: string) {
     return this.request<any>(`/api/review/jobs/${jobId}/resume`, { method: 'POST' })
   }

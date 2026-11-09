@@ -522,11 +522,23 @@ class DatasetOrchestrator(
             self._db_update_tasks.add(task)
             task.add_done_callback(self._db_update_tasks.discard)
 
-        # Broadcast via WebSocket
+        # Broadcast via WebSocket with multi-agent society telemetry
         if self.ws_manager:
             try:
                 from api.websocket_manager import MessageType, WebSocketMessage
                 samples_generated = getattr(job, "samples_generated", 0)
+                stage_agents = {
+                    "plan": {"agent": "StrategyAgent", "role": "Planning & Dependency Mapping"},
+                    "query_optimizer": {"agent": "SearchOptimizationAgent", "role": "Query Expansion & Collision Avoidance"},
+                    "discover": {"agent": "SourceDiscoveryAgent", "role": "Multi-Source & Sovereign Discovery"},
+                    "extract": {"agent": "WebCrawlerAgent", "role": "Parallel Content Extraction"},
+                    "filter": {"agent": "ContextBundleAgent", "role": "Evidence Chunking & Quality Filtering"},
+                    "construct": {"agent": "SyntheticGenerationAgent", "role": "Grounded Dialectic Synthesis"},
+                    "quality_eval": {"agent": "ReviewEnsembleAgent", "role": "Multi-Rubric Consensus & LLM Judge"},
+                    "human_review": {"agent": "HumanArbiterAgent", "role": "Human-in-the-Loop Review Gate"},
+                    "balance": {"agent": "CurriculumAgent", "role": "Diversity & Difficulty Pacing"},
+                    "export": {"agent": "DBOMAttestorAgent", "role": "Merkle Attestation & ADR-002 Export"},
+                }
                 message = WebSocketMessage(
                     type=MessageType.PROGRESS,
                     job_id=job_id,
@@ -535,6 +547,7 @@ class DatasetOrchestrator(
                         "progress": progress,
                         "samples_generated": samples_generated,
                         "error": error,
+                        "active_agent": stage_agents.get(stage),
                         **{k: v for k, v in kwargs.items()},
                     }
                 )

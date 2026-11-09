@@ -33,6 +33,60 @@ except ImportError:
     from sqlalchemy.types import UUID as PG_UUID
     JSON_DOCUMENT = JSON
 
+from sqlalchemy.types import UserDefinedType
+
+class PG_VECTOR(UserDefinedType):
+    """PostgreSQL pgvector native type with JSON array fallback for SQLite."""
+    cache_ok = True
+
+    def __init__(self, dim: int = 1536):
+        self.dim = dim
+
+    def get_col_spec(self, **kw):
+        return f"vector({self.dim})"
+
+    def bind_processor(self, dialect):
+        if dialect.name == "postgresql":
+            def process(value):
+                if value is None:
+                    return None
+                if isinstance(value, (list, tuple)):
+                    return f"[{','.join(str(float(x)) for x in value)}]"
+                return str(value)
+            return process
+        else:
+            def process(value):
+                if value is None:
+                    return None
+                if isinstance(value, (list, tuple)):
+                    import json
+                    return json.dumps(list(value))
+                return str(value)
+            return process
+
+    def result_processor(self, dialect, coltype):
+        def process(value):
+            if value is None:
+                return None
+            if isinstance(value, str):
+                import json
+                try:
+                    cleaned = value.strip().strip("[]")
+                    if not cleaned:
+                        return []
+                    return [float(x.strip()) for x in cleaned.split(",")]
+                except Exception:
+                    try:
+                        return json.loads(value)
+                    except Exception:
+                        return []
+            elif isinstance(value, (list, tuple)):
+                return list(value)
+            return value
+        return process
+
+VECTOR_TYPE = PG_VECTOR(1536).with_variant(JSON, "sqlite")
+
 
 class Job(Base):
     """Job model for tracking dataset generation jobs."""
@@ -247,6 +301,7 @@ class EvidenceChunk(Base):
     content_hash = Column(String(64), nullable=False, index=True)
     content = Column(Text, nullable=False)
     metadata_ = Column("metadata", JSON_DOCUMENT, default=dict)
+    embedding = Column(VECTOR_TYPE, nullable=True)
     created_at = Column(DateTime, default=utc_now)
 
     def to_dict(self) -> dict:
@@ -254,6 +309,7 @@ class EvidenceChunk(Base):
             "id": self.id, "snapshot_id": self.snapshot_id, "chunk_index": self.chunk_index,
             "content_hash": self.content_hash, "content": self.content,
             "metadata": self.metadata_ or {},
+            "embedding": self.embedding,
         }
 
 
@@ -273,6 +329,7 @@ class Sample(Base):
     metadata_ = Column("metadata", JSON_DOCUMENT)
     quality_score = Column(Float, index=True)
     difficulty_tier = Column(Integer)
+    embedding = Column(VECTOR_TYPE, nullable=True)
     created_at = Column(DateTime, default=utc_now, index=True)
 
     dataset = relationship("Dataset", back_populates="samples")
@@ -444,6 +501,13 @@ class DatabaseManager:
             if ":memory:" in database_url:
                 from sqlalchemy.pool import StaticPool
                 engine_kwargs["poolclass"] = StaticPool
+            else:
+                try:
+                    db_file = database_url.split("///")[-1].split("?")[0]
+                    if db_file:
+                        os.makedirs(os.path.dirname(os.path.abspath(db_file)), exist_ok=True)
+                except Exception:
+                    pass
         self.database_url = database_url
         self.is_postgresql = "postgresql" in database_url
         self.engine = create_async_engine(database_url, echo=False, connect_args=connect_args, **engine_kwargs)
@@ -767,6 +831,20 @@ class DatabaseManager:
             _ = record.id
             return record
 
+    async def get_latest_calibration_report(self) -> Optional[ReviewCalibrationReport]:
+        async with self.session_maker() as session:
+            from sqlalchemy import select
+            stmt = select(ReviewCalibrationReport).order_by(ReviewCalibrationReport.created_at.desc()).limit(1)
+            result = await session.execute(stmt)
+            return result.scalar_one_or_none()
+
+    async def list_calibration_reports(self, limit: int = 50) -> list[ReviewCalibrationReport]:
+        async with self.session_maker() as session:
+            from sqlalchemy import select
+            stmt = select(ReviewCalibrationReport).order_by(ReviewCalibrationReport.created_at.desc()).limit(limit)
+            result = await session.execute(stmt)
+            return list(result.scalars().all())
+
     async def list_datasets(self, limit: int = 100, owner: Optional[str] = None) -> list[Dataset]:
         """List all datasets ordered by creation date, optionally filtered by owner."""
         async with self.session_maker() as session:
@@ -895,6 +973,140 @@ class DatabaseManager:
             "created": created,
         }
 
+    async def create_nosql_vector_index(
+        self,
+        table_name: str,
+        column_name: str = "embedding",
+        index_type: str = "hnsw",
+        distance_op: str = "vector_cosine_ops",
+        index_name: Optional[str] = None,
+    ) -> dict:
+        """Create an HNSW or IVFFlat vector index on PostgreSQL using pgvector."""
+        import re
+        from sqlalchemy import text
+
+        clean_table = re.sub(r"[^a-zA-Z0-9_]", "", table_name)
+        clean_col = re.sub(r"[^a-zA-Z0-9_]", "", column_name)
+        idx_type = "hnsw" if index_type.lower() == "hnsw" else "ivfflat"
+        idx_name = index_name or f"ix_{clean_table}_{clean_col}_{idx_type}"
+        idx_name = re.sub(r"[^a-zA-Z0-9_]", "", idx_name)[:63]
+
+        if self.is_postgresql:
+            sql_stmt = f'CREATE INDEX IF NOT EXISTS "{idx_name}" ON "{clean_table}" USING {idx_type} ("{clean_col}" {distance_op});'
+            async with self.session_maker() as session:
+                await session.execute(text(sql_stmt))
+                await self._commit_with_retry(session)
+            created = True
+        else:
+            created = False
+
+        return {
+            "index_name": idx_name,
+            "table": clean_table,
+            "column": clean_col,
+            "index_type": idx_type,
+            "distance_op": distance_op,
+            "dialect": "postgresql" if self.is_postgresql else "sqlite",
+            "created": created,
+        }
+
+    async def hybrid_search_samples(
+        self,
+        dataset_id: str,
+        query_embedding: list[float],
+        document_filter: Optional[dict] = None,
+        min_quality: Optional[float] = None,
+        limit: int = 20,
+    ) -> list[dict]:
+        """Hybrid search combining NoSQL document metadata filtering and vector similarity.
+
+        On PostgreSQL: Executes native pgvector cosine distance (<=>) combined with JSONB containment (@>).
+        On SQLite: Evaluates document filtering in SQL, then performs cosine similarity ranking in Python.
+        """
+        import numpy as np
+
+        if self.is_postgresql:
+            from sqlalchemy import text
+            query_vec_str = f"[{','.join(str(float(x)) for x in query_embedding)}]"
+            where_clauses = ["dataset_id = :dataset_id"]
+            params = {
+                "dataset_id": dataset_id,
+                "query_vec": query_vec_str,
+                "limit": limit,
+            }
+            if min_quality is not None:
+                where_clauses.append("quality_score >= :min_quality")
+                params["min_quality"] = min_quality
+            if document_filter:
+                import json
+                where_clauses.append("metadata @> :doc_filter::jsonb")
+                params["doc_filter"] = json.dumps(document_filter)
+
+            where_sql = " AND ".join(where_clauses)
+            raw_sql = f"""
+                SELECT id, dataset_id, instruction, response, input, metadata,
+                       quality_score, difficulty_tier, created_at,
+                       embedding <=> :query_vec AS distance
+                FROM samples
+                WHERE {where_sql}
+                ORDER BY embedding <=> :query_vec ASC
+                LIMIT :limit
+            """
+            async with self.session_maker() as session:
+                result = await session.execute(text(raw_sql), params)
+                rows = result.fetchall()
+                records = []
+                for r in rows:
+                    records.append({
+                        "id": str(r.id),
+                        "dataset_id": str(r.dataset_id),
+                        "instruction": r.instruction,
+                        "response": r.response,
+                        "input": r.input,
+                        "metadata": r.metadata if isinstance(r.metadata, dict) else {},
+                        "quality_score": r.quality_score,
+                        "difficulty_tier": r.difficulty_tier,
+                        "similarity_score": float(1.0 - (r.distance or 0.0)),
+                        "distance": float(r.distance or 0.0),
+                    })
+                return records
+        else:
+            # SQLite fallback: fetch candidates matching document_filter and compute cosine similarity in numpy
+            candidates = await self.query_samples_by_document(
+                dataset_id,
+                document_filter=document_filter or {},
+                min_quality=min_quality,
+                limit=max(1000, limit * 10),
+            )
+            q = np.array(query_embedding, dtype=np.float32)
+            q_norm = np.linalg.norm(q)
+
+            scored = []
+            for s in candidates:
+                emb = getattr(s, "embedding", None)
+                if emb is None:
+                    continue
+                v = np.array(emb, dtype=np.float32)
+                v_norm = np.linalg.norm(v)
+                if q_norm == 0 or v_norm == 0:
+                    sim = 0.0
+                else:
+                    sim = float(np.dot(q, v) / (q_norm * v_norm))
+                scored.append({
+                    "id": str(s.id),
+                    "dataset_id": str(s.dataset_id),
+                    "instruction": s.instruction,
+                    "response": s.response,
+                    "input": s.input,
+                    "metadata": s.metadata_ if isinstance(s.metadata_, dict) else {},
+                    "quality_score": s.quality_score,
+                    "difficulty_tier": s.difficulty_tier,
+                    "similarity_score": sim,
+                    "distance": float(1.0 - sim),
+                })
+            scored.sort(key=lambda x: x["distance"])
+            return scored[:limit]
+
     async def get_samples(self, dataset_id: str, limit: int = 1000, offset: int = 0) -> list[Sample]:
         """Get samples for a dataset."""
         async with self.session_maker() as session:
@@ -902,7 +1114,7 @@ class DatabaseManager:
             result = await session.execute(
                 select(Sample)
                 .filter(Sample.dataset_id == dataset_id)
-                .order_by(Sample.created_at, Sample.id)
+                .order_by(Sample.created_at)
                 .offset(max(0, offset))
                 .limit(limit)
             )
@@ -930,7 +1142,7 @@ class DatabaseManager:
         records = []
         result_meta = []
 
-        for raw in samples_data:
+        for i, raw in enumerate(samples_data):
             d = dict(raw)
             sample_id = d.get("id") or str(uuid.uuid4())
             meta = d.pop("metadata_", None) or d.pop("metadata", {})
@@ -949,7 +1161,7 @@ class DatabaseManager:
                 "metadata_": meta,
                 "quality_score": d.get("quality_score"),
                 "difficulty_tier": d.get("difficulty_tier"),
-                "created_at": d.get("created_at") or now,
+                "created_at": d.get("created_at") or (now + timedelta(microseconds=i)),
             }
             records.append(record)
             result_meta.append({"id": sample_id, "dataset_id": dataset_id})
@@ -1034,83 +1246,6 @@ class DatabaseManager:
             await self._commit_with_retry(session)
             _ = (sample.id, sample.dataset_id, sample.instruction, sample.response, sample.quality_score, sample.metadata_)
             return sample
-
-    async def create_nosql_path_index(
-        self,
-        table_name: str,
-        column_name: str,
-        json_path: str,
-        index_name: Optional[str] = None,
-    ) -> dict:
-        """Create a targeted expression index on a specific JSON path attribute.
-
-        On PostgreSQL: CREATE INDEX IF NOT EXISTS ix_{table}_{col}_{path} ON {table} ((( {col}->>'{path}' )));
-        On SQLite: CREATE INDEX IF NOT EXISTS ix_{table}_{col}_{path} ON {table} (( json_extract({col}, '$.{path}') ));
-        """
-        import re
-        from sqlalchemy import text
-
-        clean_table = re.sub(r"[^a-zA-Z0-9_]", "", table_name)
-        clean_col = re.sub(r"[^a-zA-Z0-9_]", "", column_name)
-        clean_path = re.sub(r"[^a-zA-Z0-9_]", "", json_path)
-        idx_name = index_name or f"ix_{clean_table}_{clean_col}_{clean_path}"
-        idx_name = re.sub(r"[^a-zA-Z0-9_]", "", idx_name)[:63]
-
-        if self.is_postgresql:
-            sql_stmt = f'CREATE INDEX IF NOT EXISTS "{idx_name}" ON "{clean_table}" ((("{clean_col}"->>\'{clean_path}\')));'
-        else:
-            sql_stmt = f'CREATE INDEX IF NOT EXISTS "{idx_name}" ON "{clean_table}" ((json_extract("{clean_col}", \'$.{clean_path}\')));'
-
-        async with self.session_maker() as session:
-            await session.execute(text(sql_stmt))
-            await self._commit_with_retry(session)
-
-        return {
-            "index_name": idx_name,
-            "table": clean_table,
-            "column": clean_col,
-            "path": clean_path,
-            "type": "expression_index",
-            "dialect": "postgresql" if self.is_postgresql else "sqlite",
-            "created": True,
-        }
-
-    async def create_nosql_path_ops_index(
-        self,
-        table_name: str,
-        column_name: str,
-        index_name: Optional[str] = None,
-    ) -> dict:
-        """Create a specialized jsonb_path_ops GIN index on PostgreSQL.
-
-        jsonb_path_ops GIN indexes are up to 3x smaller and significantly faster
-        for JSONB containment queries (@>) on large production datasets.
-        """
-        import re
-        from sqlalchemy import text
-
-        clean_table = re.sub(r"[^a-zA-Z0-9_]", "", table_name)
-        clean_col = re.sub(r"[^a-zA-Z0-9_]", "", column_name)
-        idx_name = index_name or f"ix_{clean_table}_{clean_col}_path_ops"
-        idx_name = re.sub(r"[^a-zA-Z0-9_]", "", idx_name)[:63]
-
-        if self.is_postgresql:
-            sql_stmt = f'CREATE INDEX IF NOT EXISTS "{idx_name}" ON "{clean_table}" USING gin ("{clean_col}" jsonb_path_ops);'
-            async with self.session_maker() as session:
-                await session.execute(text(sql_stmt))
-                await self._commit_with_retry(session)
-            created = True
-        else:
-            created = False
-
-        return {
-            "index_name": idx_name,
-            "table": clean_table,
-            "column": clean_col,
-            "type": "jsonb_path_ops",
-            "dialect": "postgresql" if self.is_postgresql else "sqlite",
-            "created": created,
-        }
 
     async def query_jobs_by_document(
         self,
@@ -1466,8 +1601,21 @@ class DatabaseManager:
 class AsyncDB:
     """High-level async database interface."""
 
-    def __init__(self, db_manager: DatabaseManager):
-        self.db = db_manager
+    def __init__(self, db_manager: Optional[DatabaseManager] = None, database_url: Optional[str] = None):
+        if db_manager is not None:
+            self.db = db_manager
+        else:
+            if not database_url:
+                try:
+                    from core.config import get_settings
+                    database_url = get_settings().database_url
+                except Exception:
+                    database_url = "sqlite+aiosqlite:///data/app.db"
+            self.db = DatabaseManager(database_url)
+
+    async def connect(self) -> None:
+        """Connect and ensure tables are created."""
+        await self.db.create_tables()
 
     async def close(self) -> None:
         """Close database connections gracefully."""
@@ -1478,6 +1626,10 @@ class AsyncDB:
             logger.info('AsyncDB connection closed')
         except Exception as e:
             logger.warning(f'Error closing AsyncDB: {e}')
+
+    def __getattr__(self, name: str):
+        """Transparently delegate unhandled database calls to underlying DatabaseManager."""
+        return getattr(self.db, name)
 
     @classmethod
     async def create(cls, database_url: str) -> "AsyncDB":
@@ -1655,6 +1807,14 @@ class AsyncDB:
         record = await self.db.create_review_calibration_report(report)
         return record.to_dict()
 
+    async def get_latest_calibration_report(self) -> Optional[dict]:
+        record = await self.db.get_latest_calibration_report()
+        return record.to_dict() if record else None
+
+    async def list_calibration_reports(self, limit: int = 50) -> list[dict]:
+        records = await self.db.list_calibration_reports(limit=limit)
+        return [r.to_dict() for r in records]
+
     async def create_source_snapshot(self, job_id: str, source: dict, content: str = "", content_type: Optional[str] = None) -> dict:
         record = await self.db.create_source_snapshot(job_id, source, content, content_type)
         return record.to_dict()
@@ -1783,3 +1943,37 @@ class AsyncDB:
     async def create_nosql_path_ops_index(self, table_name: str, column_name: str, index_name: Optional[str] = None) -> dict:
         """Create a specialized jsonb_path_ops GIN index on PostgreSQL."""
         return await self.db.create_nosql_path_ops_index(table_name, column_name, index_name=index_name)
+
+    async def create_nosql_vector_index(
+        self,
+        table_name: str,
+        column_name: str = "embedding",
+        index_type: str = "hnsw",
+        distance_op: str = "vector_cosine_ops",
+        index_name: Optional[str] = None,
+    ) -> dict:
+        """Create an HNSW or IVFFlat vector index on PostgreSQL using pgvector."""
+        return await self.db.create_nosql_vector_index(
+            table_name,
+            column_name=column_name,
+            index_type=index_type,
+            distance_op=distance_op,
+            index_name=index_name,
+        )
+
+    async def hybrid_search_samples(
+        self,
+        dataset_id: str,
+        query_embedding: list[float],
+        document_filter: Optional[dict] = None,
+        min_quality: Optional[float] = None,
+        limit: int = 20,
+    ) -> list[dict]:
+        """Hybrid search combining NoSQL document metadata filtering and vector similarity."""
+        return await self.db.hybrid_search_samples(
+            dataset_id,
+            query_embedding,
+            document_filter=document_filter,
+            min_quality=min_quality,
+            limit=limit,
+        )

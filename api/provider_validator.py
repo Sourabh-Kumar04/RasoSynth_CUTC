@@ -30,8 +30,9 @@ class ProviderValidationResult:
 class ProviderValidator:
     """Validates provider configurations and health at startup."""
 
-    def __init__(self, config: Dict[str, Any]):
-        self.config = config
+    def __init__(self, config: Optional[Dict[str, Any]] = None, router: Any = None):
+        self.config = config or {}
+        self.router = router
         self.validation_results: Dict[str, ProviderValidationResult] = {}
 
     async def validate_all_providers(self) -> Dict[str, ProviderValidationResult]:

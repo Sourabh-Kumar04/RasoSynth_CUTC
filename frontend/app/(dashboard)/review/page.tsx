@@ -146,6 +146,9 @@ export default function ReviewPage() {
   // HITL: jobs currently paused at the review gate
   const [pausedJobs, setPausedJobs] = useState<string[]>([])
   const [showMerkleProof, setShowMerkleProof] = useState(false)
+  const [showCalibration, setShowCalibration] = useState(false)
+  const [calibrationData, setCalibrationData] = useState<any>(null)
+  const [rebalancing, setRebalancing] = useState(false)
   const [diffModalItem, setDiffModalItem] = useState<ReviewItem | null>(null)
   const [showHotkeyHud, setShowHotkeyHud] = useState(true)
 
@@ -188,6 +191,30 @@ export default function ReviewPage() {
       setPausedJobs(Array.isArray(data?.paused_jobs) ? data.paused_jobs : [])
     } catch {}
   }, [])
+
+  const fetchCalibration = useCallback(async () => {
+    try {
+      const res = await api.getReviewCalibration(jobFilter || undefined)
+      if (res) setCalibrationData(res)
+    } catch {}
+  }, [jobFilter])
+
+  const handleRebalanceRubrics = async () => {
+    setRebalancing(true)
+    playClickSound()
+    try {
+      const res = await api.rebalanceReviewCalibration(jobFilter || undefined)
+      if (res && res.calibration) {
+        setCalibrationData(res.calibration)
+        playSuccessChime()
+        toast('Rubrics dynamically reweighted & calibrated', 'success')
+      }
+    } catch (err: any) {
+      toast(`Rebalance failed: ${err?.message ?? err}`, 'error')
+    } finally {
+      setRebalancing(false)
+    }
+  }
 
   useEffect(() => {
     ;(async () => {
@@ -422,6 +449,23 @@ export default function ReviewPage() {
           <Button
             variant="outline"
             size="sm"
+            className={clsx(
+              "rounded-md border-[#272738] font-mono text-xs flex items-center gap-1.5 transition-colors",
+              showCalibration ? "text-emerald-400 border-emerald-500/50 bg-emerald-950/20" : "text-[#d8d2c4] hover:text-white hover:bg-[#1b1b18]/30"
+            )}
+            onClick={() => {
+              const nextState = !showCalibration
+              setShowCalibration(nextState)
+              if (nextState && !calibrationData) fetchCalibration()
+            }}
+            title="Inspect reviewer calibration, Cohen's Kappa, and continuous rubric reweighting"
+          >
+            <GitCompare className="h-3.5 w-3.5 text-[#10b981]" />
+            <span>{showCalibration ? 'Hide Calibration' : 'Judge Calibration & Rubrics'}</span>
+          </Button>
+          <Button
+            variant="outline"
+            size="sm"
             className="rounded-md border-[#272738] text-[#d8d2c4] hover:text-white hover:bg-[#1b1b18]/30 font-mono text-xs flex items-center gap-1.5"
             onClick={() => setShowMerkleProof(!showMerkleProof)}
             title="Audit cryptographic SHA-256 Merkle root covering the current active review batch"
@@ -458,6 +502,130 @@ export default function ReviewPage() {
             rootHash={jobFilter ? `${jobFilter.replace(/-/g, '').slice(0, 32)}9b87df7a` : "9b87df7a3982f6e9b418a096c429712a5542a1ef248f27af"}
             certificateId={jobFilter ? `DBOM-${jobFilter.slice(0, 8).toUpperCase()}` : "DBOM-VERIFIED"}
           />
+        </div>
+      )}
+
+      {/* Continuous Calibration & Dynamic Rubrics Feedback */}
+      {showCalibration && (
+        <div className="rounded-xl border border-emerald-500/30 bg-[#0a0a0f] p-5 shadow-xl space-y-4">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-[#272738] pb-3">
+            <div>
+              <div className="flex items-center gap-2">
+                <span className="text-xs font-mono font-bold px-2 py-0.5 rounded bg-emerald-950/50 border border-emerald-500/40 text-emerald-400 uppercase tracking-wider">
+                  Continuous Calibration Loop
+                </span>
+                <span className="text-xs text-[#a8a29e] font-mono">
+                  Inter-annotator alignment & dynamic rubric reweighting
+                </span>
+              </div>
+              <h3 className="text-base font-bold text-white mt-1">
+                LLM Judge & Human Annotator Alignment
+              </h3>
+            </div>
+            <div className="flex items-center gap-2">
+              <Button
+                size="sm"
+                className="bg-[#10b981] hover:bg-emerald-600 text-white font-mono text-xs rounded-md font-semibold h-8"
+                onClick={handleRebalanceRubrics}
+                disabled={rebalancing}
+              >
+                {rebalancing ? <Loader2 className="h-3.5 w-3.5 mr-1.5 animate-spin" /> : <RefreshCw className="h-3.5 w-3.5 mr-1.5" />}
+                Rebalance Rubrics Now
+              </Button>
+            </div>
+          </div>
+
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
+            <Card className="bg-[#12121a] border-[#272738] rounded-md p-3">
+              <p className="text-[11px] font-mono uppercase tracking-wider text-[#a8a29e]">Cohen's Kappa (κ)</p>
+              <div className="flex items-center gap-2 mt-1">
+                <span className="text-xl font-bold font-mono text-white">
+                  {calibrationData?.cohens_kappa !== null && calibrationData?.cohens_kappa !== undefined
+                    ? calibrationData.cohens_kappa.toFixed(3)
+                    : 'N/A (Pending pairs)'}
+                </span>
+                {calibrationData?.calibration_verdict && (
+                  <span className={clsx(
+                    "text-[10px] font-mono px-2 py-0.5 rounded font-bold uppercase",
+                    calibrationData.calibration_verdict === 'well_calibrated' && "bg-emerald-950/60 text-emerald-400 border border-emerald-500/40",
+                    calibrationData.calibration_verdict === 'moderate_agreement' && "bg-amber-950/60 text-amber-400 border border-amber-500/40",
+                    calibrationData.calibration_verdict === 'divergent_guidelines_needed' && "bg-rose-950/60 text-rose-400 border border-rose-500/40"
+                  )}>
+                    {calibrationData.calibration_verdict.replace(/_/g, ' ')}
+                  </span>
+                )}
+              </div>
+            </Card>
+
+            <Card className="bg-[#12121a] border-[#272738] rounded-md p-3">
+              <p className="text-[11px] font-mono uppercase tracking-wider text-[#a8a29e]">Decision Agreement</p>
+              <p className="text-xl font-bold font-mono text-[#10b981] mt-1">
+                {calibrationData?.decision_agreement_pct !== null && calibrationData?.decision_agreement_pct !== undefined
+                  ? `${calibrationData.decision_agreement_pct}%`
+                  : 'N/A'}
+              </p>
+            </Card>
+
+            <Card className="bg-[#12121a] border-[#272738] rounded-md p-3">
+              <p className="text-[11px] font-mono uppercase tracking-wider text-[#a8a29e]">Reason Code Jaccard</p>
+              <p className="text-xl font-bold font-mono text-white mt-1">
+                {calibrationData?.reason_code_jaccard !== null && calibrationData?.reason_code_jaccard !== undefined
+                  ? calibrationData.reason_code_jaccard.toFixed(3)
+                  : 'N/A'}
+              </p>
+            </Card>
+
+            <Card className="bg-[#12121a] border-[#272738] rounded-md p-3">
+              <p className="text-[11px] font-mono uppercase tracking-wider text-[#a8a29e]">Arbitration Rate</p>
+              <p className="text-xl font-bold font-mono text-[#f26625] mt-1">
+                {calibrationData?.recommended_arbitration_rate
+                  ? `${Math.round(calibrationData.recommended_arbitration_rate * 100)}% sampled`
+                  : '5% baseline'}
+              </p>
+            </Card>
+          </div>
+
+          {/* Dynamic Rubric Weights */}
+          <div className="bg-[#12121a] border border-[#272738] rounded-md p-4 space-y-3">
+            <div className="flex items-center justify-between">
+              <h4 className="text-xs font-bold text-white font-mono uppercase tracking-wider">
+                Dynamic LLM Judge Rubric Weights
+              </h4>
+              <span className="text-[11px] text-[#a8a29e] font-mono">
+                Auto-reweighted from review failure patterns
+              </span>
+            </div>
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-3">
+              {calibrationData?.rubric_weights ? (
+                Object.entries(calibrationData.rubric_weights).map(([rubric, weight]: [string, any]) => (
+                  <div key={rubric} className="p-2.5 rounded bg-[#0a0a0f] border border-[#272738] space-y-1.5">
+                    <div className="flex justify-between items-center text-[11px] font-mono">
+                      <span className="text-[#a8a29e] capitalize">{rubric.replace(/_/g, ' ')}</span>
+                      <span className="text-white font-bold">{(weight * 100).toFixed(1)}%</span>
+                    </div>
+                    <div className="h-1.5 bg-[#161622] rounded overflow-hidden">
+                      <div
+                        className="h-full bg-[#10b981] rounded"
+                        style={{ width: `${Math.min(100, weight * 200)}%` }}
+                      />
+                    </div>
+                  </div>
+                ))
+              ) : (
+                ['grounding', 'instruction_following', 'clarity_style', 'formatting', 'safety_and_dedup'].map(rubric => (
+                  <div key={rubric} className="p-2.5 rounded bg-[#0a0a0f] border border-[#272738] space-y-1.5">
+                    <div className="flex justify-between items-center text-[11px] font-mono">
+                      <span className="text-[#a8a29e] capitalize">{rubric.replace(/_/g, ' ')}</span>
+                      <span className="text-white font-bold">20.0%</span>
+                    </div>
+                    <div className="h-1.5 bg-[#161622] rounded overflow-hidden">
+                      <div className="h-full bg-emerald-500/70 rounded" style={{ width: '40%' }} />
+                    </div>
+                  </div>
+                ))
+              )}
+            </div>
+          </div>
         </div>
       )}
 

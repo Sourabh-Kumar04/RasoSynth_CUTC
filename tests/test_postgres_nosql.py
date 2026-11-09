@@ -173,3 +173,63 @@ async def test_batch_sample_ingestion_and_index_optimization(tmp_path):
     await db.close()
 
 
+@pytest.mark.asyncio
+async def test_vector_and_hybrid_search(tmp_path):
+    """Verify vector index creation and hybrid vector + document search."""
+    from core.db import DatabaseManager
+    from api.routers.datasets import router
+
+    # Verify hybrid-search endpoint registered
+    route_paths = [r.path for r in router.routes]
+    assert "/datasets/{dataset_id}/records/hybrid-search" in route_paths
+
+    db_path = tmp_path / "test_vector.db"
+    db = DatabaseManager(f"sqlite+aiosqlite:///{db_path}")
+    await db.create_tables()
+
+    job = await db.create_job(config={"domain": "science"})
+    ds = await db.create_dataset(job_id=job.id, name="VectorCorpus", type="jsonl", size=2, metadata={}, output_path="/tmp/vec.jsonl")
+
+    # Insert samples with embeddings
+    s1 = await db.create_sample(
+        dataset_id=ds.id,
+        data={
+            "instruction": "Quantum mechanics basics",
+            "response": "Wave-particle duality...",
+            "metadata": {"topic": "physics", "verified": True},
+            "embedding": [1.0, 0.0, 0.0],
+            "quality_score": 0.92,
+        },
+    )
+
+    s2 = await db.create_sample(
+        dataset_id=ds.id,
+        data={
+            "instruction": "Cell biology basics",
+            "response": "Mitochondria is powerhouse...",
+            "metadata": {"topic": "biology", "verified": True},
+            "embedding": [0.0, 1.0, 0.0],
+            "quality_score": 0.89,
+        },
+    )
+
+    # Test vector index creation
+    v_idx = await db.create_nosql_vector_index("samples", "embedding", index_type="hnsw")
+    assert "index_name" in v_idx
+    assert v_idx["index_type"] == "hnsw"
+
+    # Hybrid search: query vector close to [1.0, 0.1, 0.0] with document filter {"topic": "physics"}
+    results = await db.hybrid_search_samples(
+        dataset_id=ds.id,
+        query_embedding=[1.0, 0.1, 0.0],
+        document_filter={"topic": "physics"},
+        limit=5,
+    )
+    assert len(results) == 1
+    assert results[0]["id"] == s1.id
+    assert results[0]["metadata"]["topic"] == "physics"
+
+    await db.close()
+
+
+

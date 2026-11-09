@@ -180,13 +180,69 @@ class ReviewCalibrationTracker:
 
     @staticmethod
     def compute_inter_annotator_calibration(multi_reviews: List[Dict[str, Any]]) -> Dict[str, Any]:
-        """Compute agreement rate and calibration statistics when multi-annotator reviews exist."""
-        # multi_reviews: items with a list of reviews: [{"reviewer": ..., "decision": ..., "codes": [...]}]
+        """Compute agreement rate, Cohen's Kappa, rubric failure distribution, and dynamic weights."""
         total_pairs = 0
         decision_agreements = 0
         code_jaccard_sum = 0.0
 
+        r1_counts: Dict[str, int] = defaultdict(int)
+        r2_counts: Dict[str, int] = defaultdict(int)
+        all_categories: Set[str] = set()
+
+        # Rubric category definitions
+        rubric_mapping = {
+            "grounding": {
+                ReviewReasonCode.FACTUAL_HALLUCINATION.value,
+                ReviewReasonCode.STATUTORY_MISQUOTATION.value,
+            },
+            "instruction_following": {
+                ReviewReasonCode.INCOMPLETE_EXPLANATION.value,
+                ReviewReasonCode.CALCULATION_OR_LOGIC_ERROR.value,
+                ReviewReasonCode.OUT_OF_DOMAIN.value,
+            },
+            "clarity_style": {
+                ReviewReasonCode.UNSUITABLE_TONE_OR_STYLE.value,
+                ReviewReasonCode.POOR_VERNACULAR_OR_TRANSLATION.value,
+            },
+            "formatting": {
+                ReviewReasonCode.FORMAT_COMPLIANCE_FAILURE.value,
+                ReviewReasonCode.CORRUPTED_TEMPLATE_TOKENS.value,
+            },
+            "safety_and_dedup": {
+                ReviewReasonCode.PII_OR_SECURITY_RISK.value,
+                ReviewReasonCode.DUPLICATE_SAMPLE.value,
+            },
+        }
+
+        baseline_weights = {
+            "grounding": 0.35,
+            "instruction_following": 0.25,
+            "clarity_style": 0.15,
+            "formatting": 0.15,
+            "safety_and_dedup": 0.10,
+        }
+
+        rubric_failure_counts: Dict[str, int] = defaultdict(int)
+        total_failures = 0
+
         for item in multi_reviews:
+            # Count any observed reason codes for rubric distribution
+            item_codes = []
+            meta = item.get("metadata") or item.get("extra_metadata") or {}
+            if isinstance(meta, dict) and meta.get("reason_codes"):
+                item_codes.extend(meta.get("reason_codes"))
+            elif item.get("reason_codes"):
+                item_codes.extend(item.get("reason_codes"))
+            elif item.get("reason_code"):
+                item_codes.append(item.get("reason_code"))
+
+            for rc in item_codes:
+                rc_str = str(rc).lower()
+                for dim, dim_codes in rubric_mapping.items():
+                    if rc_str in dim_codes:
+                        rubric_failure_counts[dim] += 1
+                        total_failures += 1
+
             reviews = item.get("reviews", [])
             if len(reviews) < 2:
                 continue
@@ -198,7 +254,14 @@ class ReviewCalibrationTracker:
                     r2 = reviews[j]
                     total_pairs += 1
 
-                    if r1.get("decision") == r2.get("decision"):
+                    dec1 = str(r1.get("decision", "")).strip().lower()
+                    dec2 = str(r2.get("decision", "")).strip().lower()
+                    r1_counts[dec1] += 1
+                    r2_counts[dec2] += 1
+                    all_categories.add(dec1)
+                    all_categories.add(dec2)
+
+                    if dec1 == dec2:
                         decision_agreements += 1
 
                     codes1 = set(r1.get("codes", []))
@@ -209,21 +272,61 @@ class ReviewCalibrationTracker:
                     else:
                         code_jaccard_sum += 1.0
 
-        if total_pairs == 0:
-            return {
-                "multi_reviewed_count": 0,
-                "decision_agreement_pct": None,
-                "reason_code_jaccard": None,
-                "status": "insufficient_multi_review_data",
-            }
+        # Calculate Cohen's Kappa when pairs exist
+        cohens_kappa = None
+        dec_agreement = None
+        mean_jaccard = None
+        verdict = "insufficient_data"
+        arbitration_rate = 0.05
 
-        dec_agreement = round((decision_agreements / total_pairs) * 100, 1)
-        mean_jaccard = round(code_jaccard_sum / total_pairs, 3)
+        if total_pairs > 0:
+            p_o = decision_agreements / total_pairs
+            dec_agreement = round(p_o * 100, 1)
+            mean_jaccard = round(code_jaccard_sum / total_pairs, 3)
+
+            p_e = 0.0
+            for cat in all_categories:
+                p_e += (r1_counts[cat] / total_pairs) * (r2_counts[cat] / total_pairs)
+
+            if p_e >= 0.999999:
+                cohens_kappa = 1.0
+            else:
+                kappa_raw = (p_o - p_e) / (1.0 - p_e)
+                cohens_kappa = round(max(-1.0, min(1.0, kappa_raw)), 3)
+
+            if dec_agreement >= 80.0:
+                verdict = "well_calibrated"
+                arbitration_rate = 0.05
+            else:
+                verdict = "divergent_guidelines_needed"
+                arbitration_rate = 0.30 if (cohens_kappa is not None and cohens_kappa < 0.45) else 0.15
+
+        # Dynamic rubric reweighting
+        raw_weights = {}
+        for dim, base_w in baseline_weights.items():
+            dim_failures = rubric_failure_counts[dim]
+            failure_ratio = (dim_failures / total_failures) if total_failures > 0 else 0.0
+            # Boost weight if this dimension exhibits high failure or low kappa
+            multiplier = 1.0 + failure_ratio
+            if cohens_kappa is not None and cohens_kappa < 0.65 and dim in ("grounding", "instruction_following"):
+                multiplier += 0.25
+            raw_weights[dim] = base_w * multiplier
+
+        weight_sum = sum(raw_weights.values())
+        reweighted_rubrics = {
+            dim: round(w / weight_sum, 4) for dim, w in raw_weights.items()
+        }
 
         return {
-            "multi_reviewed_count": len(multi_reviews),
+            "multi_reviewed_count": len([i for i in multi_reviews if len(i.get("reviews", [])) >= 2]),
             "evaluated_pairs": total_pairs,
             "decision_agreement_pct": dec_agreement,
+            "cohens_kappa": cohens_kappa,
             "reason_code_jaccard": mean_jaccard,
-            "calibration_verdict": "well_calibrated" if dec_agreement >= 80.0 else "divergent_guidelines_needed",
+            "calibration_verdict": verdict,
+            "recommended_arbitration_rate": arbitration_rate,
+            "rubric_weights": reweighted_rubrics,
+            "baseline_weights": baseline_weights,
+            "dimension_failures": dict(rubric_failure_counts),
+            "status": "calibrated" if total_pairs > 0 else "insufficient_multi_review_data",
         }
