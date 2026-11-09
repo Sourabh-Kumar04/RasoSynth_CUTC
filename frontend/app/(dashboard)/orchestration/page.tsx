@@ -28,6 +28,7 @@ import {
   Cpu,
   Sparkles,
   BookOpen,
+  GitCompare,
   Search,
   ShieldCheck,
   GitMerge,
@@ -528,13 +529,23 @@ export default function OrchestrationPage() {
                         DBOM Merkle root sealed. Dispatch directly into parameter-efficient fine-tuning with 1 click.
                       </p>
                     </div>
-                    <Button
-                      onClick={() => router.push(`/finetune?dataset=${selectedJob.id}`)}
-                      className="bg-[#f26625] hover:bg-[#de581a] text-white text-xs font-mono font-bold h-8 rounded-md flex items-center gap-1.5 shadow-sm"
-                    >
-                      <Sparkles className="w-3.5 h-3.5" />
-                      Fine-Tune Model
-                    </Button>
+                    <div className="flex flex-wrap items-center gap-2">
+                      <Button
+                        onClick={() => router.push(`/finetune?dataset=${selectedJob.id}`)}
+                        className="bg-[#f26625] hover:bg-[#de581a] text-white text-xs font-mono font-bold h-8 rounded-md flex items-center gap-1.5 shadow-sm"
+                      >
+                        <Sparkles className="w-3.5 h-3.5" />
+                        Fine-Tune Model
+                      </Button>
+                      <Button
+                        onClick={() => router.push(`/review?job=${selectedJob.id}`)}
+                        variant="outline"
+                        className="border-purple-500/40 text-purple-300 hover:text-white hover:bg-purple-950/40 text-xs font-mono font-bold h-8 rounded-md flex items-center gap-1.5 shadow-sm"
+                      >
+                        <GitCompare className="w-3.5 h-3.5 text-purple-400" />
+                        Active Learning &amp; DPO
+                      </Button>
+                    </div>
                   </div>
                 )}
 

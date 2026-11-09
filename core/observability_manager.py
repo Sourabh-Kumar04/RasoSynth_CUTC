@@ -71,8 +71,12 @@ class ObservabilityManager:
     - Span exporters (console, OTLP)
     """
 
-    def __init__(self, settings: Settings):
+    def __init__(self, settings: Optional[Any] = None, service_name: str = "rasosynth-api", **kwargs):
+        if settings is None or isinstance(settings, str):
+            from core.config import get_settings
+            settings = get_settings()
         self._settings = settings
+        self.service_name = service_name
         self._tracer = None
         self._meter_provider = None
         self._is_initialized = False

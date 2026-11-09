@@ -131,6 +131,8 @@ def test_providers_outage_is_503_not_empty_list(test_client, auth_headers, monke
     import api.server as server_mod
 
     monkeypatch.setattr(server_mod, "router", None)
+    monkeypatch.setattr(test_client.app.state, "router", None)
+    monkeypatch.setattr(test_client.app.state, "provider_router", None)
     resp = test_client.get("/providers", headers=auth_headers)
     assert resp.status_code == 503
 
@@ -152,7 +154,10 @@ def test_provider_available_not_defaulted_true(test_client, auth_headers, monkey
                 }
             }
 
-    monkeypatch.setattr(server_mod, "router", FakeRouter())
+    fake_r = FakeRouter()
+    monkeypatch.setattr(server_mod, "router", fake_r)
+    monkeypatch.setattr(test_client.app.state, "router", fake_r)
+    monkeypatch.setattr(test_client.app.state, "provider_router", fake_r)
     resp = test_client.get("/providers", headers=auth_headers)
     assert resp.status_code == 200
     assert resp.json()[0]["status"] == "unknown"
@@ -182,8 +187,11 @@ def test_health_key_presence_is_configured_not_healthy(test_client, auth_headers
     class FakeRouter:
         _provider_configs = {"prov": {"api_key": "x"}}
 
-    monkeypatch.setattr(server_mod, "router", FakeRouter())
+    fake_r = FakeRouter()
+    monkeypatch.setattr(server_mod, "router", fake_r)
+    monkeypatch.setattr(test_client.app.state, "router", fake_r)
     monkeypatch.setattr(server_mod, "provider_validator", None)
+    monkeypatch.setattr(test_client.app.state, "provider_validator", None)
     resp = test_client.get("/health")
     assert resp.status_code == 200
     data = resp.json()
@@ -199,8 +207,11 @@ def test_ready_does_not_embed_raw_exceptions(test_client, monkeypatch):
         async def list_jobs(self):
             raise RuntimeError("SENTINEL_DB_FAILURE_MESSAGE")
 
-    monkeypatch.setattr(server_mod, "db", BadDB())
+    bad = BadDB()
+    monkeypatch.setattr(server_mod, "db", bad)
+    monkeypatch.setattr(test_client.app.state, "db", bad)
     monkeypatch.setattr(server_mod, "cache", None)
+    monkeypatch.setattr(test_client.app.state, "cache", None)
     resp = test_client.get("/health/ready")
     assert resp.status_code == 200
     assert resp.json()["checks"]["database"] == "not_ready"
@@ -266,8 +277,11 @@ def _fake_db(job):
 def test_retry_terminal_job_is_409(test_client, auth_headers, monkeypatch):
     import api.server as server_mod
 
-    monkeypatch.setattr(server_mod, "db", _fake_db({"status": "completed", "config": {}}))
+    f_db = _fake_db({"status": "completed", "config": {}})
+    monkeypatch.setattr(server_mod, "db", f_db)
+    monkeypatch.setattr(test_client.app.state, "db", f_db)
     monkeypatch.setattr(server_mod, "orchestrator", None)
+    monkeypatch.setattr(test_client.app.state, "orchestrator", None)
     resp = test_client.post(
         "/orchestration/steps/quality_eval/retry",
         params={"job_id": "job-1"},
@@ -279,8 +293,11 @@ def test_retry_terminal_job_is_409(test_client, auth_headers, monkeypatch):
 def test_retry_without_orchestrator_is_503(test_client, auth_headers, monkeypatch):
     import api.server as server_mod
 
-    monkeypatch.setattr(server_mod, "db", _fake_db({"status": "failed", "config": {}}))
+    f_db = _fake_db({"status": "failed", "config": {}})
+    monkeypatch.setattr(server_mod, "db", f_db)
+    monkeypatch.setattr(test_client.app.state, "db", f_db)
     monkeypatch.setattr(server_mod, "orchestrator", None)
+    monkeypatch.setattr(test_client.app.state, "orchestrator", None)
     resp = test_client.post(
         "/orchestration/steps/quality_eval/retry",
         params={"job_id": "job-1"},
@@ -303,8 +320,12 @@ def test_retry_launches_pipeline(test_client, auth_headers, monkeypatch):
     class FakeOrch:
         active_jobs = {}
 
-    monkeypatch.setattr(server_mod, "db", _fake_db({"status": "failed", "config": {"target_domain": "x"}}))
-    monkeypatch.setattr(server_mod, "orchestrator", FakeOrch())
+    f_db = _fake_db({"status": "failed", "config": {"target_domain": "x"}})
+    f_orch = FakeOrch()
+    monkeypatch.setattr(server_mod, "db", f_db)
+    monkeypatch.setattr(test_client.app.state, "db", f_db)
+    monkeypatch.setattr(server_mod, "orchestrator", f_orch)
+    monkeypatch.setattr(test_client.app.state, "orchestrator", f_orch)
     monkeypatch.setattr(server_mod, "run_pipeline", fake_run_pipeline)
     resp = test_client.post(
         "/orchestration/steps/quality_eval/retry",

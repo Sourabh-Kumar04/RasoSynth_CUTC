@@ -594,15 +594,15 @@ class MinIOProvider(S3StorageProvider):
 
     async def initialize(self) -> None:
         """Initialize MinIO client."""
+        access_key = self.config.credentials.get("access_key")
+        secret_key = self.config.credentials.get("secret_key")
+        if not access_key or not secret_key:
+            raise ValueError(
+                "MinIO storage provider requires explicit access_key and secret_key credentials; "
+                "hardcoded defaults (like minioadmin) are disabled for security."
+            )
         try:
             import boto3
-            access_key = self.config.credentials.get("access_key")
-            secret_key = self.config.credentials.get("secret_key")
-            if not access_key or not secret_key:
-                raise ValueError(
-                    "MinIO storage provider requires explicit access_key and secret_key credentials; "
-                    "hardcoded defaults (like minioadmin) are disabled for security."
-                )
             self._client = boto3.client(
                 's3',
                 endpoint_url=self.config.endpoint or "http://localhost:9000",

@@ -292,9 +292,10 @@ class TracingMiddleware(BaseHTTPMiddleware):
             raise
         finally:
             elapsed_ms = (time.time() - start_time) * 1000.0
-            if observability is not None:
+            obs = getattr(request.app.state, "observability", None) or observability
+            if obs is not None:
                 try:
-                    observability.record_trace(
+                    obs.record_trace(
                         operation=f"{request.method} {request.url.path}",
                         duration_ms=elapsed_ms,
                         status=status,
@@ -322,6 +323,7 @@ async def lifespan(app: FastAPI):
     # 2. Observability
     try:
         observability = ObservabilityManager(service_name="rasosynth-api")
+        app.state.observability = observability
         logger.info("  ✓ ObservabilityManager initialized")
     except Exception as e:
         logger.warning(f"  ⚠ ObservabilityManager failed to initialize: {e}")

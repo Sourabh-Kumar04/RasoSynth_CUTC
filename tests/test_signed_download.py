@@ -66,7 +66,7 @@ def test_signed_url_generation_endpoints(auth_headers):
     # with db=None it mints unconditionally. Pin db to an empty mock so
     # this test asserts the existence behaviour deterministically,
     # regardless of which earlier test did or did not initialise the app DB.
-    from unittest.mock import AsyncMock
+    from unittest.mock import AsyncMock, MagicMock
     mock_db = AsyncMock()
     mock_db.get_job_status.return_value = None
     mock_db.get_dataset.return_value = None
@@ -110,7 +110,7 @@ def test_download_authorization_enforcement(auth_headers):
     with patch("api.server._resolve_dynamic_disk_dataset") as mock_disk:
         mock_disk.return_value = None
         with patch("api.server.db") as mock_db:
-            from unittest.mock import AsyncMock
+            from unittest.mock import AsyncMock, MagicMock
             mock_db.get_dataset = AsyncMock(return_value=None)
             mock_db.get_job_status = AsyncMock(return_value=None)
             mock_db.get_datasets = AsyncMock(return_value=[])
@@ -121,7 +121,7 @@ def test_download_authorization_enforcement(auth_headers):
     with patch("api.server._resolve_dynamic_disk_dataset") as mock_disk:
         mock_disk.return_value = None
         with patch("api.server.db") as mock_db:
-            from unittest.mock import AsyncMock
+            from unittest.mock import AsyncMock, MagicMock
             mock_db.get_dataset = AsyncMock(return_value=None)
             mock_db.get_job_status = AsyncMock(return_value=None)
             mock_db.get_datasets = AsyncMock(return_value=[])
@@ -140,13 +140,14 @@ def test_download_authorization_enforcement(auth_headers):
 def test_download_completion_and_exact_match(auth_headers):
     """Regression test for incomplete job 409 and exact identifier matching."""
     client = TestClient(app)
-    from unittest.mock import AsyncMock
+    from unittest.mock import AsyncMock, MagicMock
 
     # 1. Incomplete job check -> 409
     job_id = "job-running-1234"
-    with patch("api.server.db") as mock_db:
-        mock_db.get_job_status = AsyncMock(return_value={"id": job_id, "status": "running", "owner": "admin"})
-        mock_db.get_dataset = AsyncMock(return_value=None)
+    mock_db = MagicMock()
+    mock_db.get_job_status = AsyncMock(return_value={"id": job_id, "status": "running", "owner": "admin"})
+    mock_db.get_dataset = AsyncMock(return_value=None)
+    with patch.object(app.state, "db", mock_db, create=True), patch("api.server.db", mock_db):
         resp = client.get(f"/jobs/{job_id}/download", headers=auth_headers)
         assert resp.status_code == 409
         assert "is not complete" in resp.json()["detail"]

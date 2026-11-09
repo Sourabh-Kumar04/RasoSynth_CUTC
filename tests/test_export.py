@@ -71,7 +71,8 @@ class TestExportPipeline:
             s3_region="us-west-2",
         )
         pipeline = ExportPipeline(config)
-        with patch("pipeline.export.boto3") as mock_boto:
+        with patch("pipeline.export.S3_AVAILABLE", True), \
+             patch("pipeline.export.boto3") as mock_boto:
             mock_s3 = MagicMock()
             mock_boto.client.return_value = mock_s3
             result = await pipeline.export(samples, "job-s3", format="s3")
@@ -88,15 +89,13 @@ class TestExportPipeline:
             hf_token="fake-token",
         )
         pipeline = ExportPipeline(config)
-        # Patch the actual module where the imports happen inside the method
-        with patch("huggingface_hub.create_repo") as mock_create_repo, \
-             patch("huggingface_hub.HfApi") as mock_hf_api:
-            # HfApi mock instance with upload_file method
-            mock_api_instance = MagicMock()
-            mock_hf_api.return_value = mock_api_instance
+        mock_hf = MagicMock()
+        mock_api_instance = MagicMock()
+        mock_hf.HfApi.return_value = mock_api_instance
+        with patch.dict("sys.modules", {"huggingface_hub": mock_hf}):
             result = await pipeline.export(samples, "job-hf", format="hf_hub")
             assert "https://huggingface.co/datasets/" in result["dataset"]
-            mock_create_repo.assert_called_once()
+            mock_hf.create_repo.assert_called_once()
 
     async def test_export_kaggle(self, samples, tmp_path):
         config = ExportConfig(

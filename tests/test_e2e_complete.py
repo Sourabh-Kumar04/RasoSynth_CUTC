@@ -85,6 +85,14 @@ class TestEndToEndSystem:
 
     def test_e2e_distributed_tracing_and_telemetry(self, test_client, auth_headers):
         """Verify distributed trace extraction, trace recording, and historical telemetry."""
+        import api.server as server_mod
+        from core.observability import ObservabilityManager
+        obs = getattr(test_client.app.state, "observability", None) or server_mod.observability
+        if obs is None:
+            obs = ObservabilityManager(service_name="rasosynth-api")
+            test_client.app.state.observability = obs
+            server_mod.observability = obs
+
         trace_id = "e2e-trace-test-456"
         corr_id = "e2e-corr-test-789"
         headers = {
@@ -133,7 +141,9 @@ class TestEndToEndSystem:
         db_file = tmp_path / "e2e_test.db"
         test_db = await AsyncDB.create(f"sqlite+aiosqlite:///{db_file}")
         orig_db = server_mod.db
+        orig_app_db = getattr(test_client.app.state, "db", None)
         server_mod.db = test_db
+        test_client.app.state.db = test_db
 
         try:
             # Create test job and dataset
@@ -220,6 +230,7 @@ class TestEndToEndSystem:
 
         finally:
             server_mod.db = orig_db
+            test_client.app.state.db = orig_app_db
             await test_db.close()
 
     @pytest.mark.asyncio
@@ -259,6 +270,12 @@ class TestEndToEndSystem:
 
     def test_e2e_human_review_workflow(self, test_client, auth_headers):
         """Verify human-in-the-loop review operations and queue querying."""
+        from unittest.mock import AsyncMock
+        mock_svc = AsyncMock()
+        mock_svc.get_queue.return_value = {"items": [], "total": 0, "page": 1, "page_size": 20, "total_pages": 0}
+        mock_svc.get_stats.return_value = {"total": 0, "pending": 0, "in_review": 0, "approved": 0, "rejected": 0, "flagged": 0, "approval_rate": 0.0, "rejection_rate": 0.0}
+        test_client.app.state.review_service = mock_svc
+
         # 1. Fetch CSRF token for review actions
         csrf_resp = test_client.get("/auth/csrf-token", headers=auth_headers)
         csrf_token = csrf_resp.json().get("csrf_token")
