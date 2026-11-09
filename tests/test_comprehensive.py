@@ -144,7 +144,7 @@ class TestAPIEndpoints:
 
     def test_datasets_records_endpoint(self, test_client, test_dataset, auth_headers, monkeypatch, db):
         monkeypatch.setattr("api.server.db", db)
-        monkeypatch.setattr(test_client.app.state, "db", db)
+        monkeypatch.setattr(test_client.app.state, "db", db, raising=False)
         """Test GET /datasets/{id}/records returns records."""
         resp = test_client.get(f"/datasets/{test_dataset['id']}/records?limit=10", headers=auth_headers)
         assert resp.status_code == 200
@@ -154,7 +154,7 @@ class TestAPIEndpoints:
 
     def test_datasets_single_endpoint(self, test_client, test_dataset, auth_headers, monkeypatch, db):
         monkeypatch.setattr("api.server.db", db)
-        monkeypatch.setattr(test_client.app.state, "db", db)
+        monkeypatch.setattr(test_client.app.state, "db", db, raising=False)
         """Test GET /datasets/{id} returns dataset detail."""
         resp = test_client.get(f"/datasets/{test_dataset['id']}", headers=auth_headers)
         assert resp.status_code == 200
@@ -181,7 +181,7 @@ class TestAPIEndpoints:
 
     def test_jobs_records_endpoint_from_db(self, test_client, test_job, auth_headers, monkeypatch, db):
         monkeypatch.setattr("api.server.db", db)
-        monkeypatch.setattr(test_client.app.state, "db", db)
+        monkeypatch.setattr(test_client.app.state, "db", db, raising=False)
         """Test GET /jobs/{id}/records reads from DB."""
         # Create a dataset for this job
         # (test_job fixture already has one via test_dataset implicitly,
@@ -260,7 +260,7 @@ class TestExportPersistence:
     @pytest.mark.asyncio
     async def test_download_generates_from_db_when_file_missing(self, db, test_job, test_client, auth_headers, monkeypatch):
         monkeypatch.setattr("api.server.db", db)
-        monkeypatch.setattr(test_client.app.state, "db", db)
+        monkeypatch.setattr(test_client.app.state, "db", db, raising=False)
         """Test download endpoint falls back to DB when no file on disk."""
         # Create dataset in DB but no file
         ds = await db.create_dataset(

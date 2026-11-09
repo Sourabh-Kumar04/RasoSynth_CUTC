@@ -34,9 +34,15 @@ jobs:
           cat deploy/huggingface/space_frontmatter.txt README.md > /tmp/README_HF.md
           mv /tmp/README_HF.md README.md
 
+          # Create a clean orphan deployment branch for HF Docker Space
+          # to exclude non-backend directories with binary assets (frontend, docs, etc.)
+          git checkout --orphan hf-space-deploy
+          git rm -rf --ignore-unmatch frontend/ docs/ .github/ charts/
+          git add README.md
+
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
-          git commit -am "chore(hf): attach Space configuration metadata"
+          git commit -m "chore(hf): deploy backend to Hugging Face Space"
 
           echo "Syncing repository to Hugging Face Space: $SPACE..."
-          git push --force https://oauth2:$HF_TOKEN@huggingface.co/spaces/$SPACE HEAD:main
+          git push --force https://oauth2:$HF_TOKEN@huggingface.co/spaces/$SPACE hf-space-deploy:main

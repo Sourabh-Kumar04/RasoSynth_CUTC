@@ -40,6 +40,11 @@ htmlcov/
 .mypy_cache/
 .ruff_cache/
 
+# Frontend and docs (not needed for backend container)
+frontend/
+docs/
+charts/
+
 # Project specific
 outputs/
 data/
