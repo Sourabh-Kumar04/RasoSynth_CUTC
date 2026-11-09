@@ -1138,6 +1138,20 @@ class APIClient {
     return socket
   }
 
+  // Connect to a resilient auto-reconnecting WebSocket for real-time job updates
+  connectResilientJobWebSocket(jobId: string, options?: ResilientWSOptions): ResilientWebSocketClient {
+    const wsBaseUrl = this.baseUrl.replace(/^http/, 'ws')
+    const url = `${wsBaseUrl}/ws/jobs/${jobId}`
+    return new ResilientWebSocketClient(url, options)
+  }
+
+  // Connect to a resilient auto-reconnecting WebSocket for real-time jobs list updates
+  connectResilientJobsListWebSocket(options?: ResilientWSOptions): ResilientWebSocketClient {
+    const wsBaseUrl = this.baseUrl.replace(/^http/, 'ws')
+    const url = `${wsBaseUrl}/ws/jobs`
+    return new ResilientWebSocketClient(url, options)
+  }
+
   private handleMockRequest<T>(endpoint: string, options: RequestOptions = {}): T {
     const method = (options.method || 'GET').toUpperCase();
     console.log(`[Mock API] Intercepted ${method} ${endpoint}`);
@@ -2236,4 +2250,130 @@ export function validateInput(input: string): { valid: boolean; error?: string }
     return { valid: false, error: 'Potential XSS detected' }
   }
   return { valid: true }
+}
+
+export interface ResilientWSOptions {
+  maxRetries?: number
+  initialDelayMs?: number
+  maxDelayMs?: number
+  heartbeatIntervalMs?: number
+  onMessage?: (data: any) => void
+  onStatusChange?: (status: 'connecting' | 'connected' | 'reconnecting' | 'disconnected') => void
+  onError?: (err: Event) => void
+}
+
+export class ResilientWebSocketClient {
+  private url: string
+  private options: ResilientWSOptions
+  private ws: WebSocket | null = null
+  private retryCount = 0
+  private isDisposed = false
+  private heartbeatTimer: ReturnType<typeof setInterval> | null = null
+  private reconnectTimer: ReturnType<typeof setTimeout> | null = null
+
+  constructor(url: string, options: ResilientWSOptions = {}) {
+    this.url = url
+    this.options = {
+      maxRetries: 10,
+      initialDelayMs: 1000,
+      maxDelayMs: 30000,
+      heartbeatIntervalMs: 15000,
+      ...options,
+    }
+    this.connect()
+  }
+
+  private connect() {
+    if (this.isDisposed || typeof window === 'undefined') return
+    this.options.onStatusChange?.(this.retryCount > 0 ? 'reconnecting' : 'connecting')
+
+    try {
+      this.ws = new WebSocket(this.url)
+
+      this.ws.onopen = () => {
+        if (this.isDisposed) {
+          this.ws?.close()
+          return
+        }
+        this.retryCount = 0
+        this.options.onStatusChange?.('connected')
+        this.startHeartbeat()
+      }
+
+      this.ws.onmessage = (event) => {
+        if (this.isDisposed) return
+        try {
+          const parsed = JSON.parse(event.data)
+          this.options.onMessage?.(parsed)
+        } catch {
+          this.options.onMessage?.(event.data)
+        }
+      }
+
+      this.ws.onclose = () => {
+        this.stopHeartbeat()
+        if (this.isDisposed) return
+        this.options.onStatusChange?.('disconnected')
+        this.scheduleReconnect()
+      }
+
+      this.ws.onerror = (err) => {
+        this.options.onError?.(err)
+      }
+    } catch {
+      this.scheduleReconnect()
+    }
+  }
+
+  private startHeartbeat() {
+    this.stopHeartbeat()
+    if (!this.options.heartbeatIntervalMs) return
+    this.heartbeatTimer = setInterval(() => {
+      if (this.ws && this.ws.readyState === WebSocket.OPEN) {
+        this.ws.send(JSON.stringify({ type: 'ping', timestamp: Date.now() }))
+      }
+    }, this.options.heartbeatIntervalMs)
+  }
+
+  private stopHeartbeat() {
+    if (this.heartbeatTimer) {
+      clearInterval(this.heartbeatTimer)
+      this.heartbeatTimer = null
+    }
+  }
+
+  private scheduleReconnect() {
+    if (this.isDisposed) return
+    if (this.retryCount >= (this.options.maxRetries || 10)) {
+      this.options.onStatusChange?.('disconnected')
+      return
+    }
+
+    const initial = this.options.initialDelayMs || 1000
+    const max = this.options.maxDelayMs || 30000
+    const delay = Math.min(max, initial * Math.pow(1.5, this.retryCount)) * (0.9 + Math.random() * 0.2)
+    this.retryCount++
+    this.options.onStatusChange?.('reconnecting')
+
+    this.reconnectTimer = setTimeout(() => {
+      this.connect()
+    }, delay)
+  }
+
+  send(data: any) {
+    if (this.ws && this.ws.readyState === WebSocket.OPEN) {
+      this.ws.send(typeof data === 'string' ? data : JSON.stringify(data))
+    }
+  }
+
+  close() {
+    this.isDisposed = true
+    this.stopHeartbeat()
+    if (this.reconnectTimer) clearTimeout(this.reconnectTimer)
+    if (this.ws) {
+      this.ws.close()
+      this.ws = null
+    }
+    this.options.onStatusChange?.('disconnected')
+  }
 }

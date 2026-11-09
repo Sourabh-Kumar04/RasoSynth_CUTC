@@ -295,6 +295,57 @@ async def hybrid_search_dataset_records(
         raise HTTPException(status_code=500, detail="Failed to execute hybrid search")
 
 
+@router.post("/datasets/{dataset_id}/import-stream")
+async def import_stream_dataset_records(
+    dataset_id: str,
+    req: Request,
+    payload: Optional[dict] = Body(default=None),
+    format_hint: Optional[str] = Query(default=None),
+    current_user: User = Depends(require_role([UserRole.ADMIN, UserRole.USER])),
+):
+    """Zero-copy streaming ingestion from Arrow IPC (.arrow/.feather) or Parquet into dataset."""
+    db = _get_db(req)
+    if not db:
+        raise HTTPException(status_code=503, detail="Database not available")
+
+    dataset = await db.get_dataset(dataset_id)
+    if not dataset:
+        datasets_for_job = await db.get_datasets_by_job(dataset_id)
+        if datasets_for_job:
+            dataset = datasets_for_job[0]
+
+    if not dataset:
+        raise HTTPException(status_code=404, detail=f"Dataset {dataset_id} not found")
+
+    enforce_owner(dataset, current_user, resource_name="Dataset")
+
+    from pipeline.import_pipeline import ArrowDatasetImporter
+    importer = ArrowDatasetImporter()
+
+    file_path = payload.get("file_path") if isinstance(payload, dict) else None
+    if file_path:
+        if not os.path.exists(file_path):
+            raise HTTPException(status_code=400, detail=f"Specified file_path not found: {file_path}")
+        source = file_path
+    else:
+        body_bytes = await req.body()
+        if not body_bytes:
+            raise HTTPException(status_code=400, detail="Missing payload body or file_path")
+        source = body_bytes
+
+    try:
+        result = await importer.import_stream_to_dataset(
+            source=source,
+            dataset_id=dataset["id"],
+            db=db,
+            format_hint=format_hint,
+        )
+        return result
+    except Exception as e:
+        logger.error(f"Streaming import failed for dataset {dataset_id}: {e}", exc_info=True)
+        raise HTTPException(status_code=400, detail=f"Streaming import failed: {e}")
+
+
 @router.delete("/datasets/{dataset_id}")
 async def delete_dataset_endpoint(
     dataset_id: str,

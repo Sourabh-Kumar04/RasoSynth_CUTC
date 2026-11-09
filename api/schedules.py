@@ -16,7 +16,7 @@ router = APIRouter(prefix="/api/schedules", tags=["schedules"])
 
 class ScheduleCreateRequest(BaseModel):
     name: str = Field(min_length=1, max_length=255)
-    workflow_type: Literal["recrawl", "refresh", "retrain"]
+    workflow_type: Literal["recrawl", "refresh", "retrain", "calibration", "drift_audit"]
     interval_seconds: int = Field(ge=60)
     workflow_config: dict[str, Any] = Field(default_factory=dict)
     next_run_at: Optional[datetime] = None

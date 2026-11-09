@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from 'react'
 import { api } from '@/lib/api/client'
+import { useStreamingStore } from '@/lib/stores/streaming'
 
 type HealthSnapshot = {
   status?: string
@@ -77,10 +78,28 @@ export function FooterStatus() {
     label = displayStatus.charAt(0).toUpperCase() + displayStatus.slice(1)
   }
 
+  const wsStatus = useStreamingStore((s) => s.connectionStatus)
+
   return (
-    <span className="flex items-center gap-1.5 px-2 py-0.5 rounded bg-[#12121a] border border-[#272738] text-xs text-zinc-300">
-      <span className={`w-1.5 h-1.5 rounded-full animate-pulse ${dotColor}`} />
-      <span>{label}</span>
-    </span>
+    <div className="flex items-center gap-2">
+      <span className="flex items-center gap-1.5 px-2 py-0.5 rounded bg-[#12121a] border border-[#272738] text-xs text-zinc-300">
+        <span className={`w-1.5 h-1.5 rounded-full animate-pulse ${dotColor}`} />
+        <span>{label}</span>
+      </span>
+      {wsStatus !== 'disconnected' && (
+        <span className="flex items-center gap-1 px-1.5 py-0.5 rounded bg-[#12121a] border border-[#272738] text-[10px] text-zinc-400 font-mono">
+          <span
+            className={`w-1 h-1 rounded-full ${
+              wsStatus === 'connected'
+                ? 'bg-emerald-400'
+                : wsStatus === 'reconnecting'
+                ? 'bg-amber-400 animate-ping'
+                : 'bg-zinc-500'
+            }`}
+          />
+          <span>{wsStatus === 'connected' ? 'WS: Live' : 'WS: Reconnecting'}</span>
+        </span>
+      )}
+    </div>
   )
 }

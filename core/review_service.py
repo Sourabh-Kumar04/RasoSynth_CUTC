@@ -26,13 +26,20 @@ class ReviewService:
     One instance stored on app.state.review_service.
     """
 
-    def __init__(self, db_manager: Optional[DatabaseManager] = None, db: Optional[DatabaseManager] = None):
+    def __init__(
+        self,
+        db_manager: Optional[DatabaseManager] = None,
+        db: Optional[DatabaseManager] = None,
+        ws_manager: Any = None,
+    ):
         manager = db_manager or db
         if manager is None:
             raise ValueError("db_manager must be provided to ReviewService")
         self.db = manager
+        self.ws_manager = ws_manager
         # job_id -> asyncio.Event (set when reviewer calls resume_job)
         self._resume_events: dict[str, asyncio.Event] = {}
+        self._reviews_since_rebalance: int = 0
 
     async def recover_paused_jobs(self) -> int:
         """
@@ -153,6 +160,7 @@ class ReviewService:
             review_timestamp=datetime.now(timezone.utc),
             review_version=(existing.review_version or 0) + 1,
         )
+        self._record_review_activity()
         return item.to_dict() if item else None
 
     async def reject(
@@ -182,6 +190,7 @@ class ReviewService:
             review_version=(existing.review_version or 0) + 1,
             extra_metadata=meta,
         )
+        self._record_review_activity()
         return item.to_dict() if item else None
 
     async def edit(
@@ -215,6 +224,7 @@ class ReviewService:
             review_version=(existing.review_version or 0) + 1,
             extra_metadata=meta,
         )
+        self._record_review_activity()
         return item.to_dict() if item else None
 
     async def flag(self, item_id: str, reviewer: str, reason: str = "") -> Optional[dict]:
@@ -229,6 +239,7 @@ class ReviewService:
             review_timestamp=datetime.now(timezone.utc),
             review_version=(existing.review_version or 0) + 1,
         )
+        self._record_review_activity()
         return item.to_dict() if item else None
 
     # ── Bulk operations ───────────────────────────────────────────────────────
@@ -287,6 +298,62 @@ class ReviewService:
             "rebalanced_rubrics": stats.get("rubric_weights", {}),
             "status": "rebalanced",
         }
+
+    async def check_and_auto_rebalance(self, min_reviews: int = 10, ws_manager: Any = None) -> Optional[dict]:
+        """
+        Evaluate reviewer calibration, detect LLM judge drift, dynamically
+        rebalance rubrics, and broadcast drift warnings if Cohen's Kappa < 0.60.
+        """
+        stats = await self.get_calibration_stats()
+        evaluated_count = stats.get("evaluated_pairs", 0) or stats.get("multi_reviewed_count", 0)
+        if evaluated_count < min_reviews:
+            return None
+
+        result = await self.rebalance_rubrics()
+        kappa = stats.get("cohens_kappa")
+        drift_detected = kappa is not None and kappa < 0.60
+
+        result["drift_detected"] = drift_detected
+        result["drift_severity"] = (
+            "critical" if (kappa is not None and kappa < 0.40)
+            else "warning" if drift_detected
+            else "normal"
+        )
+
+        mgr = ws_manager or self.ws_manager
+        if drift_detected and kappa is not None:
+            logger.warning(
+                f"LLM Judge Calibration Drift Detected: Cohen's Kappa κ={kappa:.3f} (< 0.60). "
+                f"Dynamic rubrics reweighted: {result.get('rebalanced_rubrics')}"
+            )
+            if mgr and hasattr(mgr, "broadcast"):
+                try:
+                    await mgr.broadcast({
+                        "type": "calibration_drift_alert",
+                        "data": {
+                            "kappa": kappa,
+                            "agreement_rate": stats.get("decision_agreement_pct"),
+                            "severity": result["drift_severity"],
+                            "timestamp": datetime.now(timezone.utc).isoformat(),
+                            "rubric_weights": result.get("rebalanced_rubrics"),
+                        }
+                    })
+                except Exception as ws_err:
+                    logger.debug(f"Failed to broadcast drift alert: {ws_err}")
+
+        return result
+
+    def _record_review_activity(self):
+        """Track reviews and trigger periodic auto-rebalance."""
+        self._reviews_since_rebalance += 1
+        if self._reviews_since_rebalance >= 20:
+            self._reviews_since_rebalance = 0
+            try:
+                loop = asyncio.get_event_loop()
+                if loop.is_running():
+                    loop.create_task(self.check_and_auto_rebalance())
+            except Exception:
+                pass
 
     async def get_calibration_history(self, limit: int = 50) -> list[dict]:
         """Fetch past persisted calibration reports."""

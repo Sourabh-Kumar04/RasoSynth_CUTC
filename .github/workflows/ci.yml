@@ -34,9 +34,9 @@ name: RasoSynthTune CI & Quality Gate
 
 on:
   push:
-    branches: [ master, main, optimize/industry-standard ]
+    branches: [ master, main, "feat/*", "feat/**" ]
   pull_request:
-    branches: [ master, main, optimize/industry-standard ]
+    branches: [ master, main ]
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}

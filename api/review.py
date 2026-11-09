@@ -260,6 +260,24 @@ async def review_calibration_rebalance(
     return await svc.rebalance_rubrics(job_id=job_id, owner=owner_filter)
 
 
+@router.post("/calibration/drift-audit")
+async def review_calibration_drift_audit(
+    request: Request,
+    min_reviews: int = Query(5, ge=1, le=100),
+    current_user: User = Depends(require_role([UserRole.ADMIN, UserRole.USER])),
+    svc=Depends(_svc),
+):
+    """Run an on-demand calibration drift audit and broadcast alerts if Kappa < 0.60."""
+    ws_mgr = getattr(request.app.state, "ws_manager", None)
+    result = await svc.check_and_auto_rebalance(min_reviews=min_reviews, ws_manager=ws_mgr)
+    if result is None:
+        return {
+            "status": "skipped",
+            "reason": f"Insufficient review samples (< {min_reviews}) for statistical calibration",
+        }
+    return result
+
+
 @router.get("/calibration/history")
 async def review_calibration_history(
     current_user: User = Depends(get_current_user),

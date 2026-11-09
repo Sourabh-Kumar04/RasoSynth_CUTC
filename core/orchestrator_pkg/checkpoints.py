@@ -8,12 +8,12 @@ enabling jobs to resume from exact checkpoints without restarting.
 import asyncio
 import json
 import logging
+import os
 from typing import Any, Optional, List, Dict
 from dataclasses import dataclass, field, asdict
-from datetime import datetime, timezone
+from datetime import datetime, timezone, timedelta
 from enum import Enum
 from uuid import uuid4
-import asyncio
 import asyncpg
 import redis.asyncio as redis
 
@@ -452,3 +452,219 @@ class CheckpointManager:
             "constructed_samples": checkpoint.constructed_samples,
             "metadata": checkpoint.metadata,
         }
+
+
+@dataclass
+class WorkerLease:
+    """Distributed worker lease for resilient zero-downtime execution."""
+    job_id: str
+    worker_id: str
+    lease_id: str = field(default_factory=lambda: str(uuid4()))
+    acquired_at: datetime = field(default_factory=lambda: datetime.now(timezone.utc))
+    expires_at: datetime = field(default_factory=lambda: datetime.now(timezone.utc))
+    heartbeat_count: int = 0
+    is_active: bool = True
+
+    def is_expired(self) -> bool:
+        now = datetime.now(timezone.utc)
+        exp = self.expires_at if self.expires_at.tzinfo else self.expires_at.replace(tzinfo=timezone.utc)
+        return now > exp
+
+    def to_dict(self) -> dict[str, Any]:
+        return {
+            "job_id": self.job_id,
+            "worker_id": self.worker_id,
+            "lease_id": self.lease_id,
+            "acquired_at": self.acquired_at.isoformat(),
+            "expires_at": self.expires_at.isoformat(),
+            "heartbeat_count": self.heartbeat_count,
+            "is_active": self.is_active,
+        }
+
+    @classmethod
+    def from_dict(cls, data: dict[str, Any]) -> "WorkerLease":
+        return cls(
+            job_id=data["job_id"],
+            worker_id=data["worker_id"],
+            lease_id=data.get("lease_id", str(uuid4())),
+            acquired_at=datetime.fromisoformat(data["acquired_at"]),
+            expires_at=datetime.fromisoformat(data["expires_at"]),
+            heartbeat_count=data.get("heartbeat_count", 0),
+            is_active=data.get("is_active", True),
+        )
+
+
+class WorkerLeaseManager:
+    """
+    Distributed worker lease and heartbeat coordinator.
+    Coordinates exclusive job execution, heartbeat emission,
+    lease expiry detection, and orphaned job recovery.
+    """
+
+    def __init__(self, store: Optional[CheckpointStore] = None, worker_id: Optional[str] = None):
+        self.store = store
+        self.worker_id = worker_id or f"worker-{os.getpid()}-{uuid4().hex[:6]}"
+        self._local_leases: dict[str, WorkerLease] = {}
+        self._heartbeat_tasks: dict[str, asyncio.Task] = {}
+        self._lock = asyncio.Lock()
+
+    @property
+    def _leases(self) -> dict[str, WorkerLease]:
+        if self.store is not None:
+            if not hasattr(self.store, "_in_memory_leases"):
+                self.store._in_memory_leases = {}
+            return self.store._in_memory_leases
+        return self._local_leases
+
+    async def acquire_lease(self, job_id: str, ttl_seconds: int = 30) -> Optional[WorkerLease]:
+        """Attempt to acquire or steal an expired execution lease for job_id."""
+        now = datetime.now(timezone.utc)
+        expires_at = now + timedelta(seconds=ttl_seconds)
+
+        async with self._lock:
+            # Fast-path Redis lease coordination if available
+            if self.store and self.store._redis:
+                key = f"rasosynth:lease:{job_id}"
+                try:
+                    payload = json.dumps({
+                        "job_id": job_id,
+                        "worker_id": self.worker_id,
+                        "lease_id": str(uuid4()),
+                        "acquired_at": now.isoformat(),
+                        "expires_at": expires_at.isoformat(),
+                        "heartbeat_count": 0,
+                        "is_active": True,
+                    })
+                    acquired = await self.store._redis.set(key, payload, ex=ttl_seconds, nx=True)
+                    if acquired:
+                        lease = WorkerLease(job_id=job_id, worker_id=self.worker_id, expires_at=expires_at)
+                        self._leases[job_id] = lease
+                        self._start_heartbeat(job_id, ttl_seconds)
+                        return lease
+
+                    existing_raw = await self.store._redis.get(key)
+                    if existing_raw:
+                        data = json.loads(existing_raw)
+                        existing_lease = WorkerLease.from_dict(data)
+                        if existing_lease.is_expired() or existing_lease.worker_id == self.worker_id:
+                            await self.store._redis.set(key, payload, ex=ttl_seconds)
+                            lease = WorkerLease(job_id=job_id, worker_id=self.worker_id, expires_at=expires_at)
+                            self._leases[job_id] = lease
+                            self._start_heartbeat(job_id, ttl_seconds)
+                            return lease
+                    return None
+                except Exception as e:
+                    logger.warning(f"Redis lease acquisition error ({e}); using memory fallback")
+
+            # In-memory store fallback
+            current = self._leases.get(job_id)
+            if current and not current.is_expired() and current.worker_id != self.worker_id and current.is_active:
+                logger.warning(f"Job {job_id} already locked by worker {current.worker_id}")
+                return None
+
+            lease = WorkerLease(
+                job_id=job_id,
+                worker_id=self.worker_id,
+                acquired_at=now,
+                expires_at=expires_at,
+                is_active=True,
+            )
+            self._leases[job_id] = lease
+            self._start_heartbeat(job_id, ttl_seconds)
+            return lease
+
+    def _start_heartbeat(self, job_id: str, ttl_seconds: int) -> None:
+        """Start background heartbeat loop to renew lease."""
+        if job_id in self._heartbeat_tasks and not self._heartbeat_tasks[job_id].done():
+            return
+
+        interval = max(1.0, ttl_seconds / 3.0)
+
+        async def _loop():
+            try:
+                while True:
+                    await asyncio.sleep(interval)
+                    renewed = await self.renew_lease(job_id, ttl_seconds)
+                    if not renewed:
+                        break
+            except asyncio.CancelledError:
+                pass
+            except Exception as e:
+                logger.debug(f"Heartbeat loop stopped for job {job_id}: {e}")
+
+        self._heartbeat_tasks[job_id] = asyncio.create_task(_loop())
+
+    async def renew_lease(self, job_id: str, ttl_seconds: int = 30) -> bool:
+        """Renew active lease and extend expiration timestamp."""
+        now = datetime.now(timezone.utc)
+        expires_at = now + timedelta(seconds=ttl_seconds)
+
+        async with self._lock:
+            if self.store and self.store._redis:
+                key = f"rasosynth:lease:{job_id}"
+                try:
+                    raw = await self.store._redis.get(key)
+                    if raw:
+                        data = json.loads(raw)
+                        if data.get("worker_id") == self.worker_id:
+                            data["expires_at"] = expires_at.isoformat()
+                            data["heartbeat_count"] = data.get("heartbeat_count", 0) + 1
+                            await self.store._redis.setex(key, ttl_seconds, json.dumps(data))
+                            if job_id in self._leases:
+                                self._leases[job_id].expires_at = expires_at
+                                self._leases[job_id].heartbeat_count += 1
+                            return True
+                except Exception as e:
+                    logger.debug(f"Redis lease renewal error: {e}")
+
+            if job_id in self._leases and self._leases[job_id].worker_id == self.worker_id:
+                self._leases[job_id].expires_at = expires_at
+                self._leases[job_id].heartbeat_count += 1
+                return True
+            return False
+
+    async def release_lease(self, job_id: str) -> bool:
+        """Release worker lease and cancel heartbeat loop."""
+        async with self._lock:
+            task = self._heartbeat_tasks.pop(job_id, None)
+            if task and not task.done():
+                task.cancel()
+
+            if self.store and self.store._redis:
+                try:
+                    await self.store._redis.delete(f"rasosynth:lease:{job_id}")
+                except Exception:
+                    pass
+
+            if job_id in self._leases:
+                self._leases[job_id].is_active = False
+                del self._leases[job_id]
+                return True
+            return False
+
+    async def detect_orphaned_jobs(self, running_job_ids: list[str]) -> list[str]:
+        """Identify running jobs whose worker leases expired."""
+        orphans = []
+        now = datetime.now(timezone.utc)
+
+        for jid in running_job_ids:
+            if self.store and self.store._redis:
+                try:
+                    raw = await self.store._redis.get(f"rasosynth:lease:{jid}")
+                    if not raw:
+                        orphans.append(jid)
+                        continue
+                    data = json.loads(raw)
+                    exp = datetime.fromisoformat(data["expires_at"])
+                    if exp.tzinfo is None:
+                        exp = exp.replace(tzinfo=timezone.utc)
+                    if now > exp:
+                        orphans.append(jid)
+                        continue
+                except Exception:
+                    pass
+
+            lease = self._leases.get(jid)
+            if not lease or lease.is_expired():
+                orphans.append(jid)
+        return orphans

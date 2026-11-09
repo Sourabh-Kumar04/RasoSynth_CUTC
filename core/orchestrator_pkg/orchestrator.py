@@ -61,6 +61,7 @@ class DatasetOrchestrator(
         technique_integrator=None,
         delivery_manager=None,
         agent_registry=None,
+        worker_lease_manager=None,
     ):
         self.config = config
         self.router = router
@@ -71,6 +72,11 @@ class DatasetOrchestrator(
         self.ws_manager = ws_manager
         self.technique_integrator = technique_integrator
         self.delivery_manager = delivery_manager
+
+        from core.orchestrator_pkg.checkpoints import WorkerLeaseManager
+        self.lease_manager = worker_lease_manager or WorkerLeaseManager(
+            store=getattr(checkpoint_manager, "store", None)
+        )
 
         # Multi-Agent Society integration
         try:
@@ -217,6 +223,15 @@ class DatasetOrchestrator(
         job_id = job.id
         self.active_jobs[job_id] = job
         self._cancellation_events[job_id] = asyncio.Event()
+
+        # Acquire exclusive worker execution lease
+        if self.lease_manager:
+            try:
+                lease = await self.lease_manager.acquire_lease(job_id)
+                if not lease:
+                    logger.warning(f"Could not acquire exclusive worker lease for job {job_id}")
+            except Exception as lease_err:
+                logger.warning(f"Failed to acquire lease for job {job_id}: {lease_err}")
 
         saved_stage = None
         resume_metadata = {}
@@ -425,6 +440,64 @@ class DatasetOrchestrator(
         """Clean up all in-memory state for a completed/failed/cancelled job."""
         self.active_jobs.pop(job_id, None)
         self._cancellation_events.pop(job_id, None)
+        if self.lease_manager:
+            try:
+                loop = asyncio.get_event_loop()
+                if loop.is_running():
+                    loop.create_task(self.lease_manager.release_lease(job_id))
+            except Exception:
+                pass
+
+    async def recover_job(self, job_id: str, new_worker_id: Optional[str] = None) -> Optional[dict]:
+        """
+        Recover an orphaned or interrupted job from its latest persistent checkpoint.
+        Re-claims the execution lease and resumes the DAG without regenerating completed steps.
+        """
+        if not self.persistent_checkpoint_manager:
+            logger.warning(f"No checkpoint manager configured to recover job {job_id}")
+            return None
+
+        resume_data = await self.persistent_checkpoint_manager.resume_from_checkpoint(job_id)
+        if not resume_data:
+            logger.warning(f"No valid checkpoint found for recovery of job {job_id}")
+            return None
+
+        if self.lease_manager:
+            if new_worker_id:
+                self.lease_manager.worker_id = new_worker_id
+            lease = await self.lease_manager.acquire_lease(job_id)
+            if not lease:
+                logger.warning(f"Failed to acquire lease during recovery for job {job_id}")
+
+        logger.info(
+            f"Recovering job {job_id} from stage {resume_data['resume_from_stage']} "
+            f"with {len(resume_data['constructed_samples'])} samples already generated"
+        )
+        if self.db:
+            try:
+                await self.db.update_job(
+                    job_id,
+                    status="running",
+                    current_stage=str(resume_data["resume_from_stage"]),
+                    progress=resume_data["progress"],
+                )
+            except Exception as e:
+                logger.warning(f"Failed to update job status during recovery: {e}")
+
+        return resume_data
+
+    async def check_and_recover_orphaned_jobs(self, candidate_job_ids: list[str]) -> list[str]:
+        """Detect orphaned jobs and claim leases for automatic crash recovery."""
+        if not self.lease_manager or not self.persistent_checkpoint_manager:
+            return []
+
+        orphaned = await self.lease_manager.detect_orphaned_jobs(candidate_job_ids)
+        recovered = []
+        for jid in orphaned:
+            res = await self.recover_job(jid)
+            if res:
+                recovered.append(jid)
+        return recovered
 
     async def _save_persistent_checkpoint(self, job_id: str) -> None:
         """Persist a graph snapshot after a recoverable pipeline boundary."""
