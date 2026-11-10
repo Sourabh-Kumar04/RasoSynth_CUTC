@@ -240,7 +240,42 @@ class Settings(BaseSettings):
         The JWT/postgres checks below fire in EVERY environment, not only in
         production: there is no safe default for these values, so an unset or
         known-public-default value is a configuration error anywhere.
+        In ephemeral Hugging Face Spaces or container environments without a preset JWT_SECRET,
+        we auto-generate a secure 64-character secret.
         """
+        # Auto-generate secure JWT_SECRET if running inside Hugging Face Spaces or container cloud
+        if not self.jwt_secret:
+            is_cloud = bool(
+                os.getenv("SPACE_ID")
+                or os.getenv("SPACE_HOST")
+                or os.getenv("HF_SPACE")
+                or os.getenv("RENDER")
+                or os.getenv("VERCEL")
+                or os.getenv("AUTO_GENERATE_JWT_SECRET", "").lower() in ("true", "1")
+            )
+            if is_cloud:
+                import secrets
+                import tempfile
+                from pathlib import Path
+
+                secret_file = Path(tempfile.gettempdir()) / ".rasosynth_auto_jwt_secret"
+                generated = None
+                if secret_file.exists():
+                    try:
+                        cached = secret_file.read_text(encoding="utf-8").strip()
+                        if len(cached) >= 32:
+                            generated = cached
+                    except Exception:
+                        pass
+                if not generated:
+                    generated = secrets.token_urlsafe(64)
+                    try:
+                        secret_file.write_text(generated, encoding="utf-8")
+                    except Exception:
+                        pass
+                self.jwt_secret = generated
+                os.environ["JWT_SECRET"] = generated
+
         # Unconditional: a JWT secret must be configured (AuthManager also
         # enforces >=32 chars and rejects weak patterns at auth time).
         if not self.jwt_secret:
