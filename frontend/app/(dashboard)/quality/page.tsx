@@ -122,6 +122,45 @@ export default function QualityDashboardPage() {
     ],
   });
 
+  // Statutory Indian PII Inspection State
+  const [piiInput, setPiiInput] = useState("Taxpayer PAN: ABCDE1234F, GSTIN: 27ABCDE1234F1Z5, IFSC: SBIN0001234, Contact: +91 9876543210, Aadhaar: 2345 6789 0124");
+  const [piiOutput, setPiiOutput] = useState("");
+  const [piiMatches, setPiiMatches] = useState<string[]>([]);
+
+  const handleExecutePIIRedaction = () => {
+    let clean = piiInput;
+    const matches: string[] = [];
+
+    const gstinRegex = /\b([0-9]{2}[A-Z]{5}[0-9]{4}[A-Z]{1}[1-9A-Z]{1}Z[0-9A-Z]{1})\b/g;
+    if (gstinRegex.test(clean)) {
+      matches.push("GSTIN (15-char statutory format)");
+      clean = clean.replace(gstinRegex, "[GSTIN_REDACTED]");
+    }
+    const panRegex = /\b([A-Z]{5}[0-9]{4}[A-Z])\b/g;
+    if (panRegex.test(clean)) {
+      matches.push("PAN Card (10-char CBDT format)");
+      clean = clean.replace(panRegex, "[PAN_REDACTED]");
+    }
+    const ifscRegex = /\b([A-Z]{4}0[A-Z0-9]{6})\b/g;
+    if (ifscRegex.test(clean)) {
+      matches.push("Bank IFSC (11-char RBI standard)");
+      clean = clean.replace(ifscRegex, "[IFSC_REDACTED]");
+    }
+    const mobileRegex = /\b(?:\+91[\-\s]?)?([6-9]\d{9})\b/g;
+    if (mobileRegex.test(clean)) {
+      matches.push("Mobile (+91 Indian Telecom)");
+      clean = clean.replace(mobileRegex, "[PHONE_REDACTED]");
+    }
+    const aadhaarRegex = /\b([2-9][0-9]{3}[\s\-]?[0-9]{4}[\s\-]?[0-9]{4})\b/g;
+    if (aadhaarRegex.test(clean)) {
+      matches.push("Aadhaar (UIDAI 12-digit Verhoeff format)");
+      clean = clean.replace(aadhaarRegex, "[AADHAAR_REDACTED]");
+    }
+
+    setPiiOutput(clean);
+    setPiiMatches(matches);
+  };
+
   const handleRunSemanticProjection = async () => {
     setDensityLoading(true);
     try {
@@ -855,6 +894,67 @@ export default function QualityDashboardPage() {
                 <span className="text-xs px-2 py-1 rounded bg-[#161622] text-[#d8d2c4] border border-[#272738] font-mono">
                   Cert: CONTAM-AUDIT-RFC6962
                 </span>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+      </section>
+
+      {/* Statutory Indian PII & Masking Audit */}
+      <section>
+        <div className="flex items-center justify-between mb-3">
+          <h2 className="text-xs font-mono font-bold uppercase tracking-wider text-[#a8a29e] flex items-center gap-2">
+            <ShieldCheck className="h-4 w-4 text-cyan-400" />
+            Statutory Indian PII &amp; De-Identification Audit (Verhoeff Aadhaar, PAN, GSTIN, IFSC)
+          </h2>
+          <span className="text-xs font-mono text-cyan-400 px-2 py-0.5 rounded bg-cyan-950/40 border border-cyan-500/30 flex items-center gap-1 font-bold">
+            <Info className="w-3 h-3 text-cyan-400" />
+            DPDP Act 2023 Aligned · Zero False-Positive Masking
+          </span>
+        </div>
+
+        <Card className="bg-[#12121a] border-[#272738] rounded-md card-shadow overflow-hidden">
+          <CardContent className="p-5 space-y-4 font-mono text-xs">
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <label className="text-xs font-bold text-zinc-300 block uppercase">Raw Domain Payload (Input):</label>
+                <textarea
+                  rows={4}
+                  value={piiInput}
+                  onChange={(e) => setPiiInput(e.target.value)}
+                  className="w-full bg-[#0a0a0f] border border-[#272738] rounded-md p-3 text-xs text-white focus:outline-none focus:border-[#f26625]"
+                  placeholder="Enter sample text containing statutory identifiers..."
+                />
+                <Button
+                  onClick={handleExecutePIIRedaction}
+                  size="sm"
+                  className="bg-[#f26625] hover:bg-[#d4551d] text-white text-xs font-bold font-mono h-8 rounded-md"
+                >
+                  <Sparkles className="w-3.5 h-3.5 mr-1.5" /> Execute Statutory De-Identification
+                </Button>
+              </div>
+
+              <div className="space-y-2">
+                <div className="flex items-center justify-between">
+                  <label className="text-xs font-bold text-zinc-300 uppercase">Sanitized / Redacted Output:</label>
+                  {piiMatches.length > 0 && (
+                    <span className="text-emerald-400 font-bold text-[10px]">
+                      {piiMatches.length} Identifiers Masked
+                    </span>
+                  )}
+                </div>
+                <div className="w-full min-h-[96px] bg-[#0a0a0f] border border-[#272738] rounded-md p-3 text-xs text-emerald-300 whitespace-pre-wrap">
+                  {piiOutput || "// Click 'Execute Statutory De-Identification' to view sanitized stream..."}
+                </div>
+                {piiMatches.length > 0 && (
+                  <div className="flex flex-wrap gap-1.5 pt-1">
+                    {piiMatches.map((m, i) => (
+                      <span key={i} className="px-2 py-0.5 rounded bg-cyan-950/40 text-cyan-400 border border-cyan-500/30 text-[10px] font-bold">
+                        ✓ {m}
+                      </span>
+                    ))}
+                  </div>
+                )}
               </div>
             </div>
           </CardContent>

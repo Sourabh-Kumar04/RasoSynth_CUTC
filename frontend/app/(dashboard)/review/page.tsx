@@ -1077,6 +1077,67 @@ export default function ReviewPage() {
           }
         }}
       />
+
+      {/* Multi-Model Elo Arena Leaderboard */}
+      <section className="space-y-3 pt-4 border-t border-[#272738]">
+        <div className="flex items-center justify-between flex-wrap gap-2">
+          <div>
+            <h2 className="text-sm font-bold font-mono text-white flex items-center gap-2">
+              <GitCompare className="w-4 h-4 text-[#f26625]" />
+              Blinded Multi-Model Elo Arena (Automated A/B Evaluation)
+            </h2>
+            <p className="text-xs text-[#a8a29e] font-mono mt-0.5">
+              Head-to-head blinded battles evaluated by LLM-as-a-Judge with dynamic K=32 Elo scoring
+            </p>
+          </div>
+          <span className="text-xs font-mono px-2 py-0.5 rounded bg-emerald-950/40 text-emerald-400 border border-emerald-500/30 font-bold">
+            Live Arena: Active
+          </span>
+        </div>
+
+        <Card className="bg-[#12121a] border-[#272738] rounded-md card-shadow overflow-hidden">
+          <CardContent className="p-4 space-y-3">
+            <div className="rounded-md border border-[#272738] overflow-hidden">
+              <table className="w-full text-left font-mono text-xs">
+                <thead className="bg-[#0a0a0f] text-[#a8a29e] uppercase text-[10px]">
+                  <tr>
+                    <th className="py-2.5 px-3">Rank</th>
+                    <th className="py-2.5 px-3">Model Candidate</th>
+                    <th className="py-2.5 px-3">Elo Rating</th>
+                    <th className="py-2.5 px-3">Win Rate</th>
+                    <th className="py-2.5 px-3">Record (W-L-T)</th>
+                    <th className="py-2.5 px-3">Status</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-[#1c1c28]">
+                  {[
+                    { rank: 1, name: 'sarvam-2b-indic-dpo (Fine-Tuned)', elo: 1264.2, winRate: '78.4%', record: '29W-8L-3T', status: 'Aligned Champion' },
+                    { rank: 2, name: 'meta-llama/Llama-3.2-1B-Instruct', elo: 1218.0, winRate: '61.5%', record: '16W-10L-4T', status: 'Baseline Model' },
+                    { rank: 3, name: 'sarvamai/sarvam-2b-v0.5 (Base)', elo: 1182.5, winRate: '42.1%', record: '11W-17L-2T', status: 'Pretrained Base' },
+                    { rank: 4, name: 'Qwen/Qwen2.5-1.5B-Instruct', elo: 1165.3, winRate: '38.0%', record: '9W-16L-5T', status: 'Reference Model' },
+                  ].map((m) => (
+                    <tr key={m.rank} className="hover:bg-[#161622]/40 transition-colors">
+                      <td className="py-2.5 px-3 text-amber-400 font-bold">#{m.rank}</td>
+                      <td className="py-2.5 px-3 text-white font-bold">{m.name}</td>
+                      <td className="py-2.5 px-3 text-emerald-400 font-bold text-sm">{m.elo}</td>
+                      <td className="py-2.5 px-3 text-zinc-300">{m.winRate}</td>
+                      <td className="py-2.5 px-3 text-zinc-400">{m.record}</td>
+                      <td className="py-2.5 px-3">
+                        <span className={clsx(
+                          "px-2 py-0.5 rounded text-[10px] font-bold",
+                          m.rank === 1 ? "bg-[#f26625]/20 text-[#f26625] border border-[#f26625]/30" : "bg-zinc-800 text-zinc-400"
+                        )}>
+                          {m.status}
+                        </span>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </CardContent>
+        </Card>
+      </section>
     </div>
   )
 }

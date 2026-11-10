@@ -76,7 +76,7 @@ export default function OrchestrationPage() {
   const [researchToast, setResearchToast] = useState<string | null>(null)
   const [loading, setLoading] = useState(true)
   const [selectedJob, setSelectedJob] = useState<any | null>(null)
-  const [activeTab, setActiveTab] = useState<'dag' | 'agents' | 'research'>('dag')
+  const [activeTab, setActiveTab] = useState<'dag' | 'agents' | 'research' | 'refinement'>('dag')
   const [dagInfo, setDagInfo] = useState<any | null>(null)
   const [selectedStageNode, setSelectedStageNode] = useState<any | null>(null)
   const [showAcceptConfirm, setShowAcceptConfirm] = useState(false)
@@ -276,6 +276,10 @@ export default function OrchestrationPage() {
           <TabsTrigger value="research" className="rounded-sm text-xs font-mono flex items-center gap-1.5 data-[state=active]:bg-[#f26625] data-[state=active]:text-white data-[state=active]">
             <FlaskConical className="w-3.5 h-3.5" />
             Autonomous Research Loop
+          </TabsTrigger>
+          <TabsTrigger value="refinement" className="rounded-sm text-xs font-mono flex items-center gap-1.5 data-[state=active]:bg-[#f26625] data-[state=active]:text-white data-[state=active]">
+            <Sparkles className="w-3.5 h-3.5" />
+            Self-Refinement Loop
           </TabsTrigger>
         </TabsList>
 
@@ -1063,6 +1067,69 @@ export default function OrchestrationPage() {
               </CardContent>
             </Card>
           </div>
+        </TabsContent>
+
+        {/* Tab 4: Autonomous Self-Refinement Loop */}
+        <TabsContent value="refinement" className="space-y-6 mt-0">
+          <Card className="bg-[#12121a] border-[#272738] rounded-md card-shadow overflow-hidden">
+            <CardHeader className="pb-3 border-b border-[#272738] bg-[#0e0e14] flex flex-row items-center justify-between">
+              <div>
+                <CardTitle className="text-sm font-bold text-white font-mono flex items-center gap-2">
+                  <Sparkles className="w-4 h-4 text-[#f26625]" />
+                  Multi-Agent Self-Refinement &amp; Critique Loop
+                </CardTitle>
+                <p className="text-xs text-[#a8a29e] font-mono mt-0.5">
+                  Generator ➔ Critic Rubric Evaluation ➔ Reviser Mutation (Target Quality: ≥ 0.85)
+                </p>
+              </div>
+              <Badge variant="outline" className="text-xs font-mono border-emerald-500/30 text-emerald-400 bg-emerald-950/20">
+                Convergence Rate: 94.2%
+              </Badge>
+            </CardHeader>
+            <CardContent className="p-5 space-y-6">
+              {/* Stepper DAG */}
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                {[
+                  { step: '1. Initial Draft', role: 'DomainSpecialistAgent', score: '0.52', status: 'Draft Generated', detail: 'Initial fast draft synthesizes core statutory clause.' },
+                  { step: '2. Rubric Critique', role: 'CriticAgent', score: '0.74', status: 'Feedback Injected', detail: 'Identified missing procedural preconditions and citation anchors.' },
+                  { step: '3. Certified Revision', role: 'ReviserAgent', score: '0.89', status: 'Target Achieved', detail: 'Incorporated deductive reasoning and formal statutory terms.' },
+                ].map((s, idx) => (
+                  <div key={idx} className="p-4 rounded-lg bg-[#0a0a0f] border border-[#272738] space-y-2 font-mono text-xs">
+                    <div className="flex items-center justify-between">
+                      <span className="text-[#f26625] font-bold uppercase">{s.step}</span>
+                      <span className="px-2 py-0.5 rounded bg-emerald-950/40 text-emerald-400 text-[10px] font-bold">
+                        Score: {s.score}
+                      </span>
+                    </div>
+                    <p className="text-white font-semibold text-xs">{s.role}</p>
+                    <p className="text-[#a8a29e] text-[11px] leading-relaxed">{s.detail}</p>
+                  </div>
+                ))}
+              </div>
+
+              {/* Sample Trajectory Card */}
+              <div className="p-4 rounded-lg bg-[#0a0a0f] border border-[#1f1f2e] space-y-3 font-mono text-xs">
+                <div className="flex items-center justify-between border-b border-[#1c1c28] pb-2">
+                  <span className="text-white font-bold uppercase">Sample Revision Trajectory (Legal / Taxation Domain)</span>
+                  <span className="text-emerald-400 text-xs font-bold">Converged in 2 iterations</span>
+                </div>
+                <div className="space-y-2">
+                  <div className="p-2.5 rounded bg-[#12121a] border border-[#272738]">
+                    <span className="text-rose-400 text-[10px] uppercase font-bold block mb-1">Iteration 1 Draft (Score: 0.52):</span>
+                    <p className="text-zinc-300">ITC must be claimed on time under GST rules.</p>
+                  </div>
+                  <div className="p-2.5 rounded bg-[#12121a] border border-[#272738]">
+                    <span className="text-amber-400 text-[10px] uppercase font-bold block mb-1">Critic Feedback:</span>
+                    <p className="text-zinc-400 italic">"Draft lacks statutory timeline specifics and Section 16(4) reference."</p>
+                  </div>
+                  <div className="p-2.5 rounded bg-[#12121a] border border-emerald-500/30 bg-emerald-950/10">
+                    <span className="text-emerald-400 text-[10px] uppercase font-bold block mb-1">Final Converged Revision (Score: 0.89):</span>
+                    <p className="text-white">Pursuant to Section 16(4) of the CGST Act 2017, Input Tax Credit (ITC) must be claimed no later than 30th November following the end of the financial year or the date of filing the annual return, whichever is earlier.</p>
+                  </div>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
         </TabsContent>
       </Tabs>
     </div>

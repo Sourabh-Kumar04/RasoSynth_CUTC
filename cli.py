@@ -605,6 +605,73 @@ def handle_preference(args: argparse.Namespace) -> int:
     return 0
 
 
+def handle_attest(args: argparse.Namespace) -> int:
+    """Generate In-Toto compliant provenance statement and sign with ECDSA SECP256R1."""
+    import hashlib
+    from core.export.attestation import DatasetAttestationSigner
+
+    print("=" * 70)
+    print("  RasoSynthTune: In-Toto Cryptographic Supply-Chain Attestation")
+    print("=" * 70)
+    print(f"Dataset File: {args.dataset}")
+
+    in_p = Path(args.dataset)
+    if not in_p.exists():
+        print(f"[ERROR] Dataset file {args.dataset} not found.", file=sys.stderr)
+        return 1
+
+    content = in_p.read_bytes()
+    digest = hashlib.sha256(content).hexdigest()
+    signer = DatasetAttestationSigner()
+    bundle = signer.sign_attestation(
+        dataset_name=in_p.name,
+        merkle_root=digest,
+        sample_count=len(content.splitlines()),
+    )
+
+    out_path = Path(args.output or f"{args.dataset}.attestation.json")
+    out_path.write_text(json.dumps({
+        "statement": bundle.statement,
+        "merkle_root": bundle.merkle_root,
+        "signature": bundle.signature,
+        "public_key_pem": bundle.public_key_pem,
+    }, indent=2), encoding="utf-8")
+
+    print(f"\n[OK] Signed In-Toto Attestation written to: {out_path}")
+    print(f"     Root SHA-256 Digest: {bundle.merkle_root}\n")
+    return 0
+
+
+def handle_verify_attestation(args: argparse.Namespace) -> int:
+    """Verify digital signature on an In-Toto attestation manifest."""
+    from core.export.attestation import DatasetAttestationSigner
+
+    print("=" * 70)
+    print("  RasoSynthTune: Cryptographic Attestation Verification")
+    print("=" * 70)
+
+    att_p = Path(args.attestation)
+    if not att_p.exists():
+        print(f"[ERROR] Attestation file {args.attestation} not found.", file=sys.stderr)
+        return 1
+
+    data = json.loads(att_p.read_text(encoding="utf-8"))
+    valid = DatasetAttestationSigner.verify_attestation(
+        statement=data["statement"],
+        merkle_root=data["merkle_root"],
+        signature_hex=data["signature"],
+        public_key_pem=data["public_key_pem"],
+    )
+
+    if valid:
+        print("\n[PASS] Cryptographic attestation is authentic and untampered.")
+        print(f"       Subject Digest: {data['merkle_root']}\n")
+        return 0
+    else:
+        print("\n[FAIL] Signature verification failed! Possible tamper detected.\n", file=sys.stderr)
+        return 1
+
+
 def handle_serve(args: argparse.Namespace) -> int:
     """Launch canonical FastAPI server."""
     try:
@@ -708,6 +775,15 @@ def build_parser() -> argparse.ArgumentParser:
     pref_parser.add_argument("--domain", default="general", help="Target domain label")
     pref_parser.add_argument("--perturbation", default="hallucination", choices=["hallucination", "omission", "sycophancy"], help="Perturbation type")
 
+    # Command 12: attest
+    attest_parser = subparsers.add_parser("attest", help="Generate In-Toto compliant provenance statement and sign with ECDSA")
+    attest_parser.add_argument("--dataset", required=True, help="Path to exported dataset file")
+    attest_parser.add_argument("--output", default=None, help="Path to write attestation JSON")
+
+    # Command 13: verify-attestation
+    verify_parser = subparsers.add_parser("verify-attestation", help="Verify ECDSA digital signature on In-Toto attestation")
+    verify_parser.add_argument("--attestation", required=True, help="Path to .attestation.json file")
+
     return parser
 
 
@@ -732,6 +808,8 @@ def main(argv: Optional[List[str]] = None) -> int:
         "pipeline": handle_pipeline,
         "scrape": handle_scrape,
         "preference": handle_preference,
+        "attest": handle_attest,
+        "verify-attestation": handle_verify_attestation,
     }
 
     return handlers[args.command](args)
