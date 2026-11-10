@@ -130,53 +130,76 @@ class StealthHTTPClient:
             logger.debug("Failed to set custom SSL ciphers/ALPN: %s", e)
         return context
 
+    def rotate_profile(self) -> BrowserImpersonation:
+        """Rotate browser fingerprint to evade JA3/JA4 blocklists or 429 rate limits."""
+        all_choices = list(BrowserImpersonation)
+        remaining = [p for p in all_choices if p != self.impersonate]
+        self.impersonate = random.choice(remaining)
+        logger.info(f"StealthHTTPClient rotated impersonation profile to: {self.impersonate.value}")
+        return self.impersonate
+
     async def get(
         self,
         url: str,
         headers: Optional[Dict[str, str]] = None,
         timeout: Optional[float] = None,
         follow_redirects: bool = True,
+        auto_rotate_on_block: bool = True,
     ) -> httpx.Response:
-        """Execute stealth GET request with profile headers and TLS spoofing."""
-        profile = self.profiles.get(self.impersonate, self.profiles[BrowserImpersonation.CHROME_124])
-        req_headers = dict(profile.headers)
-        if headers:
-            req_headers.update(headers)
+        """Execute stealth GET request with profile headers, TLS spoofing, and adaptive rotation."""
+        for attempt in range(2 if auto_rotate_on_block else 1):
+            profile = self.profiles.get(self.impersonate, self.profiles[BrowserImpersonation.CHROME_124])
+            req_headers = dict(profile.headers)
+            if headers:
+                req_headers.update(headers)
 
-        req_timeout = timeout or self.timeout
-        mounts = {"http://": self.proxy, "https://": self.proxy} if self.proxy else None
+            req_timeout = timeout or self.timeout
+            mounts = {"http://": self.proxy, "https://": self.proxy} if self.proxy else None
 
-        # Attempt curl_cffi for native byte-level JA3/JA4 impersonation if installed
-        try:
-            from curl_cffi.requests import AsyncSession  # type: ignore
+            res: Optional[httpx.Response] = None
 
-            session = AsyncSession(impersonate=self.impersonate.value)
-            proxies = {"http": self.proxy, "https": self.proxy} if self.proxy else None
-            resp = await session.get(
-                url,
-                headers=req_headers,
-                timeout=req_timeout,
-                proxies=proxies,
-                allow_redirects=follow_redirects,
-            )
-            # Wrap into httpx-compatible response object
-            return httpx.Response(
-                status_code=resp.status_code,
-                headers=httpx.Headers(dict(resp.headers)),
-                content=resp.content,
-                request=httpx.Request("GET", url, headers=req_headers),
-            )
-        except (ImportError, Exception):
-            pass
+            # Attempt curl_cffi for native byte-level JA3/JA4 impersonation if installed
+            try:
+                from curl_cffi.requests import AsyncSession  # type: ignore
 
-        # Native hardened httpx fallback with randomized SSL cipher suite
-        ssl_ctx = self._create_ssl_context()
-        async with httpx.AsyncClient(
-            timeout=httpx.Timeout(req_timeout),
-            headers=req_headers,
-            mounts=mounts,
-            verify=ssl_ctx,
-            follow_redirects=follow_redirects,
-            http2=True,
-        ) as client:
-            return await client.get(url)
+                session = AsyncSession(impersonate=self.impersonate.value)
+                proxies = {"http": self.proxy, "https": self.proxy} if self.proxy else None
+                resp = await session.get(
+                    url,
+                    headers=req_headers,
+                    timeout=req_timeout,
+                    proxies=proxies,
+                    allow_redirects=follow_redirects,
+                )
+                res = httpx.Response(
+                    status_code=resp.status_code,
+                    headers=httpx.Headers(dict(resp.headers)),
+                    content=resp.content,
+                    request=httpx.Request("GET", url, headers=req_headers),
+                )
+            except (ImportError, Exception):
+                pass
+
+            if res is None:
+                # Native hardened httpx fallback with randomized SSL cipher suite
+                ssl_ctx = self._create_ssl_context()
+                async with httpx.AsyncClient(
+                    timeout=httpx.Timeout(req_timeout),
+                    headers=req_headers,
+                    mounts=mounts,
+                    verify=ssl_ctx,
+                    follow_redirects=follow_redirects,
+                    http2=True,
+                ) as client:
+                    res = await client.get(url)
+
+            # Adaptive challenge / rate limit detection
+            if auto_rotate_on_block and attempt == 0 and res.status_code in (403, 429, 503):
+                logger.warning(f"Blocked or challenged with status {res.status_code}. Rotating fingerprint profile.")
+                self.rotate_profile()
+                await asyncio.sleep(0.5)
+                continue
+
+            return res
+
+        return res  # type: ignore

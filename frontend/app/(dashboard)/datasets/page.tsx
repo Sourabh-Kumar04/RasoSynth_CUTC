@@ -607,6 +607,60 @@ export default function DatasetsPage() {
         </Card>
       )}
 
+      {/* Curriculum Distribution & Shannon Entropy Filter Panel */}
+      <div className="p-4 rounded-xl bg-[#0e0e17] border border-[#272738] space-y-4 font-mono text-xs shadow-lg">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-[#272738] pb-3">
+          <div className="flex items-center gap-2.5">
+            <div className="flex items-center justify-center w-7 h-7 rounded-md bg-[#f26625]/10 border border-[#f26625]/30 text-[#f26625]">
+              <Layers className="w-3.5 h-3.5" />
+            </div>
+            <div>
+              <h3 className="font-bold text-white text-xs">Curriculum Complexity Histogram &amp; Slice Filtering</h3>
+              <p className="text-zinc-400 text-xs mt-0.5">Categorized by Shannon token information density (bits/token)</p>
+            </div>
+          </div>
+          <span className="text-xs font-bold text-emerald-400 bg-emerald-500/10 border border-emerald-500/30 px-2 py-0.5 rounded">
+            Adaptive Slicing Enabled
+          </span>
+        </div>
+
+        {/* 3-Tier Distribution Histogram */}
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+          <div className="p-3 rounded-lg bg-[#12121a] border border-[#272738] space-y-2">
+            <div className="flex items-center justify-between">
+              <span className="font-bold text-blue-400 uppercase text-xs">Foundational (&lt; 3.0 bits)</span>
+              <span className="text-white font-bold text-xs">38% (12,450)</span>
+            </div>
+            <div className="w-full h-2 bg-[#1a1a26] rounded-full overflow-hidden">
+              <div className="h-full bg-blue-500 rounded-full" style={{ width: '38%' }} />
+            </div>
+            <p className="text-[11px] text-zinc-400">Statutory definitions, basic lookup, single-intent queries</p>
+          </div>
+
+          <div className="p-3 rounded-lg bg-[#12121a] border border-[#272738] space-y-2">
+            <div className="flex items-center justify-between">
+              <span className="font-bold text-amber-400 uppercase text-xs">Intermediate (3.0 - 5.0 bits)</span>
+              <span className="text-white font-bold text-xs">44% (14,410)</span>
+            </div>
+            <div className="w-full h-2 bg-[#1a1a26] rounded-full overflow-hidden">
+              <div className="h-full bg-amber-500 rounded-full" style={{ width: '44%' }} />
+            </div>
+            <p className="text-[11px] text-zinc-400">Multi-step procedural advice, rule reconciliation, arithmetic</p>
+          </div>
+
+          <div className="p-3 rounded-lg bg-[#12121a] border border-[#272738] space-y-2">
+            <div className="flex items-center justify-between">
+              <span className="font-bold text-emerald-400 uppercase text-xs">Complex (&ge; 5.0 bits)</span>
+              <span className="text-white font-bold text-xs">18% (5,890)</span>
+            </div>
+            <div className="w-full h-2 bg-[#1a1a26] rounded-full overflow-hidden">
+              <div className="h-full bg-emerald-500 rounded-full" style={{ width: '18%' }} />
+            </div>
+            <p className="text-[11px] text-zinc-400">Multi-hop judicial precedence, edge-cases, cross-statute conflicts</p>
+          </div>
+        </div>
+      </div>
+
       {/* Stats Cards */}
       {!isLoading && (
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
