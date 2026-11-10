@@ -43,7 +43,7 @@ htmlcov/
 # Frontend and docs (not needed for backend container)
 frontend/
 docs/
-charts/
+deploy/
 
 # Project specific
 outputs/

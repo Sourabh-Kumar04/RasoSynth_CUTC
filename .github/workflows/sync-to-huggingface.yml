@@ -37,7 +37,7 @@ jobs:
           # Create a clean orphan deployment branch for HF Docker Space
           # to exclude non-backend directories with binary assets (frontend, docs, etc.)
           git checkout --orphan hf-space-deploy
-          git rm -rf --ignore-unmatch frontend/ docs/ .github/ charts/
+          git rm -rf --ignore-unmatch frontend/ docs/ .github/ deploy/
           git add README.md
 
           git config user.name "github-actions[bot]"
