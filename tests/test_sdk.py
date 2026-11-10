@@ -1,4 +1,4 @@
-from rasosynth import RasoSynthClient, JobResult, DBOMAttestation
+from rasosynthtune import RasoSynthClient, JobResult, DBOMAttestation
 
 
 def test_sdk_client_initialization():

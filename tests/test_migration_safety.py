@@ -6,7 +6,7 @@ Uses SQLite in-memory for testing.
 import pytest
 from unittest.mock import AsyncMock, patch
 
-from db.migration_safety import (
+from core.migration_safety import (
     SafeMigrationManager,
     MigrationStep,
     MigrationResult,

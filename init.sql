@@ -27,7 +27,11 @@ CREATE TABLE IF NOT EXISTS datasets (
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     metadata JSONB,
     output_path VARCHAR(500),
-    owner VARCHAR(255)
+    owner VARCHAR(255),
+    s3_url VARCHAR(500),
+    hf_url VARCHAR(500),
+    kaggle_url VARCHAR(500),
+    export_format VARCHAR(50)
 );
 
 -- Samples table

@@ -113,6 +113,12 @@ BUILTIN_MIGRATIONS: Dict[str, List[MigrationStep]] = {
         add_column("finetune_jobs", "owner", "VARCHAR(255)"),
         add_column("review_queue", "owner", "VARCHAR(255)"),
     ],
+    "007_add_dataset_export_destinations": [
+        add_column("datasets", "s3_url", "VARCHAR(500)"),
+        add_column("datasets", "hf_url", "VARCHAR(500)"),
+        add_column("datasets", "kaggle_url", "VARCHAR(500)"),
+        add_column("datasets", "export_format", "VARCHAR(50)"),
+    ],
 }
 
 

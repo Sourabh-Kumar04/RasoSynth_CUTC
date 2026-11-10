@@ -194,7 +194,7 @@ const QUICK_SEEDS = [
 
 // Code Quickstart Snippets
 const CODE_SNIPPETS = {
-  python: `from rasosynth import RasoSynthClient
+  python: `from rasosynthtune import RasoSynthClient
 
 client = RasoSynthClient(api_key="rs_live_49f82d1...")
 

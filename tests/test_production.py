@@ -15,14 +15,14 @@ class TestDatabaseHardening:
 
     def test_no_mock_fallback_import(self):
         """Verify database module doesn't silently fall back to mocks."""
-        from db.async_db import AsyncDatabaseManager
+        from core.async_db import AsyncDatabaseManager
         # Should fail explicitly if DB unavailable, not use mock
         # This is tested in integration tests with actual DB
 
     @pytest.mark.asyncio
     async def test_database_explicit_failure(self):
         """Database should fail explicitly if connection unavailable."""
-        from db.async_db import DatabaseConfig, AsyncDatabaseManager
+        from core.async_db import DatabaseConfig, AsyncDatabaseManager
 
         config = DatabaseConfig(url="postgresql://invalid:invalid@localhost:9999/invalid")
         manager = AsyncDatabaseManager(config)
