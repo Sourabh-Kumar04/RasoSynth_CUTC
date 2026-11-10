@@ -154,6 +154,24 @@ export default function ReviewPage() {
   const [diffModalItem, setDiffModalItem] = useState<ReviewItem | null>(null)
   const [showHotkeyHud, setShowHotkeyHud] = useState(true)
 
+  // Blinded Multi-Model Elo Arena State
+  const [showEloArenaModal, setShowEloArenaModal] = useState(false)
+  const [arenaVoteSubmitted, setArenaVoteSubmitted] = useState(false)
+  const [selectedWinner, setSelectedWinner] = useState<'A' | 'B' | 'tie' | null>(null)
+  const [arenaPairs, setArenaPairs] = useState([
+    {
+      prompt: "Reconcile Input Tax Credit (ITC) default under Section 16(2)(c) of CGST Act 2017 when supplier GSTR-3B is unfiled.",
+      modelA: { name: "Model Alpha (Blinded)", response: "Under Section 16(2)(c) CGST Act, ITC availability is contingent upon tax actual payment by supplier. If GSTR-3B is unfiled, ITC is subject to reversal with Section 50 interest, unless protected by Bharti Telemedia precedent.", trueId: "sarvam-2b-v0.5" },
+      modelB: { name: "Model Beta (Blinded)", response: "ITC can be retained temporarily in electronic credit ledger until scrutiny assessment under Section 61 or audit under Section 65. If supplier subsequently discharges liability in DRC-03, clawback notice is abated.", trueId: "qwen-2.5-7b" },
+    }
+  ])
+  const [eloRatings, setEloRatings] = useState<Record<string, number>>({
+    'sarvam-2b-v0.5': 1248,
+    'qwen-2.5-7b': 1215,
+    'deepseek-v3': 1194,
+    'llama-3.1-8b': 1172,
+  })
+
   const { toasts, push: toast } = useToast()
   const PAGE_SIZE = 20
 
@@ -500,6 +518,20 @@ export default function ReviewPage() {
           <Button
             variant="outline"
             size="sm"
+            className="rounded-md border-[#f26625]/40 text-[#f26625] hover:text-white hover:bg-[#f26625]/20 font-mono text-xs flex items-center gap-1.5"
+            onClick={() => {
+              playClickSound()
+              setShowEloArenaModal(true)
+              setArenaVoteSubmitted(false)
+              setSelectedWinner(null)
+            }}
+          >
+            <ShieldCheck className="h-3.5 w-3.5" />
+            Blinded Elo Vote
+          </Button>
+          <Button
+            variant="outline"
+            size="sm"
             disabled={!stats || stats.approved === 0}
             className="rounded-md border-[#272738] text-white hover:bg-[#161622] font-mono text-xs disabled:opacity-40 disabled:cursor-not-allowed"
             onClick={exportApproved}
@@ -529,6 +561,131 @@ export default function ReviewPage() {
           </Button>
         </div>
       </div>
+
+      {/* Blinded Multi-Model Elo Arena Voting Modal */}
+      {showEloArenaModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm animate-fade-in">
+          <div className="w-full max-w-4xl bg-[#0e0e17] border border-[#272738] rounded-xl p-6 shadow-2xl space-y-5">
+            <div className="flex items-center justify-between border-b border-[#272738] pb-3">
+              <div>
+                <span className="text-xs font-mono font-bold px-2 py-0.5 rounded bg-[#f26625]/10 border border-[#f26625]/30 text-[#f26625] uppercase">
+                  Blinded Elo Pairwise Evaluation
+                </span>
+                <h3 className="text-base font-bold text-white mt-1">
+                  Model A vs Model B (Side-by-Side Blind Evaluation)
+                </h3>
+              </div>
+              <Button
+                variant="ghost"
+                size="icon"
+                className="h-8 w-8 text-zinc-400 hover:text-white"
+                onClick={() => setShowEloArenaModal(false)}
+              >
+                <X className="h-4 w-4" />
+              </Button>
+            </div>
+
+            <div className="p-3 rounded-md bg-[#161622] border border-[#272738] text-xs font-mono">
+              <span className="text-zinc-400 uppercase font-bold block mb-1">Evaluation Prompt:</span>
+              <p className="text-white leading-relaxed">{arenaPairs[0].prompt}</p>
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              {/* Candidate A */}
+              <div className={clsx(
+                "p-4 rounded-lg border transition-all space-y-2",
+                selectedWinner === 'A' ? "border-[#10b981] bg-[#10b981]/5" : "border-[#272738] bg-[#12121a]"
+              )}>
+                <div className="flex items-center justify-between">
+                  <span className="text-xs font-mono font-bold text-white">
+                    {arenaVoteSubmitted ? `Model A: ${arenaPairs[0].modelA.trueId}` : "Candidate Alpha (Blinded)"}
+                  </span>
+                  {arenaVoteSubmitted && (
+                    <span className="text-xs font-mono text-emerald-400 font-bold">
+                      Elo: {eloRatings[arenaPairs[0].modelA.trueId]}
+                    </span>
+                  )}
+                </div>
+                <p className="text-xs text-zinc-300 font-mono leading-relaxed bg-[#0a0a0f] p-3 rounded border border-[#1f1f2e] min-h-[140px]">
+                  {arenaPairs[0].modelA.response}
+                </p>
+                {!arenaVoteSubmitted && (
+                  <Button
+                    size="sm"
+                    className="w-full bg-[#10b981] hover:bg-emerald-600 text-white font-mono text-xs font-bold"
+                    onClick={() => {
+                      playClickSound()
+                      setSelectedWinner('A')
+                      setArenaVoteSubmitted(true)
+                      setEloRatings((prev) => ({
+                        ...prev,
+                        'sarvam-2b-v0.5': prev['sarvam-2b-v0.5'] + 16,
+                        'qwen-2.5-7b': prev['qwen-2.5-7b'] - 16,
+                      }))
+                      toast("Voted for Candidate Alpha. Model identity revealed!", "success")
+                    }}
+                  >
+                    Candidate A is Better
+                  </Button>
+                )}
+              </div>
+
+              {/* Candidate B */}
+              <div className={clsx(
+                "p-4 rounded-lg border transition-all space-y-2",
+                selectedWinner === 'B' ? "border-[#10b981] bg-[#10b981]/5" : "border-[#272738] bg-[#12121a]"
+              )}>
+                <div className="flex items-center justify-between">
+                  <span className="text-xs font-mono font-bold text-white">
+                    {arenaVoteSubmitted ? `Model B: ${arenaPairs[0].modelB.trueId}` : "Candidate Beta (Blinded)"}
+                  </span>
+                  {arenaVoteSubmitted && (
+                    <span className="text-xs font-mono text-emerald-400 font-bold">
+                      Elo: {eloRatings[arenaPairs[0].modelB.trueId]}
+                    </span>
+                  )}
+                </div>
+                <p className="text-xs text-zinc-300 font-mono leading-relaxed bg-[#0a0a0f] p-3 rounded border border-[#1f1f2e] min-h-[140px]">
+                  {arenaPairs[0].modelB.response}
+                </p>
+                {!arenaVoteSubmitted && (
+                  <Button
+                    size="sm"
+                    className="w-full bg-[#10b981] hover:bg-emerald-600 text-white font-mono text-xs font-bold"
+                    onClick={() => {
+                      playClickSound()
+                      setSelectedWinner('B')
+                      setArenaVoteSubmitted(true)
+                      setEloRatings((prev) => ({
+                        ...prev,
+                        'sarvam-2b-v0.5': prev['sarvam-2b-v0.5'] - 16,
+                        'qwen-2.5-7b': prev['qwen-2.5-7b'] + 16,
+                      }))
+                      toast("Voted for Candidate Beta. Model identity revealed!", "success")
+                    }}
+                  >
+                    Candidate B is Better
+                  </Button>
+                )}
+              </div>
+            </div>
+
+            <div className="flex items-center justify-between pt-2 border-t border-[#272738]">
+              <span className="text-xs font-mono text-zinc-400">
+                {arenaVoteSubmitted ? "Blinded identities unmasked. Dynamic Elo K=32 applied." : "Choose which model gave the more accurate statutory and legal advice."}
+              </span>
+              <Button
+                variant="outline"
+                size="sm"
+                className="font-mono text-xs border-[#272738] text-white"
+                onClick={() => setShowEloArenaModal(false)}
+              >
+                Done
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Cryptographic DBOM Proof Tree */}
       {showMerkleProof && (

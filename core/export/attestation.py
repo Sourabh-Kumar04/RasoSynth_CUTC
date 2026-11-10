@@ -105,9 +105,17 @@ class DatasetAttestationSigner:
         dataset_name: str,
         merkle_root: str,
         sample_count: int,
+        builder_id: str = "https://github.com/Sourabh-Kumar04/RasoSynth_CUTC",
+        license_type: str = "Apache-2.0",
     ) -> SignedAttestationBundle:
         """Sign In-Toto statement with private key."""
-        stmt = self.create_statement(dataset_name, merkle_root, sample_count)
+        stmt = self.create_statement(
+            dataset_name=dataset_name,
+            merkle_root=merkle_root,
+            sample_count=sample_count,
+            builder_id=builder_id,
+            license_type=license_type,
+        )
         serialized_stmt = json.dumps(asdict(stmt), sort_keys=True)
         data_to_sign = f"{serialized_stmt}:{merkle_root}".encode("utf-8")
 
@@ -153,3 +161,49 @@ class DatasetAttestationSigner:
             return expected == signature_hex
         except Exception:
             return False
+
+    @classmethod
+    def package_attestation_bundle(
+        cls,
+        dataset_path: str,
+        output_tar_path: Optional[str] = None,
+        builder_id: str = "https://github.com/Sourabh-Kumar04/RasoSynth_CUTC",
+    ) -> str:
+        """Create a compressed tar.gz bundle containing dataset, in-toto statement, and signature."""
+        import tarfile
+        import tempfile
+        from pathlib import Path
+
+        p = Path(dataset_path)
+        if not p.exists():
+            raise FileNotFoundError(f"Dataset path {dataset_path} does not exist.")
+
+        content = p.read_bytes()
+        digest = hashlib.sha256(content).hexdigest()
+        lines = [line for line in content.splitlines() if line.strip()]
+
+        signer = cls()
+        bundle = signer.sign_attestation(
+            dataset_name=p.name,
+            merkle_root=digest,
+            sample_count=len(lines),
+            builder_id=builder_id,
+        )
+
+        out_path = Path(output_tar_path or f"{dataset_path}.bundle.tar.gz")
+
+        with tempfile.TemporaryDirectory() as tmp_dir:
+            tmp_p = Path(tmp_dir)
+            stmt_file = tmp_p / "attestation.in-toto.json"
+            stmt_file.write_text(json.dumps({
+                "statement": bundle.statement,
+                "merkle_root": bundle.merkle_root,
+                "signature": bundle.signature,
+                "public_key_pem": bundle.public_key_pem,
+            }, indent=2), encoding="utf-8")
+
+            with tarfile.open(out_path, "w:gz") as tar:
+                tar.add(p, arcname=p.name)
+                tar.add(stmt_file, arcname="attestation.in-toto.json")
+
+        return str(out_path)
