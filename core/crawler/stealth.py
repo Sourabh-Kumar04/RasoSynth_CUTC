@@ -487,6 +487,33 @@ class PlaywrightStealthDriver:
                         get: () => undefined
                     });
 
+                    // Hardware & Memory Spoofing
+                    Object.defineProperty(navigator, 'hardwareConcurrency', { get: () => 8 });
+                    Object.defineProperty(navigator, 'deviceMemory', { get: () => 8 });
+
+                    // WebGL Vendor & Renderer spoofing
+                    const getParameter = WebGLRenderingContext.prototype.getParameter;
+                    WebGLRenderingContext.prototype.getParameter = function(parameter) {
+                        // UNMASKED_VENDOR_WEBGL
+                        if (parameter === 37445) return 'Google Inc. (NVIDIA)';
+                        // UNMASKED_RENDERER_WEBGL
+                        if (parameter === 37446) return 'ANGLE (NVIDIA, NVIDIA GeForce RTX 3080 Direct3D11 vs_5_0 ps_5_0, D3D11)';
+                        return getParameter.apply(this, arguments);
+                    };
+
+                    // Subtle Canvas Noise Injection to prevent hash-based tracking
+                    const toDataURL = HTMLCanvasElement.prototype.toDataURL;
+                    HTMLCanvasElement.prototype.toDataURL = function(type) {
+                        const ctx = this.getContext('2d');
+                        if (ctx) {
+                            const img = ctx.getImageData(0, 0, Math.min(10, this.width), Math.min(10, this.height));
+                            for (let i = 0; i < img.data.length; i += 4) {
+                                img.data[i] = img.data[i] ^ 1;
+                            }
+                        }
+                        return toDataURL.apply(this, arguments);
+                    };
+
                     // Emulate chrome runtime object
                     window.chrome = {
                         runtime: {},
@@ -516,6 +543,17 @@ class PlaywrightStealthDriver:
 
                 try:
                     response = await page.goto(url, wait_until="domcontentloaded", timeout=self.timeout_ms)
+                    
+                    # Emulate human mouse movements
+                    try:
+                        for _ in range(3):
+                            rx = random.randint(100, 800)
+                            ry = random.randint(100, 600)
+                            await page.mouse.move(rx, ry, steps=random.randint(5, 12))
+                            await asyncio.sleep(random.uniform(0.1, 0.3))
+                    except Exception:
+                        pass
+
                     # Natural human delay for JavaScript/Turnstile execution
                     await asyncio.sleep(random.uniform(1.5, 3.0))
 

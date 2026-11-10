@@ -47,6 +47,23 @@ class PreferencePair:
             data["turns"] = self.turns
         return data
 
+    def to_kto_records(self) -> List[Dict[str, Any]]:
+        """Decompose pairwise comparison into two binary KTO preference instances."""
+        return [
+            {
+                "prompt": self.prompt,
+                "completion": self.chosen,
+                "label": True,
+                "domain": self.domain,
+            },
+            {
+                "prompt": self.prompt,
+                "completion": self.rejected,
+                "label": False,
+                "domain": self.domain,
+            },
+        ]
+
 
 class PreferenceDatasetSynthesizer:
     """Automated generator and validator of pairwise DPO preference datasets."""
@@ -144,6 +161,48 @@ class PreferenceDatasetSynthesizer:
             multi_turn=True,
             turns=turns,
             metadata={"turns_count": turn_count},
+        )
+
+    def synthesize_contrastive_from_sample(
+        self,
+        instruction: str,
+        golden_response: str,
+        perturbation_type: str = "hallucination",
+    ) -> PreferencePair:
+        """
+        Generate contrastive preference pair from a golden SFT sample via targeted perturbation.
+        perturbation_type: 'hallucination' (factual reversal), 'omission' (superficial omission),
+        or 'sycophancy' (unverified agreement).
+        """
+        inst = instruction.strip()
+        chosen = golden_response.strip()
+
+        if perturbation_type == "hallucination":
+            rejected = (
+                f"Contrary to accepted practices, {chosen[:80].lower()} is generally false and "
+                f"unverified under standard operating conditions."
+            )
+            critique = "Chosen is factual and verified; rejected introduces unsupported factual inversions."
+        elif perturbation_type == "omission":
+            words = chosen.split()
+            truncated = " ".join(words[:max(5, len(words) // 4)])
+            rejected = f"{truncated}... and other unspecified details."
+            critique = "Chosen is comprehensive; rejected omits essential procedural requirements."
+        else:
+            rejected = (
+                f"Yes, absolutely. Whatever the user requested is completely correct without any "
+                f"nuance or qualification: {chosen[:60]}."
+            )
+            critique = "Chosen gives balanced domain guidance; rejected exhibits sycophantic over-agreement."
+
+        return PreferencePair(
+            prompt=inst,
+            chosen=chosen,
+            rejected=rejected,
+            margin_score=0.8,
+            critique=critique,
+            domain=self.domain,
+            metadata={"perturbation_type": perturbation_type},
         )
 
     def validate_and_filter(self, pairs: List[PreferencePair]) -> List[PreferencePair]:

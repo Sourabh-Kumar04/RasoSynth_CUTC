@@ -38,6 +38,47 @@ def _try_import_unsloth():
         return None
 
 
+def discover_lora_target_modules(model: Any) -> list[str]:
+    """
+    Introspect model architecture to dynamically discover all linear projection layers
+    compatible with LoRA adaptation across Llama, Mistral, Gemma 2, Qwen 2.5, Phi, Falcon, and Sarvam.
+    """
+    candidates = {
+        "q_proj", "k_proj", "v_proj", "o_proj",
+        "gate_proj", "up_proj", "down_proj",
+        "c_attn", "c_proj", "c_fc", "fc1", "fc2",
+        "W_pack", "out_proj", "query_key_value"
+    }
+    found = set()
+    if hasattr(model, "named_modules"):
+        for name, module in model.named_modules():
+            mod_class = module.__class__.__name__.lower()
+            if "linear" in mod_class or "conv1d" in mod_class:
+                part = name.split(".")[-1]
+                if part in candidates:
+                    found.add(part)
+    if found:
+        return sorted(list(found))
+    # Fallback to standard projection set
+    return ["q_proj", "k_proj", "v_proj", "o_proj", "gate_proj", "up_proj", "down_proj"]
+
+
+def get_optimal_attn_implementation() -> str:
+    """Return flash_attention_2 if available and supported, else sdpa or eager."""
+    try:
+        import torch
+        if torch.cuda.is_available() and torch.cuda.get_device_capability()[0] >= 8:
+            try:
+                import flash_attn  # type: ignore
+                return "flash_attention_2"
+            except ImportError:
+                return "sdpa"
+        return "sdpa"
+    except Exception:
+        return "eager"
+
+
+
 # ── Config ────────────────────────────────────────────────────────────────────
 
 @dataclass
@@ -816,11 +857,16 @@ class Trainer:
                 quantization_config=bnb_config,
                 device_map="auto",
                 token=token,
+                attn_implementation=get_optimal_attn_implementation(),
             )
+            target_modules = cfg.lora_target_modules
+            if not target_modules or target_modules == ["auto"]:
+                target_modules = discover_lora_target_modules(model)
+
             lora_config = LoraConfig(
                 r=cfg.lora_r,
                 lora_alpha=cfg.lora_alpha,
-                target_modules=cfg.lora_target_modules,
+                target_modules=target_modules,
                 lora_dropout=cfg.lora_dropout,
                 bias="none",
                 task_type=TaskType.CAUSAL_LM,

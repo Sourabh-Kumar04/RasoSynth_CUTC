@@ -158,8 +158,45 @@ class QuantizationExporter:
         manifest_path = out / "quant_manifest.json"
         manifest_path.write_text(json.dumps(plan.to_dict(), indent=2), encoding="utf-8")
 
+        # Automatically synthesize Ollama Modelfile if format is GGUF or Ollama
+        if target_format.lower() in ("gguf", "llama.cpp", "ollama"):
+            gguf_name = f"{model_name}-{quant_type.upper()}.gguf"
+            modelfile_path = out / "Modelfile"
+            modelfile_content = cls.generate_ollama_modelfile(
+                model_name=model_name,
+                gguf_file=gguf_name,
+            )
+            modelfile_path.write_text(modelfile_content, encoding="utf-8")
+
         return {
             "plan": plan.to_dict(),
             "script_path": str(script_path),
             "manifest_path": str(manifest_path),
         }
+
+    @classmethod
+    def generate_ollama_modelfile(
+        cls,
+        model_name: str,
+        gguf_file: str,
+        system_prompt: str = "",
+        temperature: float = 0.7,
+        num_ctx: int = 4096,
+        stop_tokens: Optional[List[str]] = None,
+    ) -> str:
+        """Generate a production-ready Ollama Modelfile definition for local LLM deployment."""
+        stops = stop_tokens or ["<|eot_id|>", "<|im_end|>", "</s>"]
+        stop_lines = "\n".join(f'PARAMETER stop "{s}"' for s in stops)
+        sys_block = (
+            f'SYSTEM """{system_prompt}"""'
+            if system_prompt
+            else 'SYSTEM """You are a specialized domain assistant fine-tuned with RasoSynthTune."""'
+        )
+
+        return (
+            f"FROM ./{gguf_file}\n\n"
+            f"PARAMETER temperature {temperature}\n"
+            f"PARAMETER num_ctx {num_ctx}\n"
+            f"{stop_lines}\n\n"
+            f"{sys_block}\n"
+        )
