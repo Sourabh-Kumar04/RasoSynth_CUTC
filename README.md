@@ -135,7 +135,35 @@ rasosynthtune audit --dataset outputs/<dataset-id>/dataset.parquet
 
 # Fine-tuning recipes (Axolotl / Unsloth / Torchtune)
 rasosynthtune recipe --framework unsloth --model "sarvamai/sarvam-2b-v0.5" --dataset outputs/<dataset-id>/dataset.jsonl
+
+# Edge model quantization (GGUF, AWQ, GPTQ, ONNX in 4-bit / 8-bit)
+rasosynthtune quantize --model-path outputs/model --quantization-format gguf --bits 4
+
+# LLM-as-a-judge automated head-to-head evaluation
+rasosynthtune judge --aligned-model outputs/model --base-model meta-llama/Llama-3.2-1B-Instruct --domain "Tax Compliance"
+
+# Headless end-to-end dataset synthesis & curation pipeline
+rasosynthtune pipeline --domain "Indic Healthcare Protocols" --size 50 --synthesis-mode cot
 ```
+
+### Interactive Hugging Face Playground
+The FastAPI server embeds a zero-dependency dark-mode Playground accessible directly from Hugging Face Spaces or a local browser:
+- Direct UI: `http://localhost:8000/playground` (or `/ui`)
+- Content negotiation: Requesting `/` with `Accept: text/html` serves the interactive interface; CLI/cURL requests receive JSON metadata.
+
+### Preference Alignment: KTO & SimPO
+RasoSynthTune natively supports modern post-training alignment paradigms:
+- **SimPO**: Reference-free Direct Preference Optimization with length-normalized target reward margins.
+- **KTO**: Kahneman-Tversky Optimization for learning directly from binary utility signals without pairwise pairing constraints.
+
+### Multimodal Document & Scanned Table Extraction
+`pipeline.multimodal.MultimodalDocumentExtractor` parses tabular data from scanned documents and PDFs, converting raw grid cells into clean Markdown tables and synthesizing grounded Vision QA pairs.
+
+### Automated Canary Quality Gate
+The Canary Gate (`core.evaluation.canary_gate.CanaryQualityGate`) protects downstream deployments:
+- Enforces a minimum win-rate threshold (default $\ge 70\%$) against target baselines.
+- Verifies loss convergence stability and cryptographic DBOM attestation.
+- Dynamically attaches Shields.io validation badges to Hugging Face model cards upon release.
 
 ## Project structure
 

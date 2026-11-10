@@ -1506,6 +1506,11 @@ export default function DatasetsPage() {
                               DPO Pair
                             </Badge>
                           )}
+                          {(rec.metadata?.is_multimodal_table || rec.metadata?.table_markdown || (typeof rec.instruction === 'string' && rec.instruction.includes('| --- |'))) && (
+                            <Badge variant="outline" className="text-xs px-1.5 py-0 font-mono rounded-md border-indigo-500/40 text-indigo-400 bg-indigo-950/20">
+                              Multimodal Table
+                            </Badge>
+                          )}
                           {rec.difficulty_tier !== undefined && (
                             <Badge variant="outline" className="text-xs px-1.5 py-0 font-mono rounded-md border-[#272738] text-[#f26625]">
                               Tier {rec.difficulty_tier}
@@ -1529,6 +1534,14 @@ export default function DatasetsPage() {
                           </p>
                         </div>
                       ) : null}
+                      {rec.metadata?.table_markdown && (
+                        <div className="space-y-1 pt-1 border-t border-[#272738]">
+                          <p className="text-xs font-mono font-bold uppercase tracking-wider text-indigo-400">Structured Tabular Extraction:</p>
+                          <pre className="bg-[#0a0a0f] p-2.5 rounded-lg text-indigo-200 text-xs font-mono overflow-x-auto border border-indigo-950/60">
+                            {rec.metadata.table_markdown}
+                          </pre>
+                        </div>
+                      )}
                       {rec.metadata?.rejected_response && (
                         <div className="space-y-1 pt-1 border-t border-[#272738]">
                           <p className="text-xs font-mono font-bold uppercase tracking-wider text-rose-400">DPO Rejected Baseline:</p>

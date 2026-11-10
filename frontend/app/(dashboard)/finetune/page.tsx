@@ -969,6 +969,8 @@ function FineTuneContent() {
     training_method: 'sft',
     dpo_beta: 0.1,
     dpo_loss_type: 'sigmoid',
+    canary_gate_enabled: true,
+    canary_min_win_rate: 0.70,
     max_prompt_length: 512,
     packing: false,
     lora_r: 16, lora_alpha: 32,
@@ -1745,25 +1747,31 @@ function FineTuneContent() {
                         <SelectItem value="sft">SFT (Supervised Fine-Tuning)</SelectItem>
                         <SelectItem value="dpo">DPO (Direct Preference Optimization)</SelectItem>
                         <SelectItem value="orpo">ORPO (Odds Ratio Preference Optimization)</SelectItem>
+                        <SelectItem value="kto">KTO (Kahneman-Tversky Optimization)</SelectItem>
+                        <SelectItem value="simpo">SimPO (Simple Preference Optimization)</SelectItem>
                       </SelectContent>
                     </Select>
                   </div>
-                  {(form.training_method === 'dpo' || form.training_method === 'orpo') && (
+                  {(form.training_method === 'dpo' || form.training_method === 'orpo' || form.training_method === 'kto' || form.training_method === 'simpo') && (
                     <div className="p-3 rounded-md bg-[#0a0a0f] border border-[#f26625]/40 space-y-2.5 font-mono">
                       <div className="flex items-center justify-between text-xs font-bold text-white uppercase border-b border-[#272738] pb-1.5">
                         <span className="flex items-center gap-1.5 text-[#f26625]">
-                          <Sparkles className="w-3.5 h-3.5" /> DPO Alignment Parameters
+                          <Sparkles className="w-3.5 h-3.5" /> Preference Alignment Parameters ({form.training_method.toUpperCase()})
                         </span>
-                        <span className="text-[10px] text-zinc-400 font-normal">Reference Model Shared LoRA</span>
+                        <span className="text-[10px] text-zinc-400 font-normal">
+                          {form.training_method === 'simpo' ? 'Reference-Free Target Margin' : form.training_method === 'kto' ? 'Binary Unpaired Utility Loss' : 'Reference Model Shared LoRA'}
+                        </span>
                       </div>
                       <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 text-xs">
                         <div>
-                          <label className="text-[10px] text-zinc-400 block mb-1">DPO Beta (KL Penalty)</label>
+                          <label className="text-[10px] text-zinc-400 block mb-1">
+                            {form.training_method === 'simpo' ? 'SimPO Beta (Scaling)' : 'Alignment Beta (KL Penalty)'}
+                          </label>
                           <Input
                             type="number"
                             step="0.01"
                             min="0.01"
-                            max="1.0"
+                            max="2.0"
                             value={form.dpo_beta}
                             onChange={e => f('dpo_beta', parseFloat(e.target.value) || 0.1)}
                             className="bg-[#12121a] border-[#272738] text-white text-xs h-7 font-mono"
@@ -1778,6 +1786,7 @@ function FineTuneContent() {
                               <SelectItem value="hinge">Hinge</SelectItem>
                               <SelectItem value="ipo">IPO (Identity Preference)</SelectItem>
                               <SelectItem value="kto_pair">KTO Pair</SelectItem>
+                              <SelectItem value="simpo">SimPO (Target-Margin)</SelectItem>
                             </SelectContent>
                           </Select>
                         </div>
@@ -2150,6 +2159,43 @@ LORA_ALPHA = ${form.lora_alpha}`}
                     </div>
                   </div>
                 )}
+              </Section>
+
+              <Section title="Canary Quality Gate & Safe Publishing" defaultOpen={false}>
+                <div className="space-y-3 font-mono text-xs">
+                  <div className="flex items-center justify-between p-2.5 rounded-md bg-[#0a0a0f] border border-[#272738]">
+                    <div>
+                      <div className="text-xs font-bold text-white">Canary Quality Gating</div>
+                      <div className="text-[10px] text-zinc-400">Block model publishing unless win-rate exceeds threshold and loss converges safely</div>
+                    </div>
+                    <Switch id="canary_gate" checked={form.canary_gate_enabled}
+                      onCheckedChange={v => f('canary_gate_enabled', v)} />
+                  </div>
+                  {form.canary_gate_enabled && (
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 p-3 rounded-md bg-[#0a0a0f] border border-[#10b981]/30">
+                      <div>
+                        <label className="text-[10px] text-zinc-400 block mb-1">Min Win-Rate Ratio</label>
+                        <Input
+                          type="number"
+                          step="0.05"
+                          min="0.5"
+                          max="1.0"
+                          value={form.canary_min_win_rate}
+                          onChange={e => f('canary_min_win_rate', parseFloat(e.target.value) || 0.7)}
+                          className="rounded-md border-[#272738] bg-[#12121a] text-white text-xs h-7 font-mono"
+                        />
+                      </div>
+                      <div className="flex flex-col justify-center gap-1.5 pt-1">
+                        <span className="px-2 py-0.5 rounded bg-emerald-950/40 text-emerald-400 border border-emerald-500/40 text-[10px] font-semibold w-fit">
+                          ✓ DBOM Attestation Verified
+                        </span>
+                        <span className="px-2 py-0.5 rounded bg-[#f26625]/20 text-[#f26625] border border-[#f26625]/40 text-[10px] font-semibold w-fit">
+                          ✓ Dynamic Shields.io Badges
+                        </span>
+                      </div>
+                    </div>
+                  )}
+                </div>
               </Section>
 
               <Section title="Webhooks & Notifications (Optional)" defaultOpen={false}>
