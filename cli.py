@@ -438,6 +438,102 @@ def handle_publish(args: argparse.Namespace) -> int:
         return 1
 
 
+def handle_quantize(args: argparse.Namespace) -> int:
+    """Generate edge quantization recipes and conversion scripts for GGUF/AWQ/GPTQ."""
+    from finetuning.export_quant import QuantizationExporter
+
+    print(f"\n[1/2] Computing edge quantization plan for '{args.model_name}' ({args.format.upper()} - {args.quant_type.upper()})...")
+    bundle = QuantizationExporter.write_conversion_bundle(
+        model_name=args.model_name,
+        output_dir=args.output_dir,
+        target_format=args.format,
+        quant_type=args.quant_type,
+    )
+    plan = bundle["plan"]
+    print(f"      - Base FP16 VRAM: {plan['fp16_vram_gb']:.2f} GB")
+    print(f"      - Quantized VRAM: {plan['quant_vram_gb']:.2f} GB")
+    print(f"      - Memory Savings: {plan['reduction_pct']:.1f}%")
+    print(f"\n[2/2] Generated artifacts in '{args.output_dir}':")
+    print(f"      - Script:   {bundle['script_path']}")
+    print(f"      - Manifest: {bundle['manifest_path']}")
+    print(f"\nConversion Command:\n  {plan['conversion_command']}")
+    print(f"\nServing Command:\n  {plan['serving_command']}\n")
+    return 0
+
+
+def handle_judge(args: argparse.Namespace) -> int:
+    """Run automated comparative LLM-as-a-judge A/B benchmark between two models."""
+    from core.evaluation.alignment_judge import AlignmentJudge
+
+    prompts = []
+    if args.prompts and Path(args.prompts).exists():
+        data = json.loads(Path(args.prompts).read_text(encoding="utf-8"))
+        prompts = data if isinstance(data, list) else data.get("prompts", [])
+    if not prompts:
+        prompts = [
+            {"prompt": "Summarize the primary benefits of Direct Preference Optimization vs standard SFT."},
+            {"prompt": "Write a clean Python function with error handling to parse ISO timestamps."},
+            {"prompt": "Explain how LoRA reduces fine-tuning memory by factoring weight update matrices."},
+        ]
+
+    print(f"\nRunning LLM-as-a-Judge A/B evaluation: '{args.base_model}' vs '{args.aligned_model}' ({len(prompts)} prompts)...")
+    res = AlignmentJudge.compare_models(
+        job_id="cli-eval",
+        test_prompts=prompts,
+        base_model_name=args.base_model,
+        aligned_model_name=args.aligned_model,
+    )
+
+    print(f"\n==> Alignment Verdict: {res.verdict.replace('_', ' ')}")
+    print(f"    - Aligned Model Win Rate: {res.win_rate_pct:.1f}% ({res.aligned_win_count} wins, {res.base_win_count} losses, {res.tie_count} ties)")
+    print(f"    - Mean Quality Score: Aligned {res.aligned_mean_score:.3f} vs Base {res.base_mean_score:.3f}")
+    if res.comparisons:
+        print("\n    Sample Judged Prompts:")
+        for i, c in enumerate(res.comparisons[:3], 1):
+            print(f"      [{i}] {c.prompt[:60]}... -> Winner: {c.winner.upper()} ({c.reasoning})")
+
+    if args.output:
+        Path(args.output).write_text(json.dumps(res.to_dict(), indent=2), encoding="utf-8")
+        print(f"\nWrote judge evaluation report to: {args.output}")
+    return 0
+
+
+def handle_pipeline(args: argparse.Namespace) -> int:
+    """Execute end-to-end headless data synthesis, DPO preference formatting, and quantization plan."""
+    from pipeline.preference_pipeline import PreferenceDatasetSynthesizer
+    from finetuning.export_quant import QuantizationExporter
+
+    out_dir = Path(args.output_dir)
+    out_dir.mkdir(parents=True, exist_ok=True)
+
+    print(f"\n[1/3] Synthesizing DPO preference pairs for domain: '{args.domain}'...")
+    synth = PreferenceDatasetSynthesizer(domain=args.domain)
+    seed_contexts = [
+        "Under the Companies Act, corporate disclosures must be attested by a certified director.",
+        "GST e-invoicing is mandatory for business entities exceeding the statutory aggregate turnover threshold.",
+        "Pre-dial socket DNS validation prevents SSRF vulnerabilities in automated distributed scrapers.",
+    ]
+    raw_pairs = [synth.synthesize_pair_from_context(ctx) for ctx in seed_contexts]
+    valid_pairs = synth.validate_and_filter(raw_pairs)
+    prefs_path = out_dir / "dpo_preference_dataset.jsonl"
+    synth.export_jsonl(valid_pairs, prefs_path)
+    print(f"      - Valid preference pairs: {len(valid_pairs)} saved to {prefs_path}")
+
+    print(f"\n[2/3] Generating edge quantization recipe ({args.quant_type.upper()})...")
+    q_bundle = QuantizationExporter.write_conversion_bundle(
+        model_name=args.model_name,
+        output_dir=out_dir / "quantization",
+        target_format="gguf",
+        quant_type=args.quant_type,
+    )
+    print(f"      - Recipe script: {q_bundle['script_path']}")
+    print(f"      - VRAM Savings:  {q_bundle['plan']['reduction_pct']:.1f}%")
+
+    print(f"\n[3/3] Autonomous pipeline completed successfully!")
+    print(f"      - All deliverables consolidated in: {out_dir}\n")
+    return 0
+
+
 def handle_serve(args: argparse.Namespace) -> int:
     """Launch canonical FastAPI server."""
     try:
@@ -506,6 +602,27 @@ def build_parser() -> argparse.ArgumentParser:
     publish_parser.add_argument("--private", action="store_true", help="Set repository to private")
     publish_parser.add_argument("--dry-run", action="store_true", help="Validate metadata and DBOM without uploading")
 
+    # Command 7: quantize
+    quant_parser = subparsers.add_parser("quantize", help="Generate edge quantization recipes and conversion scripts")
+    quant_parser.add_argument("--model-name", default="sarvamai/sarvam-2b-v0.5", help="Target model identifier")
+    quant_parser.add_argument("--format", default="gguf", choices=["gguf", "awq", "gptq"], help="Target quantization runtime format")
+    quant_parser.add_argument("--quant-type", default="q4_k_m", help="Quantization type (q4_k_m, q5_k_m, q8_0, awq_4bit)")
+    quant_parser.add_argument("--output-dir", default="outputs/quantization", help="Directory to output quantization recipe")
+
+    # Command 8: judge
+    judge_parser = subparsers.add_parser("judge", help="Comparative LLM-as-a-judge A/B win-rate benchmark")
+    judge_parser.add_argument("--base-model", default="sarvamai/sarvam-2b-v0.5", help="Baseline model identifier")
+    judge_parser.add_argument("--aligned-model", default="custom-dpo-model", help="Aligned model identifier")
+    judge_parser.add_argument("--prompts", default=None, help="Path to JSON file containing test prompts")
+    judge_parser.add_argument("--output", default=None, help="Path to write JSON evaluation report")
+
+    # Command 9: pipeline
+    pipe_parser = subparsers.add_parser("pipeline", help="Run end-to-end autonomous synthesis, DPO preference & quant pipeline")
+    pipe_parser.add_argument("--domain", default="Indian Corporate Law & Taxation", help="Target domain")
+    pipe_parser.add_argument("--model-name", default="sarvamai/sarvam-2b-v0.5", help="Base model identifier")
+    pipe_parser.add_argument("--quant-type", default="q4_k_m", help="GGUF quantization level")
+    pipe_parser.add_argument("--output-dir", default="outputs/pipeline_run", help="Output directory")
+
     return parser
 
 
@@ -525,6 +642,9 @@ def main(argv: Optional[List[str]] = None) -> int:
         "recipe": handle_recipe,
         "serve": handle_serve,
         "publish": handle_publish,
+        "quantize": handle_quantize,
+        "judge": handle_judge,
+        "pipeline": handle_pipeline,
     }
 
     return handlers[args.command](args)

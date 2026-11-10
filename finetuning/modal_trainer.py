@@ -66,7 +66,7 @@ try:
 
         samples = [json.loads(line) for line in dataset_content.strip().split("\n") if line.strip()]
 
-        if training_method.lower() in ("dpo", "orpo"):
+        if training_method.lower() in ("dpo", "orpo", "simpo"):
             from trl import DPOTrainer, DPOConfig
             dpo_pairs = []
             for s in samples:
@@ -76,12 +76,40 @@ try:
                 if p and c and r:
                     dpo_pairs.append({"prompt": str(p), "chosen": str(c), "rejected": str(r)})
             hf_dataset = Dataset.from_list(dpo_pairs)
+            loss_type = "simpo" if training_method.lower() == "simpo" else "sigmoid"
             trainer = DPOTrainer(
                 model=model,
                 ref_model=None,
                 tokenizer=tokenizer,
                 train_dataset=hf_dataset,
                 args=DPOConfig(
+                    output_dir="/tmp/output",
+                    beta=dpo_beta,
+                    loss_type=loss_type,
+                    per_device_train_batch_size=2,
+                    gradient_accumulation_steps=8,
+                    num_train_epochs=num_epochs,
+                    learning_rate=1e-4,
+                    fp16=True,
+                    logging_steps=10,
+                ),
+            )
+        elif training_method.lower() == "kto":
+            from trl import KTOTrainer, KTOConfig
+            kto_records = []
+            for s in samples:
+                p = s.get("prompt") or s.get("instruction") or ""
+                c = s.get("completion") or s.get("response") or s.get("chosen") or ""
+                lbl = s.get("label", s.get("is_desirable", True))
+                if p and c:
+                    kto_records.append({"prompt": str(p), "completion": str(c), "label": bool(lbl)})
+            hf_dataset = Dataset.from_list(kto_records)
+            trainer = KTOTrainer(
+                model=model,
+                ref_model=None,
+                tokenizer=tokenizer,
+                train_dataset=hf_dataset,
+                args=KTOConfig(
                     output_dir="/tmp/output",
                     beta=dpo_beta,
                     per_device_train_batch_size=2,

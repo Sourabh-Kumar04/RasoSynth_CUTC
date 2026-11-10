@@ -29,7 +29,7 @@ from fastapi import (
     WebSocketDisconnect,
 )
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import JSONResponse
+from fastapi.responses import JSONResponse, HTMLResponse
 from fastapi.security import HTTPBearer
 from pydantic import BaseModel, Field, field_validator
 from starlette.middleware.base import BaseHTTPMiddleware
@@ -631,8 +631,13 @@ def _validate_security_config():
 # ── Root Endpoints ────────────────────────────────────────────────────────────
 
 @app.get("/", tags=["Root"])
-async def root():
-    """Root endpoint."""
+async def root(req: Request):
+    """Root endpoint. Serves live interactive playground for browser users, or API metadata for JSON clients."""
+    accept = req.headers.get("accept", "")
+    if "text/html" in accept and not req.query_params.get("format") == "json":
+        from api.playground_html import get_playground_html
+        return HTMLResponse(content=get_playground_html())
+
     return {
         "name": "RasoSynthTune",
         "version": "2.0.0",
@@ -640,6 +645,7 @@ async def root():
         "docs": "/docs",
         "health": "/health",
         "metrics": "/metrics",
+        "playground": "/playground",
         "features": [
             "Constraint-aware data discovery",
             "Multilingual processing",
@@ -649,6 +655,15 @@ async def root():
             "Streaming export for large datasets",
         ]
     }
+
+
+@app.get("/playground", tags=["Root"], include_in_schema=False)
+@app.get("/ui", tags=["Root"], include_in_schema=False)
+async def playground_endpoint():
+    """Direct route to interactive RasoSynthTune playground."""
+    from api.playground_html import get_playground_html
+    return HTMLResponse(content=get_playground_html())
+
 
 
 @app.get("/favicon.ico", include_in_schema=False)
