@@ -534,6 +534,77 @@ def handle_pipeline(args: argparse.Namespace) -> int:
     return 0
 
 
+def handle_scrape(args: argparse.Namespace) -> int:
+    """Execute stealth web extraction with TLS JA3/JA4 spoofing and anti-bot bypass."""
+    from core.crawler.tls_stealth import StealthHTTPClient, BrowserImpersonation
+    from pipeline.domain_extractors.regulatory import IndianRegulatoryExtractor
+
+    print("=" * 70)
+    print("  RasoSynthTune: Stealth Web Scraper & Anti-Bot Egress")
+    print("=" * 70)
+    print(f"Target URL:    {args.url}")
+    print(f"Impersonation: {args.impersonate}")
+
+    try:
+        prof = BrowserImpersonation(args.impersonate)
+    except ValueError:
+        prof = BrowserImpersonation.CHROME_124
+
+    client = StealthHTTPClient(impersonate=prof)
+    res = asyncio.run(client.get(args.url))
+    print(f"\n[OK] Response Status: HTTP {res.status_code} ({len(res.text)} characters)")
+
+    if args.regulatory:
+        extractor = IndianRegulatoryExtractor()
+        doc = extractor.extract(res.text, title=args.url)
+        print(f"      - Circular ID: {doc.circular_id or 'None'}")
+        print(f"      - Authority:   {doc.issuing_authority}")
+        print(f"      - Sections:    {len(doc.statutory_references)} extracted")
+        print(f"      - QA Pairs:    {len(doc.qa_pairs)} synthesized")
+
+    if args.output:
+        out_p = Path(args.output)
+        out_p.parent.mkdir(parents=True, exist_ok=True)
+        out_p.write_text(res.text, encoding="utf-8")
+        print(f"[OK] Response content saved to: {out_p}")
+
+    return 0
+
+
+def handle_preference(args: argparse.Namespace) -> int:
+    """Generate contrastive DPO/KTO/SimPO pairs from an SFT dataset."""
+    from pipeline.preference_pipeline import PreferenceDatasetSynthesizer
+
+    print("=" * 70)
+    print("  RasoSynthTune: Contrastive DPO/KTO Preference Synthesizer")
+    print("=" * 70)
+    print(f"Input:        {args.input}")
+    print(f"Output:       {args.output}")
+    print(f"Perturbation: {args.perturbation}")
+
+    in_path = Path(args.input)
+    if not in_path.exists():
+        print(f"[ERROR] Input dataset {args.input} not found.", file=sys.stderr)
+        return 1
+
+    synth = PreferenceDatasetSynthesizer(domain=args.domain)
+    pairs = []
+    with open(in_path, "r", encoding="utf-8") as f:
+        for line in f:
+            if not line.strip():
+                continue
+            rec = json.loads(line)
+            inst = rec.get("instruction") or rec.get("prompt") or ""
+            resp = rec.get("response") or rec.get("output") or ""
+            if inst and resp:
+                pair = synth.synthesize_contrastive_from_sample(inst, resp, perturbation_type=args.perturbation)
+                pairs.append(pair)
+
+    out_file = synth.export_jsonl(pairs, args.output)
+    print(f"\n[OK] Synthesized and exported {len(pairs)} contrastive pairs to: {out_file}\n")
+    return 0
+
+
 def handle_serve(args: argparse.Namespace) -> int:
     """Launch canonical FastAPI server."""
     try:
@@ -623,6 +694,20 @@ def build_parser() -> argparse.ArgumentParser:
     pipe_parser.add_argument("--quant-type", default="q4_k_m", help="GGUF quantization level")
     pipe_parser.add_argument("--output-dir", default="outputs/pipeline_run", help="Output directory")
 
+    # Command 10: scrape
+    scrape_parser = subparsers.add_parser("scrape", help="Stealth web scraping with TLS JA3/JA4 spoofing and anti-bot bypass")
+    scrape_parser.add_argument("--url", required=True, help="Target URL to extract")
+    scrape_parser.add_argument("--impersonate", default="chrome124", choices=["chrome124", "chrome120", "safari17_0", "firefox125"], help="Browser TLS profile")
+    scrape_parser.add_argument("--regulatory", action="store_true", help="Apply Indian regulatory circular extractor")
+    scrape_parser.add_argument("--output", default=None, help="Save raw response text to file")
+
+    # Command 11: preference
+    pref_parser = subparsers.add_parser("preference", help="Synthesize contrastive DPO/KTO preference pairs from SFT dataset")
+    pref_parser.add_argument("--input", required=True, help="Input SFT JSONL dataset path")
+    pref_parser.add_argument("--output", default="outputs/preference_pairs.jsonl", help="Output path for preference JSONL")
+    pref_parser.add_argument("--domain", default="general", help="Target domain label")
+    pref_parser.add_argument("--perturbation", default="hallucination", choices=["hallucination", "omission", "sycophancy"], help="Perturbation type")
+
     return parser
 
 
@@ -645,6 +730,8 @@ def main(argv: Optional[List[str]] = None) -> int:
         "quantize": handle_quantize,
         "judge": handle_judge,
         "pipeline": handle_pipeline,
+        "scrape": handle_scrape,
+        "preference": handle_preference,
     }
 
     return handlers[args.command](args)

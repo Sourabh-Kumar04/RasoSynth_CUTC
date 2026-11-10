@@ -182,3 +182,34 @@ def test_ollama_modelfile_exporter():
     assert "FROM ./sarvam-2b-indic-Q4_K_M.gguf" in modelfile
     assert "PARAMETER temperature 0.4" in modelfile
     assert "You are an expert Indic legal assistant." in modelfile
+
+
+def test_cli_preference_subcommand():
+    from cli import main
+    import json
+    import sys
+
+    with tempfile.TemporaryDirectory() as tmp:
+        inp = Path(tmp) / "input.jsonl"
+        out = Path(tmp) / "output.jsonl"
+        inp.write_text(json.dumps({"instruction": "Define GST compliance", "response": "GST compliance requires timely filing of monthly returns."}) + "\n")
+        old_argv = sys.argv
+        try:
+            sys.argv = ["cli.py", "preference", "--input", str(inp), "--output", str(out), "--perturbation", "hallucination"]
+            code = main()
+            assert code == 0
+            assert out.exists()
+            content = out.read_text(encoding="utf-8")
+            assert "GST compliance" in content
+        finally:
+            sys.argv = old_argv
+
+
+def test_observability_proxies_endpoint(test_client, auth_headers):
+    response = test_client.get("/observability/crawler-proxies", headers=auth_headers)
+    assert response.status_code == 200
+    data = response.json()
+    assert "proxies" in data
+    assert len(data["proxies"]) >= 2
+    assert "health_score" in data["proxies"][0]
+

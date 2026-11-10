@@ -45,20 +45,29 @@ multi-service topology, not a description of the demo.
   Multi-provider routing with fallback; a "Live/Healthy" badge is
   not evidence of requests (badges showed zero requests on 2026-10-28).
 - **Fine-tuning** — `finetuning/trainer.py` (real local PEFT/Unsloth
-  path; simulated Modal stub), `finetuning/colab_bridge.py`
-  (simulated bridge), `api/finetune.py`. See `docs/FINE_TUNING.md`.
+  path with dynamic LoRA target discovery, KTO & SimPO preference alignment),
+  `finetuning/distributed.py` (PyTorch FSDP & DeepSpeed ZeRO-2/3 configurations),
+  `finetuning/checkpoint_manager.py` (atomic mid-epoch state recovery),
+  `finetuning/export_quant.py` (GGUF edge quantization & Ollama Modelfile exporter),
+  `finetuning/colab_bridge.py`, `api/finetune.py`. See `docs/FINE_TUNING.md`.
+- **Web Scraping & Anti-Bot Egress** — `core/crawler/stealth.py` (Playwright stealth with WebGL/Canvas spoofing),
+  `core/crawler/tls_stealth.py` (TLS JA3/JA4 fingerprint evasion and HTTP/2 profiles),
+  `core/crawler/proxy_pool.py` (health-scored proxy pool with domain-sticky routing),
+  `pipeline/domain_extractors/regulatory.py` (structured Indian gazette & tax circular extractors),
+  `pipeline/pdf_stream.py` (layout-aware multi-column and scanned PDF parser).
+- **Preference Synthesis** — `pipeline/preference_pipeline.py` (contrastive DPO/KTO pair generation via targeted perturbation).
 - **Config / secrets** — `core/config.py`, `core/secrets.py`.
   Configuration comes from environment variables; see `.env.example`
   (placeholders only). Never commit `.env`.
 - **Observability** — `api/observability/`,
   `core/observability_manager.py`, Prometheus alerts config
-  (`config/prometheus_alerts.yml`). Observability existing does not
-  make the demo a production deployment.
+  (`config/prometheus_alerts.yml`), crawler proxy health telemetry.
+- **Interactive Playground** — `api/playground_html.py` (browser content-negotiated playground at `/`, `/playground`, `/ui`).
 
 ## Client surfaces
 
 - **CLI** — `cli.py` / `main.py`; console script `rasosynthtune`
-  (`generate`, `audit`, `recipe`, `publish`).
+  (`generate`, `audit`, `benchmark`, `recipe`, `serve`, `publish`, `quantize`, `judge`, `pipeline`, `scrape`, `preference`).
 - **Python SDK** — `rasosynth/` (`RasoSynthClient`: `synthesize`,
   `verify_dbom`).
 - **Dashboard** — Next.js app under `frontend/app/(dashboard)/`

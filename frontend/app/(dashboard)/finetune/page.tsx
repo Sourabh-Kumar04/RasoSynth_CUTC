@@ -980,6 +980,7 @@ function FineTuneContent() {
     push_to_hub: false, hf_token: '', hf_org: '',
     chat_template: 'alpaca', output_dir: 'outputs/finetune',
     execution_target: 'local',
+    distributed_strategy: 'none',
     webhook_url: '',
   })
 
@@ -1840,6 +1841,21 @@ function FineTuneContent() {
                         <SelectItem value="runpod">RunPod Cloud GPU (A40 / H100)</SelectItem>
                       </SelectContent>
                     </Select>
+                  </div>
+                  <div>
+                    <label className="text-xs mb-1 block font-bold font-mono uppercase text-[#a8a29e]">Distributed Engine &amp; Sharding</label>
+                    <Select value={form.distributed_strategy}
+                      onValueChange={v => f('distributed_strategy', v)}>
+                      <SelectTrigger className="rounded-md border-[#272738] bg-[#0a0a0f] text-white text-xs font-mono"><SelectValue /></SelectTrigger>
+                      <SelectContent className="bg-[#12121a] border-[#272738] text-white text-xs font-mono">
+                        <SelectItem value="none">Single Device / Standard PEFT</SelectItem>
+                        <SelectItem value="deepspeed_zero2">DeepSpeed ZeRO-2 (Optimizer Sharding)</SelectItem>
+                        <SelectItem value="deepspeed_zero3">DeepSpeed ZeRO-3 (Full ZeRO Sharding + CPU Offload)</SelectItem>
+                        <SelectItem value="fsdp">PyTorch FSDP (Fully Sharded Data Parallel)</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <div>
                     {form.execution_target === 'colab' && (() => {
                       const selectedDs = pipelineDatasets.find(d => d.id === form.dataset_id)
                       const dsId = form.dataset_id || (form.dataset_path ? form.dataset_path.replace(/.*\//, '').replace(/\..*/, '') : (pipelineDatasets[0]?.id || ''))

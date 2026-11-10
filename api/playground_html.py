@@ -71,6 +71,7 @@ def get_playground_html() -> str:
         <button onclick="switchTab('synthesizer')" id="tabBtn-synthesizer" class="px-3 py-1.5 rounded-lg text-xs font-bold transition-all bg-brand text-white shadow">1. Data Synthesis</button>
         <button onclick="switchTab('judge')" id="tabBtn-judge" class="px-3 py-1.5 rounded-lg text-xs font-bold transition-all border border-cardBorder text-zinc-400 hover:text-white">2. Alignment Judge</button>
         <button onclick="switchTab('quant')" id="tabBtn-quant" class="px-3 py-1.5 rounded-lg text-xs font-bold transition-all border border-cardBorder text-zinc-400 hover:text-white">3. Edge Quantization</button>
+        <button onclick="switchTab('ollama')" id="tabBtn-ollama" class="px-3 py-1.5 rounded-lg text-xs font-bold transition-all border border-cardBorder text-zinc-400 hover:text-white">4. Ollama Modelfile</button>
       </div>
     </div>
 
@@ -194,6 +195,37 @@ llama-server -m ./model-Q4_K_M.gguf -c 2048 --port 8080</pre>
         </div>
       </div>
     </section>
+
+    <!-- Section 4: Ollama Modelfile -->
+    <section id="pane-ollama" class="space-y-4 hidden">
+      <div class="p-6 rounded-xl border border-cardBorder bg-surface space-y-4">
+        <div class="flex items-center justify-between border-b border-cardBorder pb-3">
+          <h3 class="text-sm font-bold text-white uppercase tracking-wider flex items-center gap-2">
+            <span>🦙</span> Production Ollama Modelfile Exporter
+          </h3>
+          <span class="text-xs font-mono text-cyan-400 font-bold">1-Click Local LM Serving</span>
+        </div>
+        <p class="text-xs text-zinc-400">Directly run fine-tuned GGUF weights on Mac/Linux/Windows via Ollama with calibrated system prompts and stop tokens.</p>
+        <div class="p-4 bg-surfaceDark border border-cardBorder rounded-lg space-y-2">
+          <div class="flex items-center justify-between">
+            <span class="text-xs text-zinc-400 uppercase font-mono font-bold">Generated Modelfile:</span>
+            <span class="text-[10px] font-mono text-emerald-400">Ready for 'ollama create'</span>
+          </div>
+          <pre id="modelfileContent" class="text-xs code-font text-cyan-300 bg-surface p-3 rounded border border-cardBorder overflow-x-auto">FROM ./sarvam-2b-Q4_K_M.gguf
+
+PARAMETER temperature 0.4
+PARAMETER num_ctx 4096
+PARAMETER stop "&lt;|im_end|&gt;"
+PARAMETER stop "&lt;|eot_id|&gt;"
+
+SYSTEM &quot;&quot;&quot;You are a domain-specific assistant fine-tuned with RasoSynthTune.&quot;&quot;&quot;</pre>
+        </div>
+        <div class="p-3 bg-surfaceDark border border-cardBorder rounded-lg text-xs font-mono text-zinc-300">
+          <span class="text-brand font-bold">Terminal Quickstart:</span>
+          <code class="block mt-1 text-zinc-400">ollama create my-assistant -f ./Modelfile &amp;&amp; ollama run my-assistant</code>
+        </div>
+      </div>
+    </section>
   </main>
 
   <!-- Footer -->
@@ -203,7 +235,7 @@ llama-server -m ./model-Q4_K_M.gguf -c 2048 --port 8080</pre>
 
   <script>
     function switchTab(tab) {
-      ['synthesizer', 'judge', 'quant'].forEach(t => {
+      ['synthesizer', 'judge', 'quant', 'ollama'].forEach(t => {
         document.getElementById('pane-' + t).classList.add('hidden');
         document.getElementById('tabBtn-' + t).className = 'px-3 py-1.5 rounded-lg text-xs font-bold transition-all border border-cardBorder text-zinc-400 hover:text-white';
       });

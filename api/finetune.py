@@ -934,3 +934,32 @@ PARAMETER top_p 0.95
 {stop_str}
 """
     return PlainTextResponse(modelfile_content, media_type="text/plain")
+
+
+@router.get("/jobs/{job_id}/checkpoints")
+async def list_job_checkpoints(
+    job_id: str,
+    current_user: User = Depends(get_current_user),
+    manager=Depends(_manager),
+):
+    """List available atomic checkpoints for a fine-tuning job."""
+    from finetuning.checkpoint_manager import AtomicCheckpointManager
+    job = await manager.get_job(job_id)
+    _enforce_owner(job, current_user)
+
+    output_path = getattr(job, "output_path", None) or (job.get("output_path") if isinstance(job, dict) else None) or f"outputs/finetune/{job_id}"
+    mgr = AtomicCheckpointManager(checkpoint_dir=output_path)
+    latest = mgr.get_latest_checkpoint()
+    checkpoints = []
+    if latest:
+        c_path, state = latest
+        checkpoints.append({
+            "path": str(c_path),
+            "step": state.step,
+            "epoch": state.epoch,
+            "train_loss": state.train_loss,
+            "learning_rate": state.learning_rate,
+            "timestamp": state.timestamp,
+        })
+    return {"job_id": job_id, "checkpoints": checkpoints}
+

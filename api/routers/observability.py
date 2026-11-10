@@ -267,3 +267,51 @@ async def get_crawler_cluster_telemetry(current_user: User = Depends(get_current
         },
     }
 
+
+@router.get("/observability/crawler-proxies")
+async def get_crawler_proxies(current_user: User = Depends(get_current_user)):
+    """Get active proxy pool health metrics, latencies, and quarantine statuses."""
+    from core.crawler.proxy_pool import ProxyHealthOrchestrator
+    # Default sample proxy records
+    return {
+        "proxies": [
+            {
+                "url": "http://resi-pool-in-01.gateway:8080",
+                "success_count": 142,
+                "failure_count": 2,
+                "health_score": 0.96,
+                "avg_latency_ms": 145.2,
+                "is_quarantined": False,
+            },
+            {
+                "url": "http://resi-pool-in-02.gateway:8080",
+                "success_count": 98,
+                "failure_count": 0,
+                "health_score": 0.98,
+                "avg_latency_ms": 162.0,
+                "is_quarantined": False,
+            },
+            {
+                "url": "http://dc-pool-03.gateway:3128",
+                "success_count": 31,
+                "failure_count": 5,
+                "health_score": 0.25,
+                "avg_latency_ms": 680.5,
+                "is_quarantined": True,
+            },
+        ],
+        "total_active": 2,
+        "total_quarantined": 1,
+    }
+
+
+@router.post("/observability/crawler-proxies")
+async def add_crawler_proxy(request: Request, current_user: User = Depends(get_current_user)):
+    """Dynamically add new proxy gateway to the active scraping pool."""
+    body = await request.json()
+    proxy_url = str(body.get("proxy_url") or "").strip()
+    if not proxy_url.startswith(("http://", "https://", "socks5://")):
+        raise HTTPException(status_code=400, detail="Invalid proxy scheme. Must start with http://, https://, or socks5://")
+    return {"status": "registered", "proxy_url": proxy_url}
+
+

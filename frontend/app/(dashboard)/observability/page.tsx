@@ -576,6 +576,51 @@ export default function ObservabilityPage() {
                   </tbody>
                 </table>
               </div>
+
+              {/* Proxy Pool Egress Table */}
+              <div className="pt-4 border-t border-[#1c1c28]">
+                <div className="flex items-center justify-between mb-3">
+                  <span className="text-xs font-mono font-bold text-white uppercase flex items-center gap-1.5">
+                    <Network className="h-3.5 w-3.5 text-cyan-400" /> Active Egress Proxy Gateways &amp; Sticky Routing
+                  </span>
+                  <span className="text-[10px] font-mono text-zinc-400">
+                    TLS JA3/JA4 Spoofing: Active
+                  </span>
+                </div>
+                <div className="rounded-md border border-[#1c1c28] overflow-hidden">
+                  <table className="w-full text-left font-mono text-xs">
+                    <thead className="bg-[#0e0e16] text-[#a8a29e] uppercase text-[10px]">
+                      <tr>
+                        <th className="py-2.5 px-3">Gateway Address</th>
+                        <th className="py-2.5 px-3">Health Score</th>
+                        <th className="py-2.5 px-3">Avg Latency</th>
+                        <th className="py-2.5 px-3">Status</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-[#1c1c28]">
+                      {[
+                        { url: 'resi-pool-in-01.gateway:8080', score: '98%', latency: '145ms', status: 'Healthy', sticky: 'gst.gov.in' },
+                        { url: 'resi-pool-in-02.gateway:8080', score: '96%', latency: '162ms', status: 'Healthy', sticky: 'incometax.gov.in' },
+                        { url: 'dc-pool-03.gateway:3128', score: '25%', latency: '680ms', status: 'Quarantined', sticky: 'None' },
+                      ].map((p, i) => (
+                        <tr key={i} className="hover:bg-[#161622]/40 transition-colors">
+                          <td className="py-2.5 px-3 text-white font-mono">{p.url}</td>
+                          <td className="py-2.5 px-3 text-emerald-400 font-bold">{p.score}</td>
+                          <td className="py-2.5 px-3 text-zinc-300">{p.latency}</td>
+                          <td className="py-2.5 px-3">
+                            <span className={clsx(
+                              "px-2 py-0.5 rounded text-[10px] font-bold",
+                              p.status === 'Healthy' ? "bg-emerald-500/10 text-emerald-400 border border-emerald-500/20" : "bg-rose-500/10 text-rose-400 border border-rose-500/20"
+                            )}>
+                              {p.status}
+                            </span>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
             </CardContent>
           </Card>
         </TabsContent>
