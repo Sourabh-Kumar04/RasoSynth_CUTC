@@ -383,6 +383,33 @@ function StudioContent() {
     }
   }, [prompt, targetDomain, preservedTermsInput, language, synthesisMode, extractSyntacticInvariants])
 
+  // Shannon token entropy & information density computation
+  const tokenEntropyStats = (() => {
+    const text = prompt.trim()
+    if (!text) return { entropy: 0, level: 'Foundational', color: 'text-zinc-400', progress: 0 }
+    const tokens = text.toLowerCase().split(/\s+/).filter(Boolean)
+    if (tokens.length === 0) return { entropy: 0, level: 'Foundational', color: 'text-zinc-400', progress: 0 }
+
+    const freq: Record<string, number> = {}
+    tokens.forEach((t) => { freq[t] = (freq[t] || 0) + 1 })
+    const n = tokens.length
+    let h = 0
+    Object.values(freq).forEach((count) => {
+      const p = count / n
+      h -= p * Math.log2(p)
+    })
+    const entropyVal = Number(h.toFixed(2))
+    const progress = Math.min(100, Math.round((entropyVal / 6.5) * 100))
+
+    if (entropyVal < 3.0) {
+      return { entropy: entropyVal, level: 'Foundational', color: 'text-blue-400', progress }
+    } else if (entropyVal < 5.0) {
+      return { entropy: entropyVal, level: 'Intermediate', color: 'text-amber-400', progress }
+    } else {
+      return { entropy: entropyVal, level: 'Complex', color: 'text-emerald-400', progress }
+    }
+  })()
+
   // Launch job
   const handleGenerate = async () => {
     playClickSound()
@@ -809,7 +836,33 @@ function StudioContent() {
               />
               {/* Live Prompt Heuristic Linter Strip (Standard) */}
               {prompt.trim().length > 0 && (
-                <div className="mt-2 p-2.5 rounded-md bg-[#0a0a0f] border border-[#1f1f2e] space-y-1.5 text-xs font-mono">
+                <div className="mt-2 p-2.5 rounded-md bg-[#0a0a0f] border border-[#1f1f2e] space-y-2 text-xs font-mono">
+                  {/* Real-time Shannon Entropy & Information Density Gauge */}
+                  <div className="flex flex-wrap items-center justify-between gap-2 pb-2 border-b border-[#1f1f2e]">
+                    <div className="flex items-center gap-2">
+                      <span className="text-zinc-400 font-semibold uppercase text-xs">Shannon Entropy:</span>
+                      <span className={clsx("font-bold text-xs", tokenEntropyStats.color)}>
+                        {tokenEntropyStats.entropy} bits/token
+                      </span>
+                      <span className={clsx("px-2 py-0.5 rounded text-xs border uppercase", {
+                        "bg-blue-500/10 border-blue-500/30 text-blue-400": tokenEntropyStats.level === 'Foundational',
+                        "bg-amber-500/10 border-amber-500/30 text-amber-400": tokenEntropyStats.level === 'Intermediate',
+                        "bg-emerald-500/10 border-emerald-500/30 text-emerald-400": tokenEntropyStats.level === 'Complex',
+                      })}>
+                        Curriculum Tier: {tokenEntropyStats.level}
+                      </span>
+                    </div>
+                    <div className="flex items-center gap-2 min-w-[120px]">
+                      <div className="w-24 h-1.5 bg-[#1a1a24] rounded-full overflow-hidden">
+                        <div
+                          className="h-full bg-gradient-to-r from-blue-500 via-amber-500 to-emerald-500 transition-all duration-300"
+                          style={{ width: `${tokenEntropyStats.progress}%` }}
+                        />
+                      </div>
+                      <span className="text-zinc-500 text-xs">{tokenEntropyStats.progress}%</span>
+                    </div>
+                  </div>
+
                   <div className="flex items-center justify-between">
                     <span className="text-xs text-[#a8a29e] uppercase font-bold flex items-center gap-1.5">
                       <ShieldCheck className="h-3.5 w-3.5 text-[#10b981]" />

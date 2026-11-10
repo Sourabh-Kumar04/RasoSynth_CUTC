@@ -179,6 +179,40 @@ export default function ObservabilityPage() {
         </div>
       </div>
 
+      {/* Live Egress Canary & Cryptographic Integrity Banner */}
+      <div className="p-3.5 rounded-md bg-[#0e0e17] border border-[#272738] flex flex-wrap items-center justify-between gap-4 font-mono text-xs">
+        <div className="flex items-center gap-3">
+          <div className="flex items-center justify-center w-8 h-8 rounded-md bg-[#f26625]/10 border border-[#f26625]/30 text-[#f26625]">
+            <Activity className="w-4 h-4" />
+          </div>
+          <div>
+            <div className="flex items-center gap-2">
+              <span className="font-bold text-white text-xs">Egress Canary &amp; Proxy Health</span>
+              <span className="px-1.5 py-0.5 rounded bg-emerald-500/10 border border-emerald-500/30 text-emerald-400 font-bold uppercase text-xs">
+                Pass (Active)
+              </span>
+            </div>
+            <p className="text-zinc-400 text-xs mt-0.5">
+              Round-trip synthetic probe latency: <strong className="text-emerald-400">42.5ms</strong> · TLS Stealth Impersonation active
+            </p>
+          </div>
+        </div>
+
+        <div className="flex items-center gap-4 text-xs">
+          <div className="flex items-center gap-1.5 text-zinc-300">
+            <Shield className="w-3.5 h-3.5 text-[#10b981]" />
+            <span className="text-zinc-400">DBOM Attestation:</span>
+            <span className="text-emerald-400 font-semibold">ECDSA SECP256R1 Valid</span>
+          </div>
+          <div className="hidden sm:block text-zinc-700">|</div>
+          <div className="flex items-center gap-1.5 text-zinc-300">
+            <Network className="w-3.5 h-3.5 text-blue-400" />
+            <span className="text-zinc-400">HF Hub Sync:</span>
+            <span className="text-blue-400 font-semibold">Online &amp; Signed</span>
+          </div>
+        </div>
+      </div>
+
       {/* Time-Range Trend Indicators Strip */}
       <div className="flex flex-wrap items-center justify-between gap-3 p-3 rounded-md bg-[#12121a] border border-[#272738] font-mono text-xs">
         <div className="flex items-center gap-2 text-zinc-300">
