@@ -315,3 +315,50 @@ async def add_crawler_proxy(request: Request, current_user: User = Depends(get_c
     return {"status": "registered", "proxy_url": proxy_url}
 
 
+@router.post("/crawler/synthesize-scraper")
+async def synthesize_scraper_endpoint(request: Request):
+    """Autonomous Scraper Synthesizer API.
+
+    Searches known open scrapers and dynamically generates, lints, and self-tests
+    an async Python extractor class for any target URL or domain.
+    """
+    from core.crawler.scraper_synthesizer import AutonomousScraperSynthesizer, ScraperDiscoveryEngine
+
+    body = await request.json()
+    url = str(body.get("url") or "").strip()
+    if not url.startswith(("http://", "https://")):
+        raise HTTPException(status_code=400, detail="Target URL must start with http:// or https://")
+
+    domain_name = body.get("name")
+    custom_selectors = body.get("selectors")
+
+    # Step 1: Search existing recipes
+    match = ScraperDiscoveryEngine.search_available_scrapers(url)
+
+    # Step 2: Synthesize code
+    res = AutonomousScraperSynthesizer.synthesize_scraper_code(
+        target_url=url,
+        domain_name=domain_name,
+        custom_selectors=custom_selectors,
+    )
+
+    return {
+        "status": "success" if res.test_passed else "failed",
+        "domain_name": res.domain_name,
+        "class_name": res.class_name,
+        "matched_existing": {
+            "name": match.name,
+            "source_type": match.source_type,
+            "confidence": match.confidence,
+            "description": match.description,
+            "url": match.sample_code_or_url,
+        } if match else None,
+        "selectors": res.selectors,
+        "ast_valid": res.ast_valid,
+        "test_passed": res.test_passed,
+        "code": res.code,
+        "error": res.error,
+    }
+
+
+

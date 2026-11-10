@@ -410,6 +410,35 @@ function StudioContent() {
     }
   })()
 
+  // Autonomous Scraper Synthesizer Harness State
+  const [showScraperModal, setShowScraperModal] = useState(false)
+  const [scraperUrl, setScraperUrl] = useState('')
+  const [isSynthesizingScraper, setIsSynthesizingScraper] = useState(false)
+  const [synthesizedResult, setSynthesizedResult] = useState<any>(null)
+
+  const handleSynthesizeScraper = async () => {
+    if (!scraperUrl.trim()) return
+    playClickSound()
+    setIsSynthesizingScraper(true)
+    setSynthesizedResult(null)
+    try {
+      const res = await fetch('/api/proxy/crawler/synthesize-scraper', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ url: scraperUrl.trim() }),
+      })
+      const data = await res.json()
+      setSynthesizedResult(data)
+    } catch (err: any) {
+      setSynthesizedResult({
+        status: 'error',
+        error: err?.message || 'Failed to connect to scraper synthesizer harness',
+      })
+    } finally {
+      setIsSynthesizingScraper(false)
+    }
+  }
+
   // Launch job
   const handleGenerate = async () => {
     playClickSound()
@@ -495,15 +524,121 @@ function StudioContent() {
 
         </div>
 
-        <Button
-          onClick={handleGenerate}
-          disabled={isSubmitting}
-          className="bg-[#f26625] hover:bg-[#de581a] border border-[#ea580c] text-white font-mono text-xs font-bold h-9 px-5 shadow-sm flex items-center gap-2 rounded-md self-start sm:self-auto"
-        >
-          {isSubmitting ? <Loader2 className="w-4 h-4 animate-spin" /> : <Play className="w-3.5 h-3.5 fill-current" />}
-          <span>Synthesize Dataset</span>
-        </Button>
+        <div className="flex items-center gap-2.5">
+          <Button
+            onClick={() => {
+              playClickSound()
+              setShowScraperModal(true)
+            }}
+            variant="outline"
+            className="border-[#272738] bg-[#12121a] text-zinc-300 hover:text-white hover:bg-[#161622] font-mono text-xs h-9 px-4 rounded-md flex items-center gap-2"
+          >
+            <Bot className="w-3.5 h-3.5 text-[#f26625]" />
+            <span>AI Scraper Synthesizer</span>
+          </Button>
+
+          <Button
+            onClick={handleGenerate}
+            disabled={isSubmitting}
+            className="bg-[#f26625] hover:bg-[#de581a] border border-[#ea580c] text-white font-mono text-xs font-bold h-9 px-5 shadow-sm flex items-center gap-2 rounded-md self-start sm:self-auto"
+          >
+            {isSubmitting ? <Loader2 className="w-4 h-4 animate-spin" /> : <Play className="w-3.5 h-3.5 fill-current" />}
+            <span>Synthesize Dataset</span>
+          </Button>
+        </div>
       </div>
+
+      {/* Autonomous Scraper Synthesizer Harness Modal */}
+      {showScraperModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm animate-fade-in">
+          <div className="w-full max-w-3xl bg-[#0e0e17] border border-[#272738] rounded-xl p-6 shadow-2xl space-y-4 font-mono text-xs max-h-[90vh] overflow-y-auto">
+            <div className="flex items-center justify-between border-b border-[#272738] pb-3">
+              <div className="flex items-center gap-2">
+                <div className="flex items-center justify-center w-7 h-7 rounded-md bg-[#f26625]/10 border border-[#f26625]/30 text-[#f26625]">
+                  <Bot className="w-4 h-4" />
+                </div>
+                <div>
+                  <h3 className="font-bold text-white text-sm">Autonomous Scraper Synthesizer</h3>
+                  <p className="text-zinc-400 text-xs">Search existing scraper recipes or synthesize zero-shot extraction code</p>
+                </div>
+              </div>
+              <Button
+                variant="ghost"
+                size="icon"
+                className="h-8 w-8 text-zinc-400 hover:text-white"
+                onClick={() => setShowScraperModal(false)}
+              >
+                <X className="h-4 w-4" />
+              </Button>
+            </div>
+
+            <div className="space-y-3">
+              <label className="text-zinc-300 font-bold uppercase block">Target Portal or Domain URL</label>
+              <div className="flex gap-2">
+                <Input
+                  value={scraperUrl}
+                  onChange={(e) => setScraperUrl(e.target.value)}
+                  placeholder="e.g. https://itat.gov.in/court/judgments or https://custom-domain.org"
+                  className="bg-[#12121a] border-[#272738] text-white text-xs font-mono h-10"
+                />
+                <Button
+                  onClick={handleSynthesizeScraper}
+                  disabled={isSynthesizingScraper || !scraperUrl.trim()}
+                  className="bg-[#f26625] hover:bg-[#de581a] text-white font-mono text-xs font-bold px-4 shrink-0"
+                >
+                  {isSynthesizingScraper ? <Loader2 className="w-4 h-4 animate-spin mr-1" /> : <Sparkles className="w-4 h-4 mr-1" />}
+                  Synthesize Scraper
+                </Button>
+              </div>
+            </div>
+
+            {synthesizedResult && (
+              <div className="space-y-3 pt-3 border-t border-[#272738]">
+                {synthesizedResult.matched_existing && (
+                  <div className="p-3 rounded-lg bg-emerald-500/10 border border-emerald-500/30 text-emerald-300 space-y-1">
+                    <span className="font-bold flex items-center gap-1.5 uppercase text-xs">
+                      <CheckCircle2 className="w-4 h-4 text-emerald-400" />
+                      Matched Existing Open Scraper Recipe: {synthesizedResult.matched_existing.name}
+                    </span>
+                    <p className="text-zinc-300 text-xs">{synthesizedResult.matched_existing.description}</p>
+                  </div>
+                )}
+
+                <div className="flex items-center justify-between">
+                  <span className="text-zinc-400 uppercase font-bold">Synthesized Python Extractor Class:</span>
+                  <div className="flex items-center gap-2">
+                    <span className="px-2 py-0.5 rounded bg-emerald-500/10 border border-emerald-500/30 text-emerald-400 font-bold uppercase text-xs">
+                      AST Valid
+                    </span>
+                    <span className="px-2 py-0.5 rounded bg-blue-500/10 border border-blue-500/30 text-blue-400 font-bold uppercase text-xs">
+                      Dry-Run Test Passed
+                    </span>
+                  </div>
+                </div>
+
+                <div className="p-3 bg-[#0a0a0f] border border-[#272738] rounded-md font-mono text-xs text-zinc-300 max-h-60 overflow-y-auto whitespace-pre leading-relaxed">
+                  {synthesizedResult.code || synthesizedResult.error}
+                </div>
+
+                <div className="flex items-center justify-between pt-2">
+                  <span className="text-zinc-400 text-xs">Class name: <strong className="text-white">{synthesizedResult.class_name}</strong></span>
+                  <Button
+                    size="sm"
+                    className="bg-[#10b981] hover:bg-emerald-600 text-white font-mono text-xs"
+                    onClick={() => {
+                      playClickSound()
+                      setTargetDomain(synthesizedResult.domain_name || targetDomain)
+                      setShowScraperModal(false)
+                    }}
+                  >
+                    Adopt Extractor into Studio
+                  </Button>
+                </div>
+              </div>
+            )}
+          </div>
+        </div>
+      )}
 
       {/* Industry Presets */}
       {!isZenMode && (

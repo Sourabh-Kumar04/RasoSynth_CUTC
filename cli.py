@@ -672,6 +672,43 @@ def handle_verify_attestation(args: argparse.Namespace) -> int:
         return 1
 
 
+def handle_generate_scraper(args: argparse.Namespace) -> int:
+    """Synthesize autonomous extractor class for any target URL or domain."""
+    from core.crawler.scraper_synthesizer import AutonomousScraperSynthesizer, ScraperDiscoveryEngine
+
+    print("=" * 70)
+    print("  RasoSynthTune: Autonomous Scraper Synthesis Harness")
+    print("=" * 70)
+    print(f"Target URL: {args.url}")
+
+    # Step 1: Search known recipes
+    match = ScraperDiscoveryEngine.search_available_scrapers(args.url)
+    if match:
+        print(f"\n[FOUND] Existing recipe matched: {match.name} (Confidence: {int(match.confidence * 100)}%)")
+        print(f"        Source: {match.source_type} - {match.description}")
+    else:
+        print("\n[INFO] No pre-existing recipe found. Synthesizing zero-shot extractor...")
+
+    # Step 2: Synthesize code
+    res = AutonomousScraperSynthesizer.synthesize_scraper_code(
+        target_url=args.url,
+        domain_name=args.name,
+    )
+
+    if not res.ast_valid or not res.test_passed:
+        print(f"\n[ERROR] Synthesizer validation failed: {res.error}", file=sys.stderr)
+        return 1
+
+    out_p = Path(args.output or f"scrapers/{res.domain_name}_extractor.py")
+    out_p.parent.mkdir(parents=True, exist_ok=True)
+    out_p.write_text(res.code, encoding="utf-8")
+
+    print(f"\n[OK] Extractor class '{res.class_name}' synthesized successfully.")
+    print(f"     Output written to: {out_p}")
+    print("     AST Validation: [PASS] | Mock Dry-Run Extraction: [PASS]\n")
+    return 0
+
+
 def handle_serve(args: argparse.Namespace) -> int:
     """Launch canonical FastAPI server."""
     try:
@@ -784,6 +821,12 @@ def build_parser() -> argparse.ArgumentParser:
     verify_parser = subparsers.add_parser("verify-attestation", help="Verify ECDSA digital signature on In-Toto attestation")
     verify_parser.add_argument("--attestation", required=True, help="Path to .attestation.json file")
 
+    # Command 14: generate-scraper
+    gen_scraper_parser = subparsers.add_parser("generate-scraper", help="Autonomous Scraper Code Synthesizer Harness")
+    gen_scraper_parser.add_argument("--url", required=True, help="Target portal URL to inspect and scrape")
+    gen_scraper_parser.add_argument("--name", default=None, help="Custom domain label name")
+    gen_scraper_parser.add_argument("--output", default=None, help="Output python file path")
+
     return parser
 
 
@@ -810,6 +853,7 @@ def main(argv: Optional[List[str]] = None) -> int:
         "preference": handle_preference,
         "attest": handle_attest,
         "verify-attestation": handle_verify_attestation,
+        "generate-scraper": handle_generate_scraper,
     }
 
     return handlers[args.command](args)
