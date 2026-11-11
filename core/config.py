@@ -243,17 +243,19 @@ class Settings(BaseSettings):
         In ephemeral Hugging Face Spaces or container environments without a preset JWT_SECRET,
         we auto-generate a secure 64-character secret.
         """
-        # Auto-generate secure JWT_SECRET if running inside Hugging Face Spaces or container cloud
+        # Auto-generate secure JWT_SECRET in dev/test/cloud environments if unset
         if not self.jwt_secret:
-            is_cloud = bool(
-                os.getenv("SPACE_ID")
+            is_auto_env = bool(
+                self.environment in ("development", "test", "testing")
+                or os.getenv("PYTEST_CURRENT_TEST")
+                or os.getenv("SPACE_ID")
                 or os.getenv("SPACE_HOST")
                 or os.getenv("HF_SPACE")
                 or os.getenv("RENDER")
                 or os.getenv("VERCEL")
                 or os.getenv("AUTO_GENERATE_JWT_SECRET", "").lower() in ("true", "1")
             )
-            if is_cloud:
+            if is_auto_env:
                 import secrets
                 import tempfile
                 from pathlib import Path

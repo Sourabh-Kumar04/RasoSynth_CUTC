@@ -91,8 +91,8 @@ class DatasetOrchestrator(
             self.observability = observability
         else:
             from core.observability_manager import ObservabilityManager
-            from core.config import Settings
-            self.observability = ObservabilityManager(Settings())
+            from core.config import get_settings
+            self.observability = ObservabilityManager(get_settings())
 
         try:
             from langgraph.checkpoint.serde.jsonplus import JsonPlusSerializer

@@ -54,11 +54,11 @@ class ConstraintAnalysis:
 @dataclass
 class Job:
     id: str
-    status: JobStatus
-    created_at: datetime
-    updated_at: datetime
-    current_stage: str
-    progress: float
+    status: JobStatus = JobStatus.PENDING
+    created_at: datetime = field(default_factory=datetime.utcnow)
+    updated_at: datetime = field(default_factory=datetime.utcnow)
+    current_stage: str = "initialized"
+    progress: float = 0.0
     samples_processed: int = 0
     samples_generated: int = 0
     cost_usd: float = 0.0
