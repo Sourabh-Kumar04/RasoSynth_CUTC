@@ -6,8 +6,11 @@ Exercises all endpoints, data paths, serialization formats, and backend-frontend
 import asyncio
 import io
 import json
+import os
+from pathlib import Path
 import sys
 import tarfile
+import tempfile
 import zipfile
 from fastapi.testclient import TestClient
 
@@ -30,6 +33,25 @@ def run_dry_run():
             raise AssertionError(f"Check failed: {name} - {detail}")
 
     with TestClient(app) as client:
+        # 0. Auth Token Setup
+        from api.auth import UserRole, get_auth_manager
+        auth_mgr = get_auth_manager()
+        if not auth_mgr._users:
+            auth_mgr._users["admin"] = {
+                "user_id": "admin-001",
+                "username": "admin",
+                "role": UserRole.ADMIN,
+                "email": "admin@example.com",
+            }
+        admin_uname = next(iter(auth_mgr._users.keys()))
+        admin_user_data = auth_mgr._users[admin_uname]
+        jwt_token = auth_mgr.create_token(
+            admin_user_data.get("user_id", "admin-001"),
+            admin_uname,
+            admin_user_data.get("role", UserRole.ADMIN),
+        )
+        client.headers["Authorization"] = f"Bearer {jwt_token}"
+
         # 1. Health Checks & Authentication Token Handshake
         print("\n--- [1] SYSTEM & CLUSTER HEALTH CHECKS ---")
         res = client.get("/health")
@@ -55,9 +77,31 @@ def run_dry_run():
         check("Model catalogue population", len(models_data) > 0, f"{len(models_data)} models registered")
 
         # 3. Fine-Tuning Job Creation with Colab Default
-        ds_res = client.get("/datasets")
-        ds_list = (ds_res.json().get("data", []) if isinstance(ds_res.json(), dict) else ds_res.json()) if ds_res.status_code == 200 else []
-        chosen_id = ds_list[0]["id"] if ds_list else "user-selected-dataset"
+        db_instance = getattr(app.state, "db", None)
+        if db_instance:
+            import uuid
+            job_uuid = str(uuid.uuid4())
+            test_file_path = os.path.join(tempfile.gettempdir(), f"dryrun_test_{job_uuid[:8]}.jsonl")
+            with open(test_file_path, "w", encoding="utf-8") as f:
+                f.write(json.dumps({"instruction": "What is GST?", "input": "", "output": "Goods and Services Tax."}) + "\n")
+            asyncio.run(db_instance.create_job({"id": job_uuid, "status": "completed"}))
+            ds_rec = asyncio.run(db_instance.create_dataset(
+                job_id=job_uuid,
+                name="DryRun Valid Dataset",
+                type="alpaca",
+                size=25,
+                metadata={"domain": "Indic Instruction"},
+                output_path=test_file_path,
+            ))
+            asyncio.run(db_instance.create_samples(ds_rec["id"], [
+                {"instruction": "What is GST?", "response": "Goods and Services Tax.", "input": "", "metadata": {}},
+            ]))
+            chosen_id = ds_rec["id"]
+        else:
+            ds_res = client.get("/datasets")
+            ds_list = (ds_res.json().get("data", []) if isinstance(ds_res.json(), dict) else ds_res.json()) if ds_res.status_code == 200 else []
+            chosen_id = ds_list[0]["id"] if ds_list else "user-selected-dataset"
+
         ft_payload = {
             "dataset_id": chosen_id,
             "base_model": "sarvamai/sarvam-2b-v0.5",
@@ -80,6 +124,21 @@ def run_dry_run():
 
         res = client.get("/api/finetune/jobs")
         check("Job listing query", res.status_code == 200 and len(res.json().get("jobs", [])) > 0)
+
+        # Prepare completed weights and Merkle metadata fixture
+        out_dir = Path(f"outputs/finetune/{job_id}")
+        out_dir.mkdir(parents=True, exist_ok=True)
+        import struct
+        hdr = b'{"test":1}'
+        hdr_len = struct.pack("<Q", len(hdr))
+        (out_dir / "README.md").write_text("# Model Card\n\n## Training Provenance (DBOM)\nMerkle Root: `e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855`\n")
+        (out_dir / "adapter_model.safetensors").write_bytes(hdr_len + hdr + b"\x01\x02\x03\x04" * 64)
+        (out_dir / "adapter_config.json").write_text(json.dumps({"base_model": "sarvamai/sarvam-2b-v0.5"}))
+        (out_dir / "model-q4_k_m.gguf").write_bytes(b"GGUF" + bytes(4) + b"\x01\x02\x03\x04" * 64)
+
+        if db_instance:
+            db_mgr = getattr(db_instance, "db", db_instance)
+            asyncio.run(db_mgr.update_finetune_job(job_id, status="completed", output_path=str(out_dir), merkle_root="e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"))
 
         # 5. Model Card Generation
         res = client.get(f"/api/finetune/jobs/{job_id}/model_card")

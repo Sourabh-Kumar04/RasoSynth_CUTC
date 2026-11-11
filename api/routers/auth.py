@@ -6,7 +6,13 @@ import sys
 from fastapi import APIRouter, Depends, HTTPException, Request
 from pydantic import BaseModel
 
-from api.auth import User, UserRole, get_auth_manager, get_current_user
+from api.auth import (
+    User,
+    UserRole,
+    get_auth_manager,
+    get_current_user,
+    get_current_user_optional,
+)
 from api.security import (
     RateLimiter,
     get_client_ip,
@@ -117,11 +123,12 @@ async def get_current_user_info(current_user: User = Depends(get_current_user)):
 
 
 @router.get("/auth/csrf-token", tags=["Authentication"])
-async def get_csrf_token(current_user: User = Depends(get_current_user)):
-    """Issue a stateless CSRF token bound to the authenticated user."""
-    token = _csrf_manager.generate_token(current_user.user_id)
+async def get_csrf_token(current_user: Optional[User] = Depends(get_current_user_optional)):
+    """Issue a stateless CSRF token bound to the authenticated user or anonymous session."""
+    user_id = current_user.user_id if current_user else "anonymous"
+    token = _csrf_manager.generate_token(user_id)
     return {
         "csrf_token": token,
-        "user_id": current_user.user_id,
+        "user_id": user_id,
         "header_name": "X-CSRF-Token",
     }

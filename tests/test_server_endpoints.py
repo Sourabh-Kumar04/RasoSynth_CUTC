@@ -25,8 +25,8 @@ from core.db import AsyncDB
 
 async def setup_test_data():
     """Set up test data in the database."""
-    settings = Settings()
-    db = await AsyncDB.create(settings.postgres_url)
+    db = AsyncDB()
+    await db.connect()
 
     # Clean up
     await db.clear_all_jobs()
@@ -59,7 +59,7 @@ async def setup_test_data():
     return job_id, ds_id
 
 
-def test_datasets_endpoint():
+def test_datasets_endpoint(auth_headers):
     print("=== Testing Server /datasets Endpoints ===")
 
     # Use TestClient with lifespan events enabled
@@ -75,7 +75,7 @@ def test_datasets_endpoint():
         print(f"✓ Created test data: job={job_id}, dataset={ds_id}")
 
         # Debug: check job status before download
-        resp = client.get(f"/jobs/{job_id}")
+        resp = client.get(f"/jobs/{job_id}", headers=auth_headers)
         if resp.status_code == 200:
             job_data = resp.json()
             print(f"DEBUG: Job status from /jobs/{job_id}: {job_data.get('status')}")
@@ -84,7 +84,7 @@ def test_datasets_endpoint():
 
         # Test GET /datasets
         print("\n--- GET /datasets ---")
-        resp = client.get("/datasets?limit=10")
+        resp = client.get("/datasets?limit=10", headers=auth_headers)
         assert resp.status_code == 200, f"Expected 200, got {resp.status_code}: {resp.text}"
         data = resp.json()
         assert "data" in data, f"Missing 'data' key: {data}"
@@ -94,7 +94,7 @@ def test_datasets_endpoint():
 
         # Test GET /datasets/{id}
         print(f"\n--- GET /datasets/{ds_id} ---")
-        resp = client.get(f"/datasets/{ds_id}")
+        resp = client.get(f"/datasets/{ds_id}", headers=auth_headers)
         assert resp.status_code == 200
         ds = resp.json()
         print(f"✓ /datasets/{ds_id} returned: {ds['name']}")
@@ -103,7 +103,7 @@ def test_datasets_endpoint():
 
         # Test GET /datasets/{id}/records
         print(f"\n--- GET /datasets/{ds_id}/records ---")
-        resp = client.get(f"/datasets/{ds_id}/records?limit=10")
+        resp = client.get(f"/datasets/{ds_id}/records?limit=10", headers=auth_headers)
         assert resp.status_code == 200
         records = resp.json()
         assert "records" in records
@@ -113,14 +113,14 @@ def test_datasets_endpoint():
 
         # Test GET /jobs/{id}/records (should read from DB)
         print(f"\n--- GET /jobs/{job_id}/records ---")
-        resp = client.get(f"/jobs/{job_id}/records?limit=10")
+        resp = client.get(f"/jobs/{job_id}/records?limit=10", headers=auth_headers)
         assert resp.status_code == 200
         recs = resp.json()
         print(f"✓ /jobs/{job_id}/records returned {recs['count']} record(s) from {recs.get('source', 'unknown')}")
 
         # Test GET /jobs/{id}/download (should generate from DB since file doesn't exist)
         print(f"\n--- GET /jobs/{job_id}/download ---")
-        resp = client.get(f"/jobs/{job_id}/download")
+        resp = client.get(f"/jobs/{job_id}/download", headers=auth_headers)
         assert resp.status_code == 200, f"Download failed: {resp.status_code} - {resp.text}"
         content = resp.content.decode("utf-8")
         lines = [l for l in content.split("\n") if l.strip()]
@@ -131,7 +131,6 @@ def test_datasets_endpoint():
             print(f"  Line {i}: {rec['instruction']}")
 
     print("\n✅ All server endpoints PASSED")
-    return True
 
 
 def test_provider_endpoints(auth_headers):

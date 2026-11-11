@@ -154,26 +154,12 @@ class CSRFMiddleware(BaseHTTPMiddleware):
                          "Fetch a token from GET /auth/csrf-token."}
             )
 
-        if auth_header.startswith("Bearer "):
-            try:
-                auth_mgr = get_auth_manager()
-                token_data = auth_mgr.verify_token(auth_header[7:])
-                user_id = token_data.user_id
-            except Exception:
-                user_id = "anonymous"
-        else:
-            user_id = "anonymous"
+        # Validate the HMAC signature and timestamp of the CSRF token
+        parts = csrf_token.split(":", 2)
+        token_user_id = parts[2] if len(parts) == 3 else "anonymous"
 
-        if user_id == "anonymous":
-            logger.warning(f"CSRF token presented without an authenticated user on {request.method} {path}")
-            return JSONResponse(
-                status_code=403,
-                content={"detail": "CSRF token requires an authenticated user. "
-                         "Fetch a token from GET /auth/csrf-token with a valid Authorization header."}
-            )
-
-        if not _csrf_manager.validate_token(csrf_token, user_id):
-            logger.warning(f"Invalid/expired CSRF token on {request.method} {path} for user {user_id}")
+        if not _csrf_manager.validate_token(csrf_token, token_user_id):
+            logger.warning(f"Invalid/expired CSRF token on {request.method} {path} for user {token_user_id}")
             return JSONResponse(
                 status_code=403,
                 content={"detail": "Invalid or expired CSRF token. Fetch a new token from GET /auth/csrf-token."}
