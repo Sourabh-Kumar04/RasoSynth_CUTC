@@ -27,36 +27,38 @@ async def setup_test_data():
     """Set up test data in the database."""
     db = AsyncDB()
     await db.connect()
+    try:
+        # Clean up
+        await db.clear_all_jobs()
 
-    # Clean up
-    await db.clear_all_jobs()
+        # Create job
+        job = await db.create_job({
+            "config": {"target_domain": "test", "dataset_size": 3, "export_format": "jsonl"},
+            "status": "completed"
+        })
+        job_id = job["id"]
 
-    # Create job
-    job = await db.create_job({
-        "config": {"target_domain": "test", "dataset_size": 3, "export_format": "jsonl"},
-        "status": "completed"
-    })
-    job_id = job["id"]
+        # Create dataset
+        ds = await db.create_dataset(
+            job_id=job_id,
+            name="test_dataset",
+            type="jsonl",
+            size=3,
+            metadata={"test": True},
+            output_path="/tmp/test.jsonl"
+        )
+        ds_id = ds["id"]
 
-    # Create dataset
-    ds = await db.create_dataset(
-        job_id=job_id,
-        name="test_dataset",
-        type="jsonl",
-        size=3,
-        metadata={"test": True},
-        output_path="/tmp/test.jsonl"
-    )
-    ds_id = ds["id"]
+        # Create samples
+        await db.create_samples(ds_id, [
+            {"instruction": "Q1", "response": "A1", "input": "", "metadata": {}, "quality_score": 0.9, "difficulty_tier": 3},
+            {"instruction": "Q2", "response": "A2", "input": "", "metadata": {}, "quality_score": 0.8, "difficulty_tier": 2},
+            {"instruction": "Q3", "response": "A3", "input": "", "metadata": {}, "quality_score": 0.7, "difficulty_tier": 1},
+        ])
 
-    # Create samples
-    await db.create_samples(ds_id, [
-        {"instruction": "Q1", "response": "A1", "input": "", "metadata": {}, "quality_score": 0.9, "difficulty_tier": 3},
-        {"instruction": "Q2", "response": "A2", "input": "", "metadata": {}, "quality_score": 0.8, "difficulty_tier": 2},
-        {"instruction": "Q3", "response": "A3", "input": "", "metadata": {}, "quality_score": 0.7, "difficulty_tier": 1},
-    ])
-
-    return job_id, ds_id
+        return job_id, ds_id
+    finally:
+        await db.close()
 
 
 def test_datasets_endpoint(auth_headers):
