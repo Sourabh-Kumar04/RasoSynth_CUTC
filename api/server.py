@@ -348,8 +348,7 @@ async def lifespan(app: FastAPI):
 
     # 5. WebSocket ConnectionManager
     try:
-        ws_manager = get_ws_manager()
-        await ws_manager.connect()
+        ws_manager = await get_ws_manager()
         app.state.ws_manager = ws_manager
         logger.info("  ✓ WebSocket ConnectionManager initialized")
     except Exception as e:
@@ -374,14 +373,13 @@ async def lifespan(app: FastAPI):
 
     # 8. Admission Controller
     try:
-        from core.admission import AdmissionController
+        from core.admission_control import AdmissionController
         admission_controller = AdmissionController(
-            max_concurrent=int(os.getenv("MAX_CONCURRENT_JOBS", "4")),
-            max_queue_depth=int(os.getenv("MAX_JOB_QUEUE_DEPTH", "64")),
+            max_concurrent_jobs=int(os.getenv("MAX_CONCURRENT_JOBS", "4")),
+            max_queue_size=int(os.getenv("MAX_JOB_QUEUE_DEPTH", "64")),
         )
-        await admission_controller.start()
         app.state.admission_controller = admission_controller
-        logger.info("  ✓ AdmissionController initialized (max_concurrent=%d)", admission_controller.max_concurrent)
+        logger.info("  ✓ AdmissionController initialized (max_concurrent=%d)", admission_controller._max_concurrent)
     except Exception as e:
         logger.warning("  ⚠ AdmissionController failed to initialize: %s", e)
 
@@ -406,8 +404,8 @@ async def lifespan(app: FastAPI):
 
     # 10. ResearchLoop and TechniqueIntegrator
     try:
-        research_loop = ResearchLoop(router=router, db=db, observability=observability)
-        technique_integrator = TechniqueIntegrator(research_loop=research_loop)
+        research_loop = ResearchLoop(router=router)
+        technique_integrator = TechniqueIntegrator(router=router)
         app.state.research_loop = research_loop
         app.state.technique_integrator = technique_integrator
         logger.info("  ✓ ResearchLoop and TechniqueIntegrator initialized")
@@ -428,9 +426,15 @@ async def lifespan(app: FastAPI):
 
     # 12. Failover Engine and Hot Switcher
     try:
-        from core.failover import AutomaticFailoverEngine, ProviderHotSwitcher
-        failover_engine = AutomaticFailoverEngine(router=router)
-        provider_hot_switcher = ProviderHotSwitcher(router=router, failover_engine=failover_engine)
+        from providers.failover import AutomaticFailoverEngine, ProviderHotSwitcher
+        failover_engine = AutomaticFailoverEngine(
+            provider_registry=router,
+            checkpoint_manager=checkpoint_manager,
+        )
+        provider_hot_switcher = ProviderHotSwitcher(
+            failover_engine=failover_engine,
+            provider_router=router,
+        )
         app.state.failover_engine = failover_engine
         app.state.provider_hot_switcher = provider_hot_switcher
         logger.info("  ✓ AutomaticFailoverEngine and ProviderHotSwitcher initialized")
@@ -439,8 +443,8 @@ async def lifespan(app: FastAPI):
 
     # 13. Service Container (ADR-003)
     try:
-        from core.container import ServiceContainer
-        container = ServiceContainer()
+        from core.di.container import ServiceContainer
+        container = ServiceContainer(settings=settings)
         if db is not None:
             container.register_instance(type(db), db)
         if cache is not None:

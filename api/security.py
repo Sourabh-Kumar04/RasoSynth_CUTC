@@ -6,7 +6,9 @@ import hmac
 import json
 import logging
 import os
+from pathlib import Path
 import secrets
+import tempfile
 import time
 from typing import Any, Dict, List, Optional
 
@@ -115,12 +117,24 @@ class CSRFTokenManager:
         self._token_ttl = int(os.getenv("CSRF_TOKEN_TTL_SECONDS", "3600"))  # 1 hour default
         secret = os.getenv("CSRF_SECRET")
         if not secret:
-            secret = secrets.token_hex(32)
-            logger.warning(
-                "CSRF_SECRET is unset; using an ephemeral CSRF secret "
-                "(tokens will not survive a restart or validate across "
-                "workers). Set CSRF_SECRET."
-            )
+            # Check temp cached secret across multi-process workers on the same machine
+            secret_file = Path(tempfile.gettempdir()) / ".rasosynth_auto_csrf_secret"
+            cached = None
+            if secret_file.exists():
+                try:
+                    c = secret_file.read_text(encoding="utf-8").strip()
+                    if len(c) >= 32:
+                        cached = c
+                except Exception:
+                    pass
+            if not cached:
+                cached = secrets.token_hex(32)
+                try:
+                    secret_file.write_text(cached, encoding="utf-8")
+                except Exception:
+                    pass
+            secret = cached
+            os.environ["CSRF_SECRET"] = secret
         self._secret = secret
 
     def _sign(self, payload: str) -> str:
