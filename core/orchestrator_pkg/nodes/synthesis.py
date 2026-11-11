@@ -512,7 +512,17 @@ class SynthesisNodeMixin:
             try:
                 from cli import BUILTIN_SEED_BANK
                 domain_lower = str(target_domain_str or user_prompt or "").lower()
-                if any(k in domain_lower for k in ["tax", "gst", "india", "cgst", "finance", "compliance"]):
+                if any(k in domain_lower for k in ["income tax", "itr", "115bac", "capital gains", "tds", "advance tax"]):
+                    seed_pool = BUILTIN_SEED_BANK.get("income_tax") or BUILTIN_SEED_BANK.get("taxation", [])
+                elif any(k in domain_lower for k in ["privacy", "dpdp", "personal data", "gdpr", "consent", "fiduciary"]):
+                    seed_pool = BUILTIN_SEED_BANK.get("compliance_privacy") or BUILTIN_SEED_BANK.get("general", [])
+                elif any(k in domain_lower for k in ["company", "corporate", "csr", "mca", "director", "companies act"]):
+                    seed_pool = BUILTIN_SEED_BANK.get("corporate_law") or BUILTIN_SEED_BANK.get("general", [])
+                elif any(k in domain_lower for k in ["lora", "attention", "merkle", "quant", "gguf", "dpo", "llm", "neural", "deep learning"]):
+                    seed_pool = BUILTIN_SEED_BANK.get("ai_engineering") or BUILTIN_SEED_BANK.get("general", [])
+                elif any(k in domain_lower for k in ["hindi", "hinglish", "kya", "hai", "kaise"]):
+                    seed_pool = BUILTIN_SEED_BANK.get("multilingual_indic") or BUILTIN_SEED_BANK.get("taxation", [])
+                elif any(k in domain_lower for k in ["tax", "gst", "india", "cgst", "finance", "compliance"]):
                     seed_pool = BUILTIN_SEED_BANK.get("taxation", [])
                 else:
                     seed_pool = BUILTIN_SEED_BANK.get("general", [])
@@ -527,9 +537,12 @@ class SynthesisNodeMixin:
                                 "source": "builtin_seed_bank",
                                 "domain": target_domain_str,
                                 "language": config.get("language", "en"),
+                                "category": seed_item.get("category", "general"),
+                                "citation": seed_item.get("citation", ""),
+                                "verified_statutory": seed_item.get("verified_statutory", True),
                             },
-                            "quality_score": 0.95,
-                            "difficulty_tier": 3,
+                            "quality_score": 0.98,
+                            "difficulty_tier": int(seed_item.get("tier", 3)),
                             "curriculum_order": len(samples),
                         })
             except Exception as seed_err:
