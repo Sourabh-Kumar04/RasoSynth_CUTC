@@ -154,12 +154,32 @@ class CSRFMiddleware(BaseHTTPMiddleware):
                          "Fetch a token from GET /auth/csrf-token."}
             )
 
-        # Validate the HMAC signature and timestamp of the CSRF token
-        parts = csrf_token.split(":", 2)
-        token_user_id = parts[2] if len(parts) == 3 else "anonymous"
+        # Get user from JWT if present. A token bound to "anonymous"
+        # is never accepted: CSRF tokens are only issued to authenticated
+        # users (GET /auth/csrf-token), so an anonymous token on a
+        # state-changing request is rejected here even if it was minted
+        # before this fix and is still within its TTL.
+        auth_header = request.headers.get("Authorization", "")
+        if auth_header.startswith("Bearer "):
+            try:
+                auth_mgr = get_auth_manager()
+                token_data = auth_mgr.verify_token(auth_header[7:])
+                user_id = token_data.user_id
+            except Exception:
+                user_id = "anonymous"
+        else:
+            user_id = "anonymous"
 
-        if not _csrf_manager.validate_token(csrf_token, token_user_id):
-            logger.warning(f"Invalid/expired CSRF token on {request.method} {path} for user {token_user_id}")
+        if user_id == "anonymous":
+            logger.warning(f"CSRF token presented without an authenticated user on {request.method} {path}")
+            return JSONResponse(
+                status_code=403,
+                content={"detail": "CSRF token requires an authenticated user. "
+                         "Fetch a token from GET /auth/csrf-token with a valid Authorization header."}
+            )
+
+        if not _csrf_manager.validate_token(csrf_token, user_id):
+            logger.warning(f"Invalid/expired CSRF token on {request.method} {path} for user {user_id}")
             return JSONResponse(
                 status_code=403,
                 content={"detail": "Invalid or expired CSRF token. Fetch a new token from GET /auth/csrf-token."}

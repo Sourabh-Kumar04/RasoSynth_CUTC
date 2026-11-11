@@ -1,3 +1,4 @@
+import inspect
 """Dependency injection container for enterprise-grade service management."""
 import asyncio
 import logging
@@ -176,7 +177,7 @@ class ServiceContainer:
         # Run shutdown callbacks in reverse order
         for callback in reversed(self._shutdown_callbacks):
             try:
-                if asyncio.iscoroutinefunction(callback):
+                if inspect.iscoroutinefunction(callback):
                     await callback()
                 else:
                     callback()

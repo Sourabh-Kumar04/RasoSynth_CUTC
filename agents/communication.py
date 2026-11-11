@@ -1,3 +1,4 @@
+import inspect
 """
 Agent Communication System
 
@@ -101,7 +102,7 @@ class EventSystem:
         handlers = self._subscribers.get(event.event_type, [])
         for handler in handlers:
             try:
-                if asyncio.iscoroutinefunction(handler):
+                if inspect.iscoroutinefunction(handler):
                     await handler(event)
                 else:
                     handler(event)
@@ -210,7 +211,7 @@ class SharedMemory:
         if notify and key in self._watchers:
             for watcher in self._watchers[key]:
                 try:
-                    if asyncio.iscoroutinefunction(watcher):
+                    if inspect.iscoroutinefunction(watcher):
                         await watcher(key, value, old_value)
                     else:
                         watcher(key, value, old_value)

@@ -214,7 +214,13 @@ class APIClient {
   }
 
   private async fetchCsrfToken(): Promise<string> {
+    const headers: Record<string, string> = {}
+    const jwtToken = this.getToken()
+    if (jwtToken) {
+      headers['Authorization'] = `Bearer ${jwtToken}`
+    }
     const response = await fetch(`${this.baseUrl}/auth/csrf-token`, {
+      headers,
       credentials: 'include',
     })
     if (!response.ok) {

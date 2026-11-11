@@ -1,3 +1,4 @@
+import inspect
 """
 Distributed Tracing System
 
@@ -241,7 +242,7 @@ class DistributedTracer:
         # Export trace
         for exporter in self._exporters:
             try:
-                if asyncio.iscoroutinefunction(exporter):
+                if inspect.iscoroutinefunction(exporter):
                     asyncio.create_task(exporter(span))
                 else:
                     exporter(span)

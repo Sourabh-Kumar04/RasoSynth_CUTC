@@ -1,3 +1,4 @@
+import inspect
 """
 Dashboards, Alerts & Incident Management
 
@@ -186,7 +187,7 @@ class AlertManager:
         handlers = self._notification_handlers.get(channel, [])
         for handler in handlers:
             try:
-                if asyncio.iscoroutinefunction(handler):
+                if inspect.iscoroutinefunction(handler):
                     await handler(alert)
                 else:
                     handler(alert)
@@ -387,7 +388,7 @@ class RealTimeMetricsStream:
         # Notify subscribers
         for subscriber_id, handler in self._subscribers.items():
             try:
-                if asyncio.iscoroutinefunction(handler):
+                if inspect.iscoroutinefunction(handler):
                     await handler(metrics)
                 else:
                     handler(metrics)

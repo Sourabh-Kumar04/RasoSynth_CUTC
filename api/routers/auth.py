@@ -123,12 +123,17 @@ async def get_current_user_info(current_user: User = Depends(get_current_user)):
 
 
 @router.get("/auth/csrf-token", tags=["Authentication"])
-async def get_csrf_token(current_user: Optional[User] = Depends(get_current_user_optional)):
-    """Issue a stateless CSRF token bound to the authenticated user or anonymous session."""
-    user_id = current_user.user_id if current_user else "anonymous"
-    token = _csrf_manager.generate_token(user_id)
+async def get_csrf_token(current_user: User = Depends(get_current_user)):
+    """Issue a stateless CSRF token bound to the authenticated user.
+
+    Unauthenticated requests are rejected (401): tokens are never
+    issued for the ``anonymous`` identity, because the CSRF middleware
+    would otherwise accept an attacker-minted anonymous token on
+    state-changing requests. Pair with the ``X-CSRF-Token`` header.
+    """
+    token = _csrf_manager.generate_token(current_user.user_id)
     return {
         "csrf_token": token,
-        "user_id": user_id,
+        "user_id": current_user.user_id,
         "header_name": "X-CSRF-Token",
     }

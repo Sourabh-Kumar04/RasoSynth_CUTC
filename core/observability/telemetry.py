@@ -1,3 +1,4 @@
+import inspect
 """
 Enterprise Observability with OpenTelemetry
 
@@ -650,7 +651,7 @@ class HealthChecker:
 
         for name, check in self._checks.items():
             try:
-                if asyncio.iscoroutinefunction(check):
+                if inspect.iscoroutinefunction(check):
                     result = await check()
                 else:
                     result = check()

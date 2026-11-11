@@ -1,3 +1,4 @@
+import inspect
 """Regression tests for step-5 P1 items 14/15 (API fake-success + hygiene).
 
 Covers, per sub-item:
@@ -341,5 +342,5 @@ def test_retry_launches_pipeline(test_client, auth_headers, monkeypatch):
             break
         time.sleep(0.1)
     assert calls and calls[0][0] == "job-1"
-    assert asyncio.iscoroutinefunction(fake_run_pipeline)
+    assert inspect.iscoroutinefunction(fake_run_pipeline)
 

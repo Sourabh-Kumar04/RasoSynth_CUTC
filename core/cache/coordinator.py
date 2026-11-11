@@ -1,3 +1,4 @@
+import inspect
 """
 Event-Driven Coordination
 
@@ -111,7 +112,7 @@ class EventBus:
         handlers = self._handlers.get(event_type, [])
         for handler in handlers:
             try:
-                if asyncio.iscoroutinefunction(handler):
+                if inspect.iscoroutinefunction(handler):
                     await handler(event)
                 else:
                     handler(event)
@@ -248,7 +249,7 @@ class PubSubManager:
                         data = json.loads(message["data"])
                         handler = self._subscribers.get(channel, {}).get(subscriber_id)
                         if handler:
-                            if asyncio.iscoroutinefunction(handler):
+                            if inspect.iscoroutinefunction(handler):
                                 await handler(data)
                             else:
                                 handler(data)

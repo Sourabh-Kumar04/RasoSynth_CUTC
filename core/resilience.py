@@ -11,6 +11,7 @@ from datetime import datetime, timedelta, timezone
 from enum import Enum
 from functools import wraps
 import asyncio
+import inspect
 import logging
 import random
 import time
@@ -144,7 +145,7 @@ class CircuitBreaker:
                 self._half_open_calls += 1
 
         try:
-            if asyncio.iscoroutinefunction(func):
+            if inspect.iscoroutinefunction(func):
                 result = await func(*args, **kwargs)
             else:
                 result = func(*args, **kwargs)
@@ -320,7 +321,7 @@ class Bulkhead:
             )
 
         try:
-            if asyncio.iscoroutinefunction(func):
+            if inspect.iscoroutinefunction(func):
                 return await asyncio.wait_for(
                     func(*args, **kwargs),
                     timeout=self.config.timeout_seconds

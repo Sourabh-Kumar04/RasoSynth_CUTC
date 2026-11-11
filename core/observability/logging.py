@@ -1,3 +1,4 @@
+import inspect
 """
 Structured Logging System
 
@@ -181,7 +182,7 @@ class StructuredLogger:
         # Invoke handlers
         for handler in self._handlers:
             try:
-                if asyncio.iscoroutinefunction(handler):
+                if inspect.iscoroutinefunction(handler):
                     await handler(schema)
                 else:
                     handler(schema)
