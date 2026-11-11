@@ -43,6 +43,34 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
+  author-gate:
+    name: Commit Authorship & Provenance Verification
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 10
+
+      - name: Verify Author Integrity & Reject AI Co-Author Tags
+        run: |
+          AUTHOR_EMAIL=$(git log -1 --format='%ae')
+          AUTHOR_NAME=$(git log -1 --format='%an')
+          echo "Inspecting latest commit author: $AUTHOR_NAME <$AUTHOR_EMAIL>"
+
+          if [[ "$AUTHOR_EMAIL" != "Sourabhkumar01010101@gmail.com" ]]; then
+            echo "Error: Commit author email must strictly be Sourabhkumar01010101@gmail.com. Found: $AUTHOR_EMAIL"
+            exit 1
+          fi
+
+          if git log -1 --format='%B' | grep -iE 'Co-authored-by:.*(bot|ai|assistant|anthropic|openai|github-actions)'; then
+            echo "Error: AI co-authorship tags detected in commit message. Disallowed by repository governance."
+            exit 1
+          fi
+
+          echo "Authorship verified: $AUTHOR_NAME <$AUTHOR_EMAIL> with zero illicit AI tags."
+
   lint:
     name: Lint (ruff, clean rules only)
     runs-on: ubuntu-latest

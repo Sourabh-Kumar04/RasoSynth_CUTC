@@ -83,6 +83,7 @@ export default function OrchestrationPage() {
   const [expandedSamples, setExpandedSamples] = useState<Record<number, boolean>>({})
   const [copiedSampleIdx, setCopiedSampleIdx] = useState<number | null>(null)
   const [showJobDrawer, setShowJobDrawer] = useState(false)
+  const [selectedTrajectory, setSelectedTrajectory] = useState<any | null>(null)
 
   const fetchJobs = useCallback(async () => {
     try {
@@ -1111,7 +1112,48 @@ export default function OrchestrationPage() {
               <div className="p-4 rounded-lg bg-[#0a0a0f] border border-[#1f1f2e] space-y-3 font-mono text-xs">
                 <div className="flex items-center justify-between border-b border-[#1c1c28] pb-2">
                   <span className="text-white font-bold uppercase">Sample Revision Trajectory (Legal / Taxation Domain)</span>
-                  <span className="text-emerald-400 text-xs font-bold">Converged in 2 iterations</span>
+                  <div className="flex items-center gap-2">
+                    <span className="text-emerald-400 text-xs font-bold">Converged in 2 iterations</span>
+                    <Button
+                      size="sm"
+                      onClick={() => setSelectedTrajectory({
+                        domain: "Statutory Taxation & CGST Compliance",
+                        seed: "Section 16(4) Input Tax Credit time limit rule",
+                        turns: [
+                          {
+                            turn: 0,
+                            agent: "Generator (DomainSpecialistAgent)",
+                            score: 0.52,
+                            delta: "+0.00",
+                            breakdown: { legal_invariants: 0.45, grounding: 0.60, toxicity_safety: 1.0 },
+                            output: "ITC must be claimed on time under GST rules by business taxpayers.",
+                            critique: null
+                          },
+                          {
+                            turn: 1,
+                            agent: "Critic (CriticAgent)",
+                            score: 0.74,
+                            delta: "+0.22",
+                            breakdown: { legal_invariants: 0.70, grounding: 0.75, toxicity_safety: 1.0 },
+                            output: "ITC claims are subject to annual return dates or November deadline.",
+                            critique: "Vague phrasing. Must cite Section 16(4) of the CGST Act 2017 explicitly and state '30th day of November following the end of financial year or the date of furnishing of the relevant annual return, whichever is earlier'."
+                          },
+                          {
+                            turn: 2,
+                            agent: "Reviser (ReviserAgent)",
+                            score: 0.89,
+                            delta: "+0.15",
+                            breakdown: { legal_invariants: 0.92, grounding: 0.90, toxicity_safety: 1.0 },
+                            output: "Pursuant to Section 16(4) of the CGST Act 2017, a registered person shall not be entitled to take input tax credit in respect of any invoice or debit note after the 30th day of November following the end of financial year to which such invoice pertains, or the furnishing of the relevant annual return, whichever is earlier.",
+                            critique: "Fully grounded in statutory gazette. Invariant verified. Ready for Merkle DBOM signing."
+                          }
+                        ]
+                      })}
+                      className="h-7 text-xs bg-[#f26625] hover:bg-[#d4551d] text-white font-bold font-mono px-2.5 rounded"
+                    >
+                      Inspect Multi-Turn Trajectory
+                    </Button>
+                  </div>
                 </div>
                 <div className="space-y-2">
                   <div className="p-2.5 rounded bg-[#12121a] border border-[#272738]">
@@ -1128,6 +1170,108 @@ export default function OrchestrationPage() {
                   </div>
                 </div>
               </div>
+
+              {/* Trajectory Drill-Down Slide-Out Modal */}
+              {selectedTrajectory && (
+                <div className="fixed inset-0 z-50 bg-black/70 backdrop-blur-sm flex items-center justify-center p-4">
+                  <div className="w-full max-w-4xl max-h-[90vh] bg-[#0e0e17] border border-[#272738] rounded-xl flex flex-col overflow-hidden shadow-2xl font-mono text-xs">
+                    <div className="p-4 border-b border-[#272738] bg-[#12121c] flex items-center justify-between">
+                      <div>
+                        <h3 className="text-sm font-bold text-white flex items-center gap-2">
+                          <Sparkles className="w-4 h-4 text-[#f26625]" />
+                          Multi-Turn Self-Refinement Trajectory Drawer
+                        </h3>
+                        <p className="text-[11px] text-[#a8a29e] mt-0.5">
+                          Domain: {selectedTrajectory.domain} &bull; Seed: {selectedTrajectory.seed}
+                        </p>
+                      </div>
+                      <Button
+                        size="sm"
+                        variant="ghost"
+                        onClick={() => setSelectedTrajectory(null)}
+                        className="h-8 w-8 p-0 text-zinc-400 hover:text-white"
+                      >
+                        ✕
+                      </Button>
+                    </div>
+
+                    <div className="p-6 overflow-y-auto space-y-6">
+                      {/* Quality Score Delta Progression */}
+                      <div className="p-4 rounded-lg bg-[#08080d] border border-[#1c1c28] space-y-3">
+                        <div className="flex items-center justify-between text-xs">
+                          <span className="text-zinc-300 font-bold uppercase tracking-wider">Quality Score Progression (Q₀ ➔ Q₁ ➔ Q₂)</span>
+                          <span className="text-emerald-400 font-bold">+0.37 Net Quality Gain</span>
+                        </div>
+                        <div className="grid grid-cols-3 gap-3">
+                          {selectedTrajectory.turns.map((t: any, i: number) => (
+                            <div key={i} className="p-3 rounded bg-[#12121a] border border-[#272738] space-y-1">
+                              <div className="flex justify-between text-[11px]">
+                                <span className="text-zinc-400">Turn {t.turn}</span>
+                                <span className="text-emerald-400 font-bold">{(t.score * 100).toFixed(0)}% ({t.delta})</span>
+                              </div>
+                              <div className="w-full bg-[#1c1c28] h-1.5 rounded-full overflow-hidden">
+                                <div
+                                  className="h-full bg-[#f26625] rounded-full"
+                                  style={{ width: `${t.score * 100}%` }}
+                                />
+                              </div>
+                              <p className="text-[10px] text-zinc-400 truncate">{t.agent.split(' ')[0]}</p>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+
+                      {/* Step-by-Step Trajectory */}
+                      <div className="space-y-4">
+                        {selectedTrajectory.turns.map((turn: any, idx: number) => (
+                          <div key={idx} className="p-4 rounded-lg bg-[#0a0a0f] border border-[#272738] space-y-3">
+                            <div className="flex items-center justify-between border-b border-[#1c1c28] pb-2">
+                              <span className="text-[#f26625] font-bold text-xs uppercase flex items-center gap-1.5">
+                                <span className="w-2 h-2 rounded-full bg-[#f26625]" />
+                                Step {turn.turn}: {turn.agent}
+                              </span>
+                              <div className="flex items-center gap-3 text-[11px]">
+                                <span className="text-zinc-400">Legal: {Math.round(turn.breakdown.legal_invariants * 100)}%</span>
+                                <span className="text-zinc-400">Grounding: {Math.round(turn.breakdown.grounding * 100)}%</span>
+                                <span className="px-2 py-0.5 rounded bg-emerald-950/40 text-emerald-400 font-bold border border-emerald-500/20">
+                                  Score: {turn.score.toFixed(2)}
+                                </span>
+                              </div>
+                            </div>
+
+                            <div className="space-y-1.5">
+                              <span className="text-[10px] uppercase font-bold text-zinc-400 block">Candidate Output:</span>
+                              <p className="text-xs text-white bg-[#12121c] p-3 rounded border border-[#1f1f2e] leading-relaxed">
+                                {turn.output}
+                              </p>
+                            </div>
+
+                            {turn.critique && (
+                              <div className="space-y-1.5 pt-1">
+                                <span className="text-[10px] uppercase font-bold text-amber-400 block">Critic Evaluator Feedback:</span>
+                                <p className="text-xs text-amber-200/90 italic bg-amber-950/20 p-2.5 rounded border border-amber-900/40 leading-relaxed">
+                                  &ldquo;{turn.critique}&rdquo;
+                                </p>
+                              </div>
+                            )}
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+
+                    <div className="p-4 border-t border-[#272738] bg-[#12121c] flex items-center justify-between">
+                      <span className="text-[11px] text-zinc-400">Autonomous Convergence Gate: Passed (Threshold &ge; 0.85)</span>
+                      <Button
+                        size="sm"
+                        onClick={() => setSelectedTrajectory(null)}
+                        className="bg-[#1f1f2e] hover:bg-[#2a2a3d] text-white text-xs font-mono h-8 px-4"
+                      >
+                        Close Drawer
+                      </Button>
+                    </div>
+                  </div>
+                </div>
+              )}
             </CardContent>
           </Card>
         </TabsContent>

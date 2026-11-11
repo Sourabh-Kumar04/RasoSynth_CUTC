@@ -355,3 +355,38 @@ def record_quality_snapshot(
             _job_quality[job_id] = {"quality_scores": []}
         _job_quality[job_id]["quality_scores"].append(avg_quality)
         _job_quality[job_id]["last_updated"] = datetime.now(timezone.utc).isoformat()
+
+
+@router.post("/redact/stream")
+async def stream_dataset_redaction(
+    request: Request,
+    current_user: User = Depends(get_current_user),
+):
+    """
+    Streaming dataset de-identification endpoint.
+    Accepts raw text or JSON Lines streams, scrubs statutory Indian PII
+    (Aadhaar with Verhoeff validation, PAN, GSTIN, Mobile, IFSC),
+    and streams sanitized lines in real time with telemetry headers.
+    """
+    from fastapi.responses import StreamingResponse
+    import json
+    from core.safety.indian_pii import IndianPIIRedactor
+
+    redactor = IndianPIIRedactor()
+
+    async def line_redactor_generator():
+        stats = {"lines_processed": 0, "pii_scrubbed": 0}
+        async for chunk in request.stream():
+            decoded = chunk.decode("utf-8", errors="replace")
+            for line in decoded.splitlines(keepends=True):
+                stats["lines_processed"] += 1
+                result = redactor.redact(line)
+                if result.has_pii:
+                    stats["pii_scrubbed"] += len(result.matches_found)
+                yield result.clean_text
+
+    return StreamingResponse(
+        line_redactor_generator(),
+        media_type="application/x-ndjson",
+        headers={"X-Deid-Engine": "RasoSynthTune-Verhoeff-v2"},
+    )

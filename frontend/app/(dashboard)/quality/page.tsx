@@ -126,6 +126,35 @@ export default function QualityDashboardPage() {
   const [piiInput, setPiiInput] = useState("Taxpayer PAN: ABCDE1234F, GSTIN: 27ABCDE1234F1Z5, IFSC: SBIN0001234, Contact: +91 9876543210, Aadhaar: 2345 6789 0124");
   const [piiOutput, setPiiOutput] = useState("");
   const [piiMatches, setPiiMatches] = useState<string[]>([]);
+  const [uploadedFileName, setUploadedFileName] = useState<string | null>(null);
+  const [redactionStats, setRedactionStats] = useState<{ total: number; entities: Record<string, number> } | null>(null);
+
+  const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    setUploadedFileName(file.name);
+    const reader = new FileReader();
+    reader.onload = (event) => {
+      const text = event.target?.result as string;
+      if (text) {
+        setPiiInput(text.slice(0, 5000)); // preview first 5k chars
+      }
+    };
+    reader.readAsText(file);
+  };
+
+  const handleDownloadSanitized = () => {
+    if (!piiOutput) return;
+    const blob = new Blob([piiOutput], { type: "text/plain;charset=utf-8" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = `sanitized_${uploadedFileName || "dataset.jsonl"}`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+  };
 
   const handleExecutePIIRedaction = () => {
     let clean = piiInput;
@@ -917,21 +946,50 @@ export default function QualityDashboardPage() {
           <CardContent className="p-5 space-y-4 font-mono text-xs">
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
               <div className="space-y-2">
-                <label className="text-xs font-bold text-zinc-300 block uppercase">Raw Domain Payload (Input):</label>
+                <div className="flex items-center justify-between">
+                  <label className="text-xs font-bold text-zinc-300 block uppercase">Raw Domain Payload (Input):</label>
+                  <label className="cursor-pointer text-[11px] text-[#f26625] hover:text-[#d4551d] font-bold flex items-center gap-1">
+                    <span>📁 Upload JSONL / CSV</span>
+                    <input
+                      type="file"
+                      accept=".jsonl,.csv,.json,.txt"
+                      className="hidden"
+                      onChange={handleFileUpload}
+                    />
+                  </label>
+                </div>
+                {uploadedFileName && (
+                  <div className="text-[10px] text-zinc-400 bg-[#161622] px-2 py-1 rounded border border-[#272738] flex justify-between items-center">
+                    <span>Loaded: <strong className="text-white">{uploadedFileName}</strong></span>
+                    <button onClick={() => setUploadedFileName(null)} className="text-rose-400 hover:text-rose-300">✕</button>
+                  </div>
+                )}
                 <textarea
                   rows={4}
                   value={piiInput}
                   onChange={(e) => setPiiInput(e.target.value)}
                   className="w-full bg-[#0a0a0f] border border-[#272738] rounded-md p-3 text-xs text-white focus:outline-none focus:border-[#f26625]"
-                  placeholder="Enter sample text containing statutory identifiers..."
+                  placeholder="Enter sample text or drop a dataset file containing statutory identifiers..."
                 />
-                <Button
-                  onClick={handleExecutePIIRedaction}
-                  size="sm"
-                  className="bg-[#f26625] hover:bg-[#d4551d] text-white text-xs font-bold font-mono h-8 rounded-md"
-                >
-                  <Sparkles className="w-3.5 h-3.5 mr-1.5" /> Execute Statutory De-Identification
-                </Button>
+                <div className="flex items-center gap-2">
+                  <Button
+                    onClick={handleExecutePIIRedaction}
+                    size="sm"
+                    className="bg-[#f26625] hover:bg-[#d4551d] text-white text-xs font-bold font-mono h-8 rounded-md"
+                  >
+                    <Sparkles className="w-3.5 h-3.5 mr-1.5" /> Execute Statutory De-Identification
+                  </Button>
+                  {piiOutput && (
+                    <Button
+                      onClick={handleDownloadSanitized}
+                      size="sm"
+                      variant="outline"
+                      className="border-[#272738] hover:bg-[#1a1a28] text-white text-xs font-mono h-8 rounded-md"
+                    >
+                      💾 Download Sanitized Output
+                    </Button>
+                  )}
+                </div>
               </div>
 
               <div className="space-y-2">
