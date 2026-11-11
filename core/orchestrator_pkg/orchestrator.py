@@ -96,7 +96,14 @@ class DatasetOrchestrator(
 
         try:
             from langgraph.checkpoint.serde.jsonplus import JsonPlusSerializer
-            self.checkpointer = MemorySaver(serde=JsonPlusSerializer(allowed_msgpack_modules=True))
+            allowed_modules = [
+                ("api.legacy_schemas", "DatasetType"),
+                ("api.legacy_schemas", "QualityLevel"),
+                ("api.legacy_schemas", "LicenseRequirement"),
+                ("api.legacy_schemas", "ExportFormat"),
+                ("core.intent", "UserIntent"),
+            ]
+            self.checkpointer = MemorySaver(serde=JsonPlusSerializer(allowed_msgpack_modules=allowed_modules))
         except Exception:
             self.checkpointer = MemorySaver()
         self.graph = self._build_graph()

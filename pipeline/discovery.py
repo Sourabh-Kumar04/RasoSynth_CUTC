@@ -2450,6 +2450,7 @@ class DiscoveryPipeline:
                         "srlimit": 15,
                         "format": "json",
                     },
+                    headers={"User-Agent": "RasoSynthTune/1.0 (https://rasosynthtune-indiaai.vercel.app; support@rasosynthtune.ai)"},
                 )
 
                 if response.status_code == 200:
@@ -2494,6 +2495,7 @@ class DiscoveryPipeline:
                     "srlimit": 10,
                     "format": "json",
                 },
+                headers={"User-Agent": "RasoSynthTune/1.0 (https://rasosynthtune-indiaai.vercel.app; support@rasosynthtune.ai)"},
                 max_retries=1,
                 timeout=8.0,
             )

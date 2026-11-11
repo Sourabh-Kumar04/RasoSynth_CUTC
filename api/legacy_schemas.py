@@ -26,6 +26,8 @@ class QualityLevel(str, Enum):
     DRAFT = "draft"
     STANDARD = "standard"
     HIGH = "high"
+    PREMIUM = "premium"
+    ENTERPRISE = "enterprise"
     RESEARCH = "research"
 
 
