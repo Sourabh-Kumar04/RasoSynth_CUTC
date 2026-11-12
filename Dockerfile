@@ -61,12 +61,12 @@ RUN mkdir -p /app/outputs && chown -R app:app /app
 # Switch to non-root user
 USER app
 
-# Expose port
-EXPOSE 8000
+# Expose ports (8000 for standard Docker, 7860 for Hugging Face Spaces)
+EXPOSE 8000 7860
 
-# Health check with proper start delay
+# Health check with dynamic port resolution
 HEALTHCHECK --interval=30s --timeout=10s --start-period=180s --retries=5 \
-    CMD curl -f http://localhost:8000/health || exit 1
+    CMD curl -f http://localhost:${PORT:-8000}/health || exit 1
 
-# Run the application with production settings
-CMD ["/app/.venv/bin/python", "-m", "uvicorn", "api.server:app", "--host", "0.0.0.0", "--port", "8000", "--workers", "4", "--limit-concurrency", "100"]
+# Run the application via start script (honoring PORT env var)
+CMD ["/app/start.sh"]

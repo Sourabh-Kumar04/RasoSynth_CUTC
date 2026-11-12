@@ -27,10 +27,13 @@ def main():
     if len(sys.argv) > 1 and sys.argv[1] in {"-h", "--help"}:
         sys.exit(cli_main(sys.argv[1:]))
 
+    import os
+    default_port = int(os.getenv("PORT", "8000"))
+
     # Default to uvicorn API server
     parser = argparse.ArgumentParser(description="RasoSynthTune Canonical Server & Platform")
     parser.add_argument("--host", default="0.0.0.0", help="Host to bind to")
-    parser.add_argument("--port", type=int, default=8000, help="Port to bind to")
+    parser.add_argument("--port", type=int, default=default_port, help="Port to bind to")
     parser.add_argument("--reload", action="store_true", help="Enable auto-reload")
     parser.add_argument("--workers", type=int, default=1, help="Number of workers")
 

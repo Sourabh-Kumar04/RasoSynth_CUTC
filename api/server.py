@@ -217,10 +217,13 @@ def _get_cors_origins() -> list[str]:
         return [o.strip() for o in cors_origins.split(",") if o.strip()]
 
     if env in ("production", "gpu_cluster"):
-        raise RuntimeError(
-            "CORS_ALLOWED_ORIGINS must be explicitly set in production. "
-            "Set CORS_ALLOWED_ORIGINS environment variable."
-        )
+        # If CORS_ALLOWED_ORIGINS is not explicitly configured, default to the official production frontend
+        default_prod_origins = [
+            "https://rasosynthtune-indiaai.vercel.app",
+            "https://sourabh-kumar04-rasosynthtune.hf.space",
+        ]
+        logger.info(f"CORS_ALLOWED_ORIGINS unset in {env}; defaulting to {default_prod_origins}")
+        return default_prod_origins
 
     return [
         "http://localhost:3000",
