@@ -56,7 +56,7 @@ WORKDIR /app
 COPY --chown=app:app . .
 
 # Create outputs directory with proper permissions
-RUN mkdir -p /app/outputs && chown -R app:app /app
+RUN mkdir -p /app/outputs && chown -R app:app /app && chmod +x /app/start.sh
 
 # Switch to non-root user
 USER app
