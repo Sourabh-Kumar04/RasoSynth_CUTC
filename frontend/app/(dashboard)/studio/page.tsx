@@ -26,6 +26,7 @@ import { useRouter, useSearchParams } from 'next/navigation'
 import { ZenSpatialCanvas } from '@/components/zen/zen-spatial-canvas'
 import { playClickSound } from '@/lib/audio/sound-effects'
 import { api } from '@/lib/api/client'
+import { formatErrorMessage } from '@/lib/utils'
 
 // 1-Click Enterprise Industry Presets
 const INDUSTRY_PRESETS = [
@@ -617,7 +618,7 @@ function StudioContent() {
                 </div>
 
                 <div className="p-3 bg-[#0a0a0f] border border-[#272738] rounded-md font-mono text-xs text-zinc-300 max-h-60 overflow-y-auto whitespace-pre leading-relaxed">
-                  {synthesizedResult.code || synthesizedResult.error}
+                  {synthesizedResult.code ? String(synthesizedResult.code) : formatErrorMessage(synthesizedResult.error)}
                 </div>
 
                 <div className="flex items-center justify-between pt-2">
@@ -1389,7 +1390,7 @@ function StudioContent() {
                   type="range"
                   min={100}
                   max={50000}
-                  step={500}
+                  step={100}
                   value={datasetSize}
                   onChange={(e) => setDatasetSize(Number(e.target.value))}
                   className="w-full accent-[#f26625] bg-[#0a0a0f] cursor-pointer"

@@ -44,6 +44,7 @@ import { BrandLogo } from '@/components/ui/brand-logo'
 import { Mascot } from '@/components/ui/mascot'
 import { Button } from '@/components/ui/button'
 import { SynthesisFlowDiagram } from '@/components/ui/synthesis-flow-diagram'
+import { FooterStatus } from '@/components/layout/footer-status'
 
 // 7 Synthesis Engines Definition with example preview data (illustrative, not live output)
 const ENGINES = [
@@ -1153,9 +1154,8 @@ export default function ZenPortalPage() {
                 </span>
               </div>
 
-              <div className="flex items-center gap-2 text-xs text-emerald-400">
-                <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
-                <span>Hybrid Standalone · Operational</span>
+              <div className="pt-1">
+                <FooterStatus />
               </div>
             </div>
 
