@@ -64,6 +64,7 @@ import { useRouter } from 'next/navigation'
 import { api, HealthStatus } from '@/lib/api/client'
 import { MerkleTreeGraph } from '@/components/dbom/merkle-tree-graph'
 import { playClickSound, playSuccessChime } from '@/lib/audio/sound-effects'
+import { formatErrorMessage } from '@/lib/utils'
 
 // Dataset interface matching backend
 interface DatasetJob {
@@ -460,7 +461,7 @@ export default function DatasetsPage() {
           setDatasetSummary(summaryResult.status === 'fulfilled' ? summaryResult.value : null)
         } catch (e: any) {
           console.error('Failed to fetch dataset records:', e)
-          setRecordsError(e.message || 'Failed to fetch records')
+          setRecordsError(formatErrorMessage(e, 'Failed to fetch records'))
         } finally {
           setRecordsLoading(false)
           setSummaryLoading(false)
@@ -492,7 +493,14 @@ export default function DatasetsPage() {
       setDatasets(mappedDatasets)
     } catch (err: any) {
       console.error('Failed to fetch jobs:', err)
-      setError(err.message || 'Failed to load datasets')
+      const errStr = formatErrorMessage(err)
+      if (errStr.includes('401') || errStr.toLowerCase().includes('token') || errStr.toLowerCase().includes('auth')) {
+        // Handle unauthenticated gracefully: empty state, not crashes or errors
+        setDatasets([])
+        setError(null)
+      } else {
+        setError(errStr || 'Failed to load datasets')
+      }
     } finally {
       setIsLoading(false)
     }
@@ -520,7 +528,7 @@ export default function DatasetsPage() {
       document.body.removeChild(a)
     } catch (err: any) {
       console.error('Download failed:', err)
-      setError(err.message || 'Download failed')
+      setError(formatErrorMessage(err, 'Download failed'))
     } finally {
       setDownloadingIds((prev) => {
         const next = new Set(prev)
@@ -588,7 +596,7 @@ export default function DatasetsPage() {
             <AlertCircle className="h-5 w-5 text-rose-400 shrink-0" />
             <div className="flex-1">
               <p className="text-sm font-semibold text-rose-300">Connection Error</p>
-              <p className="text-xs text-rose-400/80">{error}</p>
+              <p className="text-xs text-rose-400/80">{formatErrorMessage(error)}</p>
             </div>
             <Button variant="outline" size="sm" onClick={fetchJobs} className="rounded-md border-rose-500/30 text-rose-300 hover:bg-rose-950/40">
               Retry
@@ -1514,7 +1522,7 @@ export default function DatasetsPage() {
                 </div>
               ) : recordsError ? (
                 <div className="p-4 bg-rose-950/20 rounded-md border border-rose-500/30 text-xs text-rose-300">
-                  Failed to load preview: {recordsError}
+                  Failed to load preview: {formatErrorMessage(recordsError)}
                 </div>
               ) : records.length === 0 ? (
                 <div className="p-8 text-center bg-[#0a0a0f] rounded-md border border-[#272738] text-xs font-mono space-y-2">
@@ -1892,7 +1900,7 @@ export default function DatasetsPage() {
 
               {hfPublishError && (
                 <div className="p-3 rounded bg-rose-950/30 border border-rose-500/40 text-rose-300 text-xs">
-                  {hfPublishError}
+                  {formatErrorMessage(hfPublishError)}
                 </div>
               )}
 

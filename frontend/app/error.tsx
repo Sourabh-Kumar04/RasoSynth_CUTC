@@ -4,6 +4,7 @@ import { useEffect } from 'react'
 import Link from 'next/link'
 import { AlertTriangle, RefreshCw, Home } from 'lucide-react'
 import { Button } from '@/components/ui/button'
+import { formatErrorMessage } from '@/lib/utils'
 
 export default function RootError({
   error,
@@ -16,6 +17,8 @@ export default function RootError({
     console.error('Unhandled platform exception:', error)
   }, [error])
 
+  const errorMessage = formatErrorMessage(error)
+
   return (
     <div className="min-h-screen bg-[#0a0a0f] text-white flex flex-col items-center justify-center p-6 font-mono text-center">
       <div className="w-16 h-16 rounded-2xl bg-rose-950/40 border border-rose-500/40 flex items-center justify-center mb-6 text-rose-400">
@@ -25,14 +28,20 @@ export default function RootError({
       <p className="text-xs text-[#a8a29e] max-w-md mb-6">
         An unexpected error occurred while rendering this view. You can retry the operation or return home.
       </p>
-      {error.message && (
+      {errorMessage && (
         <div className="max-w-md p-3 mb-6 bg-[#12121a] border border-[#272738] rounded-md text-xs text-rose-300 text-left overflow-x-auto">
-          <code>{error.message}</code>
+          <code>{errorMessage}</code>
         </div>
       )}
       <div className="flex items-center gap-3">
         <Button
-          onClick={() => reset()}
+          onClick={() => {
+            try {
+              reset()
+            } catch {
+              window.location.reload()
+            }
+          }}
           className="bg-[#f26625] hover:bg-[#de581a] text-white text-xs font-bold font-mono h-9 px-4 rounded-md flex items-center gap-2"
         >
           <RefreshCw className="w-3.5 h-3.5" />

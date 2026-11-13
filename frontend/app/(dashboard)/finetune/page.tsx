@@ -26,6 +26,7 @@ import { api } from '@/lib/api/client'
 import { TelemetryChart } from '@/components/finetune/telemetry-chart'
 import { StatusStrip } from '@/components/ui/status-strip'
 import { Mascot } from '@/components/ui/mascot'
+import { formatErrorMessage } from '@/lib/utils'
 
 const API_BASE = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000'
 
@@ -494,7 +495,7 @@ function DetailPane({ job, logs, lossHistory, onCancel, onCopy, onReconnect, log
           {job.error && (
             <div className="flex items-start gap-2 text-xs text-rose-300 bg-rose-950/20 border border-rose-500/30 rounded-md px-3 py-2 font-mono">
               <AlertCircle className="h-3.5 w-3.5 mt-0.5 shrink-0 text-rose-400" />
-              {job.error}
+              {formatErrorMessage(job.error)}
             </div>
           )}
 
@@ -1495,7 +1496,7 @@ function FineTuneContent() {
         toast('Fine-tuning started', 'success')
       }
     } catch (err: any) {
-      toast(`Failed: ${err?.message ?? err}`, 'error')
+      toast(`Failed: ${formatErrorMessage(err)}`, 'error')
     } finally {
       setSubmitting(false)
     }
@@ -1532,7 +1533,7 @@ function FineTuneContent() {
       if (selectedJob?.id === jobId) setSelectedJob(null)
       toast('Job cancelled', 'info')
     } catch (err: any) {
-      toast(`Cancel failed: ${err?.message ?? err}`, 'error')
+      toast(`Cancel failed: ${formatErrorMessage(err)}`, 'error')
     }
   }
 
@@ -1662,7 +1663,7 @@ function FineTuneContent() {
               {formError && (
                 <div className="flex items-center gap-2 text-xs text-rose-300 bg-rose-950/20 border border-rose-500/30 rounded-md px-3 py-2">
                   <AlertCircle className="h-4 w-4 shrink-0 text-rose-400" />
-                  {formError}
+                  {formatErrorMessage(formError)}
                 </div>
               )}
 

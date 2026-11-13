@@ -31,6 +31,7 @@ import { HealthMonitor } from '@/components/health-monitor'
 import { TracePanel } from '@/components/trace-panel'
 import { ValidationFeedback } from '@/components/validation-feedback'
 import { api } from '@/lib/api/client'
+import { formatErrorMessage } from '@/lib/utils'
 
 const timeRanges = [
   { label: '5m', value: '5m' },
@@ -104,7 +105,7 @@ export default function ObservabilityPage() {
         setMetricsText(metricsData)
       }
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to load observability data')
+      setError(formatErrorMessage(err, 'Failed to load observability data'))
     } finally {
       setLoading(false)
     }
@@ -241,7 +242,7 @@ export default function ObservabilityPage() {
             <AlertTriangle className="h-5 w-5 text-rose-400" />
             <div className="flex-1">
               <p className="text-sm font-bold text-rose-200">Failed to load observability data</p>
-              <p className="text-xs text-rose-400">{error}</p>
+              <p className="text-xs text-rose-400">{formatErrorMessage(error)}</p>
             </div>
             <Button variant="outline" size="sm" className="rounded-md border-[#3b3b52] text-[#f5f2ea] hover:bg-[#161622]" onClick={fetchData}>
               Retry

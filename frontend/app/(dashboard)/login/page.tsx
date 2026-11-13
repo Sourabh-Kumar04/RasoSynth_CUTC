@@ -7,6 +7,7 @@ import { LogIn, KeyRound, User, AlertCircle, ArrowLeft, ShieldCheck } from 'luci
 import { api } from '@/lib/api/client'
 import { Button } from '@/components/ui/button'
 import { PageHeader } from '@/components/ui/page-header'
+import { formatErrorMessage } from '@/lib/utils'
 
 export default function LoginPage() {
   const router = useRouter()
@@ -64,7 +65,7 @@ export default function LoginPage() {
           {error && (
             <div className="flex items-start gap-2.5 p-3 rounded-md bg-rose-500/10 border border-rose-500/30 text-rose-300 text-xs font-mono">
               <AlertCircle className="w-4 h-4 shrink-0 text-rose-400 mt-0.5" />
-              <span>{error}</span>
+              <span>{formatErrorMessage(error)}</span>
             </div>
           )}
 

@@ -13,6 +13,7 @@ import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { api } from '@/lib/api/client'
+import { formatErrorMessage } from '@/lib/utils'
 
 interface ResearchStatus {
   enabled?: boolean
@@ -179,7 +180,7 @@ export default function ResearchPage() {
         setEvalBenchmark(eb)
       }
     } catch (e: any) {
-      setError(e?.message ?? 'Failed to load research data')
+      setError(formatErrorMessage(e, 'Failed to load research data'))
     } finally {
       setLoading(false)
     }
@@ -290,7 +291,7 @@ export default function ResearchPage() {
       {error && (
         <Card className="border-rose-300 bg-rose-950/30 border border-rose-500/30 text-rose-300 rounded-md">
           <CardContent className="p-3 flex items-center gap-3 text-xs text-rose-300">
-            <AlertCircle className="h-4 w-4 shrink-0" />{error}
+            <AlertCircle className="h-4 w-4 shrink-0" />{formatErrorMessage(error)}
             <Button variant="ghost" size="sm" className="ml-auto h-7 text-xs rounded-md" onClick={fetchAll}>Retry</Button>
           </CardContent>
         </Card>

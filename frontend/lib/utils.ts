@@ -82,3 +82,56 @@ export function throttle<T extends (...args: any[]) => any>(
 export function generateId(): string {
   return Math.random().toString(36).substring(2, 9)
 }
+
+/**
+ * Universal error message formatter.
+ * Guarantees a safe string output for any error type (FastAPI validation arrays,
+ * error objects, Error instances, strings, nulls) so React never encounters
+ * Minified React Error #310 ("Objects are not valid as a React child").
+ */
+export function formatErrorMessage(err: unknown, fallback = 'An unexpected error occurred'): string {
+  if (!err) return fallback
+  if (typeof err === 'string') return err.trim().length > 0 ? err : fallback
+  if (err instanceof Error) {
+    if (typeof err.message === 'string' && err.message.trim().length > 0) {
+      return err.message
+    }
+    return fallback
+  }
+  if (typeof err === 'object') {
+    const record = err as Record<string, unknown>
+    // Handle FastAPI detail field: can be string or list of validation dicts
+    if (record.detail !== undefined && record.detail !== null) {
+      if (typeof record.detail === 'string') return record.detail
+      if (Array.isArray(record.detail)) {
+        const msgs = record.detail
+          .map((item) => (typeof item === 'object' && item && 'msg' in item ? String((item as any).msg) : JSON.stringify(item)))
+          .filter(Boolean)
+        if (msgs.length > 0) return msgs.join(', ')
+      }
+      if (typeof record.detail === 'object') {
+        try {
+          return JSON.stringify(record.detail)
+        } catch {
+          return fallback
+        }
+      }
+    }
+    if (typeof record.message === 'string' && record.message.trim().length > 0) {
+      return record.message
+    }
+    if (typeof record.error === 'string' && record.error.trim().length > 0) {
+      return record.error
+    }
+    if (typeof record.error === 'object' && record.error !== null) {
+      return formatErrorMessage(record.error, fallback)
+    }
+    try {
+      return JSON.stringify(err)
+    } catch {
+      return fallback
+    }
+  }
+  return String(err)
+}
+

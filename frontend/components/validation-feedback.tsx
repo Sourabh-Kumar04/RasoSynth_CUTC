@@ -15,6 +15,7 @@ import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Textarea } from '@/components/ui/textarea'
+import { formatErrorMessage } from '@/lib/utils'
 
 interface ValidationFeedbackProps {
   className?: string
@@ -74,7 +75,7 @@ export function ValidationFeedback({ className }: ValidationFeedbackProps) {
                   {validationResult.valid ? 'Valid Input' : 'Invalid Input'}
                 </p>
                 {validationResult.error && (
-                  <p className="text-sm text-muted-foreground">{validationResult.error}</p>
+                  <p className="text-sm text-muted-foreground">{formatErrorMessage(validationResult.error)}</p>
                 )}
               </div>
             </div>
