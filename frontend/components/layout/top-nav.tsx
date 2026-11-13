@@ -22,6 +22,8 @@ import {
   Zap,
   LogIn,
   LogOut,
+  Briefcase,
+  ShieldCheck,
 } from 'lucide-react'
 import { clsx } from 'clsx'
 import { CommandPalette } from '@/components/search/CommandPalette'
@@ -32,8 +34,10 @@ import { api } from '@/lib/api/client'
 const MOBILE_NAV_ITEMS = [
   { href: '/dashboard', label: 'Dashboard', icon: LayoutDashboard },
   { href: '/studio', label: 'Studio', icon: FlaskConical },
+  { href: '/jobs', label: 'Jobs', icon: Briefcase },
   { href: '/datasets', label: 'Data Library', icon: Database },
   { href: '/finetune', label: 'Model Training', icon: Cpu },
+  { href: '/dbom', label: 'DBOM Attestation', icon: ShieldCheck },
   { href: '/orchestration', label: 'Pipelines', icon: Workflow },
   { href: '/quality', label: 'Quality', icon: BarChart2 },
   { href: '/review', label: 'Review', icon: ClipboardCheck },

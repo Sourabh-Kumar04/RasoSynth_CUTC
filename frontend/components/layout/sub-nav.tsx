@@ -16,6 +16,8 @@ import {
   Beaker,
   Settings,
   ChevronDown,
+  Briefcase,
+  ShieldCheck,
 } from 'lucide-react'
 import { clsx } from 'clsx'
 import { api } from '@/lib/api/client'
@@ -32,6 +34,8 @@ const PRIMARY_NAV_LINKS = [
 ]
 
 const SECONDARY_NAV_LINKS = [
+  { href: '/jobs', label: 'Jobs', fullLabel: 'Jobs & Execution Runs', icon: Briefcase },
+  { href: '/dbom', label: 'DBOM', fullLabel: 'Cryptographic DBOM Attestation', icon: ShieldCheck },
   { href: '/research', label: 'Benchmarks', fullLabel: 'Benchmarks & ROI', icon: BarChart2 },
   { href: '/providers', label: 'Providers', fullLabel: 'AI Providers & Failover', icon: Beaker },
   { href: '/settings', label: 'System Status', fullLabel: 'System Status & Configuration', icon: Settings },
