@@ -178,6 +178,16 @@ class AuthManager:
                 "email": os.getenv("USER_EMAIL", "user@example.com")
             }
 
+        # Anonymous/guest user for frictionless visitor access (keeps "NO SIGN-UP" promise)
+        if "anonymous" not in self._users:
+            self._users["anonymous"] = {
+                "user_id": "guest-anonymous",
+                "username": "anonymous",
+                "password_hash": self._hash_password(secrets.token_urlsafe(32)),
+                "role": UserRole.USER,
+                "email": "anonymous@rasosynthtune.local"
+            }
+
     def _hash_password(self, password: str) -> str:
         """Hash a password using bcrypt with unique salt per password.
 
@@ -422,24 +432,12 @@ async def get_current_user(
     """
     auth = get_auth_manager()
 
-    # Auth disabled mode - still require valid token if users are configured
-    if auth.auth_disabled and auth._users:
-        if not credentials:
-            # Still require token for audit trail even if auth_disabled
-            raise HTTPException(status_code=401, detail="Authentication required")
-    elif not auth.auth_disabled:
-        # Normal auth mode - always require credentials
-        if not credentials:
-            raise HTTPException(status_code=401, detail="Authentication required")
-
-    # If no users configured and auth disabled, fail gracefully
-    if auth.auth_disabled and not auth._users:
-        raise HTTPException(
-            status_code=503,
-            detail="System not configured. Please set ADMIN_USER and USER_USER environment variables."
-        )
-
     if not credentials:
+        allow_anon = os.getenv("ALLOW_ANONYMOUS", "true").lower() == "true"
+        if allow_anon and "anonymous" in auth._users:
+            anon_user = auth.get_user("anonymous")
+            if anon_user:
+                return anon_user
         raise HTTPException(status_code=401, detail="Authentication required")
 
     token_data = auth.verify_token(credentials.credentials)

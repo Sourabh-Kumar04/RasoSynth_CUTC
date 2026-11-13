@@ -94,6 +94,23 @@ async def login(request: LoginRequest, fastapi_request: Request):
     )
 
 
+@router.post("/auth/anonymous", tags=["Authentication"])
+@router.get("/auth/anonymous", tags=["Authentication"])
+async def issue_anonymous_session():
+    """Mint an anonymous JWT session token for zero-friction visitor access."""
+    auth = get_auth_manager()
+    token = auth.create_token("guest-anonymous", "anonymous", UserRole.USER)
+    return LoginResponse(
+        access_token=token,
+        expires_in=auth.expiration_hours * 3600,
+        user={
+            "user_id": "guest-anonymous",
+            "username": "anonymous",
+            "role": "user"
+        }
+    )
+
+
 @router.post("/auth/logout", tags=["Authentication"])
 async def logout(request: Request, current_user: User = Depends(get_current_user)):
     """Logout: revoke the presented token server-side.

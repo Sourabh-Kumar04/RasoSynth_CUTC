@@ -31,6 +31,7 @@ const ALLOWLIST: AllowlistRule[] = [
   // Auth & CSRF
   { pattern: /^auth\/csrf-token$/, methods: ['GET'] },
   { pattern: /^auth\/login$/, methods: ['POST'] },
+  { pattern: /^auth\/anonymous$/, methods: ['GET', 'POST'] },
   { pattern: /^auth\/me$/, methods: ['GET'] },
   { pattern: /^auth\/logout$/, methods: ['POST'] },
 
@@ -197,9 +198,9 @@ async function handleProxy(req: NextRequest, { params }: { params: { path?: stri
     headers['authorization'] = clientAuth
   }
 
-  // If targeting Hugging Face Space and no client auth was provided, securely inject HF_TOKEN
-  if (!headers['authorization'] && HF_TOKEN && (BACKEND_URL.includes('hf.space') || BACKEND_URL.includes('huggingface.co'))) {
-    headers['authorization'] = `Bearer ${HF_TOKEN}`
+  // Hugging Face private space gateway token: pass as custom header to avoid corrupting backend JWT auth
+  if (HF_TOKEN && (BACKEND_URL.includes('hf.space') || BACKEND_URL.includes('huggingface.co'))) {
+    headers['x-hf-token'] = HF_TOKEN
   }
 
   const body = ['GET', 'HEAD'].includes(method) ? undefined : await req.arrayBuffer()
