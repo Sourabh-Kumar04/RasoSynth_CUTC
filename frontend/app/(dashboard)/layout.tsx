@@ -2,7 +2,6 @@ import Link from 'next/link'
 import { TopNav } from '@/components/layout/top-nav'
 import { BrandLogo } from '@/components/ui/brand-logo'
 import { FooterStatus } from '@/components/layout/footer-status'
-import { Github, Activity } from 'lucide-react'
 
 export default function DashboardLayout({
   children,
@@ -19,9 +18,9 @@ export default function DashboardLayout({
 
         {/* Global App Shell Footer */}
         <footer className="w-full border-t border-[#1f1f2e] bg-[#08080d]/90 backdrop-blur-md mt-auto py-5 px-4 sm:px-8 text-xs font-mono text-[#a8a29e]">
-          <div className="max-w-[1600px] mx-auto flex flex-col md:flex-row items-center justify-between gap-4">
+          <div className="max-w-[1600px] mx-auto flex flex-col sm:flex-row items-center justify-between gap-4">
             {/* Left: Brand Identity & Status */}
-            <div className="flex flex-wrap items-center gap-3 text-center md:text-left">
+            <div className="flex flex-wrap items-center gap-3 text-center sm:text-left">
               <Link href="/" className="flex items-center gap-2 text-white hover:text-[#f26625] transition-colors">
                 <BrandLogo size={20} />
                 <span className="font-bold tracking-tight">RasoSynthTune</span>
@@ -30,28 +29,9 @@ export default function DashboardLayout({
               <FooterStatus />
             </div>
 
-            {/* Right: Quick Links, GitHub, License */}
-            <div className="flex flex-wrap items-center justify-center gap-4 text-xs">
-              <Link href="/observability" className="hover:text-white transition-colors flex items-center gap-1">
-                <Activity className="w-3 h-3 text-[#f26625]" />
-                <span>Telemetry</span>
-              </Link>
-              <a
-                href="https://github.com/Sourabh-Kumar04/RasoSynth_CUTC"
-                target="_blank"
-                rel="noreferrer"
-                className="hover:text-white transition-colors flex items-center gap-1"
-              >
-                <Github className="w-3 h-3" />
-                <span>GitHub</span>
-              </a>
-              <Link href="/settings" className="hover:text-white transition-colors">
-                System Status
-              </Link>
-              <span className="text-[#4a463f]">|</span>
-              <span className="text-[#a8a29e]">
-                Open Source · Self-Hostable
-              </span>
+            {/* Right: Copyright */}
+            <div className="text-xs text-[#71717a]">
+              © 2026 RasoSynthTune
             </div>
           </div>
         </footer>

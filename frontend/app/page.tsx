@@ -1122,7 +1122,7 @@ export default function ZenPortalPage() {
                 <li><Link href="/datasets" className="hover:text-white transition-colors">Datasets</Link></li>
                 <li><Link href="/orchestration" className="hover:text-white transition-colors">Pipelines</Link></li>
                 <li><Link href="/finetune" className="hover:text-white transition-colors">Models</Link></li>
-                <li><Link href="/observability" className="hover:text-white transition-colors">Telemetry</Link></li>
+                <li><Link href="/research" className="hover:text-white transition-colors">Research Lab</Link></li>
               </ul>
             </div>
 
@@ -1140,25 +1140,10 @@ export default function ZenPortalPage() {
           </div>
 
           <div className="pt-8 border-t border-[#1c1c28]/60 flex flex-col sm:flex-row items-center justify-between text-xs font-mono text-zinc-500 gap-4">
-            <div className="flex flex-col sm:flex-row items-center gap-2 sm:gap-4">
-              <p>© 2026 RasoSynthTune · PolyForm Noncommercial 1.0.0</p>
-              <span className="hidden sm:inline text-zinc-700">·</span>
-              <a
-                href="https://github.com/Sourabh-Kumar04/RasoSynth_CUTC"
-                target="_blank"
-                rel="noreferrer"
-                className="hover:text-white transition-colors underline underline-offset-2"
-              >
-                GitHub Repository
-              </a>
-            </div>
+            <p>© 2026 RasoSynthTune · Enterprise Synthetic Data &amp; Alignment</p>
             <div className="flex items-center space-x-3 text-zinc-400">
-              <Link href="/settings" className="hover:text-white transition-colors">
-                System Status
-              </Link>
-              <span className="text-zinc-700">·</span>
-              <Link href="/observability" className="hover:text-white transition-colors">
-                Telemetry
+              <Link href="/studio" className="hover:text-white transition-colors">
+                Launch Studio →
               </Link>
             </div>
           </div>
