@@ -25,6 +25,7 @@ import { useSearchParams } from 'next/navigation'
 import { api } from '@/lib/api/client'
 import { TelemetryChart } from '@/components/finetune/telemetry-chart'
 import { StatusStrip } from '@/components/ui/status-strip'
+import { Mascot } from '@/components/ui/mascot'
 import { formatErrorMessage } from '@/lib/utils'
 
 const API_BASE = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000'
@@ -1596,7 +1597,7 @@ function FineTuneContent() {
               Autonomous Training
             </span>
             <h1 className="text-2xl font-bold tracking-tight text-white font-display">
-              Model Training (QLoRA)
+              Model Training Studio
             </h1>
           </div>
           <p className="text-xs text-[#a8a29e]">
@@ -1604,6 +1605,10 @@ function FineTuneContent() {
           </p>
         </div>
         <div className="flex items-center gap-2 self-start sm:self-auto flex-wrap">
+          <div className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md text-xs font-mono font-medium border border-emerald-500/30 bg-emerald-950/30 text-emerald-300">
+            <Zap className="h-3.5 w-3.5 text-emerald-400" />
+            <span>Zero-Setup Cloud GPU Ready</span>
+          </div>
           <Button
             variant={tab === 'jobs' ? 'default' : 'outline'}
             size="sm"
@@ -2245,76 +2250,80 @@ LORA_ALPHA = ${form.lora_alpha}`}
 
       {/* ── Jobs view ── */}
       {tab === 'jobs' && (
-        !loading && jobs.length === 0 ? (
-          <div className="flex flex-col items-center justify-center py-16 space-y-4 bg-[#12121a] rounded-md border border-[#272738]">
-            <p className="text-xs text-[#a8a29e] font-mono">No fine-tuning sessions recorded</p>
-            <Button size="sm" className="bg-[#f26625] hover:bg-[#de581a] border border-[#ea580c] text-white rounded-md font-mono text-xs" onClick={() => setTab('new')}>
-              <Plus className="h-3.5 w-3.5 mr-1 text-white" />Create first job
-            </Button>
-          </div>
-        ) : (
-          <div className="grid grid-cols-1 lg:grid-cols-5 gap-4">
-            {/* List */}
-            <div className="lg:col-span-2 space-y-2">
-              {loading
-                ? Array.from({ length: 4 }).map((_, i) => <JobSkeleton key={i} />)
-                : jobs.map(job => (
-                    <div
-                      key={job.id}
-                      onClick={() => handleSelectJob(job)}
-                      className={clsx(
-                        'border-l-4 rounded-lg p-3.5 cursor-pointer transition-all',
-                        'bg-[#12121a] border border-[#272738] card-shadow',
-                        'hover:border-[#3b3b52] hover:bg-[#0a0a0f]',
-                        STATUS_STRIPE[job.status],
-                        selectedJob?.id === job.id && 'border-[#f26625] bg-[#161622]/90 shadow-sm',
-                      )}
-                    >
-                      <div className="flex items-start justify-between gap-2">
-                        <div className="min-w-0">
-                          <p className="text-xs font-bold text-white truncate">
-                            {job.output_model_name || job.id.slice(0, 8)}
-                          </p>
-                          <p className="text-xs text-[#a8a29e] font-mono truncate mt-0.5">
-                            {job.base_model}
-                          </p>
-                        </div>
-                        <StatusPill status={job.status} />
-                      </div>
-                      {job.status === 'running' && (
-                        <div className="mt-2 space-y-1">
-                          <Progress value={job.progress ?? 0} className="h-1.5 bg-[#0a0a0f]" />
-                          <p className="text-xs font-mono text-[#a8a29e]">
-                            {(job.progress ?? 0).toFixed(0)}% · epoch {job.current_epoch}/{job.total_epochs}
-                          </p>
-                        </div>
-                      )}
-                      <p className="text-xs font-mono text-[#a8a29e] mt-1.5">
-                        {fmtDate(job.created_at)}
-                      </p>
-                    </div>
-                  ))
-              }
-            </div>
-
-            {/* Desktop detail */}
-            <div className="lg:col-span-3 hidden lg:block">
-              {selectedJob
+        <div className="grid grid-cols-1 lg:grid-cols-5 gap-4">
+          {/* List */}
+          <div className="lg:col-span-2 space-y-2">
+            {loading
+              ? Array.from({ length: 4 }).map((_, i) => <JobSkeleton key={i} />)
+              : jobs.length === 0
                 ? (
-                  <DetailPane
-                    job={selectedJob} logs={logs} lossHistory={lossHistory}
-                    onCancel={handleCancel} onCopy={copyPath}
-                    onReconnect={connectStream} logsEndRef={logsEndRef}
-                  />
-                )
-                : (
-                  <div className="flex flex-col items-center justify-center h-full min-h-[420px] border border-dashed border-[#272738] bg-[#12121a] rounded-md gap-3">
-                    <Cpu className="h-10 w-10 text-[#a8a29e]" />
+                  <div className="flex flex-col items-center justify-center py-16 space-y-4 bg-[#12121a] rounded-md border border-[#272738]">
+                    <Mascot size="medium" state="working" className="mb-2" />
+                    <p className="text-xs text-[#a8a29e] font-mono">No fine-tuning sessions recorded</p>
+                    <Button size="sm" className="bg-[#f26625] hover:bg-[#de581a] border border-[#ea580c] text-white rounded-md font-mono text-xs" onClick={() => setTab('new')}>
+                      <Plus className="h-3.5 w-3.5 mr-1 text-white" />Create first job
+                    </Button>
                   </div>
-                )}
-            </div>
+                )
+                : jobs.map(job => (
+                  <div
+                    key={job.id}
+                    onClick={() => handleSelectJob(job)}
+                    className={clsx(
+                      'border-l-4 rounded-lg p-3.5 cursor-pointer transition-all',
+                      'bg-[#12121a] border border-[#272738] card-shadow',
+                      'hover:border-[#3b3b52] hover:bg-[#0a0a0f]',
+                      STATUS_STRIPE[job.status],
+                      selectedJob?.id === job.id && 'border-[#f26625] bg-[#161622]/90 shadow-sm',
+                    )}
+                  >
+                    <div className="flex items-start justify-between gap-2">
+                      <div className="min-w-0">
+                        <p className="text-xs font-bold text-white truncate">
+                          {job.output_model_name || job.id.slice(0, 8)}
+                        </p>
+                        <p className="text-xs text-[#a8a29e] font-mono truncate mt-0.5">
+                          {job.base_model}
+                        </p>
+                      </div>
+                      <StatusPill status={job.status} />
+                    </div>
+                    {job.status === 'running' && (
+                      <div className="mt-2 space-y-1">
+                        <Progress value={job.progress ?? 0} className="h-1.5 bg-[#0a0a0f]" />
+                        <p className="text-xs font-mono text-[#a8a29e]">
+                          {(job.progress ?? 0).toFixed(0)}% · epoch {job.current_epoch}/{job.total_epochs}
+                        </p>
+                      </div>
+                    )}
+                    <p className="text-xs font-mono text-[#a8a29e] mt-1.5">
+                      {fmtDate(job.created_at)}
+                    </p>
+                  </div>
+                ))
+            }
           </div>
-        )
+
+          {/* Desktop detail */}
+          <div className="lg:col-span-3 hidden lg:block">
+            {selectedJob
+              ? (
+                <DetailPane
+                  job={selectedJob} logs={logs} lossHistory={lossHistory}
+                  onCancel={handleCancel} onCopy={copyPath}
+                  onReconnect={connectStream} logsEndRef={logsEndRef}
+                />
+              )
+              : (
+                <div className="flex flex-col items-center justify-center h-full min-h-[420px] border border-dashed border-[#272738] bg-[#12121a] rounded-md gap-3">
+                  <Cpu className="h-10 w-10 text-[#a8a29e]" />
+                  <p className="text-xs text-[#a8a29e] font-mono">
+                    Select a job to view details &amp; live training telemetry
+                  </p>
+                </div>
+              )}
+          </div>
+        </div>
       )}
     </div>
   )

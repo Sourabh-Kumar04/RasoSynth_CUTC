@@ -20,6 +20,7 @@ import { api } from '@/lib/api/client'
 import { MerkleTreeGraph } from '@/components/dbom/merkle-tree-graph'
 import { GroundingDiffModal } from '@/components/review/grounding-diff-modal'
 import { playSuccessChime, playClickSound } from '@/lib/audio/sound-effects'
+import { Mascot } from '@/components/ui/mascot'
 
 const API_BASE = process.env.NEXT_PUBLIC_API_URL || ''
 
@@ -476,7 +477,7 @@ export default function ReviewPage() {
               Human-in-the-Loop Verification
             </span>
             <h1 className="text-2xl font-bold tracking-tight text-white font-display">
-              Review Studio
+              Data Review Studio
             </h1>
           </div>
           <p className="text-xs text-[#a8a29e]">
@@ -971,16 +972,22 @@ export default function ReviewPage() {
             : !queue || !Array.isArray(queue.items) || queue.items.length === 0
               ? (
                 <div className="flex flex-col items-center justify-center p-8 space-y-3 bg-[#12121a] rounded-md border border-[#272738] text-center">
-                  <h4 className="text-xs font-bold text-white font-mono uppercase tracking-wider">
-                    No samples awaiting review.
-                  </h4>
+                  <Mascot size="medium" state="celebrate" className="mb-2" />
+                  <div className="space-y-1 max-w-sm">
+                    <h4 className="text-xs font-bold text-white font-mono uppercase tracking-wider">
+                      No Samples Awaiting Review
+                    </h4>
+                    <p className="text-xs text-[#a8a29e] leading-relaxed">
+                      Review queues populate when you run dataset synthesis with the <strong className="text-zinc-200">Stratified HITL Review</strong> gate enabled in Studio. A percentage of samples will pause here for manual audit.
+                    </p>
+                  </div>
                   <Button
                     asChild
                     variant="outline"
                     className="border-[#f26625]/40 text-[#f26625] bg-[#f26625]/10 hover:bg-[#f26625]/20 text-xs font-mono font-bold h-8 px-3 rounded-md"
                   >
                     <a href="/studio">
-                      <span>Generate New Samples</span>
+                      <span>Launch Studio with HITL Gate →</span>
                     </a>
                   </Button>
                 </div>

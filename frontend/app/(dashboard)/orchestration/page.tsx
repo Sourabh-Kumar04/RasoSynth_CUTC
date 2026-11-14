@@ -266,13 +266,21 @@ export default function OrchestrationPage() {
       {/* Tabs Navigation */}
       <Tabs value={activeTab} onValueChange={(v) => setActiveTab(v as any)} className="w-full space-y-6">
         <TabsList className="bg-[#161622] rounded-md border border-[#272738] p-1 flex flex-wrap gap-1 h-auto">
-          <TabsTrigger value="dag" className="rounded-sm text-xs font-mono flex items-center gap-1.5 data-[state=active]:bg-[#f26625] data-[state=active]:text-white">
+          <TabsTrigger value="dag" className="rounded-sm text-xs font-mono flex items-center gap-1.5 data-[state=active]:bg-[#f26625] data-[state=active]:text-white data-[state=active]">
             <Workflow className="w-3.5 h-3.5" />
-            Pipelines &amp; Execution
+            Pipeline DAG Execution
           </TabsTrigger>
-          <TabsTrigger value="agents" className="rounded-sm text-xs font-mono flex items-center gap-1.5 data-[state=active]:bg-[#f26625] data-[state=active]:text-white">
+          <TabsTrigger value="agents" className="rounded-sm text-xs font-mono flex items-center gap-1.5 data-[state=active]:bg-[#f26625] data-[state=active]:text-white data-[state=active]">
             <Users className="w-3.5 h-3.5" />
             Multi-Agent Society ({agents.length > 0 ? agents.length : '—'})
+          </TabsTrigger>
+          <TabsTrigger value="research" className="rounded-sm text-xs font-mono flex items-center gap-1.5 data-[state=active]:bg-[#f26625] data-[state=active]:text-white data-[state=active]">
+            <FlaskConical className="w-3.5 h-3.5" />
+            Autonomous Research Loop
+          </TabsTrigger>
+          <TabsTrigger value="refinement" className="rounded-sm text-xs font-mono flex items-center gap-1.5 data-[state=active]:bg-[#f26625] data-[state=active]:text-white data-[state=active]">
+            <Sparkles className="w-3.5 h-3.5" />
+            Self-Refinement Loop
           </TabsTrigger>
         </TabsList>
 
@@ -354,6 +362,7 @@ export default function OrchestrationPage() {
                           )} />
                         </div>
                         <h4 className="text-xs font-semibold text-white truncate">{stage.label}</h4>
+                        <p className="text-xs font-mono text-[#a8a29e] truncate">{stage.desc}</p>
                         
                         {hasFeedbackLoop && (
                           <div className="mt-1">
@@ -793,7 +802,7 @@ export default function OrchestrationPage() {
               <div className="flex items-center space-x-2">
                 <Database className="w-4 h-4 text-[#10b981]" />
                 <h3 className="text-xs font-bold font-mono uppercase tracking-wider text-white">
-                  Queued Jobs
+                  All Orchestration Jobs
                 </h3>
               </div>
               <span className="text-xs font-mono text-[#a8a29e]">

@@ -28,11 +28,11 @@ import { playClickSound } from '@/lib/audio/sound-effects'
 import { api } from '@/lib/api/client'
 import { formatErrorMessage } from '@/lib/utils'
 
-// 1-Click Enterprise Industry Presets (5 Curated Presets)
+// 1-Click Enterprise Industry Presets
 const INDUSTRY_PRESETS = [
   {
     id: 'aikosh-tax',
-    title: 'AI Kosh GST & Tax',
+    title: 'AI Kosh (GST & Indian Tax)',
     domain: 'Finance & Taxation (Indian GST & Tax Compliance)',
     source: 'AI Kosh & CBIC',
     prompt: 'Indian indirect and direct tax compliance advisory. Focus on Input Tax Credit (ITC) reconciliation under Section 16(4) CGST Act, purchase-register vs GSTR-2B discrepancies, supplier default clawbacks under Section 16(2)(c), and TDS/TCS cross-deductions under Section 194Q / 206C(1H). Apply a 3-tier difficulty curriculum: (1) Definitional statutory citations and filing timelines under CGST/IGST Act 2017; (2) Multi-hop reconciliation calculations with arithmetic proofs and circular citations; (3) Complex multi-party manufacturing disputes grounded in ITAT, High Court, and Supreme Court precedent. Require grounded citations to official CBIC circulars. Exclude foreign tax rules (IRS 45Q, Uzbekistan VAT) and biomedical glutathione collisions.',
@@ -43,12 +43,29 @@ const INDUSTRY_PRESETS = [
     formalityRegister: 'formal',
     preservedTerms: ['Section 16(4)', 'ITC', 'GSTR-3B', 'GSTR-2B', 'CGST Act', 'Section 194Q', 'Section 206C(1H)', 'ISD', 'Challan', 'ITAT'],
     antiDomains: ['glutathione', 's-transferase', 'nrf2', 'uzbekistan', 'irs section 45q', 'arteriovenous fistula', 'cancer chemotherapy'],
-    size: 1000,
+    size: 20000,
     sources: ['AI Kosh', 'CBIC Portals', 'ITAT Bench Rulings'],
   },
   {
+    id: 'indic-legal',
+    title: 'Bharatiya Nyaya Sanhita (BNS)',
+    domain: 'Indian Law & Constitutional Jurisprudence (BNS 2023)',
+    source: 'eCourts & SCI',
+    prompt: 'Criminal justice statutory transition and legal adjudication under Bharatiya Nyaya Sanhita (BNS 2023), BNSS 2023, and BSA 2023. Focus on: (1) Precision cross-mapping of offences from IPC sections to BNS with legislative intent analysis and altered sentencing maximums; (2) Undertrial bail jurisprudence and statutory bail entitlement under Section 479 BNSS; (3) Electronic evidence hash verification protocols under Section 61 BSA 2023; (4) Precedent reconciliation grounded in Supreme Court of India constitutional bench rulings. Preserve exact statutory terminology without importing US Title 18 or UK common law concepts.',
+    type: 'reasoning',
+    category: 'indic',
+    language: 'indic_multilingual',
+    scriptMode: 'native',
+    formalityRegister: 'formal',
+    parallelBilingual: true,
+    preservedTerms: ['BNS 2023', 'Section 479 BNSS', 'BSA Section 61', 'Bharatiya Sakshya Adhiniyam', 'Ratio Decidendi', 'Mandamus', 'Habeas Corpus', 'Mens Rea'],
+    antiDomains: ['us code title 18', 'california penal code', 'uk crown prosecution service', 'hallucinated citations'],
+    size: 20000,
+    sources: ['eCourts India', 'Supreme Court Reports', 'Legislative Dept'],
+  },
+  {
     id: 'aerospace-airfoil',
-    title: 'Aerospace & Airfoils',
+    title: 'Aerospace & Aerodynamics',
     domain: 'Aerospace Engineering & Computational Aerodynamics',
     source: 'NASA Glenn & FAA',
     prompt: 'Transonic aircraft aerodynamics and transport category airworthiness certification. Focus on: (1) Governing compressible Navier-Stokes and Reynolds-averaged Navier-Stokes (RANS) turbulence closure models; (2) Supercritical airfoil profile optimization (drag divergence Mach number M_dd, shock-boundary interaction, and lift-to-drag L/D maximization) versus conventional NACA 6-series profiles; (3) FAA FAR Part 25 structural load envelopes and §25.629 flutter margins. Preserve exact standard designations (NACA 0012, Mach 0.82, FAR §25.107). Exclude undergraduate textbook simplifications and retracted NASA technical memos.',
@@ -59,12 +76,12 @@ const INDUSTRY_PRESETS = [
     formalityRegister: 'formal',
     preservedTerms: ['NACA 0012', 'Mach 0.82', 'FAR §25.107', 'FAR §25.629', 'Supercritical Airfoil', 'Navier-Stokes', 'Lift-to-Drag (L/D)', 'Reynolds Number'],
     antiDomains: ['undergraduate textbook simplifications', 'retracted nasa reports', 'superseded far revisions', 'tin cans'],
-    size: 1000,
+    size: 15000,
     sources: ['NASA Technical Reports', 'FAA Regulations', 'AIAA'],
   },
   {
     id: 'bhashini-multilingual',
-    title: 'Indic Language Corpus',
+    title: 'Bhashini Indic Corpus',
     domain: 'Indic Multilingual (Bhashini)',
     source: 'Bhashini Data Vatika',
     prompt: 'Construct a high-fidelity parallel multilingual SFT corpus semantically aligned across Hindi (Devanagari), Tamil (Tamil script), Telugu (Telugu script), and Indian English for critical e-governance and public service delivery. Structure samples across: (1) Tier 1 [35% Single-Intent Queries]: Factual citizen queries on Jan Dhan Yojana, PM-KISAN, Aadhaar biometric locking, and DigiLocker credential retrieval with script-native output. (2) Tier 2 [45% Multi-Step Navigation]: End-to-end procedural guidance for UMANG portal service delivery, caste/income certificate issuance, and plain-language Right to Information (RTI) application drafting. (3) Tier 3 [20% Disambiguation & Cultural Dialects]: Resolving regional vocabulary nuances, formal administrative terminology vs conversational spoken registers, and handling code-mixed queries without degrading Devanagari/Dravidian syntactic structure. Ensure bidirectional semantic fidelity without word-for-word translation artifacts. Never generate medical prescriptions without regulatory disclaimers or substitute Roman transliteration when native Indic script is requested.',
@@ -76,12 +93,12 @@ const INDUSTRY_PRESETS = [
     parallelBilingual: true,
     preservedTerms: ['Bhashini', 'Jan Dhan', 'PM-KISAN', 'Aadhaar', 'UMANG', 'DigiLocker', 'RTI Act 2005', 'Devanagari', 'Tamil Script', 'Telugu Script'],
     antiDomains: ['unsupervised machine translation', 'synthetic hallucinated schemes', 'romanized garble', 'unverified medical dosages'],
-    size: 1000,
+    size: 25000,
     sources: ['Bhashini', 'AI Kosh', 'HuggingFace'],
   },
   {
     id: 'python-codegen',
-    title: 'Python & Systems Code',
+    title: 'Python Systems Architecture',
     domain: 'Production Python Systems & Async Architecture',
     source: 'GitHub & PyPI',
     prompt: 'Synthesize a production-grade Python systems engineering and high-throughput backend architecture dataset. Structure samples across: (1) Tier 1 [30% Strict Typings & Protocols]: PEP 484/PEP 585 static type annotations, Pydantic v2 strict models with custom validators and Rust core serialization, and abstract base classes / typing.Protocol. (2) Tier 2 [45% Concurrency & Data Pipelines]: Asynchronous I/O pipelines utilizing asyncio.TaskGroup, uvloop event loops, structured concurrency, non-blocking connection pooling, and zero-copy Apache Arrow / Polars dataframe transformations. (3) Tier 3 [25% Distributed Primitives & Test Invariants]: Lock-free shared memory structures with multiprocessing, atomic distributed locks using Redis Redlock / etcd, robust pytest property-based testing with Hypothesis, and memory-leak profile diagnostics. Every code snippet must be fully typed, PEP 8 compliant, include comprehensive docstrings with parameter types and failure modes, and avoid deprecated Python 2 idioms, dummy mocks, or hallucinated third-party package APIs.',
@@ -90,12 +107,26 @@ const INDUSTRY_PRESETS = [
     language: 'en',
     preservedTerms: ['asyncio', 'TaskGroup', 'Pydantic v2', 'FastAPI', 'Polars', 'Apache Arrow', 'PEP 484', 'Hypothesis', 'pytest', 'Zero-Copy'],
     antiDomains: ['python 2 syntax', 'hello world boilerplate', 'hallucinated pypi apis', 'giant panda bear', 'ailuropoda melanoleuca'],
-    size: 1000,
+    size: 15000,
     sources: ['HuggingFace', 'GitHub', 'ArXiv'],
   },
   {
+    id: 'distributed-consensus',
+    title: 'Raft & Rust Consensus',
+    domain: 'Distributed Systems & Formal Verification (Rust)',
+    source: 'USENIX & ACM',
+    prompt: 'Construct an advanced systems-engineering dataset for fault-tolerant distributed storage engines and consensus protocols implemented in Rust. Structure samples across: (1) Tier 1 [30% Protocol Transitions]: Formal Raft and Multi-Paxos consensus state machine transitions (Leader Election, Log Replication, Heartbeats) with TLA+ model checking specification invariants. (2) Tier 2 [45% Failure Scenarios]: Network partition split-brain mitigation, joint consensus cluster membership changes, write-ahead logging (WAL) crash recovery, and log compaction with asynchronous snapshotting. (3) Tier 3 [25% Lock-Free Runtime Engineering]: High-performance concurrency with Tokio async runtime, Crossbeam channels, hardware CAS atomics, and LSM-tree tiered compaction strategies under Byzantine network jitter. Code must guarantee compile-time memory safety, zero data races, explicit error handling without unwrap(), and test harnesses simulating split-brain drops.',
+    type: 'coding',
+    category: 'code',
+    language: 'en',
+    preservedTerms: ['Raft Term', 'LogCompaction', 'Tokio::select', 'CompareAndSwap', 'Linearizability', 'Byzantine Fault', 'TLA+', 'Crossbeam', 'WAL'],
+    antiDomains: ['wheat rust fungus', 'puccinia', 'crop pathology', 'single threaded nodejs', 'deprecated crates', 'trivial mock code'],
+    size: 15000,
+    sources: ['GitHub', 'ArXiv', 'USENIX ATC'],
+  },
+  {
     id: 'clinical-reasoning',
-    title: 'Clinical Reasoning',
+    title: 'Medical Clinical Reasoning',
     domain: 'Medical Reasoning & Clinical Differential Diagnosis',
     source: 'PubMed & ACGME',
     prompt: 'Synthesize an evidence-based clinical reasoning and differential diagnosis dataset adhering to ACGME internal medicine residency diagnostic frameworks. Structure samples across: (1) Tier 1 [30% Diagnostic Panel Interpretation]: Comprehensive analysis of standard laboratory profiles (CBC with differential, comprehensive metabolic panel, arterial blood gas, cardiac biomarker troponin kinetics) in clinical context. (2) Tier 2 [45% Bayesian Probability Workup]: Iterative disease probability updating using likelihood ratios, pre-test probability, illness-script matching, and geriatric drug-drug contraindication screening via AGS Beers Criteria. (3) Tier 3 [25% Multi-Morbidity SOAP Formulations]: De-identified acute critical presentations (septic shock, acute coronary syndrome, decompensated heart failure) with ordered differential ranking, exclusion criteria, and diagnostic workup rationale grounded in AHA/ACC/IDSA guidelines. Responses must maintain clinical rigor with diagnostic rationale before treatment conclusions. Strictly exclude any real patient identifiers (PII redaction) and unverified dosage recommendations.',
@@ -104,8 +135,22 @@ const INDUSTRY_PRESETS = [
     language: 'en',
     preservedTerms: ['Bayesian Pre-Test Probability', 'Beers Criteria', 'CBC', 'CMP', 'LFTs', 'Troponin', 'ABG', 'SOAP Note', 'ACGME'],
     antiDomains: ['real patient identifiers', 'prescriptions without disclaimers', 'unverified dosing', 'tax law', 'software bugs'],
-    size: 1000,
+    size: 10000,
     sources: ['PubMed', 'ArXiv', 'Zenodo'],
+  },
+  {
+    id: 'cybersecurity-redteam',
+    title: 'Zero-Day Threat Defense',
+    domain: 'Offensive Security & Vulnerability Analysis',
+    source: 'MITRE ATT&CK & NIST',
+    prompt: 'Synthesize a rigorous cybersecurity engineering and defensive threat modeling dataset grounded in NIST CSF 2.0 and MITRE ATT&CK enterprise frameworks. Structure samples across: (1) Tier 1 [30% Vulnerability Root-Cause]: Dissecting memory-safety vulnerabilities (CWE-119 buffer overflows, CWE-416 use-after-free, CWE-362 race conditions) and cryptographic implementation flaws (nonce reuse, ECB mode, side-channel timing). (2) Tier 2 [45% Detection Engineering & Telemetry]: MITRE ATT&CK technique mapping (T1059 Command and Scripting Interpreter, T1055 Process Injection, T1021 Remote Services) with actionable Sigma and YARA detection rules grounded in OS telemetry. (3) Tier 3 [25% Zero-Trust Architectural Defense]: Cloud IAM privilege escalation modeling in AWS/Kubernetes, defense-in-depth perimeter design, and incident response playbooks for ransomware containment. Defensive and analysis focus only — never generate operational weaponized exploit code, polymorphic droppers, or active malicious C2 command payloads.',
+    type: 'reasoning',
+    category: 'code',
+    language: 'en',
+    preservedTerms: ['MITRE ATT&CK', 'NIST CSF 2.0', 'CVE', 'CWE-416', 'ASLR', 'DEP', 'Sigma Rule', 'YARA', 'Zero-Trust', 'Least Privilege'],
+    antiDomains: ['operational exploit payloads', 'malware droppers', 'c2 infrastructure', 'script kiddie tutorials'],
+    size: 12000,
+    sources: ['NVD NIST', 'MITRE ATT&CK', 'CISA Advisories'],
   },
 ]
 
@@ -512,14 +557,9 @@ function StudioContent() {
       }
     } catch (err: any) {
       console.error('Job creation failed:', err)
-      const raw = formatErrorMessage(err) || ''
-      // Never show raw python tracebacks or connection pool internals in presentation build
-      const cleanMsg = raw.includes('Traceback') || raw.includes('HTTPConnectionPool') || raw.includes('Max retries') || raw.includes('Connection refused')
-        ? 'Job status unavailable. Backend scheduler did not respond.'
-        : raw || 'Job creation failed. The backend service may be offline or unreachable.'
       setSubmitResult({
         type: 'error',
-        message: cleanMsg,
+        message: formatErrorMessage(err) || 'Job creation failed. The backend service may be offline or unreachable.',
       })
     } finally {
       setIsSubmitting(false)
@@ -1384,19 +1424,19 @@ function StudioContent() {
 
               <div>
                 <div className="flex justify-between items-center mb-1.5">
-                  <label className="text-xs font-mono uppercase text-[#a8a29e]">Target Size (Max 1,000 for Demo)</label>
+                  <label className="text-xs font-mono uppercase text-[#a8a29e]">Target Size</label>
                   <div className="flex items-center gap-1.5">
                     <input
                       type="number"
                       min={100}
-                      max={1000}
+                      max={50000}
                       step={100}
                       value={sizeInput}
                       onChange={(e) => {
                         const raw = e.target.value
                         setSizeInput(raw)
                         const num = Number(raw)
-                        if (!isNaN(num) && num >= 100 && num <= 1000) {
+                        if (!isNaN(num) && num >= 100 && num <= 50000) {
                           setDatasetSize(num)
                         }
                       }}
@@ -1405,9 +1445,9 @@ function StudioContent() {
                         if (isNaN(num) || num < 100) {
                           setDatasetSize(100)
                           setSizeInput('100')
-                        } else if (num > 1000) {
-                          setDatasetSize(1000)
-                          setSizeInput('1000')
+                        } else if (num > 50000) {
+                          setDatasetSize(50000)
+                          setSizeInput('50000')
                         } else {
                           setDatasetSize(num)
                           setSizeInput(String(num))
@@ -1421,7 +1461,7 @@ function StudioContent() {
                 <input
                   type="range"
                   min={100}
-                  max={1000}
+                  max={50000}
                   step={100}
                   value={datasetSize}
                   onInput={(e) => {

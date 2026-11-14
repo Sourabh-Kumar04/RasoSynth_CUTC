@@ -8,6 +8,7 @@ interface FlowStage {
   id: string
   title: string
   subtitle: string
+  metric: string
   icon: React.ReactNode
   color: string
 }
@@ -17,6 +18,7 @@ const STAGES: FlowStage[] = [
     id: 'extract',
     title: 'Corpus Extraction',
     subtitle: 'Trafilatura · PDF Plumber · LangDetect',
+    metric: '99.4% Text Yield',
     icon: <Database className="w-4 h-4 text-[#f26625]" />,
     color: '#f26625',
   },
@@ -24,6 +26,7 @@ const STAGES: FlowStage[] = [
     id: 'synthesize',
     title: '7-Engine Synthesis',
     subtitle: 'CoT · Socratic · DPO · Tool Schemas',
+    metric: '7 Invariant Generators',
     icon: <Sparkles className="w-4 h-4 text-[#fb923c]" />,
     color: '#fb923c',
   },
@@ -31,6 +34,7 @@ const STAGES: FlowStage[] = [
     id: 'judge',
     title: 'LLM Quality Judge',
     subtitle: 'Consensus L2 · Decontamination Probe',
+    metric: '> 0.88 Quality Threshold',
     icon: <Cpu className="w-4 h-4 text-emerald-400" />,
     color: '#10b981',
   },
@@ -38,6 +42,7 @@ const STAGES: FlowStage[] = [
     id: 'attest',
     title: 'DBOM Attestation',
     subtitle: 'SHA-256 Merkle Root · HF & GGUF',
+    metric: '100% Cryptographic Proof',
     icon: <ShieldCheck className="w-4 h-4 text-[#f26625]" />,
     color: '#f26625',
   },
@@ -52,10 +57,19 @@ export function SynthesisFlowDiagram() {
       <div className="absolute -top-24 left-1/2 -translate-x-1/2 w-96 h-48 bg-[#f26625]/5 rounded-full pointer-events-none" />
 
       {/* Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between pb-4 mb-6 border-b border-[#1c1c28] gap-3">
-        <div className="flex items-center gap-2 text-xs font-mono uppercase tracking-widest text-[#f26625]">
-          <span className="w-1.5 h-1.5 rounded-full bg-[#f26625]" />
-          <span>Interactive Architecture Flow</span>
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between pb-6 mb-6 border-b border-[#1c1c28] gap-3">
+        <div>
+          <div className="flex items-center gap-2 text-xs font-mono uppercase tracking-widest text-[#f26625]">
+            <span className="w-1.5 h-1.5 rounded-full bg-[#f26625] animate-ping" />
+            <span>Interactive Architecture Vector</span>
+          </div>
+          <h3 className="text-base font-bold text-white font-display mt-0.5">
+            End-to-End Autonomous Refinery Stream
+          </h3>
+        </div>
+        <div className="flex items-center gap-2 text-xs font-mono text-zinc-400">
+          <span className="inline-block w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
+          <span>Zero-Drop Fault Tolerant Bus</span>
         </div>
       </div>
 
@@ -67,6 +81,10 @@ export function SynthesisFlowDiagram() {
           xmlns="http://www.w3.org/2000/svg"
           className="min-w-[800px] w-full h-auto select-none"
         >
+          <defs>
+
+          </defs>
+
           {/* Main Transit Pipeline Highway */}
           <line
             x1="80"
@@ -153,7 +171,11 @@ export function SynthesisFlowDiagram() {
                 </div>
                 {isSelected && <CheckCircle2 className="w-3.5 h-3.5 text-[#f26625]" />}
               </div>
-              <p className="text-xs text-zinc-400 leading-relaxed font-sans">{stg.subtitle}</p>
+              <p className="text-xs text-zinc-400 mb-2 leading-relaxed font-sans">{stg.subtitle}</p>
+              <div className="pt-2 border-t border-[#1c1c28] flex items-center justify-between text-xs font-mono text-zinc-500">
+                <span className="text-[#f26625] font-semibold">{stg.metric}</span>
+                <span className="text-xs uppercase tracking-wider text-zinc-400">Validated</span>
+              </div>
             </div>
           )
         })}

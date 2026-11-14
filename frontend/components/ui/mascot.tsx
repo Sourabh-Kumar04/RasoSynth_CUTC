@@ -150,6 +150,7 @@ export function Mascot({
       role="img"
       aria-label={altText}
       onClick={interactive ? handleClick : undefined}
+      title={interactive ? "Click me!" : undefined}
     >
       {/* eslint-disable-next-line @next/next/no-img-element */}
       <img
