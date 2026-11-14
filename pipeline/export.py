@@ -623,6 +623,28 @@ class ExportPipeline:
             if curr is not None:
                 record["curriculum_order"] = curr
 
+            src_url = (sample.get("source_url") if is_dict else getattr(sample, "source_url", None)) or (
+                meta.get("source_url") if isinstance(meta, dict) else None
+            )
+            if src_url:
+                record["source_url"] = str(src_url)
+                if isinstance(meta, dict) and not meta.get("source_url"):
+                    meta["source_url"] = str(src_url)
+
+            q_score = (sample.get("quality_score") if is_dict else getattr(sample, "quality_score", None))
+            if q_score is not None:
+                try:
+                    record["quality_score"] = round(float(q_score), 4)
+                except (ValueError, TypeError):
+                    pass
+
+            llm_score = (sample.get("llm_review_score") if is_dict else getattr(sample, "llm_review_score", None))
+            if llm_score is not None:
+                try:
+                    record["llm_review_score"] = round(float(llm_score), 4)
+                except (ValueError, TypeError):
+                    pass
+
         return record
 
     def _sample_to_dict(self, sample) -> dict:

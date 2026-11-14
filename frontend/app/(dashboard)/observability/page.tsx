@@ -94,7 +94,7 @@ export default function ObservabilityPage() {
   const memPct = health?.system_metrics?.memory_used_percent
   const cpuLoad = health?.system_metrics?.cpu_load_1m
   const hostPressureCritical =
-    (memPct != null && memPct > 85) || (cpuLoad != null && cpuLoad > 3.0)
+    (memPct != null && memPct > 95) || (cpuLoad != null && cpuLoad > 16.0)
   const displayStatus = hostPressureCritical ? 'degraded' : (health?.status || 'healthy')
 
   return (

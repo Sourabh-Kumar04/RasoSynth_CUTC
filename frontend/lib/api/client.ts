@@ -11,9 +11,11 @@ interface RequestOptions extends RequestInit {
 
 // Types for new observability and health features
 export interface HealthStatus {
-  status: 'healthy' | 'degraded' | 'unhealthy' | 'not_ready'
-  service: string
+  status: 'healthy' | 'degraded' | 'unhealthy' | 'not_ready' | string
+  service?: string
   timestamp: string
+  ready?: boolean
+  checks?: Record<string, any>
   providers?: Record<string, ProviderHealthInfo>
   database?: boolean
   redis?: boolean

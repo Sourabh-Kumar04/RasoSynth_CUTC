@@ -173,8 +173,7 @@ export function Mascot({
           objectFit: "contain",
           background: "transparent",
           display: "block",
-          filter:
-            "drop-shadow(0 4px 14px rgba(0, 0, 0, 0.55)) drop-shadow(0 1px 3px rgba(0, 0, 0, 0.45)) drop-shadow(0 10px 28px rgba(242, 102, 37, 0.26))",
+          filter: "drop-shadow(0 8px 24px rgba(242, 102, 37, 0.15))",
         }}
       />
     </div>

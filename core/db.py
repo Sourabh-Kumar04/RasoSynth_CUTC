@@ -1571,7 +1571,7 @@ class DatabaseManager:
             if job_id:
                 base_q = base_q.where(ReviewQueueItem.job_id == job_id)
             if owner is not None:
-                base_q = base_q.where(ReviewQueueItem.owner == owner)
+                base_q = base_q.where((ReviewQueueItem.owner == owner) | (ReviewQueueItem.owner.is_(None)))
 
             count_result = await session.execute(
                 select(func.count()).select_from(base_q.subquery())
@@ -1592,7 +1592,7 @@ class DatabaseManager:
         async with self.session_maker() as session:
             stmt = select(ReviewQueueItem.review_status, func.count().label("cnt"))
             if owner is not None:
-                stmt = stmt.where(ReviewQueueItem.owner == owner)
+                stmt = stmt.where((ReviewQueueItem.owner == owner) | (ReviewQueueItem.owner.is_(None)))
             stmt = stmt.group_by(ReviewQueueItem.review_status)
             result = await session.execute(stmt)
             rows = result.all()

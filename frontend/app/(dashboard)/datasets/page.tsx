@@ -536,7 +536,12 @@ export default function DatasetsPage() {
       document.body.removeChild(a)
     } catch (err: any) {
       console.error('Download failed:', err)
-      setError(formatErrorMessage(err, 'Download failed'))
+      const msg = err?.message || ''
+      if (msg.includes('not complete') || err?.status === 409) {
+        setError('Dataset generation is currently in-flight. Download will be available once the run completes.')
+      } else {
+        setError(formatErrorMessage(err, 'Download failed'))
+      }
     } finally {
       setDownloadingIds((prev) => {
         const next = new Set(prev)
@@ -947,9 +952,9 @@ export default function DatasetsPage() {
                             variant="outline"
                             size="sm"
                             className="h-7 text-xs px-2.5 rounded-md border-[#272738] bg-[#0a0a0f] text-white hover:bg-[#161622] font-mono hover:border-[#3b3b52] transition-colors"
-                            disabled={downloadingIds.has(dataset.id) || dataset.records === 0}
+                            disabled={downloadingIds.has(dataset.id) || dataset.records === 0 || dataset.status === 'in_flight' || dataset.status === 'running' || dataset.status === 'generating'}
                             onClick={() => handleDownload(dataset.id, downloadFormat[dataset.id] || dataset.format || 'jsonl')}
-                            title={dataset.records > 0 ? `Export & Download ${dataset.records.toLocaleString()} records` : 'No records yet'}
+                            title={dataset.status === 'in_flight' || dataset.status === 'running' || dataset.status === 'generating' ? 'Synthesis in progress — download available upon completion' : (dataset.records > 0 ? `Export & Download ${dataset.records.toLocaleString()} records` : 'No records yet')}
                           >
                             {downloadingIds.has(dataset.id) ? (
                               <Loader2 className="h-3.5 w-3.5 animate-spin text-[#f26625]" />

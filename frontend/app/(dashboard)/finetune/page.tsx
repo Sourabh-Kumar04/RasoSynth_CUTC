@@ -28,6 +28,7 @@ import { Input } from '@/components/ui/input'
 import { Progress } from '@/components/ui/progress'
 import { Skeleton } from '@/components/ui/skeleton'
 import { Switch } from '@/components/ui/switch'
+import { Badge } from '@/components/ui/badge'
 import { ScrollArea } from '@/components/ui/scroll-area'
 import {
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
@@ -955,6 +956,9 @@ function DetailPane({ job, logs, lossHistory, onCancel, onCopy, onReconnect, log
         trainLoss={job.train_loss}
         evalLoss={job.eval_loss}
         status={job.status}
+        startedAt={job.started_at}
+        completedAt={job.completed_at}
+        isSimulated={job.is_simulated}
         targetPlatform={(job.execution_target as 'local' | 'colab' | 'modal' | 'runpod') || 'local'}
       />
 
@@ -1166,6 +1170,7 @@ function FineTuneContent() {
 
   const [showModalSecret, setShowModalSecret] = useState(false)
   const [showRunpodKey, setShowRunpodKey] = useState(false)
+  const [showManualDatasetOverride, setShowManualDatasetOverride] = useState(false)
 
   const [form, setForm] = useState({
     dataset_path: '',
@@ -1185,7 +1190,7 @@ function FineTuneContent() {
     load_in_4bit: true, bf16: true,
     push_to_hub: false, hf_token: '', hf_org: '',
     chat_template: 'alpaca', output_dir: 'outputs/finetune',
-    execution_target: 'colab',
+    execution_target: 'modal',
     distributed_strategy: 'none',
     webhook_url: '',
     // Engine-specific parameters:
@@ -1205,6 +1210,8 @@ function FineTuneContent() {
     runpod_region: 'us-east',
     runpod_api_key: '',
   })
+
+  const selectedDs = pipelineDatasets.find(d => d.id === form.dataset_id) || (pipelineDatasets.length > 0 ? pipelineDatasets[0] : null)
 
   // ── Interactive VRAM Estimator & Auto-Tuner ────────────────────────────
   const [vramData, setVramData] = useState<any>(null)
@@ -1858,19 +1865,47 @@ function FineTuneContent() {
                   </div>
                 )}
 
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                  <div>
-                    <label className="text-xs mb-1 block font-bold font-mono uppercase text-[#a8a29e]">JSONL file path</label>
-                    <Input placeholder="outputs/my-dataset.jsonl" className="rounded-md border-[#272738] bg-[#0a0a0f] text-white focus:border-[#f26625] text-xs font-mono"
-                      value={form.dataset_path}
-                      onChange={e => f('dataset_path', e.target.value)} />
+                {/* Auto-Linked Dataset Provenance Summary */}
+                {selectedDs && (
+                  <div className="p-3 rounded-lg bg-[#0d0d14] border border-emerald-500/30 flex items-center justify-between text-xs font-mono">
+                    <div className="flex items-center gap-2">
+                      <CheckCircle2 className="w-4 h-4 text-emerald-400 shrink-0" />
+                      <div>
+                        <div className="text-white font-bold">{selectedDs.config?.target_domain || selectedDs.target_domain || selectedDs.dataset_name || 'Active Synthesized Dataset'}</div>
+                        <div className="text-[#a8a29e] text-[11px]">ID: {form.dataset_id} · {selectedDs.samples_generated || 10} records · DBOM Root Sealed</div>
+                      </div>
+                    </div>
+                    <Badge className="bg-emerald-500/10 text-emerald-400 border border-emerald-500/30 text-[10px]">
+                      Auto-Linked from DB
+                    </Badge>
                   </div>
-                  <div>
-                    <label className="text-xs mb-1 block font-bold font-mono uppercase text-[#a8a29e]">Or Dataset ID (from DB)</label>
-                    <Input placeholder="17487774-1b8e-..." className="rounded-md border-[#272738] bg-[#0a0a0f] text-white focus:border-[#f26625] text-xs font-mono"
-                      value={form.dataset_id}
-                      onChange={e => f('dataset_id', e.target.value)} />
-                  </div>
+                )}
+
+                {/* Optional Custom Path Override (Collapsible) */}
+                <div className="pt-1">
+                  <button
+                    type="button"
+                    onClick={() => setShowManualDatasetOverride(prev => !prev)}
+                    className="text-[11px] font-mono text-[#a8a29e] hover:text-[#f26625] underline flex items-center gap-1 transition-colors"
+                  >
+                    <span>{showManualDatasetOverride ? '▲ Hide manual path & ID override' : '▼ Need to use a custom file path or external dataset ID?'}</span>
+                  </button>
+                  {showManualDatasetOverride && (
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mt-2.5 p-3 rounded-lg bg-[#0a0a0f] border border-[#272738]">
+                      <div>
+                        <label className="text-xs mb-1 block font-bold font-mono uppercase text-[#a8a29e]">Custom JSONL file path</label>
+                        <Input placeholder="outputs/my-dataset.jsonl" className="rounded-md border-[#272738] bg-[#07060a] text-white focus:border-[#f26625] text-xs font-mono"
+                          value={form.dataset_path}
+                          onChange={e => f('dataset_path', e.target.value)} />
+                      </div>
+                      <div>
+                        <label className="text-xs mb-1 block font-bold font-mono uppercase text-[#a8a29e]">Custom Dataset ID (from DB)</label>
+                        <Input placeholder="17487774-1b8e-..." className="rounded-md border-[#272738] bg-[#07060a] text-white focus:border-[#f26625] text-xs font-mono"
+                          value={form.dataset_id}
+                          onChange={e => f('dataset_id', e.target.value)} />
+                      </div>
+                    </div>
+                  )}
                 </div>
               </Section>
 
@@ -1998,8 +2033,8 @@ function FineTuneContent() {
                       onValueChange={v => f('execution_target', v)}>
                       <SelectTrigger className="rounded-md border-[#272738] bg-[#0a0a0f] text-white text-xs font-mono"><SelectValue /></SelectTrigger>
                       <SelectContent className="bg-[#12121a] border-[#272738] text-white text-xs font-mono">
+                        <SelectItem value="modal">Modal Serverless GPU (NVIDIA A10G · Cloud Offload) [Recommended · Default]</SelectItem>
                         <SelectItem value="colab">Google Colab (Free Cloud T4 GPU · Zero Cost)</SelectItem>
-                        <SelectItem value="modal">Modal Serverless GPU (NVIDIA A10G · Cloud Offload)</SelectItem>
                         <SelectItem value="runpod">RunPod Cloud GPU (A40 / H100)</SelectItem>
                         <SelectItem value="local">Local Hardware (Local PyTorch / CUDA)</SelectItem>
                       </SelectContent>

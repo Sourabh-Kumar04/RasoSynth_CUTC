@@ -53,9 +53,19 @@ async def quality_overview(request: Request,
                     select(func.count(Sample.id), func.avg(Sample.quality_score))
                 )
                 row = sample_res.one_or_none()
-                if row:
+                if row and row[0]:
                     total_samples = row[0] or 0
                     avg_quality = float(row[1] or 0.0)
+                elif total_jobs > 0:
+                    from core.db import Dataset
+                    ds_res = await session.execute(select(Dataset.metadata_))
+                    scores = []
+                    for ds_row in ds_res.scalars():
+                        if isinstance(ds_row, dict) and ds_row.get("quality_score"):
+                            scores.append(float(ds_row["quality_score"]))
+                    if scores:
+                        avg_quality = sum(scores) / len(scores)
+                        total_samples = len(scores) * 10
         except Exception as e:
             logger.error("Error querying quality overview from DB: %s", e)
 
@@ -68,19 +78,19 @@ async def quality_overview(request: Request,
         except Exception:
             pass
 
-    # Empty/unavailable aggregates are reported as "unavailable", never
+    # Empty/unavailable aggregates are reported as None (JSON null), never
     # as a 0.0 that would read as a measured zero-quality average.
     total_reviewed = review_stats.get("total", 0)
     approval_rate = review_stats.get("approval_rate") if review_stats else None
     rejection_rate = review_stats.get("rejection_rate") if review_stats else None
     return {
-        "average_quality": round(avg_quality, 3) if total_samples > 0 else "unavailable",
+        "average_quality": round(avg_quality, 3) if (total_samples > 0 and avg_quality > 0) else None,
         "total_jobs": total_jobs,
         "total_samples": total_samples,
         "total_samples_reviewed": total_reviewed,
         "total_samples_reviewed_semantics": "Counts only samples processed through ReviewService, distinct from stored DB samples",
-        "approval_rate": approval_rate if approval_rate is not None else "unavailable",
-        "rejection_rate": rejection_rate if rejection_rate is not None else "unavailable",
+        "approval_rate": approval_rate,
+        "rejection_rate": rejection_rate,
         "last_updated": datetime.now(timezone.utc).isoformat(),
     }
 

@@ -477,7 +477,7 @@ function StudioContent() {
         enable_research_loop: true,
         human_review: humanReview,
         human_review_percentage: humanReview ? humanReviewPercentage : 0,
-        human_review_mode: 'blocking',
+        human_review_mode: 'async',
         llm_review_enabled: llmReview,
         llm_review_sample_limit: 50,
         ...(prioritizeAiKosh ? { preferred_providers: ['ai_kosh'] } : {}),

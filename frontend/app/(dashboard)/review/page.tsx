@@ -437,12 +437,13 @@ export default function ReviewPage() {
               Review Studio
             </h1>
           </div>
-          <p className="text-xs text-[#a8a29e]">
-            Review samples — <kbd className="text-xs bg-[#161622] border border-[#272738] px-1.5 py-0.5 rounded font-mono text-white">a</kbd> approve&nbsp;
-            <kbd className="text-xs bg-[#161622] border border-[#272738] px-1.5 py-0.5 rounded font-mono text-white">r</kbd> reject&nbsp;
-            <kbd className="text-xs bg-[#161622] border border-[#272738] px-1.5 py-0.5 rounded font-mono text-white">e</kbd> edit&nbsp;
-            <kbd className="text-xs bg-[#161622] border border-[#272738] px-1.5 py-0.5 rounded font-mono text-white">f</kbd> flag
-          </p>
+          <div className="flex items-center gap-3 text-xs text-[#a8a29e] flex-wrap">
+            <span>Review shortcuts:</span>
+            <span className="inline-flex items-center gap-1 font-mono text-[11px]"><kbd className="bg-[#161622] border border-[#272738] px-1.5 py-0.5 rounded text-white">A</kbd> Approve</span>
+            <span className="inline-flex items-center gap-1 font-mono text-[11px]"><kbd className="bg-[#161622] border border-[#272738] px-1.5 py-0.5 rounded text-white">R</kbd> Reject</span>
+            <span className="inline-flex items-center gap-1 font-mono text-[11px]"><kbd className="bg-[#161622] border border-[#272738] px-1.5 py-0.5 rounded text-white">E</kbd> Edit</span>
+            <span className="inline-flex items-center gap-1 font-mono text-[11px]"><kbd className="bg-[#161622] border border-[#272738] px-1.5 py-0.5 rounded text-white">F</kbd> Flag</span>
+          </div>
         </div>
         <div className="flex gap-2 flex-wrap">
           <Button

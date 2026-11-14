@@ -503,7 +503,7 @@ class EvaluationNodeMixin:
 
         quality_eval_passed = state.get("quality_eval_passed", True)
         hitl_enabled = config.get("human_review", True)  # Route stratified audit sample to review queue by default
-        hitl_mode = config.get("human_review_mode", "blocking" if not quality_eval_passed else "async")
+        hitl_mode = config.get("human_review_mode", "async")
         hitl_timeout = int(config.get("hitl_timeout_seconds", 0))
         review_percentage = float(config.get("human_review_percentage", 10.0))
         if review_percentage <= 0:
@@ -653,6 +653,7 @@ class EvaluationNodeMixin:
                             duplicate_score=float(sample.get("duplicate_score", 0.0)),
                             diversity_score=float(sample.get("diversity_score", 0.0)),
                             metadata=sample.get("metadata", {}),
+                            owner=config.get("owner") or job.get("owner"),
                         )
                         review_ids[sample_review_id] = sample
                         submitted += 1

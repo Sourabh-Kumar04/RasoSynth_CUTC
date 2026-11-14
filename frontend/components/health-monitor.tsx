@@ -110,11 +110,11 @@ export function HealthMonitor({ className }: ProviderHealthProps) {
               {/* Overall Status */}
               <div className="flex items-center justify-between p-3 bg-muted/50 rounded-lg">
                 <div className="flex items-center gap-2">
-                  {getStatusIcon(healthStatus?.status || 'unknown')}
+                  {getStatusIcon(healthStatus?.status || (healthStatus?.ready ? 'healthy' : 'unknown'))}
                   <span className="font-medium">Overall Status</span>
                 </div>
-                <Badge variant={healthStatus?.status === 'healthy' ? 'default' : 'destructive'}>
-                  {healthStatus?.status || 'unknown'}
+                <Badge variant={(healthStatus?.status === 'healthy' || healthStatus?.ready) ? 'default' : 'destructive'}>
+                  {healthStatus?.status || (healthStatus?.ready ? 'healthy' : 'unknown')}
                 </Badge>
               </div>
 
@@ -123,7 +123,7 @@ export function HealthMonitor({ className }: ProviderHealthProps) {
                 <div className="flex items-center gap-2 p-2">
                   <Database className="h-4 w-4 text-muted-foreground" />
                   <span className="text-sm">Database</span>
-                  {healthStatus?.database ? (
+                  {(healthStatus?.database ?? healthStatus?.checks?.database === 'ready') ? (
                     <CheckCircle2 className="h-3 w-3 text-green-500 ml-auto" />
                   ) : (
                     <AlertCircle className="h-3 w-3 text-red-500 ml-auto" />
@@ -132,7 +132,7 @@ export function HealthMonitor({ className }: ProviderHealthProps) {
                 <div className="flex items-center gap-2 p-2">
                   <Server className="h-4 w-4 text-muted-foreground" />
                   <span className="text-sm">Redis</span>
-                  {healthStatus?.redis ? (
+                  {(healthStatus?.redis ?? healthStatus?.checks?.redis === 'ready') ? (
                     <CheckCircle2 className="h-3 w-3 text-green-500 ml-auto" />
                   ) : (
                     <AlertCircle className="h-3 w-3 text-red-500 ml-auto" />

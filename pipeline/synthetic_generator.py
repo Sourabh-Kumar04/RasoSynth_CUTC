@@ -195,9 +195,9 @@ def _build_language_instruction(
 
     # 2. Formality Register
     if register == "formal":
+        indic_note = " In Hindi/Indic dialogue, address the user with honorifics ('आप' / 'आपण' / 'நீங்கள்') and polite verbal forms." if lang not in ("en", "english") else ""
         rules.append(
-            "6. Register & Honorifics: Use a formal, respectful, and professional register. "
-            "In Hindi/Indic dialogue, address the user with honorifics ('आप' / 'आपण' / 'நீங்கள்') and polite verbal forms."
+            f"6. Register & Honorifics: Use a formal, respectful, and professional register.{indic_note}"
         )
     elif register == "casual":
         rules.append(

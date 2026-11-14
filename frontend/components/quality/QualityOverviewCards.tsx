@@ -58,7 +58,8 @@ export default function QualityOverviewCards() {
   };
 
   const avgScore = data?.average_quality ?? null;
-  const avgPct = avgScore == null ? null : avgScore <= 1 ? (avgScore * 100).toFixed(1) : Number(avgScore).toFixed(1);
+  const numScore = (typeof avgScore === 'number' && !isNaN(avgScore)) ? avgScore : (typeof avgScore === 'string' && !isNaN(parseFloat(avgScore))) ? parseFloat(avgScore) : null;
+  const avgPct = numScore == null ? null : numScore <= 1 ? (numScore * 100).toFixed(1) : numScore.toFixed(1);
 
   const cards = [
     {

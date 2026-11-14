@@ -120,15 +120,17 @@ export function TelemetryChart({
 
   // Dynamic GPU training duration: use actual elapsed wall time if available
   const estGpuHours = useMemo(() => {
-    if (startedAt && completedAt) {
+    if (startedAt) {
       const s = new Date(startedAt).getTime()
-      const c = new Date(completedAt).getTime()
-      const diffSec = Math.max(1, Math.round((c - s) / 1000))
+      const end = completedAt ? new Date(completedAt).getTime() : Date.now()
+      const diffSec = Math.max(1, Math.round((end - s) / 1000))
       if (diffSec < 60) return `${diffSec}s`
-      return `${(diffSec / 60).toFixed(1)}m`
+      const mins = Math.floor(diffSec / 60)
+      const secs = diffSec % 60
+      return `${mins}m ${secs}s`
     }
-    return `${((totalEpochs || 1) * 0.12).toFixed(2)} hrs`
-  }, [startedAt, completedAt, totalEpochs])
+    return `~45s (Serverless A10G)`
+  }, [startedAt, completedAt])
 
   // SVG Chart Dimensions
   const SVG_W = 500
@@ -206,7 +208,7 @@ export function TelemetryChart({
         <div className="flex items-center gap-3">
           <span>Active Epoch: <strong className="text-white">{currentEpoch || 1} / {totalEpochs || 3}</strong></span>
           <span className="text-zinc-700">·</span>
-          <span>GPU Time: <strong className="text-white">{estGpuHours} hrs</strong></span>
+          <span>GPU Time: <strong className="text-white">{estGpuHours}</strong></span>
           <span className="text-zinc-700">·</span>
           <span className="text-emerald-400 font-semibold flex items-center gap-1">
             <Sparkles className="w-3 h-3" />

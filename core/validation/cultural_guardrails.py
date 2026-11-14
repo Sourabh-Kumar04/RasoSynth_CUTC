@@ -171,6 +171,14 @@ def validate_script_conformity(text: str, language: str, script_mode: str = "nat
     lang = (language or "en").lower().strip()
     mode = (script_mode or "native").lower().strip()
 
+    # English guard: verify English text is predominantly Latin script
+    if lang in ("en", "english"):
+        devanagari_count = sum(1 for c in text if '\u0900' <= c <= '\u097f')
+        latin_count = sum(1 for c in text if ('a' <= c.lower() <= 'z'))
+        if devanagari_count > 10 and devanagari_count > latin_count * 0.2:
+            return False, f"Expected English text in Latin script, but found {devanagari_count} Devanagari characters."
+        return True, None
+
     # Hinglish is Roman-script Hindi: map it to the Hindi script spec and
     # reinterpret the default 'native' mode as 'romanized' (see docstring).
     if lang in ("hinglish", "hing", "roman_hindi"):

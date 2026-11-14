@@ -39,8 +39,8 @@
     border-color: rgba(255, 255, 255, 0.08);
   }
 
-  body {
-    background-color: #07060a;
+  html, body {
+    background-color: #07060a !important;
     color: #f5f2ea;
     font-family: 'Manrope', sans-serif;
     font-feature-settings: "cv02", "cv03", "cv04", "cv11", "tnum";
@@ -88,13 +88,13 @@
     border-color: rgba(255, 255, 255, 0.04) !important;
   }
   .bg-\[\#12121a\] {
-    background-color: rgba(255, 255, 255, 0.02) !important;
+    background-color: #12121a !important;
   }
   .bg-\[\#161622\] {
-    background-color: rgba(255, 255, 255, 0.035) !important;
+    background-color: #161622 !important;
   }
   .bg-\[\#0a0a0f\] {
-    background-color: rgba(255, 255, 255, 0.015) !important;
+    background-color: #0a0a0f !important;
   }
 
   .card-shadow,
