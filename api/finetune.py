@@ -77,9 +77,13 @@ class CreateFineTuneJobRequest(BaseModel):
     hf_token: str = ""
     hf_org: str = ""
     chat_template: str = Field("alpaca", pattern="^(alpaca|chatml|llama3|sharegpt|openai_jsonl)$")
-    training_method: str = Field("sft", pattern="^(sft|dpo|orpo)$")
-    dpo_beta: float = Field(0.1, ge=0.01, le=1.0)
-    dpo_loss_type: str = Field("sigmoid", pattern="^(sigmoid|hinge|ipo|kto_pair)$")
+    training_method: str = Field("sft", pattern="^(sft|dpo|orpo|kto|simpo)$")
+    dpo_beta: float = Field(0.1, ge=0.01, le=5.0)
+    dpo_loss_type: str = Field("sigmoid", pattern="^(sigmoid|hinge|ipo|kto_pair|simpo)$")
+    simpo_gamma: float = Field(1.0, ge=0.1, le=5.0)
+    orpo_lambda: float = Field(0.5, ge=0.01, le=2.0)
+    autoresearch_enabled: bool = Field(False, description="Whether job was initiated via Karpathy AutoResearch loop")
+    autoresearch_trial_id: Optional[int] = Field(None, description="AutoResearch champion trial ID")
     max_prompt_length: int = Field(512, ge=64, le=4096)
     packing: bool = Field(False, description="Enable sample packing for high throughput")
     export_ollama: bool = Field(False, description="Generate Ollama Modelfile upon completion")
