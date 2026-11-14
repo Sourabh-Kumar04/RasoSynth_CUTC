@@ -9,7 +9,7 @@ export default function DashboardLayout({
   children: React.ReactNode
 }) {
   return (
-    <div className="relative min-h-screen bg-[#07060a] text-[#f5f2ea] flex flex-col font-sans antialiased bg-dot-grid selection:bg-[#FF7A1A]/30 selection:text-white">
+    <div className="relative min-h-screen bg-[#07060a] text-[#f5f2ea] flex flex-col font-sans antialiased bg-dot-grid selection:bg-[#f26625]/30 selection:text-white">
       <div className="relative z-10 flex flex-col min-h-screen">
         <TopNav />
         <main className="flex-1 w-full max-w-[1600px] mx-auto p-4 sm:p-6 lg:p-8 space-y-6">
@@ -21,7 +21,7 @@ export default function DashboardLayout({
           <div className="max-w-[1600px] mx-auto flex flex-col sm:flex-row items-center justify-between gap-4">
             {/* Left: Brand Identity & Status */}
             <div className="flex flex-wrap items-center gap-3 text-center sm:text-left">
-              <Link href="/" className="flex items-center gap-2 text-white hover:text-[#FF7A1A] transition-colors">
+              <Link href="/" className="flex items-center gap-2 text-white hover:text-[#f26625] transition-colors">
                 <BrandLogo size={22} />
                 <span className="font-bold tracking-tight text-white">RasoSynthTune</span>
               </Link>

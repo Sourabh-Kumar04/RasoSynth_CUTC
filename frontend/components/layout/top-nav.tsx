@@ -27,25 +27,24 @@ import { SpotlightProductTour } from '@/components/onboarding/SpotlightProductTo
 import { BrandLogo } from '@/components/ui/brand-logo'
 import { api } from '@/lib/api/client'
 
-const CORE_PILLARS = [
+// Core primary navigation items - evenly spaced across the center
+const NAV_ITEMS = [
   { href: '/studio', label: 'Studio', icon: FlaskConical },
   { href: '/datasets', label: 'Datasets', icon: Database },
+  { href: '/review', label: 'Review', icon: ClipboardCheck },
   { href: '/orchestration', label: 'Pipelines', icon: Workflow },
   { href: '/finetune', label: 'Models', icon: Cpu },
-]
-
-const SETTINGS_DROPDOWN_ITEMS = [
-  { href: '/settings', label: 'Settings', desc: 'System status & configuration', icon: SettingsIcon },
-  { href: '/observability', label: 'Telemetry', desc: 'Cluster metrics & observability', icon: Activity },
-  { href: '/providers', label: 'API Keys', desc: 'Model providers & credentials', icon: Key },
-  { href: '/dbom', label: 'Attestation', desc: 'Cryptographic provenance', icon: ShieldCheck },
-]
-
-const SECONDARY_MANAGEMENT_ITEMS = [
-  { href: '/review', label: 'Review', icon: ClipboardCheck },
-  { href: '/quality', label: 'Quality', icon: BarChart2 },
   { href: '/jobs', label: 'Jobs', icon: Briefcase },
   { href: '/research', label: 'Benchmarks', icon: TrendingUp },
+]
+
+// Settings & Governance dropdown items
+const SETTINGS_DROPDOWN_ITEMS = [
+  { href: '/settings', label: 'Settings', desc: 'System status & compute config', icon: SettingsIcon },
+  { href: '/providers', label: 'API Keys', desc: 'Model providers & credentials', icon: Key },
+  { href: '/dbom', label: 'Provenance', desc: 'Cryptographic DBOM attestations', icon: ShieldCheck },
+  { href: '/quality', label: 'Quality Hub', desc: '5D Jury scoring & certification', icon: BarChart2 },
+  { href: '/observability', label: 'Telemetry', desc: 'Cluster resources & health', icon: Activity },
 ]
 
 function SystemHealthIndicator() {
@@ -99,7 +98,7 @@ function SystemHealthIndicator() {
   return (
     <Link
       href="/observability"
-      className="hidden md:inline-flex items-center gap-2 px-2.5 py-1 text-xs text-zinc-400 hover:text-white transition-colors shrink-0 group"
+      className="hidden lg:inline-flex items-center gap-1.5 px-2 py-1 text-xs text-zinc-400 hover:text-white transition-colors shrink-0 group"
       title="System Health & Observability"
     >
       <span className={clsx('w-2 h-2 rounded-full transition-transform group-hover:scale-125', dotColor, status === 'healthy' && 'animate-pulse')} />
@@ -172,17 +171,19 @@ export function TopNav() {
 
   return (
     <>
-      <header className="sticky top-0 z-40 w-full border-b border-white/[0.06] bg-[#07060b]/85 backdrop-blur-xl select-none transition-colors">
-        <div className="w-full max-w-[1600px] mx-auto px-4 sm:px-6 lg:px-8 flex items-center justify-between h-14">
-          {/* Left: Brand Logo & Fluid Borderless Nav */}
-          <div className="flex items-center space-x-4 sm:space-x-8 shrink-0">
+      <header className="sticky top-0 z-40 w-full border-b border-white/[0.06] bg-[#07060a]/90 backdrop-blur-xl select-none transition-colors">
+        <div className="w-full max-w-[1600px] mx-auto px-4 sm:px-6 lg:px-8 flex items-center justify-between h-14 gap-2">
+          {/* Left: Brand Logo */}
+          <div className="flex items-center shrink-0">
             <Link href="/" className="flex items-center space-x-2.5 group transition-transform active:scale-98">
-              <BrandLogo size={32} showWordmark wordmarkClassName="text-[16px]" />
+              <BrandLogo size={34} showWordmark wordmarkClassName="text-[16px]" />
             </Link>
+          </div>
 
-            {/* 4 Core Pillars - Borderless, Fluid, Modern */}
-            <nav className="hidden md:flex items-center space-x-1 lg:space-x-2">
-              {CORE_PILLARS.map((item) => {
+          {/* Center: Evenly Spaced Primary Navigation */}
+          <nav className="hidden md:flex items-center justify-center flex-1 mx-2 lg:mx-6">
+            <div className="flex items-center justify-evenly w-full max-w-3xl gap-1">
+              {NAV_ITEMS.map((item) => {
                 const active = pathname === item.href || (item.href !== '/' && pathname.startsWith(item.href))
                 const Icon = item.icon
                 return (
@@ -191,29 +192,29 @@ export function TopNav() {
                     href={item.href}
                     aria-current={active ? 'page' : undefined}
                     className={clsx(
-                      'relative flex items-center space-x-2 px-3 py-1.5 rounded-lg text-xs font-medium tracking-wide transition-all shrink-0',
+                      'relative flex items-center space-x-1.5 px-3 py-1.5 rounded-lg text-xs font-medium tracking-wide transition-all shrink-0',
                       active
-                        ? 'text-white bg-white/[0.07] font-semibold'
-                        : 'text-zinc-400 hover:text-zinc-100 hover:bg-white/[0.03]'
+                        ? 'text-white font-semibold'
+                        : 'text-zinc-400 hover:text-white hover:bg-white/[0.04]'
                     )}
                   >
-                    <Icon className={clsx('w-3.5 h-3.5 transition-colors', active ? 'text-[#FF7A1A]' : 'text-zinc-400')} />
+                    <Icon className={clsx('w-3.5 h-3.5 transition-colors', active ? 'text-[#f26625]' : 'text-zinc-400')} />
                     <span>{item.label}</span>
                     {active && (
-                      <span className="absolute bottom-0 left-3 right-3 h-[2px] bg-gradient-to-r from-[#FF7A1A] to-[#FF385C] rounded-full shadow-[0_0_8px_rgba(255,122,26,0.6)]" />
+                      <span className="absolute bottom-0 left-2 right-2 h-[2px] bg-[#f26625] rounded-full shadow-[0_0_8px_rgba(242,102,37,0.7)]" />
                     )}
                   </Link>
                 )
               })}
-            </nav>
-          </div>
+            </div>
+          </nav>
 
-          {/* Right Controls: Health Indicator, Settings Ghost, + New Dataset Pill */}
+          {/* Right Controls: Health Indicator, Settings Cog, + New Dataset */}
           <div className="flex items-center space-x-2 sm:space-x-3 shrink-0">
             {/* System Health Dot Indicator */}
             <SystemHealthIndicator />
 
-            {/* Settings Cog Dropdown - Borderless Ghost Button */}
+            {/* Settings Cog Dropdown */}
             <div className="relative" ref={settingsRef}>
               <button
                 type="button"
@@ -223,12 +224,12 @@ export function TopNav() {
                 className={clsx(
                   'p-2 rounded-lg text-zinc-400 hover:text-white transition-all',
                   settingsOpen
-                    ? 'text-white bg-white/[0.08]'
+                    ? 'text-[#f26625] bg-white/[0.08]'
                     : 'hover:bg-white/[0.05]'
                 )}
                 aria-label="Settings and options"
               >
-                <SettingsIcon className={clsx('w-4 h-4 transition-transform duration-200', settingsOpen && 'rotate-45 text-[#FF7A1A]')} />
+                <SettingsIcon className={clsx('w-4 h-4 transition-transform duration-200', settingsOpen && 'rotate-45 text-[#f26625]')} />
               </button>
 
               {settingsOpen && (
@@ -247,40 +248,16 @@ export function TopNav() {
                           onClick={() => setSettingsOpen(false)}
                           className={clsx(
                             'flex items-start space-x-2.5 px-3.5 py-2 transition-colors hover:bg-white/[0.05]',
-                            active ? 'text-[#FF7A1A] bg-white/[0.04]' : 'text-zinc-300'
+                            active ? 'text-[#f26625] bg-white/[0.04]' : 'text-zinc-300'
                           )}
                         >
-                          <Icon className={clsx('w-4 h-4 mt-0.5 shrink-0', active ? 'text-[#FF7A1A]' : 'text-zinc-400')} />
+                          <Icon className={clsx('w-4 h-4 mt-0.5 shrink-0', active ? 'text-[#f26625]' : 'text-zinc-400')} />
                           <div>
-                            <div className={clsx('font-semibold text-xs', active ? 'text-[#FF7A1A]' : 'text-zinc-200')}>
+                            <div className={clsx('font-semibold text-xs', active ? 'text-[#f26625]' : 'text-zinc-200')}>
                               {item.label}
                             </div>
                             <div className="text-[10px] text-zinc-500 font-sans">{item.desc}</div>
                           </div>
-                        </Link>
-                      )
-                    })}
-                  </div>
-
-                  <div className="px-3.5 py-1 text-[10px] uppercase tracking-wider text-zinc-500 font-bold border-t border-white/[0.06] mt-1 pt-2">
-                    Workspace Tools
-                  </div>
-                  <div className="grid grid-cols-2 gap-1 px-2.5 py-1">
-                    {SECONDARY_MANAGEMENT_ITEMS.map((item) => {
-                      const active = pathname === item.href
-                      const Icon = item.icon
-                      return (
-                        <Link
-                          key={item.href}
-                          href={item.href}
-                          onClick={() => setSettingsOpen(false)}
-                          className={clsx(
-                            'flex items-center space-x-1.5 px-2 py-1.5 rounded-lg text-[11px] transition-colors hover:bg-white/[0.05]',
-                            active ? 'text-[#FF7A1A] bg-white/[0.04]' : 'text-zinc-400 hover:text-white'
-                          )}
-                        >
-                          <Icon className="w-3 h-3 shrink-0" />
-                          <span className="truncate">{item.label}</span>
                         </Link>
                       )
                     })}
@@ -314,13 +291,13 @@ export function TopNav() {
               )}
             </div>
 
-            {/* Primary CTA: Sleek Radiant Gradient Pill (Border-Free) */}
+            {/* Primary CTA: + New Dataset */}
             <Link
               href="/studio"
-              className="inline-flex items-center space-x-1.5 px-4 py-1.5 rounded-full bg-gradient-to-r from-[#FF7A1A] via-[#FF385C] to-[#C084FC] hover:opacity-90 text-white text-xs font-semibold tracking-wide transition-all active:scale-95 shadow-[0_2px_15px_rgba(255,122,26,0.35)] shrink-0"
+              className="inline-flex items-center space-x-1.5 px-3.5 py-1.5 rounded-md bg-[#f26625] hover:bg-[#de581a] text-white text-xs font-semibold tracking-wide transition-all active:scale-95 shadow-sm shrink-0"
             >
               <Plus className="w-3.5 h-3.5" />
-              <span>New Dataset</span>
+              <span className="hidden sm:inline">New Dataset</span>
             </Link>
 
             {/* Mobile menu toggle */}
@@ -338,7 +315,7 @@ export function TopNav() {
           </div>
         </div>
 
-        {/* Mobile Navigation Drawer - Fluid, Borderless */}
+        {/* Mobile Navigation Drawer */}
         {mobileMenuOpen && (
           <nav
             ref={mobileDrawerRef}
@@ -346,13 +323,13 @@ export function TopNav() {
             role="dialog"
             aria-modal="true"
             aria-label="Site navigation"
-            className="md:hidden border-t border-white/[0.06] bg-[#07060b]/95 backdrop-blur-2xl p-4 space-y-3 animate-fade-in"
+            className="md:hidden border-t border-white/[0.06] bg-[#07060a]/95 backdrop-blur-2xl p-4 space-y-3 animate-fade-in"
           >
             <div className="text-[10px] uppercase tracking-wider text-zinc-500 font-bold px-1">
-              Core Pillars
+              Platform Navigation
             </div>
             <div className="space-y-1">
-              {CORE_PILLARS.map((item) => {
+              {NAV_ITEMS.map((item) => {
                 const active = pathname === item.href
                 const Icon = item.icon
                 return (
@@ -364,11 +341,11 @@ export function TopNav() {
                     className={clsx(
                       'flex items-center space-x-3 px-3 py-2.5 rounded-xl text-xs font-medium transition-colors',
                       active
-                        ? 'bg-white/[0.08] text-white font-semibold'
+                        ? 'bg-white/[0.08] text-[#f26625] font-semibold'
                         : 'text-zinc-300 hover:bg-white/[0.04] hover:text-white'
                     )}
                   >
-                    <Icon className={clsx('w-4 h-4', active ? 'text-[#FF7A1A]' : 'text-zinc-400')} />
+                    <Icon className={clsx('w-4 h-4', active ? 'text-[#f26625]' : 'text-zinc-400')} />
                     <span>{item.label}</span>
                   </Link>
                 )
@@ -379,7 +356,7 @@ export function TopNav() {
               Settings &amp; Tools
             </div>
             <div className="space-y-1">
-              {[...SETTINGS_DROPDOWN_ITEMS, ...SECONDARY_MANAGEMENT_ITEMS].map((item) => {
+              {SETTINGS_DROPDOWN_ITEMS.map((item) => {
                 const active = pathname === item.href
                 const Icon = item.icon
                 return (
@@ -390,7 +367,7 @@ export function TopNav() {
                     onClick={() => setMobileMenuOpen(false)}
                     className={clsx(
                       'flex items-center space-x-3 px-3 py-2 rounded-xl text-xs transition-colors',
-                      active ? 'text-[#FF7A1A] bg-white/[0.06]' : 'text-zinc-400 hover:text-white hover:bg-white/[0.03]'
+                      active ? 'text-[#f26625] bg-white/[0.06]' : 'text-zinc-400 hover:text-white hover:bg-white/[0.03]'
                     )}
                   >
                     <Icon className="w-3.5 h-3.5" />

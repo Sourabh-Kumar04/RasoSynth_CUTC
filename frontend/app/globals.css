@@ -17,10 +17,10 @@
     --border-subtle: rgba(255, 255, 255, 0.04);
     --muted-foreground: #a8a29e;
     
-    /* Modern Radiant AI Palette */
-    --accent: #FF7A1A;
-    --accent-hover: #FF5E3A;
-    --accent-muted: #FF385C;
+    /* Authentic YC Signal Orange Palette */
+    --accent: #f26625;
+    --accent-hover: #de581a;
+    --accent-muted: #ea580c;
     
     --success: #10b981;
     --warning: #f59e0b;
@@ -63,7 +63,7 @@
   }
 
   ::-webkit-scrollbar-thumb:hover {
-    background-color: #FF7A1A;
+    background-color: #f26625;
   }
 }
 
