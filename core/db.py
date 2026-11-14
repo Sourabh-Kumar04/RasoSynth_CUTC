@@ -133,8 +133,8 @@ class Job(Base):
             "merkle_root": self.merkle_root or (self.datasets[0].metadata_.get("merkle_root_hash") if self.datasets and self.datasets[0].metadata_ else None),
             "owner": getattr(self, "owner", None),
             "is_simulated": getattr(self, "is_simulated", False),
-            "created_at": self.created_at.isoformat() if self.created_at else None,
-            "updated_at": self.updated_at.isoformat() if self.updated_at else None,
+            "created_at": (self.created_at.isoformat() + "Z") if self.created_at and not self.created_at.isoformat().endswith("Z") else (self.created_at.isoformat() if self.created_at else None),
+            "updated_at": (self.updated_at.isoformat() + "Z") if self.updated_at and not self.updated_at.isoformat().endswith("Z") else (self.updated_at.isoformat() if self.updated_at else None),
         }
 
 
@@ -474,8 +474,8 @@ class ReviewQueueItem(Base):
             "metadata": self.extra_metadata or {},
             "owner": getattr(self, "owner", None),
             "is_simulated": getattr(self, "is_simulated", False),
-            "created_at": self.created_at.isoformat() if self.created_at else None,
-            "updated_at": self.updated_at.isoformat() if self.updated_at else None,
+            "created_at": (self.created_at.isoformat() + "Z") if self.created_at and not self.created_at.isoformat().endswith("Z") else (self.created_at.isoformat() if self.created_at else None),
+            "updated_at": (self.updated_at.isoformat() + "Z") if self.updated_at and not self.updated_at.isoformat().endswith("Z") else (self.updated_at.isoformat() if self.updated_at else None),
         }
 
 
@@ -1768,6 +1768,14 @@ class AsyncDB:
                     q = meta.get("quality_score") or (meta.get("quality_breakdown") or {}).get("composite")
                 if not root:
                     root = meta.get("merkle_root_hash")
+            c_at = job.created_at
+            if hasattr(c_at, "isoformat"):
+                c_str = c_at.isoformat()
+                c_at = c_str if c_str.endswith("Z") else (c_str + "Z")
+            u_at = getattr(job, 'updated_at', job.created_at)
+            if hasattr(u_at, "isoformat"):
+                u_str = u_at.isoformat()
+                u_at = u_str if u_str.endswith("Z") else (u_str + "Z")
             job_dict = {
                 "id": job.id,
                 "status": job.status,
@@ -1778,8 +1786,8 @@ class AsyncDB:
                 "quality_score": q,
                 "merkle_root": root,
                 "metadata": meta,
-                "created_at": job.created_at,
-                "updated_at": getattr(job, 'updated_at', job.created_at),
+                "created_at": c_at,
+                "updated_at": u_at,
                 "owner": getattr(job, 'owner', None),
                 "config": config,
                 "target_domain": config.get('target_domain') or getattr(job, 'target_domain', 'Custom'),

@@ -37,10 +37,26 @@ export function formatDuration(ms: number): string {
   return `${Math.floor(ms / 3600000)}h ${Math.floor((ms % 3600000) / 60000)}m`
 }
 
-export function formatRelativeTime(date: Date | string): string {
+export function formatRelativeTime(date: Date | string | null | undefined): string {
+  if (!date) return 'just now'
   const now = new Date()
-  const then = new Date(date)
-  const diff = now.getTime() - then.getTime()
+  let then: Date
+  if (typeof date === 'string') {
+    let str = date.trim()
+    if (!str.endsWith('Z') && !str.includes('+') && !/[-+]\d{2}:\d{2}$/.test(str)) {
+      if (str.includes(' ') && !str.includes('T')) {
+        str = str.replace(' ', 'T')
+      }
+      str += 'Z'
+    }
+    then = new Date(str)
+  } else {
+    then = new Date(date)
+  }
+
+  if (isNaN(then.getTime())) return 'just now'
+
+  const diff = Math.max(0, now.getTime() - then.getTime())
 
   const seconds = Math.floor(diff / 1000)
   const minutes = Math.floor(seconds / 60)
