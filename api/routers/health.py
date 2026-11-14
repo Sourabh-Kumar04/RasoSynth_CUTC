@@ -61,7 +61,7 @@ async def health_check(request: Request):
         overall_status = "unhealthy"
     elif not providers_healthy:
         overall_status = "degraded"
-    elif any(v == "healthy" for v in providers_healthy.values()):
+    elif any(v in ("healthy", "configured") for v in providers_healthy.values()):
         overall_status = "healthy"
     else:
         overall_status = "degraded"
