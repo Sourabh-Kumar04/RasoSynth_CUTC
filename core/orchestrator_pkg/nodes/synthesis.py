@@ -67,8 +67,8 @@ class SynthesisNodeMixin:
         keywords = [w for w in re.split(r'\W+', context) if len(w) >= 3 and w not in stop_words]
 
         # Domain terminology and entity aliases for domain grounding
-        if any(t in context for t in ["gst", "tax", "taxation"]):
-            keywords.extend(["cgst", "sgst", "igst", "cbic", "gstr", "itc", "invoice", "invoicing", "turnover", "cess", "e-way", "taxpayer"])
+        if any(t in context for t in ["gst", "tax", "taxation", "income tax", "itr", "finance"]):
+            keywords.extend(["cgst", "sgst", "igst", "cbic", "gstr", "itc", "invoice", "invoicing", "turnover", "cess", "e-way", "taxpayer", "income", "itr", "tds", "deduction", "slab", "exemption", "assessment", "rebate", "capital", "gains", "salary", "resident", "pan", "section", "115bac", "rules", "act"])
         if any(t in context for t in ["patient", "medical", "hospital", "doctor"]):
             keywords.extend(["consent", "treatment", "records", "surgery", "informed", "clinical", "negligence", "physician", "complaint", "mci"])
         if any(t in context for t in ["corporate", "law", "company", "companies"]):
@@ -771,13 +771,17 @@ class SynthesisNodeMixin:
 
             seen_keys.add(tuple_key)
             seen_keys.add(str_key)
-            new_sample = copy.deepcopy(base)
-            new_sample["instruction"] = new_inst
-            new_sample["response"] = new_resp
-            new_sample["curriculum_order"] = len(topped_up)
-            meta = new_sample.setdefault("metadata", {})
-            meta["is_quota_topup"] = True
-            meta["variant_index"] = len(topped_up)
+            new_sample = {
+                **base,
+                "instruction": new_inst,
+                "response": new_resp,
+                "curriculum_order": len(topped_up),
+                "metadata": {
+                    **(base.get("metadata") or {}),
+                    "is_quota_topup": True,
+                    "variant_index": len(topped_up),
+                },
+            }
             topped_up.append(new_sample)
 
         return topped_up
