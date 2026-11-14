@@ -1,0 +1,41 @@
+name: Keep Render Backend Awake
+
+on:
+  schedule:
+    # Run every 10 minutes to prevent Render's 15-minute idle sleep
+    - cron: '*/10 * * * *'
+  workflow_dispatch: # Allows manual trigger from GitHub Actions UI
+
+concurrency:
+  group: keep-alive-render
+  cancel-in-progress: true
+
+jobs:
+  ping-render:
+    name: Ping Health Endpoint
+    runs-on: ubuntu-latest
+    timeout-minutes: 3
+    steps:
+      - name: Ping Render Backend
+        env:
+          TARGET_URL: ${{ vars.RENDER_BACKEND_URL || 'https://rasosynthtune-api.onrender.com' }}
+        run: |
+          HEALTH_URL="${TARGET_URL%/}/health"
+          echo "Sending keep-alive heartbeat to: ${HEALTH_URL}"
+          
+          # Retry up to 3 times in case of transient cold-start delays
+          for attempt in 1 2 3; do
+            echo "Heartbeat attempt #${attempt}..."
+            STATUS=$(curl -s -o /dev/null -w "%{http_code}" --max-time 45 "${HEALTH_URL}" || echo "000")
+            if [ "$STATUS" -ge 200 ] && [ "$STATUS" -lt 400 ]; then
+              echo "✅ Success: Received HTTP ${STATUS} from ${HEALTH_URL}"
+              exit 0
+            else
+              echo "⚠️ Attempt #${attempt} returned HTTP ${STATUS}. Retrying in 5 seconds..."
+              sleep 5
+            fi
+          done
+          
+          echo "❌ Failed to reach ${HEALTH_URL} after 3 attempts."
+          # Don't fail the workflow run to avoid noisy alert emails if Render is temporarily building
+          exit 0
