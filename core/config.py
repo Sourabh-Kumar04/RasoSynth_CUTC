@@ -311,14 +311,17 @@ class Settings(BaseSettings):
                 self.nvidia_api_key,
                 self.anthropic_api_key,
                 self.openai_api_key,
+                self.groq_api_key,
+                self.fireworks_api_key,
+                self.hf_token,
             ])
 
             if not has_provider:
-                missing_secrets.append("At least one AI provider API key")
+                missing_secrets.append("At least one AI provider API key (Gemini, Groq, NVIDIA, OpenAI, Claude, Fireworks, or HF)")
 
-            # Check for database connection
-            if not self.postgres_url or "localhost" in self.postgres_url:
-                missing_secrets.append("Production database URL (non-localhost)")
+            # Check for database connection (allow SQLite fallback if POSTGRES_URL is omitted)
+            if self.postgres_url and "localhost" in self.postgres_url:
+                missing_secrets.append("Production database URL must be a remote URL (e.g. Neon, Supabase, Render Postgres), not localhost")
 
             if missing_secrets:
                 raise SecurityError(

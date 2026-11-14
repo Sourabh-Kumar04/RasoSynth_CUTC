@@ -24,18 +24,39 @@ services:
         value: "2"
       - key: PYTHONUNBUFFERED
         value: "1"
-      # Free AI Provider keys (e.g. Gemini 1.5 Flash, Groq)
-      - key: GEMINI_API_KEY
+      # JWT Authentication (Auto-generated 64-char cryptographically secure secret)
+      - key: JWT_SECRET
+        generateValue: true
+      # Database: Remote PostgreSQL connection string (e.g. Neon, Supabase, Render Postgres)
+      # If left empty, the server automatically defaults to SQLite.
+      - key: POSTGRES_URL
         sync: false
-      - key: OPENAI_API_KEY
+      # AI Provider API Keys from your .env
+      - key: GOOGLE_API_KEY
         sync: false
       - key: GROQ_API_KEY
         sync: false
+      - key: NVIDIA_API_KEY
+        sync: false
+      - key: SARVAM_API_KEY
+        sync: false
+      - key: FIREWORKS_API_KEY
+        sync: false
+      - key: AIKOSH_API_KEY
+        sync: false
+      - key: TAVILY_API_KEY
+        sync: false
       - key: HF_TOKEN
         sync: false
-      # Modal Labs Free Tier ($30/mo free compute) for offloaded fine-tuning
+      - key: OPENAI_API_KEY
+        sync: false
+      - key: ANTHROPIC_API_KEY
+        sync: false
+      # Serverless Cloud GPU Training (Modal Labs $30/mo free compute)
       - key: MODAL_TOKEN_ID
         sync: false
       - key: MODAL_TOKEN_SECRET
+        sync: false
+      - key: RUNPOD_API_KEY
         sync: false
     healthCheckPath: /health
