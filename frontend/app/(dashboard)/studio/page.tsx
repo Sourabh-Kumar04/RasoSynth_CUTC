@@ -48,7 +48,7 @@ const INDUSTRY_PRESETS = [
   },
   {
     id: 'indic-legal',
-    title: 'Bhartiya Nyaya Sanhita (BNS)',
+    title: 'Bharatiya Nyaya Sanhita (BNS)',
     domain: 'Indian Law & Constitutional Jurisprudence (BNS 2023)',
     source: 'eCourts & SCI',
     prompt: 'Criminal justice statutory transition and legal adjudication under Bharatiya Nyaya Sanhita (BNS 2023), BNSS 2023, and BSA 2023. Focus on: (1) Precision cross-mapping of offences from IPC sections to BNS with legislative intent analysis and altered sentencing maximums; (2) Undertrial bail jurisprudence and statutory bail entitlement under Section 479 BNSS; (3) Electronic evidence hash verification protocols under Section 61 BSA 2023; (4) Precedent reconciliation grounded in Supreme Court of India constitutional bench rulings. Preserve exact statutory terminology without importing US Title 18 or UK common law concepts.',
@@ -58,7 +58,7 @@ const INDUSTRY_PRESETS = [
     scriptMode: 'native',
     formalityRegister: 'formal',
     parallelBilingual: true,
-    preservedTerms: ['BNS 2023', 'Section 479 BNSS', 'BSA Section 61', 'Bhartiya Sakshya Adhiniyam', 'Ratio Decidendi', 'Mandamus', 'Habeas Corpus', 'Mens Rea'],
+    preservedTerms: ['BNS 2023', 'Section 479 BNSS', 'BSA Section 61', 'Bharatiya Sakshya Adhiniyam', 'Ratio Decidendi', 'Mandamus', 'Habeas Corpus', 'Mens Rea'],
     antiDomains: ['us code title 18', 'california penal code', 'uk crown prosecution service', 'hallucinated citations'],
     size: 20000,
     sources: ['eCourts India', 'Supreme Court Reports', 'Legislative Dept'],

@@ -909,9 +909,9 @@ export default function QualityDashboardPage() {
                   </p>
                 </div>
                 <div className="p-2.5 rounded bg-[#12121a] border border-[#1f1f2e] space-y-1">
-                  <p className="text-white font-bold text-xs">3. Zero Test Leakage Guarantee</p>
+                  <p className="text-white font-bold text-xs">3. Test Leakage Minimization Gate</p>
                   <p className="text-xs text-[#a8a29e] leading-relaxed">
-                    Guarantees evaluated model checkpoints never memorize ground-truth benchmark prompts or test solutions, ensuring genuine zero-shot generalization.
+                    Evaluates model checkpoints against ground-truth benchmark prompts and test solutions to prevent benchmark memorization.
                   </p>
                 </div>
               </div>
@@ -924,7 +924,7 @@ export default function QualityDashboardPage() {
                   <span className="text-white font-bold">8-Gram MinHash Jaccard Overlap Barrier</span>
                 </div>
                 <p className="text-xs text-[#a8a29e]">
-                  Verified against evaluation splits across 5 frontier benchmarks. Zero ground truth contamination.
+                  Verified against evaluation splits across 5 frontier benchmarks to prevent ground truth contamination.
                 </p>
               </div>
               <div className="flex items-center gap-2">
