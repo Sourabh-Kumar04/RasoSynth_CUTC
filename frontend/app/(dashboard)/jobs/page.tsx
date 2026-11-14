@@ -113,7 +113,7 @@ export default function JobsPage() {
       <PageHeader
         eyebrow={`${counts.running} Active Runs`}
         title="Jobs Execution Dashboard"
-        purpose="Real-time monitoring and orchestration of synthetic dataset generation runs and fine-tuning pipelines."
+        purpose="Dataset generation and fine-tuning runs."
         action={
           <div className="flex items-center gap-2">
             <Button
@@ -194,11 +194,8 @@ export default function JobsPage() {
       ) : error && jobs.length === 0 ? (
         <Card className="border-[#272738] bg-[#12121a]/60 rounded-md p-12 text-center">
           <AlertCircle className="w-8 h-8 text-amber-500 mx-auto mb-3" />
-          <h3 className="text-sm font-bold font-mono text-white mb-1">
-            Can&apos;t reach the scheduler
-          </h3>
           <p className="text-xs font-mono text-[#a8a29e] max-w-md mx-auto mb-6">
-            The job scheduler did not respond. The backend may be offline or unreachable.
+            Backend service unavailable — verify local container or proxy connection.
           </p>
           <div className="flex items-center justify-center gap-3">
             <Button

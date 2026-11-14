@@ -725,8 +725,24 @@ export default function DatasetsPage() {
         </div>
       )}
 
-      {/* Filters Toolbar */}
+      {/* Counter chips & Filters Toolbar */}
       <div className="flex flex-wrap items-center gap-3">
+        {/* Counter chips: Exactly 3 clean chips (Datasets, Ready, Exports) */}
+        <div className="flex items-center gap-2">
+          <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-md text-xs font-mono bg-[#161622] border border-[#272738] text-white">
+            <span className="text-[#a8a29e]">Datasets:</span>
+            <strong className="text-white font-semibold">{datasets.length}</strong>
+          </span>
+          <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-md text-xs font-mono bg-[#161622] border border-emerald-500/30 text-emerald-400">
+            <span className="text-[#a8a29e]">Ready:</span>
+            <strong className="text-[#10b981] font-semibold">{datasets.filter((ds) => ds.status === 'ready' || ds.validated).length}</strong>
+          </span>
+          <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-md text-xs font-mono bg-[#161622] border border-[#f26625]/30 text-[#f26625]">
+            <span className="text-[#a8a29e]">Exports:</span>
+            <strong className="text-[#f26625] font-semibold">{datasets.filter((ds) => ds.records > 0).length}</strong>
+          </span>
+        </div>
+
         <div className="relative flex-1 min-w-[200px] max-w-sm">
           <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 h-4 w-4 text-[#a8a29e]" />
           <Input
@@ -737,18 +753,21 @@ export default function DatasetsPage() {
           />
         </div>
 
-        <Select value={modalityFilter} onValueChange={setModalityFilter}>
-          <SelectTrigger className="w-full sm:w-36 rounded-md border-[#272738] bg-[#0a0a0f] text-white text-xs font-mono">
-            <SelectValue placeholder="Modality" />
-          </SelectTrigger>
-          <SelectContent className="bg-[#12121a] border-[#272738] text-white text-xs">
-            <SelectItem value="all">All Modalities</SelectItem>
-            <SelectItem value="text">Text (SFT)</SelectItem>
-            <SelectItem value="image">Image</SelectItem>
-            <SelectItem value="code">Code</SelectItem>
-            <SelectItem value="multimodal">Multimodal</SelectItem>
-          </SelectContent>
-        </Select>
+        <div className="flex items-center gap-1.5">
+          <span className="text-xs font-mono text-[#a8a29e]">Domain:</span>
+          <Select value={modalityFilter} onValueChange={setModalityFilter}>
+            <SelectTrigger className="w-full sm:w-36 rounded-md border-[#272738] bg-[#0a0a0f] text-white text-xs font-mono">
+              <SelectValue placeholder="Modality" />
+            </SelectTrigger>
+            <SelectContent className="bg-[#12121a] border-[#272738] text-white text-xs">
+              <SelectItem value="all">All Domains</SelectItem>
+              <SelectItem value="text">Text (SFT)</SelectItem>
+              <SelectItem value="image">Image</SelectItem>
+              <SelectItem value="code">Code</SelectItem>
+              <SelectItem value="multimodal">Multimodal</SelectItem>
+            </SelectContent>
+          </Select>
+        </div>
 
         <Select value={statusFilter} onValueChange={setStatusFilter}>
           <SelectTrigger className="w-full sm:w-32 rounded-md border-[#272738] bg-[#0a0a0f] text-white text-xs font-mono">
@@ -756,7 +775,7 @@ export default function DatasetsPage() {
           </SelectTrigger>
           <SelectContent className="bg-[#12121a] border-[#272738] text-white text-xs">
             <SelectItem value="all">All Status</SelectItem>
-            <SelectItem value="ready">Ready (Ready)</SelectItem>
+            <SelectItem value="ready">Ready</SelectItem>
             <SelectItem value="processing">Processing</SelectItem>
           </SelectContent>
         </Select>

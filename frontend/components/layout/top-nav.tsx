@@ -9,19 +9,9 @@ import {
   Database,
   Search,
   Workflow,
-  Cpu,
-  ClipboardCheck,
-  BarChart2,
-  Activity,
-  Beaker,
-  TrendingUp,
-  Settings as SettingsIcon,
   Menu,
   X,
   Sparkles,
-  Zap,
-  LogIn,
-  LogOut,
   Briefcase,
   ShieldCheck,
 } from 'lucide-react'
@@ -32,19 +22,12 @@ import { BrandLogo } from '@/components/ui/brand-logo'
 import { api } from '@/lib/api/client'
 
 const MOBILE_NAV_ITEMS = [
-  { href: '/dashboard', label: 'Dashboard', icon: LayoutDashboard },
+  { href: '/', label: 'Home', icon: LayoutDashboard },
   { href: '/studio', label: 'Studio', icon: FlaskConical },
   { href: '/jobs', label: 'Jobs', icon: Briefcase },
-  { href: '/datasets', label: 'Data Library', icon: Database },
-  { href: '/finetune', label: 'Model Training', icon: Cpu },
-  { href: '/dbom', label: 'DBOM Attestation', icon: ShieldCheck },
-  { href: '/orchestration', label: 'Pipelines', icon: Workflow },
-  { href: '/quality', label: 'Quality', icon: BarChart2 },
-  { href: '/review', label: 'Review', icon: ClipboardCheck },
-  { href: '/observability', label: 'Telemetry', icon: Activity },
-  { href: '/research', label: 'Benchmarks', icon: TrendingUp },
-  { href: '/providers', label: 'Providers', icon: Beaker },
-  { href: '/settings', label: 'System Status', icon: SettingsIcon },
+  { href: '/datasets', label: 'Datasets', icon: Database },
+  { href: '/orchestration', label: 'Orchestration', icon: Workflow },
+  { href: '/dbom', label: 'DBOM', icon: ShieldCheck },
 ]
 
 export function TopNav() {
@@ -134,7 +117,6 @@ export function TopNav() {
             <button
               onClick={() => setShowTour(true)}
               className="hidden sm:inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md border border-[#272738] bg-[#12121a] hover:bg-[#181826] hover:border-amber-500/40 text-xs font-mono text-zinc-300 hover:text-white transition-all"
-              title="Launch Guided Product Tour"
             >
               <Sparkles className="w-3.5 h-3.5 text-amber-400" />
               <span>Tour</span>
@@ -143,7 +125,6 @@ export function TopNav() {
             <button
               onClick={() => setShowSearch(true)}
               className="sm:hidden p-2 rounded-lg text-[#a8a29e] hover:text-white hover:bg-[#161622] border border-[#272738]"
-              title="Search"
             >
               <Search className="w-4 h-4" />
             </button>

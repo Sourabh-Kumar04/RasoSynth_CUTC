@@ -676,7 +676,6 @@ export default function ResearchPage() {
                             {h.plain}
                           </p>
                         </div>
-                        <p className="text-xs text-[#a8a29e] mt-1 leading-relaxed font-mono">{h.desc}</p>
                       </div>
 
                       {/* Benchmark Impact Indicator */}
