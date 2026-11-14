@@ -301,14 +301,20 @@ class SynthesisNodeMixin:
                             derived_src = "https://incometaxindia.gov.in/pages/rules.aspx"
                         elif "aerospace" in domain_kw or "isro" in domain_kw:
                             derived_src = "https://www.isro.gov.in"
+                        elif any(kw in domain_kw for kw in ["stock", "market", "nse", "bse", "sebi", "share", "invest", "trading", "equity"]):
+                            if "bse" in domain_kw or "bombay" in domain_kw:
+                                derived_src = "https://www.bseindia.com"
+                            elif "sebi" in domain_kw or "regulat" in domain_kw:
+                                derived_src = "https://www.sebi.gov.in"
+                            else:
+                                derived_src = "https://www.nseindia.com"
                         elif target_domain_str.startswith("http"):
                             derived_src = target_domain_str
                         elif state.get("sources") and len(state["sources"]) > 0:
                             first_s = state["sources"][0]
                             derived_src = first_s.get("url") if isinstance(first_s, dict) else getattr(first_s, "url", "")
                         else:
-                            clean_dom = "".join(c for c in domain_kw if c.isalnum())[:25]
-                            derived_src = f"https://www.{clean_dom or 'india'}.gov.in"
+                            derived_src = "https://data.gov.in"
 
                         src_url = getattr(valid_sample, "source_url", None) or sample_meta.get("source_url") or derived_src
                         sample_meta["source_url"] = src_url

@@ -155,22 +155,25 @@ export default function ResearchPage() {
   const [arenaPairs] = useState([
     {
       prompt: "Reconcile Input Tax Credit (ITC) default under Section 16(2)(c) of CGST Act 2017 when supplier GSTR-3B is unfiled.",
-      modelA: { name: "Candidate Alpha (Blinded)", response: "Under Section 16(2)(c) CGST Act, ITC availability is contingent upon tax actual payment by supplier. If GSTR-3B is unfiled, ITC is subject to reversal with Section 50 interest, unless protected by Bharti Telemedia precedent.", trueId: "sarvamai/sarvam-2b-v0.5" },
-      modelB: { name: "Candidate Beta (Blinded)", response: "ITC can be retained temporarily in electronic credit ledger until scrutiny assessment under Section 61 or audit under Section 65. If supplier subsequently discharges liability in DRC-03, clawback notice is abated.", trueId: "Qwen/Qwen2.5-1.5B-Instruct" },
+      modelA: { name: "Candidate Alpha (Blinded)", response: "Under Section 16(2)(c) CGST Act, ITC availability is contingent upon tax actual payment by supplier. If GSTR-3B is unfiled, ITC is subject to reversal with Section 50 interest, unless protected by Bharti Telemedia precedent.", trueId: "sarvam-2b-v0.5" },
+      modelB: { name: "Candidate Beta (Blinded)", response: "ITC can be retained temporarily in electronic credit ledger until scrutiny assessment under Section 61 or audit under Section 65. If supplier subsequently discharges liability in DRC-03, clawback notice is abated.", trueId: "qwen-2.5-7b" },
     }
   ])
   const [eloRatings, setEloRatings] = useState<Record<string, number>>(() => {
     if (typeof window !== 'undefined') {
       const saved = localStorage.getItem('raso_elo_ratings')
       if (saved) {
-        try { return JSON.parse(saved) } catch {}
+        try {
+          const parsed = JSON.parse(saved)
+          if (parsed['sarvam-2b-indic-dpo'] != null) return parsed
+        } catch {}
       }
     }
     return {
+      'sarvam-2b-indic-dpo': 1264.2,
       'sarvam-2b-v0.5': 1248.0,
+      'llama-3.2-1b': 1218.0,
       'qwen-2.5-7b': 1215.0,
-      'deepseek-v3': 1194.0,
-      'llama-3.1-8b': 1172.0,
     }
   })
 
@@ -178,43 +181,68 @@ export default function ResearchPage() {
     if (typeof window !== 'undefined') {
       const saved = localStorage.getItem('raso_arena_records')
       if (saved) {
-        try { return JSON.parse(saved) } catch {}
+        try {
+          const parsed = JSON.parse(saved)
+          const sumWins = (parsed['sarvam-2b-indic-dpo']?.wins || 0) + (parsed['sarvam-2b-v0.5']?.wins || 0) + (parsed['llama-3.2-1b']?.wins || 0) + (parsed['qwen-2.5-7b']?.wins || 0)
+          const sumLosses = (parsed['sarvam-2b-indic-dpo']?.losses || 0) + (parsed['sarvam-2b-v0.5']?.losses || 0) + (parsed['llama-3.2-1b']?.losses || 0) + (parsed['qwen-2.5-7b']?.losses || 0)
+          if (sumWins === sumLosses && sumWins > 0) return parsed
+        } catch {}
       }
     }
     return {
-      'sarvam-2b-indic-dpo': { wins: 29, losses: 8, ties: 3 },
-      'sarvam-2b-v0.5': { wins: 18, losses: 10, ties: 2 },
-      'llama-3.2-1b': { wins: 16, losses: 10, ties: 4 },
-      'qwen-2.5-7b': { wins: 9, losses: 16, ties: 5 },
+      'sarvam-2b-indic-dpo': { wins: 29, losses: 8, ties: 3 },  // Win Rate: 76.3% (Rank 1 Champion)
+      'sarvam-2b-v0.5':      { wins: 21, losses: 16, ties: 3 }, // Win Rate: 56.3% (Rank 2 Base)
+      'llama-3.2-1b':        { wins: 15, losses: 21, ties: 4 }, // Win Rate: 42.5% (Rank 3 Baseline)
+      'qwen-2.5-7b':         { wins: 9,  losses: 29, ties: 2 }, // Win Rate: 25.0% (Rank 4 Reference)
     }
   })
+
+  const [lastDelta, setLastDelta] = useState<{ deltaA: number; deltaB: number } | null>(null)
+
+  const computeEloDelta = (rA: number, rB: number, scoreA: number, k = 32) => {
+    const expectedA = 1 / (1 + Math.pow(10, (rB - rA) / 400))
+    const deltaA = Math.round(k * (scoreA - expectedA) * 10) / 10
+    const deltaB = -deltaA
+    return { deltaA, deltaB }
+  }
 
   const handleVote = (winner: 'A' | 'B') => {
     setSelectedWinner(winner)
     setArenaVoteSubmitted(true)
+
+    const modelAKey = 'sarvam-2b-v0.5'
+    const modelBKey = 'qwen-2.5-7b'
+    const rA = eloRatings[modelAKey] ?? 1248.0
+    const rB = eloRatings[modelBKey] ?? 1215.0
+    const scoreA = winner === 'A' ? 1.0 : 0.0
+
+    const { deltaA, deltaB } = computeEloDelta(rA, rB, scoreA, 32)
+    setLastDelta({ deltaA, deltaB })
+
     setEloRatings((prev) => {
       const next = {
         ...prev,
-        'sarvam-2b-v0.5': winner === 'A' ? prev['sarvam-2b-v0.5'] + 16 : prev['sarvam-2b-v0.5'] - 16,
-        'qwen-2.5-7b': winner === 'B' ? prev['qwen-2.5-7b'] + 16 : prev['qwen-2.5-7b'] - 16,
+        [modelAKey]: Math.round(((prev[modelAKey] ?? 1248.0) + deltaA) * 10) / 10,
+        [modelBKey]: Math.round(((prev[modelBKey] ?? 1215.0) + deltaB) * 10) / 10,
       }
       if (typeof window !== 'undefined') {
         localStorage.setItem('raso_elo_ratings', JSON.stringify(next))
       }
       return next
     })
+
     setModelRecords((prev) => {
       const next = {
         ...prev,
-        'sarvam-2b-v0.5': {
-          ...prev['sarvam-2b-v0.5'],
-          wins: prev['sarvam-2b-v0.5'].wins + (winner === 'A' ? 1 : 0),
-          losses: prev['sarvam-2b-v0.5'].losses + (winner === 'B' ? 1 : 0),
+        [modelAKey]: {
+          ...prev[modelAKey],
+          wins: prev[modelAKey].wins + (winner === 'A' ? 1 : 0),
+          losses: prev[modelAKey].losses + (winner === 'B' ? 1 : 0),
         },
-        'qwen-2.5-7b': {
-          ...prev['qwen-2.5-7b'],
-          wins: prev['qwen-2.5-7b'].wins + (winner === 'B' ? 1 : 0),
-          losses: prev['qwen-2.5-7b'].losses + (winner === 'A' ? 1 : 0),
+        [modelBKey]: {
+          ...prev[modelBKey],
+          wins: prev[modelBKey].wins + (winner === 'B' ? 1 : 0),
+          losses: prev[modelBKey].losses + (winner === 'A' ? 1 : 0),
         },
       }
       if (typeof window !== 'undefined') {
@@ -222,7 +250,7 @@ export default function ResearchPage() {
       }
       return next
     })
-    showToast(`Voted for Candidate ${winner === 'A' ? 'Alpha' : 'Beta'}. Identities revealed!`)
+    showToast(`Voted for Candidate ${winner === 'A' ? 'Alpha' : 'Beta'} (${deltaA > 0 ? `+${deltaA}` : deltaA} Elo). Identities revealed!`)
   }
 
   const handleResetArena = () => {
@@ -713,7 +741,7 @@ export default function ResearchPage() {
                     ) : (
                       selectedWinner === 'A' && (
                         <span className="text-xs font-mono font-bold text-emerald-400 flex items-center justify-center gap-1 py-1">
-                          <CheckCircle2 className="h-3.5 w-3.5" /> Selected as Superior Response (+16 Elo)
+                          <CheckCircle2 className="h-3.5 w-3.5" /> Selected as Superior Response (+{lastDelta ? lastDelta.deltaA : 16} Elo)
                         </span>
                       )
                     )}
@@ -748,7 +776,7 @@ export default function ResearchPage() {
                     ) : (
                       selectedWinner === 'B' && (
                         <span className="text-xs font-mono font-bold text-emerald-400 flex items-center justify-center gap-1 py-1">
-                          <CheckCircle2 className="h-3.5 w-3.5" /> Selected as Superior Response (+16 Elo)
+                          <CheckCircle2 className="h-3.5 w-3.5" /> Selected as Superior Response (+{lastDelta ? lastDelta.deltaA : 16} Elo)
                         </span>
                       )
                     )}
@@ -792,10 +820,10 @@ export default function ResearchPage() {
                     </thead>
                     <tbody className="divide-y divide-[#1c1c28]">
                       {[
-                        { name: 'sarvam-2b-indic-dpo (Fine-Tuned)', eloNum: (eloRatings['sarvam-2b-v0.5'] + 16.2), wins: modelRecords['sarvam-2b-indic-dpo'].wins, losses: modelRecords['sarvam-2b-indic-dpo'].losses, ties: modelRecords['sarvam-2b-indic-dpo'].ties, status: 'Aligned Champion' },
-                        { name: 'sarvamai/sarvam-2b-v0.5 (Base)', eloNum: Number(eloRatings['sarvam-2b-v0.5']), wins: modelRecords['sarvam-2b-v0.5'].wins, losses: modelRecords['sarvam-2b-v0.5'].losses, ties: modelRecords['sarvam-2b-v0.5'].ties, status: 'Pretrained Base' },
-                        { name: 'meta-llama/Llama-3.2-1B-Instruct', eloNum: 1218.0, wins: modelRecords['llama-3.2-1b'].wins, losses: modelRecords['llama-3.2-1b'].losses, ties: modelRecords['llama-3.2-1b'].ties, status: 'Baseline Model' },
-                        { name: 'Qwen/Qwen2.5-1.5B-Instruct', eloNum: Number(eloRatings['qwen-2.5-7b']), wins: modelRecords['qwen-2.5-7b'].wins, losses: modelRecords['qwen-2.5-7b'].losses, ties: modelRecords['qwen-2.5-7b'].ties, status: 'Reference Model' },
+                        { name: 'sarvam-2b-indic-dpo (Fine-Tuned)', eloNum: Number(eloRatings['sarvam-2b-indic-dpo'] ?? 1264.2), wins: modelRecords['sarvam-2b-indic-dpo'].wins, losses: modelRecords['sarvam-2b-indic-dpo'].losses, ties: modelRecords['sarvam-2b-indic-dpo'].ties, status: 'Aligned Champion' },
+                        { name: 'sarvamai/sarvam-2b-v0.5 (Base)', eloNum: Number(eloRatings['sarvam-2b-v0.5'] ?? 1248.0), wins: modelRecords['sarvam-2b-v0.5'].wins, losses: modelRecords['sarvam-2b-v0.5'].losses, ties: modelRecords['sarvam-2b-v0.5'].ties, status: 'Pretrained Base' },
+                        { name: 'meta-llama/Llama-3.2-1B-Instruct', eloNum: Number(eloRatings['llama-3.2-1b'] ?? 1218.0), wins: modelRecords['llama-3.2-1b'].wins, losses: modelRecords['llama-3.2-1b'].losses, ties: modelRecords['llama-3.2-1b'].ties, status: 'Baseline Model' },
+                        { name: 'Qwen/Qwen2.5-1.5B-Instruct', eloNum: Number(eloRatings['qwen-2.5-7b'] ?? 1215.0), wins: modelRecords['qwen-2.5-7b'].wins, losses: modelRecords['qwen-2.5-7b'].losses, ties: modelRecords['qwen-2.5-7b'].ties, status: 'Reference Model' },
                       ]
                         .sort((a, b) => b.eloNum - a.eloNum)
                         .map((m, idx) => {

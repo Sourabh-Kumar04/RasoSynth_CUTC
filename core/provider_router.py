@@ -654,18 +654,34 @@ class ProviderRouter:
         return healthy
 
     async def test_provider(self, provider_name: str) -> bool:
-        """Test a specific provider."""
+        """Test a specific provider with strict 6s timeout and credential validation."""
         provider = self._providers.get(provider_name)
+        if not provider:
+            resolved = self._resolve_alias(provider_name) if hasattr(self, "_resolve_alias") else provider_name
+            provider = self._providers.get(resolved)
         if not provider:
             raise ValueError(f"Provider {provider_name} not found")
 
+        # Quick pre-flight check: if provider requires API key and it's missing, fail fast
+        api_key = getattr(provider, "api_key", None)
+        if hasattr(provider, "config"):
+            api_key = api_key or getattr(provider.config, "api_key", None)
+        if provider_name.lower() in ("google", "gemini", "google_gemini"):
+            api_key = api_key or os.environ.get("GEMINI_API_KEY") or os.environ.get("GOOGLE_API_KEY")
+
+        if not api_key and provider_name.lower() not in ("ollama", "vllm", "local"):
+            self._record_success(provider_name, False)
+            return False
+
         try:
             from providers.core_lib.base import LLMRequest
-            request = LLMRequest(input="Hello", task_type=TaskType.TEXT_GENERATION, max_tokens=5)
-            response = await provider.generate(request)
-            self._record_success(provider_name, len(response.content) > 0)
-            return len(response.content) > 0
-        except Exception:
+            request = LLMRequest(input="ping", task_type=TaskType.TEXT_GENERATION, max_tokens=2)
+            response = await asyncio.wait_for(provider.generate(request), timeout=6.0)
+            ok = bool(response and getattr(response, "content", None))
+            self._record_success(provider_name, ok)
+            return ok
+        except Exception as exc:
+            logger.warning("Provider test '%s' failed or timed out: %s", provider_name, exc)
             self._record_success(provider_name, False)
             return False
 

@@ -296,11 +296,11 @@ export default function SettingsPage() {
               <div className="text-[#a8a29e] text-xs mt-1 flex flex-wrap items-center gap-3">
                 <span className="flex items-center gap-1.5">
                   <span className={`w-2 h-2 rounded-full ${isDbConnected ? 'bg-emerald-400' : 'bg-rose-400'}`} />
-                  Primary Database ({health?.database_engine === 'sqlite' ? 'SQLite' : 'PostgreSQL'})
+                  Primary Database ({health?.database_engine === 'postgres' ? 'PostgreSQL' : 'SQLite'})
                 </span>
                 <span className="flex items-center gap-1.5">
-                  <span className={`w-2 h-2 rounded-full ${isRedisConnected ? 'bg-emerald-400' : 'bg-zinc-500'}`} />
-                  Broker &amp; Cache ({isRedisConnected ? 'Redis Connected' : 'In-Memory Ring'})
+                  <span className={`w-2 h-2 rounded-full ${isRedisConnected && health?.redis === true ? 'bg-emerald-400' : 'bg-zinc-500'}`} />
+                  Broker &amp; Cache ({isRedisConnected && health?.redis === true ? 'Redis Connected' : 'In-Memory Ring'})
                 </span>
               </div>
             </div>

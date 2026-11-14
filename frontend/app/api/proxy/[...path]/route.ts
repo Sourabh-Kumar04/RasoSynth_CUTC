@@ -124,6 +124,7 @@ const ALLOWLIST: AllowlistRule[] = [
   // Fine-tuning API
   { pattern: /^api\/finetune\/colab-token$/, methods: ['GET'] },
   { pattern: /^api\/finetune\/models$/, methods: ['GET'] },
+  { pattern: /^api\/finetune\/estimate-vram$/, methods: ['POST'] },
   { pattern: /^api\/finetune\/jobs$/, methods: ['GET', 'POST'] },
   { pattern: /^api\/finetune\/jobs\/[^/]+$/, methods: ['GET', 'DELETE'] },
   { pattern: /^api\/finetune\/jobs\/[^/]+\/logs$/, methods: ['GET'] },
@@ -179,7 +180,7 @@ async function handleProxy(req: NextRequest, { params }: { params: { path?: stri
   const search = req.nextUrl.search
   const primaryUrl = `${PRIMARY_BACKEND_URL}/${path}${search}`
   const fallbackUrl = FALLBACK_BACKEND_URL ? `${FALLBACK_BACKEND_URL}/${path}${search}` : ''
-  const isHealthCheck = path === 'health' || path === 'health/ready'
+  const isHealthCheck = path.startsWith('health') || path === 'providers/test'
 
   // Header hygiene: forward only explicitly permitted headers, never cookies or ambient auth
   const headers: Record<string, string> = {

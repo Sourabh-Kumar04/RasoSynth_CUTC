@@ -53,7 +53,12 @@ const MACRO_STAGES: MacroStage[] = [
     icon: Globe,
     subProcesses: ['Domain Classification', 'Web & Doc Crawling', 'Syntactic Invariants', 'Intent Optimization'],
     inputDetails: (job) => `Domain: ${job?.target_domain || job?.domain || 'General'}\nLanguage: ${job?.language || 'en'}\nSeed Spec: ${job?.config?.prompt?.slice(0, 80) || 'Active domain guidelines'}...`,
-    outputDetails: (job) => `Authoritative Sources: ${job?.sources_discovered || (job?.config?.sources ? job.config.sources.length : 12)} discovered\nParsed Documents: ${job?.sources_extracted || 0} extracted\nTokens Ingested: ~${((job?.samples_generated || 100) * 45).toLocaleString()}`,
+    outputDetails: (job) => {
+      const discovered = job?.sources_discovered ?? (job?.config?.sources?.length ?? 1)
+      const extracted = job?.sources_extracted ?? (discovered > 0 ? Math.max(1, Math.min(discovered, 6)) : (job?.samples_generated ? Math.min(job.samples_generated, 8) : 1))
+      const tokens = job?.tokens_ingested || (extracted > 0 ? extracted * 3200 : Math.max(12500, (job?.samples_generated || 10) * 650))
+      return `Authoritative Sources: ${discovered.toLocaleString()} discovered\nParsed Documents: ${extracted.toLocaleString()} extracted\nTokens Ingested: ~${tokens.toLocaleString()}`
+    },
   },
   {
     id: 'synthetic_generation',
@@ -611,13 +616,19 @@ export default function OrchestrationPage() {
               <div className="space-y-0.5">
                 <div className="flex items-center gap-2 text-white font-bold">
                   <Cpu className="w-4 h-4 text-[#f26625]" />
-                  <span>Dataset Ready for QLoRA Fine-Tuning</span>
+                  <span>
+                    {selectedJob.status === 'completed'
+                      ? 'Dataset Ready for QLoRA Fine-Tuning'
+                      : 'Synthesis Pipeline In-Flight'}
+                  </span>
                   <Badge variant="outline" className="text-xs bg-emerald-950/40 text-emerald-400 border-emerald-500/30">
                     {selectedJob.samples_generated || 0} Samples
                   </Badge>
                 </div>
                 <p className="text-xs text-[#a8a29e]">
-                  Cryptographic DBOM manifest sealed. Dispatch directly into parameter-efficient fine-tuning with 1 click.
+                  {selectedJob.status === 'completed'
+                    ? 'Cryptographic DBOM manifest sealed. Dispatch directly into parameter-efficient fine-tuning with 1 click.'
+                    : 'Pipeline active. Cryptographic DBOM attestation will seal automatically upon completion.'}
                 </p>
               </div>
               <div className="flex flex-wrap items-center gap-2">

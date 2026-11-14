@@ -395,18 +395,27 @@ async def tool_shard_dataset(
     )
 
 
+_bench_cache: dict[str, Any] = {}
+
 @router.get("/benchmarks/quality", tags=["Research"])
 async def get_quality_benchmarks(current_user: User = Depends(get_current_user)):
     """Run comprehensive quality, throughput latency, and unit economic benchmarks."""
+    global _bench_cache
+    now = time.time()
+    if _bench_cache.get("data") and (now - _bench_cache.get("timestamp", 0) < 180):
+        return _bench_cache["data"]
+
     from research.quality_benchmark import QualityBenchmark
 
     benchmark = QualityBenchmark()
     results = await benchmark.run_all()
     markdown_report = benchmark.generate_report(results)
-    return {
+    payload = {
         "benchmark_data": results,
         "markdown_report": markdown_report,
     }
+    _bench_cache = {"data": payload, "timestamp": now}
+    return payload
 
 
 @router.get("/benchmarks/evaluation", tags=["Research"])

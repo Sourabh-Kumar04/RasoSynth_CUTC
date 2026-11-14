@@ -175,10 +175,17 @@ async def readiness_check(request: Request):
         provider_map["anthropic"] = {"status": "healthy", "latency_ms": 140}
         provider_map["groq"] = {"status": "healthy", "latency_ms": 85}
 
+    db_engine_name = "sqlite"
+    if db:
+        engine_str = str(getattr(getattr(db, "db", db), "database_url", "")).lower()
+        if "postgres" in engine_str:
+            db_engine_name = "postgres"
+
     return {
         "ready": is_ready,
         "status": overall_status,
         "database": checks.get("database") == "ready",
+        "database_engine": db_engine_name,
         "redis": checks.get("redis") == "ready",
         "providers": provider_map,
         "checks": checks,

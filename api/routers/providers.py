@@ -207,12 +207,20 @@ async def test_provider(
 
     start_time = time.perf_counter()
     try:
-        success = await router_inst.test_provider(test_req.provider)
+        success = await asyncio.wait_for(router_inst.test_provider(test_req.provider), timeout=7.0)
         latency_ms = (time.perf_counter() - start_time) * 1000
         return ProviderTestResponse(
             provider=test_req.provider,
             success=success,
             latency_ms=latency_ms,
+        )
+    except asyncio.TimeoutError:
+        latency_ms = (time.perf_counter() - start_time) * 1000
+        return ProviderTestResponse(
+            provider=test_req.provider,
+            success=False,
+            latency_ms=latency_ms,
+            error="Reachability check timed out after 7s",
         )
     except Exception as e:
         latency_ms = (time.perf_counter() - start_time) * 1000

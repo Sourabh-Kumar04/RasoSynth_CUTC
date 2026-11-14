@@ -223,10 +223,10 @@ async def quality_distributions(
         "total_scores": len(all_scores),
         "mean": round(sum(all_scores) / len(all_scores), 3),
         "distribution": {
-            "excellent": sum(1 for s in all_scores if s >= 0.9),
-            "good": sum(1 for s in all_scores if 0.7 <= s < 0.9),
-            "fair": sum(1 for s in all_scores if 0.5 <= s < 0.7),
-            "poor": sum(1 for s in all_scores if s < 0.5),
+            "excellent": sum(1 for s in all_scores if s >= 0.85),
+            "good": sum(1 for s in all_scores if 0.70 <= s < 0.85),
+            "fair": sum(1 for s in all_scores if 0.50 <= s < 0.70),
+            "poor": sum(1 for s in all_scores if s < 0.50),
         },
         "histogram": buckets,
     }

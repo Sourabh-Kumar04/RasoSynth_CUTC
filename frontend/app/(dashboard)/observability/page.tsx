@@ -177,7 +177,7 @@ export default function ObservabilityPage() {
               <div>
                 <p className="text-xs text-[#a8a29e] font-mono uppercase tracking-wider">Primary Database</p>
                 <p className="text-lg font-bold font-mono text-[#10b981] mt-1">
-                  {health?.database !== false ? (health?.database_engine === 'sqlite' ? 'SQLite Ready' : 'PostgreSQL') : 'Disconnected'}
+                  {health?.database !== false ? (health?.database_engine === 'postgres' ? 'PostgreSQL' : 'SQLite Ready') : 'Disconnected'}
                 </p>
               </div>
               <div className="h-9 w-9 rounded-md bg-emerald-500/10 border border-emerald-500/30 flex items-center justify-center">
@@ -193,7 +193,7 @@ export default function ObservabilityPage() {
               <div>
                 <p className="text-xs text-[#a8a29e] font-mono uppercase tracking-wider">Broker &amp; Cache</p>
                 <p className="text-lg font-bold font-mono text-[#f26625] mt-1">
-                  {health?.redis !== false ? 'Redis Connected' : 'In-Memory Queue'}
+                  {health?.redis === true ? 'Redis Connected' : 'In-Memory Queue'}
                 </p>
               </div>
               <div className="h-9 w-9 rounded-md bg-[#f26625]/10 border border-[#f26625]/30 flex items-center justify-center">

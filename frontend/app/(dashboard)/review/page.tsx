@@ -638,19 +638,43 @@ export default function ReviewPage() {
             ))
             : !queue || !Array.isArray(queue.items) || queue.items.length === 0
               ? (
-                <div className="flex flex-col items-center justify-center p-8 space-y-3 bg-[#12121a] rounded-md border border-[#272738] text-center">
-                  <h4 className="text-xs font-bold text-white font-mono uppercase tracking-wider">
-                    No samples awaiting review.
-                  </h4>
-                  <Button
-                    asChild
-                    variant="outline"
-                    className="border-[#f26625]/40 text-[#f26625] bg-[#f26625]/10 hover:bg-[#f26625]/20 text-xs font-mono font-bold h-8 px-3 rounded-md"
-                  >
-                    <a href="/studio">
-                      <span>Generate New Samples</span>
-                    </a>
-                  </Button>
+                <div className="flex flex-col items-center justify-center p-8 space-y-3 bg-[#12121a] rounded-md border border-emerald-500/30 text-center">
+                  <div className="flex items-center justify-center gap-2 text-emerald-400">
+                    <CheckCircle2 className="h-4 w-4" />
+                    <h4 className="text-xs font-bold text-white font-mono uppercase tracking-wider">
+                      {statusFilter === 'pending' ? 'Automated Verification Active' : 'No samples found'}
+                    </h4>
+                  </div>
+                  <p className="text-xs text-[#a8a29e] font-mono max-w-sm">
+                    {statusFilter === 'pending'
+                      ? `${stats?.approved ? `${stats.approved} samples auto-approved by 5D Jury. ` : ''}0 samples currently require manual human intervention.`
+                      : 'No samples matching the current status filter.'}
+                  </p>
+                  <div className="flex items-center gap-2 pt-1 flex-wrap justify-center">
+                    {statusFilter === 'pending' && stats && stats.approved > 0 && (
+                      <Button
+                        type="button"
+                        variant="outline"
+                        onClick={() => {
+                          setStatus('approved')
+                          setPage(1)
+                        }}
+                        className="border-emerald-500/40 text-emerald-300 bg-emerald-950/20 hover:bg-emerald-950/40 text-xs font-mono font-bold h-8 px-3 rounded-md"
+                      >
+                        <CheckCircle2 className="h-3.5 w-3.5 mr-1 text-emerald-400" />
+                        <span>View Auto-Approved Samples ({stats.approved})</span>
+                      </Button>
+                    )}
+                    <Button
+                      asChild
+                      variant="outline"
+                      className="border-[#272738] text-zinc-300 hover:text-white bg-[#0a0a0f] text-xs font-mono font-bold h-8 px-3 rounded-md"
+                    >
+                      <a href="/studio">
+                        <span>Generate New Samples</span>
+                      </a>
+                    </Button>
+                  </div>
                 </div>
               )
               : (

@@ -89,7 +89,11 @@ export default function QualityDashboardPage() {
     ? (rawBreakdown.composite <= 1.0 ? Math.round(rawBreakdown.composite * 100) : Math.round(rawBreakdown.composite))
     : null;
 
-  const isTopicCertified = topicFidelityPct !== null && topicFidelityPct >= 85;
+  const dimensionScores = [topicFidelityPct, groundingPct, clarityPct, completenessPct, domainPct];
+  const scoredScores = dimensionScores.filter((s): s is number => s !== null);
+  const allScored = scoredScores.length === 5;
+  const allMetricsPassed = allScored && scoredScores.every(s => s >= 85);
+  const anyMetricFailed = scoredScores.some(s => s < 85);
 
   // Semantic Density State
   const [densityLoading, setDensityLoading] = useState(false);
@@ -304,20 +308,25 @@ export default function QualityDashboardPage() {
                 <span className="text-xs text-[#a8a29e] font-mono">[{selectedJobId.slice(0, 8)}...]</span>
               </div>
               <div className="flex items-center gap-2">
-                {topicFidelityPct === null ? (
+                {scoredScores.length === 0 ? (
                   <Badge variant="outline" className="text-xs font-mono font-bold bg-zinc-900/50 text-[#a8a29e] border-[#272738] flex items-center gap-1">
                     <Info className="h-3 w-3 text-[#a8a29e]" />
                     AUDIT PENDING (NO TOPIC SCORE)
                   </Badge>
-                ) : isTopicCertified ? (
+                ) : allMetricsPassed ? (
                   <Badge variant="outline" className="text-xs font-mono font-bold bg-emerald-950/50 text-emerald-400 border-emerald-600/50 flex items-center gap-1">
                     <CheckCircle2 className="h-3 w-3 text-emerald-400" />
                     PASSED TARGET (ALL METRICS &ge; 85%)
                   </Badge>
-                ) : (
+                ) : anyMetricFailed ? (
                   <Badge variant="outline" className="text-xs font-mono font-bold bg-amber-950/50 text-amber-400 border-amber-600/50 flex items-center gap-1">
                     <AlertCircle className="h-3 w-3 text-amber-400" />
                     NEEDS CALIBRATION (&lt; 85% TARGET)
+                  </Badge>
+                ) : (
+                  <Badge variant="outline" className="text-xs font-mono font-bold bg-zinc-800 text-zinc-300 border-zinc-700 flex items-center gap-1">
+                    <Info className="h-3 w-3 text-zinc-400" />
+                    PARTIAL AUDIT ({scoredScores.length}/5 SCORED)
                   </Badge>
                 )}
                 <span className="text-xs font-mono font-bold text-white bg-[#1a1a26] px-2.5 py-0.5 rounded border border-[#272738]">

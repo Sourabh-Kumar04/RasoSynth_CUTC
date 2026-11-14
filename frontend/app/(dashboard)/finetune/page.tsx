@@ -1236,7 +1236,36 @@ function FineTuneContent() {
       })
       setVramData(res)
     } catch {
-      // fallback handled gracefully
+      // Deterministic client-side fallback based on parameter sizes
+      const is4bit = !!form.load_in_4bit
+      const isSarvam2B = form.base_model.includes('2b')
+      const isLlama1B = form.base_model.includes('1b')
+      const baseParams = isSarvam2B ? 2.0 : (isLlama1B ? 1.2 : 7.0)
+      const weightGb = Number((baseParams * (is4bit ? 0.65 : 2.0)).toFixed(1))
+      const loraGb = Number(((form.lora_r / 16) * 0.45).toFixed(1))
+      const actGb = Number((form.per_device_train_batch_size * (baseParams > 3 ? 1.8 : 0.9)).toFixed(1))
+      const totalGb = Number((weightGb + loraGb + actGb).toFixed(1))
+      const recGb = totalGb <= 12 ? 16 : (totalGb <= 20 ? 24 : 80)
+      setVramData({
+        base_model: form.base_model,
+        breakdown: {
+          weight_memory_gb: weightGb,
+          lora_optimizer_memory_gb: loraGb,
+          activation_memory_gb: actGb,
+          total_estimated_vram_gb: totalGb,
+          recommended_gpu_vram_gb: recGb,
+          supported_on_16gb_gpu: totalGb <= 14.5,
+          supported_on_24gb_gpu: totalGb <= 22.0,
+        },
+        recommended_hyperparameters: {
+          load_in_4bit: true,
+          bf16: true,
+          per_device_train_batch_size: baseParams > 3 ? 1 : 2,
+          gradient_accumulation_steps: 4,
+          lora_r: 16,
+          lora_alpha: 32,
+        }
+      })
     } finally {
       setVramLoading(false)
     }
@@ -1882,7 +1911,9 @@ function FineTuneContent() {
                       <CheckCircle2 className="w-4 h-4 text-emerald-400 shrink-0" />
                       <div>
                         <div className="text-white font-bold">{selectedDs.config?.target_domain || selectedDs.target_domain || selectedDs.dataset_name || 'Active Synthesized Dataset'}</div>
-                        <div className="text-[#a8a29e] text-[11px]">ID: {form.dataset_id} · {selectedDs.samples_generated || 10} records · DBOM Root Sealed</div>
+                        <div className="text-[#a8a29e] text-[11px]">
+                          ID: {form.dataset_id} · {selectedDs.samples_generated || 10} records · {selectedDs.status === 'completed' ? 'DBOM Root Sealed' : (selectedDs.status === 'running' ? 'Synthesis In Progress' : 'Dataset Ready')}
+                        </div>
                       </div>
                     </div>
                     <Badge className="bg-emerald-500/10 text-emerald-400 border border-emerald-500/30 text-[10px]">
