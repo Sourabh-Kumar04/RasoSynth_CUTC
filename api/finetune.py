@@ -175,6 +175,13 @@ def _looks_like_real_weights(path: Path) -> bool:
 
 # ── Endpoints ─────────────────────────────────────────────────────────────────
 
+@router.get("/colab-token")
+async def get_colab_token():
+    """Retrieve pre-configured HF_TOKEN from environment for seamless zero-click Colab publishing."""
+    token = os.getenv("HF_TOKEN", "").strip()
+    return {"hf_token": token, "configured": bool(token)}
+
+
 @router.get("/models")
 async def list_supported_models(current_user: User = Depends(get_current_user)):
     return {"models": SUPPORTED_MODELS}

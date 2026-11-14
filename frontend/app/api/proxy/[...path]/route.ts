@@ -121,6 +121,7 @@ const ALLOWLIST: AllowlistRule[] = [
   { pattern: /^tools\/shard-dataset$/, methods: ['POST'] },
 
   // Fine-tuning API
+  { pattern: /^api\/finetune\/colab-token$/, methods: ['GET'] },
   { pattern: /^api\/finetune\/models$/, methods: ['GET'] },
   { pattern: /^api\/finetune\/jobs$/, methods: ['GET', 'POST'] },
   { pattern: /^api\/finetune\/jobs\/[^/]+$/, methods: ['GET', 'DELETE'] },
