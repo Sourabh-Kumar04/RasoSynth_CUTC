@@ -18,6 +18,15 @@ const nextConfig = {
       bodySizeLimit: '10mb',
     },
   },
+  async redirects() {
+    return [
+      {
+        source: '/telemetry',
+        destination: '/observability',
+        permanent: true,
+      },
+    ]
+  },
   webpack: (config) => {
     config.resolve.alias['@'] = path.resolve(__dirname)
     config.resolve.modules = [
