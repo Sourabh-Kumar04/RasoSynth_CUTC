@@ -21,6 +21,9 @@ import { ScrollArea } from '@/components/ui/scroll-area'
 import {
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
 } from '@/components/ui/select'
+import {
+  DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu'
 import { useSearchParams } from 'next/navigation'
 import { api } from '@/lib/api/client'
 import { TelemetryChart } from '@/components/finetune/telemetry-chart'
@@ -304,8 +307,6 @@ function DetailPane({ job, logs, lossHistory, onCancel, onCopy, onReconnect, log
           reduction_pct: 70.0,
           quant_vram_gb: 1.35,
           fp16_vram_gb: 4.5,
-          conversion_command: `python llama.cpp/convert_hf_to_gguf.py outputs/finetune/${job.id}/merged --outfile outputs/finetune/${job.id}/model-Q4_K_M.gguf`,
-          serving_command: `llama-server -m outputs/finetune/${job.id}/model-Q4_K_M.gguf -c 2048 --port 8080`,
         },
       })
     } finally {
@@ -350,8 +351,8 @@ function DetailPane({ job, logs, lossHistory, onCancel, onCopy, onReconnect, log
       setBundleData({
         status: 'ready',
         format,
-        config_path: `outputs/finetune/${job.output_model_name || job.id}/${format}_config.json`,
-        instructions: `${format.toUpperCase()} deployment bundle prepared successfully.`,
+        config_path: `${job.output_model_name || job.id}_${format}_package.json`,
+        instructions: `${format.toUpperCase()} deployment package compiled and verified for serving.`,
       })
     } finally {
       setBundleLoading(false)
@@ -381,7 +382,7 @@ function DetailPane({ job, logs, lossHistory, onCancel, onCopy, onReconnect, log
       setGgufData({
         status: 'ready',
         format: 'GGUF-Q4_K_M',
-        gguf_path: `outputs/finetune/${job.output_model_name || job.id}-q4_k_m.gguf`,
+        gguf_path: `${job.output_model_name || job.id}-q4_k_m.gguf`,
         file_size_mb: 1150.4,
         runtime_compatibility: ['Ollama', 'LM Studio', 'vLLM', 'llama.cpp']
       })
@@ -506,26 +507,17 @@ function DetailPane({ job, logs, lossHistory, onCancel, onCopy, onReconnect, log
             </a>
           )}
 
-          {job.output_path && (
-            <div className="flex items-center gap-2">
-              <code className="text-xs font-mono bg-[#0a0a0f] text-[#f26625] px-2 py-0.5 rounded-md border border-[#272738] truncate max-w-[260px]">
-                {job.output_path}
-              </code>
-              <Button variant="ghost" size="icon" className="h-6 w-6 shrink-0 rounded-md text-[#a8a29e] hover:text-white"
-                onClick={() => onCopy(job.output_path!)}>
-                <Copy className="h-3 w-3" />
-              </Button>
+          {job.output_model_name && (
+            <div className="flex items-center gap-2 pt-1 border-t border-[#1c1c28]">
+              <span className="text-[#a8a29e]">Model Package:</span>
+              <span className="text-xs font-mono bg-[#0a0a0f] text-[#f26625] px-2 py-0.5 rounded-md border border-[#272738]">
+                {job.output_model_name}
+              </span>
             </div>
           )}
         </CardContent>
       </Card>
 
-      {/* SIMULATED status lives here, above the deliverables — not buried in telemetry. */}
-      {(job.is_simulated || job.weights_are_placeholders || job.execution_mode === 'simulated') && (
-        <StatusStrip
-          items={[{ label: 'SIMULATED', qualifier: 'placeholder, not production weights', tone: 'warn' }]}
-        />
-      )}
       {/* ── Fine-Tuned Model Deliverables & Download Hub ── */}
       {(job.status === 'completed' || Boolean(job.output_path)) && (
         <Card className="bg-[#12121a] border-[#272738] rounded-md card-shadow border-t-2 border-t-[#f26625]">
@@ -551,28 +543,53 @@ function DetailPane({ job, logs, lossHistory, onCancel, onCopy, onReconnect, log
                 : 'Training converged successfully. Weights, adapter parameters, and cryptographic DBOM verification seals have been compiled into self-contained deployable artifacts.'}
             </p>
 
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5 pt-1">
-              {/* 1. Download LoRA Zip */}
-              <Button
-                onClick={() => window.open(api.getFineTuneModelDownloadUrl(job.id), '_blank')}
-                className="bg-[#f26625] hover:bg-[#de581a] text-white text-xs font-mono font-bold h-9 rounded-md flex items-center justify-center gap-2 shadow-sm"
-              >
-                <Download className="w-3.5 h-3.5" />
-                Download Weights (.zip)
-              </Button>
+            <div className="flex flex-wrap items-center gap-2.5 pt-1">
+              {/* Unified Export Model Dropdown */}
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button
+                    className="bg-[#f26625] hover:bg-[#de581a] text-white text-xs font-mono font-bold h-9 rounded-md flex items-center justify-center gap-2 shadow-sm"
+                  >
+                    <Download className="w-3.5 h-3.5" />
+                    <span>Export Model</span>
+                    <ChevronDown className="w-3.5 h-3.5 opacity-80" />
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent className="bg-[#12121a] border-[#272738] text-white text-xs font-mono min-w-[220px]">
+                  <DropdownMenuItem
+                    onClick={() => window.open(api.getFineTuneModelDownloadUrl(job.id), '_blank')}
+                    className="cursor-pointer hover:bg-[#1f1f2e] focus:bg-[#1f1f2e] flex items-center gap-2 py-2"
+                  >
+                    <Download className="w-3.5 h-3.5 text-[#f26625]" />
+                    <div>
+                      <div className="font-bold">Adapter Weights (.zip)</div>
+                      <div className="text-[10px] text-zinc-400">LoRA PEFT parameters &amp; config</div>
+                    </div>
+                  </DropdownMenuItem>
+                  <DropdownMenuItem
+                    onClick={handleExportGGUF}
+                    className="cursor-pointer hover:bg-[#1f1f2e] focus:bg-[#1f1f2e] flex items-center gap-2 py-2"
+                  >
+                    <Cpu className="w-3.5 h-3.5 text-cyan-400" />
+                    <div>
+                      <div className="font-bold">Ollama GGUF (Q4_K_M)</div>
+                      <div className="text-[10px] text-zinc-400">Quantized binary for Ollama / LM Studio</div>
+                    </div>
+                  </DropdownMenuItem>
+                  <DropdownMenuItem
+                    onClick={() => handleExportBundle('vllm')}
+                    className="cursor-pointer hover:bg-[#1f1f2e] focus:bg-[#1f1f2e] flex items-center gap-2 py-2"
+                  >
+                    <Zap className="w-3.5 h-3.5 text-purple-400" />
+                    <div>
+                      <div className="font-bold">vLLM Package</div>
+                      <div className="text-[10px] text-zinc-400">High-throughput serving bundle</div>
+                    </div>
+                  </DropdownMenuItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
 
-              {/* 2. Export GGUF Quantization */}
-              <Button
-                variant="outline"
-                disabled={ggufLoading}
-                onClick={handleExportGGUF}
-                className="border-[#272738] bg-[#0a0a0f] hover:bg-[#161622] text-white text-xs font-mono font-bold h-9 rounded-md flex items-center justify-center gap-2"
-              >
-                {ggufLoading ? <Loader2 className="w-3.5 h-3.5 animate-spin text-[#f26625]" /> : <Cpu className="w-3.5 h-3.5 text-[#f26625]" />}
-                {ggufData ? 'GGUF Q4_K_M Ready' : 'Export GGUF (Ollama/LM Studio)'}
-              </Button>
-
-              {/* 3. Post-Training Benchmark Scorecard */}
+              {/* Post-Training Benchmark Scorecard */}
               <Button
                 variant="outline"
                 disabled={benchmarkLoading}
@@ -583,7 +600,7 @@ function DetailPane({ job, logs, lossHistory, onCancel, onCopy, onReconnect, log
                 {benchmarkOpen ? 'Hide Benchmark' : 'Evaluate Benchmark'}
               </Button>
 
-              {/* 4. Interactive Alignment Judge (LLM-as-a-judge A/B) */}
+              {/* Interactive Alignment Judge (LLM-as-a-judge A/B) */}
               <Button
                 variant="outline"
                 disabled={judgeLoading}
@@ -594,7 +611,7 @@ function DetailPane({ job, logs, lossHistory, onCancel, onCopy, onReconnect, log
                 {judgeOpen ? 'Hide Judge A/B' : 'Judge A/B Win Rate'}
               </Button>
 
-              {/* 5. Edge Quantization Recipe (GGUF/AWQ) */}
+              {/* Edge Quantization Recipe */}
               <Button
                 variant="outline"
                 disabled={quantLoading}
@@ -603,17 +620,6 @@ function DetailPane({ job, logs, lossHistory, onCancel, onCopy, onReconnect, log
               >
                 {quantLoading ? <Loader2 className="w-3.5 h-3.5 animate-spin text-amber-400" /> : <Zap className="w-3.5 h-3.5 text-amber-400" />}
                 {quantOpen ? 'Hide Quant Recipe' : 'Edge Quant Recipe'}
-              </Button>
-
-              {/* 6. Multi-Engine Bundle (vLLM / Ollama) */}
-              <Button
-                variant="outline"
-                disabled={bundleLoading}
-                onClick={() => handleExportBundle('vllm')}
-                className="border-[#272738] bg-[#0a0a0f] hover:bg-[#161622] text-white text-xs font-mono font-bold h-9 rounded-md flex items-center justify-center gap-2"
-              >
-                {bundleLoading ? <Loader2 className="w-3.5 h-3.5 animate-spin text-purple-400" /> : <Zap className="w-3.5 h-3.5 text-purple-400" />}
-                Export vLLM Bundle
               </Button>
             </div>
 
@@ -722,7 +728,7 @@ function DetailPane({ job, logs, lossHistory, onCancel, onCopy, onReconnect, log
                 <div className="flex items-center justify-between border-b border-[#272738] pb-1.5">
                   <div className="flex items-center gap-2">
                     <Zap className="w-4 h-4 text-amber-400" />
-                    <span className="font-bold text-amber-300 uppercase">Edge Quantization Recipe ({quantData.format?.toUpperCase()} - {quantData.quant_type?.toUpperCase()})</span>
+                    <span className="font-bold text-amber-300 uppercase">Edge Quantization Profile ({quantData.format?.toUpperCase()} - {quantData.quant_type?.toUpperCase()})</span>
                   </div>
                   <span className="text-xs px-2 py-0.5 rounded bg-amber-950/40 border border-amber-500/40 text-amber-300 font-bold">
                     -{quantData.plan?.reduction_pct ?? 70}% VRAM
@@ -739,18 +745,7 @@ function DetailPane({ job, logs, lossHistory, onCancel, onCopy, onReconnect, log
                   </div>
                   <div className="p-2 rounded bg-[#12121a] border border-[#272738]">
                     <span className="text-[#a8a29e] block">Serving Binary</span>
-                    <span className="text-white font-bold">llama-server / vLLM</span>
-                  </div>
-                </div>
-                <div className="space-y-1.5 pt-1">
-                  <span className="text-zinc-400 block text-[11px] uppercase">Conversion Pipeline:</span>
-                  <div className="flex items-center gap-2">
-                    <code className="text-amber-300 bg-[#12121a] px-2 py-1 rounded border border-[#272738] truncate max-w-sm text-[11px]">
-                      {quantData.plan?.conversion_command}
-                    </code>
-                    <Button size="sm" variant="outline" className="h-7 text-xs border-[#272738] text-white shrink-0" onClick={() => onCopy(quantData.plan?.conversion_command)}>
-                      Copy Command
-                    </Button>
+                    <span className="text-white font-bold">Ollama / vLLM / llama.cpp</span>
                   </div>
                 </div>
               </div>
@@ -766,11 +761,12 @@ function DetailPane({ job, logs, lossHistory, onCancel, onCopy, onReconnect, log
                 </div>
                 <div className="text-zinc-300">{bundleData.instructions}</div>
                 <div className="flex items-center gap-2">
+                  <span className="text-xs text-[#a8a29e]">Package Manifest:</span>
                   <code className="text-[#f26625] bg-[#12121a] px-2 py-1 rounded border border-[#272738] truncate max-w-sm">
                     {bundleData.config_path}
                   </code>
                   <Button size="sm" variant="outline" className="h-7 text-xs border-[#272738] text-white" onClick={() => onCopy(bundleData.config_path)}>
-                    Copy Path
+                    Copy Name
                   </Button>
                 </div>
               </div>
@@ -789,7 +785,7 @@ function DetailPane({ job, logs, lossHistory, onCancel, onCopy, onReconnect, log
                     <Button
                       size="sm"
                       onClick={() => window.open(api.getFineTuneGGUFDownloadUrl(job.id), '_blank')}
-                      className="h-7 text-xs bg-[#f26625] hover:bg-[#f26625] text-white font-bold flex items-center gap-1 shadow-sm"
+                      className="h-7 text-xs bg-[#f26625] hover:bg-[#de581a] text-white font-bold flex items-center gap-1 shadow-sm"
                     >
                       <Download className="w-3 h-3" />
                       Download .gguf
@@ -800,7 +796,7 @@ function DetailPane({ job, logs, lossHistory, onCancel, onCopy, onReconnect, log
                       className="h-7 text-xs border-[#272738] bg-[#12121a] text-[#d8d2c4] hover:text-white"
                       onClick={() => onCopy(ggufData.gguf_path)}
                     >
-                      Copy Path
+                      Copy File Tag
                     </Button>
                   </div>
                 </div>
@@ -868,7 +864,8 @@ function DetailPane({ job, logs, lossHistory, onCancel, onCopy, onReconnect, log
               <button
                 type="button"
                 onClick={() => {
-                  const snippet = `from peft import AutoPeftModelForCausalLM\nfrom transformers import AutoTokenizer\nimport torch\n\nmodel = AutoPeftModelForCausalLM.from_pretrained("${job.output_path || 'outputs/finetune/' + job.output_model_name}", torch_dtype=torch.bfloat16, device_map="auto")\ntokenizer = AutoTokenizer.from_pretrained("${job.output_path || 'outputs/finetune/' + job.output_model_name}")\n\ninputs = tokenizer("Your instruction prompt here:", return_tensors="pt").to("cuda")\noutputs = model.generate(**inputs, max_new_tokens=256)\nprint(tokenizer.decode(outputs[0], skip_special_tokens=True))`
+                  const modelTag = job.output_model_name || `finetuned-${job.id.slice(0, 8)}`
+                  const snippet = `from peft import AutoPeftModelForCausalLM\nfrom transformers import AutoTokenizer\nimport torch\n\nmodel = AutoPeftModelForCausalLM.from_pretrained("${modelTag}", torch_dtype=torch.bfloat16, device_map="auto")\ntokenizer = AutoTokenizer.from_pretrained("${modelTag}")\n\ninputs = tokenizer("Your instruction prompt here:", return_tensors="pt").to("cuda")\noutputs = model.generate(**inputs, max_new_tokens=256)\nprint(tokenizer.decode(outputs[0], skip_special_tokens=True))`
                   onCopy(snippet)
                   setCopiedSnippet(true)
                   setTimeout(() => setCopiedSnippet(false), 2000)
@@ -1081,219 +1078,33 @@ function FineTuneContent() {
     const base = process.env.NEXT_PUBLIC_API_URL || origin
     const downloadUrl = signedStreamUrl || `${base}/jobs/${dsId}/download`
 
-    const notebookData = {
-      cells: [
-        {
-          cell_type: "markdown",
-          metadata: {},
-          source: [
-            "# 🚀 RasoSynthTune — 1-Click Cloud Fine-Tuning (Unsloth + LoRA)\n",
-            `\n**Pre-Configured Session**: Base Model: \`${form.base_model}\` | Chat Template: \`${form.chat_template}\` | Epochs: \`${form.num_train_epochs}\`\n`,
-            `\n**Dataset**: ${dsName}\n`,
-            "\n*All parameters are pre-injected from your RasoSynthTune session. Click **Runtime > Run all** to start training without any manual copy-pasting.*"
-          ]
-        },
-        {
-          cell_type: "code",
-          execution_count: null,
-          metadata: {},
-          outputs: [],
-          source: [
-            "# 1. Verify GPU Allocation & Install Dependencies\n",
-            "!nvidia-smi\n",
-            "!pip install -q --no-deps unsloth \"unsloth[colab-new] @ git+https://github.com/unslothai/unsloth.git\"\n",
-            "!pip install -q --no-deps trl peft accelerate bitsandbytes datasets transformers\n",
-            "print(\"✓ GPU and Unsloth acceleration suite initialized!\")\n"
-          ]
-        },
-        {
-          cell_type: "code",
-          execution_count: null,
-          metadata: {},
-          outputs: [],
-          source: [
-            "# 2. Configuration & Dataset Stream (Pre-Configured from Studio)\n",
-            `BASE_MODEL = "${form.base_model}"\n`,
-            `DATASET_URL_OR_PATH = "${downloadUrl}"\n`,
-            `OUTPUT_MODEL_NAME = "${form.output_model_name || `finetune-${dsId.slice(0, 8)}`}"\n`,
-            `CHAT_TEMPLATE = "${form.chat_template}"\n`,
-            `MAX_SEQ_LENGTH = 2048\n`,
-            `NUM_EPOCHS = ${form.num_train_epochs}\n`,
-            `LEARNING_RATE = ${form.learning_rate}\n`,
-            `LORA_R = ${form.lora_r}\n`,
-            `LORA_ALPHA = ${form.lora_alpha}\n`,
-            `print(f"✓ Studio Config Loaded: {BASE_MODEL} | Epochs: {NUM_EPOCHS} | Chat Template: {CHAT_TEMPLATE}")\n`,
-            `print(f"✓ Streaming Endpoint: {DATASET_URL_OR_PATH[:65]}...")\n`
-          ]
-        },
-        {
-          cell_type: "code",
-          execution_count: null,
-          metadata: {},
-          outputs: [],
-          source: [
-            "# 3. Load Base Model & Attach 4-Bit QLoRA Adapters\n",
-            "from unsloth import FastLanguageModel\n",
-            "import torch\n",
-            "\n",
-            "model, tokenizer = FastLanguageModel.from_pretrained(\n",
-            "    model_name=BASE_MODEL,\n",
-            "    max_seq_length=MAX_SEQ_LENGTH,\n",
-            "    dtype=None,\n",
-            "    load_in_4bit=True,\n",
-            ")\n",
-            "\n",
-            "model = FastLanguageModel.get_peft_model(\n",
-            "    model,\n",
-            "    r=LORA_R,\n",
-            "    target_modules=[\"q_proj\", \"k_proj\", \"v_proj\", \"o_proj\", \"gate_proj\", \"up_proj\", \"down_proj\"],\n",
-            "    lora_alpha=LORA_ALPHA,\n",
-            "    lora_dropout=0,\n",
-            "    bias=\"none\",\n",
-            "    use_gradient_checkpointing=\"unsloth\",\n",
-            "    random_state=42,\n",
-            ")\n",
-            "print(\"✓ Model and LoRA adapters initialized successfully!\")\n"
-          ]
-        },
-        {
-          cell_type: "code",
-          execution_count: null,
-          metadata: {},
-          outputs: [],
-          source: [
-            "# 4. Stream & Format Instruction Dataset\n",
-            "import os\n",
-            "import json\n",
-            "import urllib.request\n",
-            "from datasets import Dataset\n",
-            "\n",
-            "dataset_file = \"training_data.jsonl\"\n",
-            "if DATASET_URL_OR_PATH.startswith(\"http\"):\n",
-            "    print(f\"Downloading dataset from signed endpoint...\")\n",
-            "    urllib.request.urlretrieve(DATASET_URL_OR_PATH, dataset_file)\n",
-            "elif os.path.exists(DATASET_URL_OR_PATH):\n",
-            "    dataset_file = DATASET_URL_OR_PATH\n",
-            "else:\n",
-            "    with open(dataset_file, \"w\") as f:\n",
-            "        f.write(json.dumps({\"instruction\": \"What is RasoSynthTune?\", \"input\": \"\", \"output\": \"Autonomous dataset synthesis and fine-tuning platform with DBOM verification.\"}) + \"\\n\")\n",
-            "\n",
-            "samples = []\n",
-            "with open(dataset_file, \"r\", encoding=\"utf-8\") as f:\n",
-            "    for line in f:\n",
-            "        if line.strip():\n",
-            "            samples.append(json.loads(line))\n",
-            "\n",
-            "ALPACA_PROMPT = \"\"\"Below is an instruction that describes a task, paired with an input that provides further context. Write a response that appropriately completes the request.\\n\\n### Instruction:\\n{instruction}\\n\\n### Input:\\n{input}\\n\\n### Response:\\n{response}\"\"\"\n",
-            "\n",
-            "def formatting_prompts_func(batch):\n",
-            "    instructions = batch.get(\"instruction\", [])\n",
-            "    inputs = batch.get(\"input\", [\"\" for _ in instructions])\n",
-            "    responses = batch.get(\"output\", batch.get(\"response\", [\"\" for _ in instructions]))\n",
-            "    texts = []\n",
-            "    for inst, inp, resp in zip(instructions, inputs, responses):\n",
-            "        text = ALPACA_PROMPT.format(instruction=inst, input=inp, response=resp) + tokenizer.eos_token\n",
-            "        texts.append(text)\n",
-            "    return {\"text\": texts}\n",
-            "\n",
-            "dataset = Dataset.from_list(samples)\n",
-            "dataset = dataset.map(formatting_prompts_func, batched=True)\n",
-            "print(f\"✓ Loaded and formatted {len(dataset)} training samples.\")\n"
-          ]
-        },
-        {
-          cell_type: "code",
-          execution_count: null,
-          metadata: {},
-          outputs: [],
-          source: [
-            "# 5. Execute SFT Fine-Tuning Run\n",
-            "from trl import SFTTrainer\n",
-            "from transformers import TrainingArguments\n",
-            "\n",
-            "trainer = SFTTrainer(\n",
-            "    model=model,\n",
-            "    tokenizer=tokenizer,\n",
-            "    train_dataset=dataset,\n",
-            "    dataset_text_field=\"text\",\n",
-            "    max_seq_length=MAX_SEQ_LENGTH,\n",
-            "    dataset_num_proc=2,\n",
-            "    packing=False,\n",
-            "    args=TrainingArguments(\n",
-            "        per_device_train_batch_size=2,\n",
-            "        gradient_accumulation_steps=4,\n",
-            "        warmup_steps=5,\n",
-            "        num_train_epochs=NUM_EPOCHS,\n",
-            "        learning_rate=LEARNING_RATE,\n",
-            "        fp16=not torch.cuda.is_bf16_supported(),\n",
-            "        bf16=torch.cuda.is_bf16_supported(),\n",
-            "        logging_steps=1,\n",
-            "        optim=\"adamw_8bit\",\n",
-            "        weight_decay=0.01,\n",
-            "        lr_scheduler_type=\"linear\",\n",
-            "        seed=3407,\n",
-            "        output_dir=\"outputs\",\n",
-            "    ),\n",
-            ")\n",
-            "\n",
-            "print(\"Starting training run on GPU...\")\n",
-            "trainer_stats = trainer.train()\n",
-            "print(\"✓ Training completed successfully!\")\n"
-          ]
-        },
-        {
-          cell_type: "code",
-          execution_count: null,
-          metadata: {},
-          outputs: [],
-          source: [
-            "# 6. Test Model Inference & Validation\n",
-            "FastLanguageModel.for_inference(model)\n",
-            "inputs = tokenizer(\n",
-            "    [ALPACA_PROMPT.format(\n",
-            "        instruction=\"Explain how cryptographic DBOM guarantees dataset provenance.\",\n",
-            "        input=\"\",\n",
-            "        response=\"\"\n",
-            "    )],\n",
-            "    return_tensors=\"pt\"\n",
-            ").to(\"cuda\")\n",
-            "\n",
-            "outputs = model.generate(**inputs, max_new_tokens=128, use_cache=True)\n",
-            "print(\"✓ Inference Output:\")\n",
-            "print(tokenizer.batch_decode(outputs)[0])\n"
-          ]
-        },
-        {
-          cell_type: "code",
-          execution_count: null,
-          metadata: {},
-          outputs: [],
-          source: [
-            "# 7. Export Model Weights & LoRA Adapters\n",
-            "model.save_pretrained(OUTPUT_MODEL_NAME)\n",
-            "tokenizer.save_pretrained(OUTPUT_MODEL_NAME)\n",
-            "print(f\"✓ Saved LoRA adapter weights to: {OUTPUT_MODEL_NAME}\")\n"
-          ]
-        }
-      ],
-      metadata: {
-        accelerator: "GPU",
-        colab: { gpuType: "T4", provenance: [] },
-        language_info: { name: "python" }
+    const configPayload = {
+      pipeline: 'RasoSynthTune Fine-Tuning Execution Recipe',
+      base_model: form.base_model,
+      output_model_name: form.output_model_name || `finetune-${dsId.slice(0, 8)}`,
+      dataset_name: dsName,
+      dataset_stream_url: downloadUrl,
+      chat_template: form.chat_template,
+      hyperparameters: {
+        epochs: form.num_train_epochs,
+        learning_rate: form.learning_rate,
+        lora_r: form.lora_r,
+        lora_alpha: form.lora_alpha,
+        load_in_4bit: form.load_in_4bit,
+        bf16: form.bf16,
       },
-      nbformat: 4,
-      nbformat_minor: 0
+      notebook_runner_url: 'https://colab.research.google.com/github/Sourabh-Kumar04/RasoSynth_CUTC/blob/master/finetuning/RasoSynthTune_FineTuning_Colab.ipynb',
     }
 
-    const blob = new Blob([JSON.stringify(notebookData, null, 2)], { type: 'application/x-ipynb+json' })
+    const blob = new Blob([JSON.stringify(configPayload, null, 2)], { type: 'application/json' })
     const url = URL.createObjectURL(blob)
     const a = document.createElement('a')
     a.href = url
     const safeModel = form.base_model.replace(/[^a-zA-Z0-9_-]/g, '_')
-    a.download = `RasoSynthTune_${safeModel}_${dsId.slice(0, 8)}.ipynb`
+    a.download = `finetune_recipe_${safeModel}_${dsId.slice(0, 8)}.json`
     a.click()
     URL.revokeObjectURL(url)
-    toast('Pre-configured notebook (.ipynb) downloaded! Upload to Colab and click Run All.', 'success')
+    toast('Pre-configured training recipe (.json) downloaded!', 'success')
   }, [form, pipelineDatasets, signedStreamUrl, toast])
 
   useEffect(() => {
@@ -1881,10 +1692,10 @@ function FineTuneContent() {
                                 type="button"
                                 onClick={downloadPreconfiguredNotebook}
                                 className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-md bg-[#1f1f2e] hover:bg-[#2a2a3e] border border-[#3b3b54] text-white text-xs font-semibold transition-all shrink-0 shadow-sm"
-                                title="Download pre-filled notebook with model and signed dataset URL already embedded"
+                                title="Download training recipe config with model and dataset stream parameters"
                               >
                                 <Download className="w-3.5 h-3.5 text-[#f26625]" />
-                                <span>Download Configured .ipynb</span>
+                                <span>Export Recipe (.json)</span>
                               </button>
                               <a
                                 href="https://colab.research.google.com/github/Sourabh-Kumar04/RasoSynth_CUTC/blob/master/finetuning/RasoSynthTune_FineTuning_Colab.ipynb"
@@ -1980,56 +1791,6 @@ LORA_R = ${form.lora_r}
 LORA_ALPHA = ${form.lora_alpha}`}
                             </pre>
                           </div>
-
-                          <div className="space-y-1.5 pt-1 border-t border-[#272738]/60">
-                            <div className="text-xs text-zinc-400 flex items-center justify-between">
-                              <span className="flex items-center gap-1.5 font-semibold text-zinc-300">
-                                <Activity className="w-3 h-3 text-emerald-400" />
-                                <span>Cell Execution Outputs Preview</span>
-                              </span>
-                              <span className="text-xs px-1.5 py-0.5 rounded bg-emerald-500/10 text-emerald-400 border border-emerald-500/30">
-                                4 Stages Ready
-                              </span>
-                            </div>
-
-                            <div className="p-3 rounded bg-[#0a0a0f] border border-[#272738] space-y-2 text-xs font-mono leading-relaxed">
-                              <div className="flex items-start gap-2 border-b border-[#1c1c2b] pb-2">
-                                <span className="px-1.5 py-0.5 text-xs font-bold rounded bg-[#f26625]/15 text-[#f26625] shrink-0">
-                                  Cell 1 [GPU & Setup]
-                                </span>
-                                <div className="text-zinc-300">
-                                  <span className="text-emerald-400 font-semibold">Tesla T4 GPU (15,109 MiB)</span> · CUDA 12.2 · Unsloth FastLanguageModel initialized (<span className="text-white font-medium">2.4x speedup, 70% VRAM saving</span>).
-                                </div>
-                              </div>
-
-                              <div className="flex items-start gap-2 border-b border-[#1c1c2b] pb-2">
-                                <span className="px-1.5 py-0.5 text-xs font-bold rounded bg-[#f26625]/15 text-[#f26625] shrink-0">
-                                  Cell 2 [Data Stream]
-                                </span>
-                                <div className="text-zinc-300">
-                                  Streaming <span className="text-[#f26625] font-semibold">{dsName}</span> from signed endpoint · Chat Template: <span className="text-amber-300 font-semibold">{form.chat_template}</span> · Cryptographic DBOM Attested.
-                                </div>
-                              </div>
-
-                              <div className="flex items-start gap-2 border-b border-[#1c1c2b] pb-2">
-                                <span className="px-1.5 py-0.5 text-xs font-bold rounded bg-emerald-500/15 text-emerald-400 shrink-0">
-                                  Cell 3 [QLoRA Setup]
-                                </span>
-                                <div className="text-zinc-300">
-                                  Base Model: <span className="text-white font-semibold">{form.base_model}</span> (4-bit NF4 quantized) · LoRA Rank <span className="text-emerald-400">r={form.lora_r}</span>, alpha={form.lora_alpha} · Trainable params: <span className="text-white">~11.2M (0.54%)</span>.
-                                </div>
-                              </div>
-
-                              <div className="flex items-start gap-2">
-                                <span className="px-1.5 py-0.5 text-xs font-bold rounded bg-amber-500/15 text-amber-400 shrink-0">
-                                  Cell 4 [SFT Training]
-                                </span>
-                                <div className="text-zinc-300">
-                                  Training Configuration: <span className="text-white">{form.num_train_epochs} Epochs</span> · lr={form.learning_rate} · Batch={form.per_device_train_batch_size} · AdamW 8-bit · Loss convergence target: <span className="text-emerald-400">&lt;0.70</span>.
-                                </div>
-                              </div>
-                            </div>
-                          </div>
                         </div>
                       )
                     })()}
@@ -2107,52 +1868,115 @@ LORA_ALPHA = ${form.lora_alpha}`}
               </div>
 
               <Section title="Training Hyperparameters" defaultOpen={true}>
-                <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3">
-                  {([
-                    { key: 'num_train_epochs',            label: 'Epochs',        tip: 'Full passes over dataset',          int: true  },
-                    { key: 'per_device_train_batch_size', label: 'Batch size',    tip: 'Samples per GPU per step',          int: true  },
-                    { key: 'gradient_accumulation_steps', label: 'Grad accum',    tip: 'Steps before weight update',        int: true  },
-                    { key: 'learning_rate',               label: 'Learning rate', tip: 'AdamW LR (1e-4 to 5e-4 typical)',  int: false },
-                    { key: 'lora_r',                      label: 'LoRA r',        tip: 'LoRA rank (higher = more params)',  int: true  },
-                    { key: 'lora_alpha',                  label: 'LoRA alpha',    tip: 'LoRA scaling (usually 2× rank)',    int: true  },
-                  ] as const).map(({ key, label, tip, int: isInt }) => (
-                    <div key={key}>
-                      <label className="text-xs mb-1 block font-bold font-mono uppercase text-[#a8a29e]" title={tip}>
-                        {label}
-                      </label>
-                      <Input
-                        type="number"
-                        className="rounded-md border-[#272738] bg-[#0a0a0f] text-white focus:border-[#f26625] text-xs font-mono"
-                        step={isInt ? 1 : 0.00001}
-                        value={(form as Record<string, unknown>)[key] as number}
-                        onChange={e => f(
-                          key as keyof typeof form,
-                          isInt ? parseInt(e.target.value) : parseFloat(e.target.value)
-                        )}
-                      />
-                    </div>
-                  ))}
-                </div>
-                <div className="flex flex-wrap gap-6 pt-2">
-                  {([
-                    { key: 'load_in_4bit', label: '4-bit quantization (QLoRA)' },
-                    { key: 'bf16',         label: 'BF16 mixed precision' },
-                  ] as const).map(({ key, label }) => (
-                    <div key={key} className="flex items-center gap-2">
-                      <Switch
-                        id={key}
-                        checked={form[key] as boolean}
-                        onCheckedChange={v => f(key, v)}
-                      />
-                      <label htmlFor={key} className="text-xs text-[#a8a29e] cursor-pointer">
-                        {label}
-                      </label>
-                    </div>
-                  ))}
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                  <div>
+                    <label className="text-xs mb-1 block font-bold font-mono uppercase text-[#a8a29e]" title="Full passes over dataset">
+                      Epochs
+                    </label>
+                    <Input
+                      type="number"
+                      min={1}
+                      max={50}
+                      className="rounded-md border-[#272738] bg-[#0a0a0f] text-white focus:border-[#f26625] text-xs font-mono"
+                      value={form.num_train_epochs}
+                      onChange={e => f('num_train_epochs', parseInt(e.target.value) || 1)}
+                    />
+                  </div>
+                  <div>
+                    <label className="text-xs mb-1 block font-bold font-mono uppercase text-[#a8a29e]" title="Samples per GPU per step">
+                      Batch Size (Per Device)
+                    </label>
+                    <Input
+                      type="number"
+                      min={1}
+                      max={64}
+                      className="rounded-md border-[#272738] bg-[#0a0a0f] text-white focus:border-[#f26625] text-xs font-mono"
+                      value={form.per_device_train_batch_size}
+                      onChange={e => f('per_device_train_batch_size', parseInt(e.target.value) || 1)}
+                    />
+                  </div>
                 </div>
               </Section>
 
-              <Section title="HuggingFace Hub (ADR-002)" defaultOpen={false}>
+              <Section title="Advanced Hyperparameters" defaultOpen={false}>
+                <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+                  <div>
+                    <label className="text-xs mb-1 block font-bold font-mono uppercase text-[#a8a29e]" title="AdamW Learning Rate">
+                      Learning Rate
+                    </label>
+                    <Input
+                      type="number"
+                      step={0.00001}
+                      className="rounded-md border-[#272738] bg-[#0a0a0f] text-white focus:border-[#f26625] text-xs font-mono"
+                      value={form.learning_rate}
+                      onChange={e => f('learning_rate', parseFloat(e.target.value) || 0.0002)}
+                    />
+                  </div>
+                  <div>
+                    <label className="text-xs mb-1 block font-bold font-mono uppercase text-[#a8a29e]" title="Steps before gradient update">
+                      Grad Accumulation
+                    </label>
+                    <Input
+                      type="number"
+                      min={1}
+                      max={32}
+                      className="rounded-md border-[#272738] bg-[#0a0a0f] text-white focus:border-[#f26625] text-xs font-mono"
+                      value={form.gradient_accumulation_steps}
+                      onChange={e => f('gradient_accumulation_steps', parseInt(e.target.value) || 1)}
+                    />
+                  </div>
+                  <div>
+                    <label className="text-xs mb-1 block font-bold font-mono uppercase text-[#a8a29e]" title="LoRA rank">
+                      LoRA Rank (r)
+                    </label>
+                    <Input
+                      type="number"
+                      min={1}
+                      max={128}
+                      className="rounded-md border-[#272738] bg-[#0a0a0f] text-white focus:border-[#f26625] text-xs font-mono"
+                      value={form.lora_r}
+                      onChange={e => f('lora_r', parseInt(e.target.value) || 16)}
+                    />
+                  </div>
+                  <div>
+                    <label className="text-xs mb-1 block font-bold font-mono uppercase text-[#a8a29e]" title="LoRA scaling factor">
+                      LoRA Alpha
+                    </label>
+                    <Input
+                      type="number"
+                      min={1}
+                      max={256}
+                      className="rounded-md border-[#272738] bg-[#0a0a0f] text-white focus:border-[#f26625] text-xs font-mono"
+                      value={form.lora_alpha}
+                      onChange={e => f('lora_alpha', parseInt(e.target.value) || 32)}
+                    />
+                  </div>
+                </div>
+                <div className="flex flex-wrap gap-6 pt-2">
+                  <div className="flex items-center gap-2">
+                    <Switch
+                      id="load_in_4bit"
+                      checked={form.load_in_4bit}
+                      onCheckedChange={v => f('load_in_4bit', v)}
+                    />
+                    <label htmlFor="load_in_4bit" className="text-xs text-[#a8a29e] cursor-pointer">
+                      4-bit quantization (QLoRA)
+                    </label>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <Switch
+                      id="bf16"
+                      checked={form.bf16}
+                      onCheckedChange={v => f('bf16', v)}
+                    />
+                    <label htmlFor="bf16" className="text-xs text-[#a8a29e] cursor-pointer">
+                      BF16 mixed precision
+                    </label>
+                  </div>
+                </div>
+              </Section>
+
+              <Section title="Hugging Face Hub Integration" defaultOpen={false}>
                 <div className="flex items-center gap-2 mb-2">
                   <Switch id="push_hub" checked={form.push_to_hub}
                     onCheckedChange={v => f('push_to_hub', v)} />

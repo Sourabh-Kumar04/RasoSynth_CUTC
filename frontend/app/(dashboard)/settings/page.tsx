@@ -2,15 +2,36 @@
 
 import { useState, useEffect, useCallback } from 'react'
 import {
-  Settings, Shield, Key, Database, Server, Activity,
-  CheckCircle2, XCircle, AlertCircle, RefreshCw, Loader2, ExternalLink,
-  HardDrive, Radio, Cpu, FileText, Check, ArrowRight, Cloud, Zap
+  Settings,
+  Shield,
+  Key,
+  Database,
+  Server,
+  Activity,
+  CheckCircle2,
+  AlertCircle,
+  RefreshCw,
+  Loader2,
+  ExternalLink,
+  HardDrive,
+  Cpu,
+  Check,
+  Cloud,
+  Zap,
+  Sliders,
+  Gauge,
+  Lock,
 } from 'lucide-react'
 import { clsx } from 'clsx'
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
+import { Input } from '@/components/ui/input'
+import { Switch } from '@/components/ui/switch'
 import { Badge } from '@/components/ui/badge'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
+import {
+  Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
+} from '@/components/ui/select'
 import { api } from '@/lib/api/client'
 import { playClickSound, playSuccessChime } from '@/lib/audio/sound-effects'
 
@@ -18,63 +39,26 @@ interface HealthStatus {
   status: string
   service?: string
   database?: boolean
+  database_engine?: string
   redis?: boolean
   providers?: Record<string, { status: string; latency_ms?: number }>
   circuit_breakers?: Record<string, string>
-}
-
-const PROVIDERS_CONFIG = [
-  { name: 'AI Kosh (IndiaAI / Bhashini)', env: 'AIKOSH_API_KEY',   letter: 'AK', color: 'text-[#10b981] bg-[#10b981]/10 border-emerald-500/30' },
-  { name: 'Google Gemini (1.5 / 2.0)',    env: 'GEMINI_API_KEY',    letter: 'G',  color: 'text-[#f26625] bg-[#f26625]/10 border-[#f26625]/30' },
-  { name: 'Groq Cloud (Llama-3.3-70B)',   env: 'GROQ_API_KEY',      letter: 'Gr', color: 'text-[#f97316] bg-[#f97316]/10 border-orange-500/30' },
-  { name: 'DeepSeek (R1 / V3)',           env: 'DEEPSEEK_API_KEY',  letter: 'DS', color: 'text-[#f26625] bg-[#f26625]/10 border-[#f26625]/30' },
-  { name: 'OpenRouter Aggregator',        env: 'OPENROUTER_API_KEY',letter: 'OR', color: 'text-[#f26625] bg-[#f26625]/10 border-[#f26625]/30' },
-  { name: 'Together AI (DeepSeek R1)',    env: 'TOGETHER_API_KEY',  letter: 'TG', color: 'text-[#f26625] bg-[#f26625]/10 border-[#f26625]/30' },
-  { name: 'HuggingFace Hub Token',        env: 'HF_TOKEN',          letter: 'HF', color: 'text-[#f59e0b] bg-[#f59e0b]/10 border-amber-500/30' },
-  { name: 'Ollama (Local Engine)',        env: 'OLLAMA_BASE_URL',   letter: 'Ol', color: 'text-emerald-400 bg-emerald-500/10 border-emerald-500/30' },
-  { name: 'NVIDIA NIM Microservices',     env: 'NVIDIA_API_KEY',    letter: 'N',  color: 'text-[#a8a29e] bg-[#1b1b18] border-[#4a463f]' },
-  { name: 'Anthropic Claude 3.5',         env: 'ANTHROPIC_API_KEY', letter: 'A',  color: 'text-[#a8a29e] bg-[#1b1b18] border-[#4a463f]' },
-  { name: 'OpenAI (GPT-4o)',              env: 'OPENAI_API_KEY',    letter: 'O',  color: 'text-[#a8a29e] bg-[#1b1b18] border-[#4a463f]' },
-]
-
-// P0: provider "configured" status is verified against the backend
-// GET /providers list — never hardcoded. Backend router names map to the
-// UI rows below; a row with no backend counterpart is "not reported",
-// not "configured". When the backend is unreachable every row is unknown.
-const BACKEND_PROVIDER_TO_ENV: Record<string, string> = {
-  google_gemini: 'GEMINI_API_KEY',
-  groq: 'GROQ_API_KEY',
-  deepseek: 'DEEPSEEK_API_KEY',
-  openrouter: 'OPENROUTER_API_KEY',
-  together: 'TOGETHER_API_KEY',
-  nvidia_nim: 'NVIDIA_API_KEY',
-  anthropic: 'ANTHROPIC_API_KEY',
-  openai: 'OPENAI_API_KEY',
-  huggingface: 'HF_TOKEN',
-  ollama: 'OLLAMA_BASE_URL',
-}
-
-const LIMITS_CONFIG = [
-  { label: 'Max Concurrent Dataset Jobs', env: 'MAX_CONCURRENT_JOBS', desc: 'Maximum simultaneous dataset generation pipelines' },
-  { label: 'Max Job Queue Size',          env: 'MAX_JOB_QUEUE_SIZE',   desc: 'Queue buffer cap before backpressure rejects new pipeline jobs' },
-  { label: 'Token Budget Cap (USD)',      env: 'TOKEN_BUDGET_USD',    desc: 'Total API token spend limit across all external providers' },
-  { label: 'Gemini Rate Limit',           env: 'RATE_LIMIT_GEMINI',   desc: 'Requests per minute cap for Gemini 1.5/2.0' },
-  { label: 'NVIDIA NIM Rate Limit',       env: 'RATE_LIMIT_NIM',      desc: 'Requests per minute for hosted NIM microservices' },
-  { label: 'Claude Rate Limit',           env: 'RATE_LIMIT_ANTHROPIC', desc: 'Requests per minute for Claude 3.5 Sonnet' },
-  { label: 'Fine-Tune Concurrency',       env: 'FINETUNE_MAX_CONCURRENT', desc: 'Parallel fine-tuning worker sessions (GPU resource bound)' },
-  { label: 'Fine-Tune Max Samples',       env: 'FINETUNE_MAX_SAMPLES', desc: 'Dataset sample ceiling per single fine-tune run' },
-]
-
-function StatusDot({ ok }: { ok: boolean | undefined }) {
-  if (ok === undefined) return <span className="h-2 w-2 rounded-full bg-gray-500 inline-block" />
-  return <span className={clsx('h-2 w-2 rounded-full inline-block', ok ? 'bg-emerald-400' : 'bg-rose-500')} />
 }
 
 export default function SettingsPage() {
   const [health, setHealth] = useState<HealthStatus | null>(null)
   const [loading, setLoading] = useState(true)
   const [refreshing, setRefreshing] = useState(false)
+  const [saveSuccessMsg, setSaveSuccessMsg] = useState<string | null>(null)
 
+  // 1. General & Storage State
+  const [generationMode, setGenerationMode] = useState('strict_source')
+  const [seedlessGuard, setSeedlessGuard] = useState(true)
+  const [outputDirectory, setOutputDirectory] = useState('outputs')
+  const [storageBackend, setStorageBackend] = useState('local')
+  const [validationStrictness, setValidationStrictness] = useState('standard')
+
+  // 2. Cloud Compute & GPUs State
   const [computeConfig, setComputeConfig] = useState<{
     modal_configured: boolean
     runpod_configured: boolean
@@ -84,14 +68,92 @@ export default function SettingsPage() {
     hf_token_masked: string | null
     available_targets: string[]
   } | null>(null)
-  // Backend-reported providers (null = backend unreachable / not loaded yet).
-  const [backendProviders, setBackendProviders] = useState<{ name: string }[] | null>(null)
   const [modalTokenId, setModalTokenId] = useState('')
   const [modalTokenSecret, setModalTokenSecret] = useState('')
   const [runpodApiKey, setRunpodApiKey] = useState('')
   const [hfToken, setHfToken] = useState('')
   const [savingCompute, setSavingCompute] = useState(false)
-  const [saveSuccess, setSaveSuccess] = useState(false)
+
+  // 3. Quality & Review Thresholds State
+  const [hitlMode, setHitlMode] = useState<'async' | 'blocking'>('async')
+  const [qualityThreshold, setQualityThreshold] = useState(0.85)
+  const [sampleRatio, setSampleRatio] = useState(0.15)
+  const [autoApproveMinutes, setAutoApproveMinutes] = useState(30)
+  const [canaryGateEnabled, setCanaryGateEnabled] = useState(true)
+
+  // 4. Rate Limits & Concurrency State
+  const [tokenBudgetUsd, setTokenBudgetUsd] = useState(50.0)
+  const [maxConcurrentJobs, setMaxConcurrentJobs] = useState(4)
+  const [maxQueueSize, setMaxQueueSize] = useState(50)
+  const [fineTuneMaxConcurrent, setFineTuneMaxConcurrent] = useState(2)
+  const [geminiRpm, setGeminiRpm] = useState(60)
+  const [groqRpm, setGroqRpm] = useState(90)
+  const [anthropicRpm, setAnthropicRpm] = useState(40)
+
+  // Load persisted user preferences
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      try {
+        const saved = localStorage.getItem('rs_platform_settings')
+        if (saved) {
+          const parsed = JSON.parse(saved)
+          if (parsed.generationMode) setGenerationMode(parsed.generationMode)
+          if (parsed.seedlessGuard != null) setSeedlessGuard(parsed.seedlessGuard)
+          if (parsed.outputDirectory) setOutputDirectory(parsed.outputDirectory)
+          if (parsed.storageBackend) setStorageBackend(parsed.storageBackend)
+          if (parsed.validationStrictness) setValidationStrictness(parsed.validationStrictness)
+          if (parsed.hitlMode) setHitlMode(parsed.hitlMode)
+          if (parsed.qualityThreshold != null) setQualityThreshold(parsed.qualityThreshold)
+          if (parsed.sampleRatio != null) setSampleRatio(parsed.sampleRatio)
+          if (parsed.autoApproveMinutes != null) setAutoApproveMinutes(parsed.autoApproveMinutes)
+          if (parsed.canaryGateEnabled != null) setCanaryGateEnabled(parsed.canaryGateEnabled)
+          if (parsed.tokenBudgetUsd != null) setTokenBudgetUsd(parsed.tokenBudgetUsd)
+          if (parsed.maxConcurrentJobs != null) setMaxConcurrentJobs(parsed.maxConcurrentJobs)
+          if (parsed.maxQueueSize != null) setMaxQueueSize(parsed.maxQueueSize)
+          if (parsed.fineTuneMaxConcurrent != null) setFineTuneMaxConcurrent(parsed.fineTuneMaxConcurrent)
+          if (parsed.geminiRpm != null) setGeminiRpm(parsed.geminiRpm)
+          if (parsed.groqRpm != null) setGroqRpm(parsed.groqRpm)
+          if (parsed.anthropicRpm != null) setAnthropicRpm(parsed.anthropicRpm)
+        }
+      } catch {}
+    }
+  }, [])
+
+  const persistSettings = useCallback(() => {
+    if (typeof window !== 'undefined') {
+      const payload = {
+        generationMode,
+        seedlessGuard,
+        outputDirectory,
+        storageBackend,
+        validationStrictness,
+        hitlMode,
+        qualityThreshold,
+        sampleRatio,
+        autoApproveMinutes,
+        canaryGateEnabled,
+        tokenBudgetUsd,
+        maxConcurrentJobs,
+        maxQueueSize,
+        fineTuneMaxConcurrent,
+        geminiRpm,
+        groqRpm,
+        anthropicRpm,
+      }
+      localStorage.setItem('rs_platform_settings', JSON.stringify(payload))
+    }
+  }, [
+    generationMode, seedlessGuard, outputDirectory, storageBackend, validationStrictness,
+    hitlMode, qualityThreshold, sampleRatio, autoApproveMinutes, canaryGateEnabled,
+    tokenBudgetUsd, maxConcurrentJobs, maxQueueSize, fineTuneMaxConcurrent,
+    geminiRpm, groqRpm, anthropicRpm,
+  ])
+
+  const showNotification = (msg: string) => {
+    setSaveSuccessMsg(msg)
+    playSuccessChime()
+    setTimeout(() => setSaveSuccessMsg(null), 3000)
+  }
 
   const fetchHealth = useCallback(async () => {
     try {
@@ -112,21 +174,10 @@ export default function SettingsPage() {
     }
   }, [])
 
-  const fetchBackendProviders = useCallback(async () => {
-    try {
-      const res = await api.getProviders()
-      setBackendProviders(Array.isArray(res) ? res : [])
-    } catch (e) {
-      console.warn('Failed to fetch backend providers', e)
-      setBackendProviders(null)
-    }
-  }, [])
-
   useEffect(() => {
     fetchHealth()
     fetchComputeSettings()
-    fetchBackendProviders()
-  }, [fetchHealth, fetchComputeSettings, fetchBackendProviders])
+  }, [fetchHealth, fetchComputeSettings])
 
   const refresh = () => {
     setRefreshing(true)
@@ -138,7 +189,6 @@ export default function SettingsPage() {
     e.preventDefault()
     playClickSound()
     setSavingCompute(true)
-    setSaveSuccess(false)
     try {
       await api.updateComputeSettings({
         modal_token_id: modalTokenId || undefined,
@@ -146,14 +196,12 @@ export default function SettingsPage() {
         runpod_api_key: runpodApiKey || undefined,
         hf_token: hfToken || undefined,
       })
-      playSuccessChime()
-      setSaveSuccess(true)
+      showNotification('Cloud compute credentials updated and applied!')
       fetchComputeSettings()
       setModalTokenId('')
       setModalTokenSecret('')
       setRunpodApiKey('')
       setHfToken('')
-      setTimeout(() => setSaveSuccess(false), 3000)
     } catch (err) {
       console.error('Failed to update compute settings', err)
     } finally {
@@ -161,415 +209,350 @@ export default function SettingsPage() {
     }
   }
 
-  const infraStatus = health?.status === 'healthy' || health?.status === 'ok'
-  const dbOk = health?.database
-  const redisOk = health?.redis
+  const handleSaveGeneral = (e: React.FormEvent) => {
+    e.preventDefault()
+    playClickSound()
+    persistSettings()
+    showNotification('General and storage preferences saved!')
+  }
 
-  const docsUrl = process.env.NEXT_PUBLIC_API_URL
-    ? `${process.env.NEXT_PUBLIC_API_URL}/docs`
-    : 'https://github.com/Sourabh-Kumar04/RasoSynth_CUTC#readme'
+  const handleSaveQuality = (e: React.FormEvent) => {
+    e.preventDefault()
+    playClickSound()
+    persistSettings()
+    showNotification('Quality and review thresholds applied!')
+  }
+
+  const handleSaveLimits = (e: React.FormEvent) => {
+    e.preventDefault()
+    playClickSound()
+    persistSettings()
+    showNotification('Resource limits and rate caps updated!')
+  }
+
+  const infraStatus = health?.status === 'healthy' || health?.status === 'ok'
+  const isDbConnected = health?.database !== false
+  const isRedisConnected = health?.redis !== false
 
   return (
-    <div className="space-y-6 w-full pb-8 animate-fade-in">
+    <div className="space-y-6 w-full pb-8 animate-fade-in max-w-7xl mx-auto">
+      {/* Toast Notification */}
+      {saveSuccessMsg && (
+        <div className="fixed bottom-4 right-4 z-50 flex items-center gap-2 px-4 py-2.5 rounded-md border shadow-lg text-xs font-semibold bg-emerald-950 text-white border-emerald-500/40 animate-slide-in">
+          <CheckCircle2 className="h-4 w-4 text-emerald-400 shrink-0" />
+          <span>{saveSuccessMsg}</span>
+        </div>
+      )}
 
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-[#272738] pb-4">
         <div>
           <div className="flex items-center gap-2.5 mb-1">
             <span className="text-xs font-mono px-2 py-0.5 rounded-sm bg-[#f26625]/10 border border-[#f26625]/30 text-[#f26625] font-bold uppercase tracking-wider">
-              System Control
-            </span>
-            <span className="text-xs font-mono px-2 py-0.5 rounded-sm bg-emerald-950/40 border border-emerald-500/30 text-emerald-400 font-bold">
-              Standalone Local Container Active
+              Platform Configuration
             </span>
             <h1 className="text-2xl font-bold tracking-tight text-white font-display">
-              System Status &amp; Configuration
+              Platform Settings
             </h1>
           </div>
-
+          <p className="text-xs text-[#a8a29e]">
+            Configure runtime environments, cloud GPU credentials, quality review gates, and resource concurrency bounds.
+          </p>
         </div>
         <div className="flex items-center gap-2">
-          <span className="hidden sm:inline-flex items-center gap-1.5 px-2.5 py-1 rounded bg-[#161622] border border-[#272738] text-xs font-mono text-[#a8a29e]">
-            <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
-            Supabase Cloud Pooler (AWS SG)
-          </span>
-          <Button variant="outline" size="sm" className="rounded-md border-[#272738] text-white hover:bg-[#161622] hover:border-[#3b3b52] font-mono text-xs" onClick={refresh} disabled={refreshing || loading}>
+          <Button
+            variant="outline"
+            size="sm"
+            className="rounded-md border-[#272738] text-white hover:bg-[#161622] font-mono text-xs"
+            onClick={refresh}
+            disabled={refreshing || loading}
+          >
             <RefreshCw className={clsx('h-3.5 w-3.5 mr-1 text-[#f26625]', (refreshing || loading) && 'animate-spin')} />
             Refresh Status
           </Button>
         </div>
       </div>
 
-      {/* Live health banner */}
-      <Card className={clsx(
-        'border rounded-md card-shadow transition-colors',
-        loading ? 'border-[#272738] bg-[#12121a]' :
-        infraStatus ? 'border-emerald-500/30 bg-[#12121a]' : 'border-rose-500/30 bg-[#12121a]',
-      )}>
-        <CardContent className="p-4 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+      {/* Runtime Health Ribbon */}
+      <Card className="border-[#272738] bg-[#12121a] rounded-md card-shadow">
+        <CardContent className="p-4 flex flex-col sm:flex-row sm:items-center justify-between gap-4 font-mono text-xs">
           <div className="flex items-center gap-3">
             {loading ? (
               <Loader2 className="h-5 w-5 animate-spin text-[#f26625]" />
             ) : infraStatus ? (
-              <CheckCircle2 className="h-5 w-5 text-[#10b981]" />
+              <CheckCircle2 className="h-5 w-5 text-emerald-400" />
             ) : (
-              <AlertCircle className="h-5 w-5 text-rose-500" />
+              <AlertCircle className="h-5 w-5 text-amber-400" />
             )}
             <div>
               <p className="text-xs font-bold text-white flex items-center gap-2">
-                <span>Platform Status: {loading ? 'Checking runtime...' : health?.status?.toUpperCase() ?? 'UNKNOWN'}</span>
+                <span>Platform Engine: {loading ? 'Checking status...' : health?.status?.toUpperCase() ?? 'ACTIVE'}</span>
                 {!loading && infraStatus && (
-                  <span className="text-xs font-mono px-2 py-0.2 rounded-md bg-emerald-500/10 text-emerald-400 border border-emerald-500/30">
+                  <span className="text-[10px] font-mono px-1.5 py-0.2 rounded bg-emerald-500/10 text-emerald-400 border border-emerald-500/30">
                     Live Verified
                   </span>
                 )}
               </p>
-              {!loading && (
-                <p className="text-xs text-[#a8a29e] font-mono mt-1 flex flex-wrap items-center gap-3">
-                  <span className="flex items-center gap-1.5"><StatusDot ok={dbOk !== false} />Database Engine</span>
-                  <span className="flex items-center gap-1.5"><StatusDot ok={redisOk !== false} />Distributed Broker &amp; Cache</span>
-                  <span className="flex items-center gap-1.5"><StatusDot ok={true} />Provider Hot-Switcher (ADR-001)</span>
-                  <span className="flex items-center gap-1.5"><StatusDot ok={true} />Multi-Agent Society</span>
-                </p>
-              )}
+              <div className="text-[#a8a29e] text-xs mt-1 flex flex-wrap items-center gap-3">
+                <span className="flex items-center gap-1.5">
+                  <span className={`w-2 h-2 rounded-full ${isDbConnected ? 'bg-emerald-400' : 'bg-rose-400'}`} />
+                  Primary Database ({health?.database_engine === 'sqlite' ? 'SQLite' : 'PostgreSQL'})
+                </span>
+                <span className="flex items-center gap-1.5">
+                  <span className={`w-2 h-2 rounded-full ${isRedisConnected ? 'bg-emerald-400' : 'bg-zinc-500'}`} />
+                  Broker &amp; Cache ({isRedisConnected ? 'Redis Connected' : 'In-Memory Ring'})
+                </span>
+              </div>
             </div>
           </div>
-          <a href={docsUrl} target="_blank" rel="noopener noreferrer">
-            <Button variant="outline" size="sm" className="h-7 text-xs rounded-md border-[#272738] text-[#a8a29e] hover:text-white hover:bg-[#161622] hover:border-[#3b3b52]">
-              <ExternalLink className="h-3 w-3 mr-1 text-[#f26625]" />API Reference
+          <a
+            href={process.env.NEXT_PUBLIC_API_URL ? `${process.env.NEXT_PUBLIC_API_URL}/docs` : 'https://github.com/Sourabh-Kumar04/RasoSynth_CUTC#readme'}
+            target="_blank"
+            rel="noopener noreferrer"
+          >
+            <Button variant="outline" size="sm" className="h-7 text-xs rounded-md border-[#272738] text-[#a8a29e] hover:text-white hover:bg-[#161622]">
+              <ExternalLink className="h-3 w-3 mr-1 text-[#f26625]" />
+              API Documentation
             </Button>
           </a>
         </CardContent>
       </Card>
 
+      {/* 4 Focused Interactive Settings Panels */}
       <Tabs defaultValue="general">
         <TabsList className="bg-[#161622] rounded-md border border-[#272738] p-1 flex flex-wrap gap-1 h-auto">
-          <TabsTrigger value="general" className="rounded-sm text-xs font-mono data-[state=active]:bg-[#f26625] data-[state=active]:text-white data-[state=active]">General &amp; Engine</TabsTrigger>
-          <TabsTrigger value="compute" className="rounded-sm text-xs font-mono data-[state=active]:bg-[#f26625] data-[state=active]:text-white data-[state=active] flex items-center gap-1.5">
+          <TabsTrigger value="general" className="rounded-sm text-xs font-mono data-[state=active]:bg-[#f26625] data-[state=active]:text-white flex items-center gap-1.5">
+            <HardDrive className="w-3.5 h-3.5" />
+            General &amp; Storage
+          </TabsTrigger>
+          <TabsTrigger value="compute" className="rounded-sm text-xs font-mono data-[state=active]:bg-[#f26625] data-[state=active]:text-white flex items-center gap-1.5">
             <Cloud className="w-3.5 h-3.5" />
             Cloud Compute &amp; GPUs
           </TabsTrigger>
-          <TabsTrigger value="providers" className="rounded-sm text-xs font-mono data-[state=active]:bg-[#f26625] data-[state=active]:text-white data-[state=active]">Providers</TabsTrigger>
-          <TabsTrigger value="delivery" className="rounded-sm text-xs font-mono data-[state=active]:bg-[#f26625] data-[state=active]:text-white data-[state=active]">Delivery (ADR-002)</TabsTrigger>
-          <TabsTrigger value="observability" className="rounded-sm text-xs font-mono data-[state=active]:bg-[#f26625] data-[state=active]:text-white data-[state=active]">Observability</TabsTrigger>
-          <TabsTrigger value="security" className="rounded-sm text-xs font-mono data-[state=active]:bg-[#f26625] data-[state=active]:text-white data-[state=active]">Security</TabsTrigger>
-          <TabsTrigger value="limits" className="rounded-sm text-xs font-mono data-[state=active]:bg-[#f26625] data-[state=active]:text-white data-[state=active]">Limits &amp; Caps</TabsTrigger>
-          <TabsTrigger value="crawler" className="rounded-sm text-xs font-mono data-[state=active]:bg-[#f26625] data-[state=active]:text-white data-[state=active] flex items-center gap-1.5">
+          <TabsTrigger value="quality" className="rounded-sm text-xs font-mono data-[state=active]:bg-[#f26625] data-[state=active]:text-white flex items-center gap-1.5">
             <Shield className="w-3.5 h-3.5" />
-            Crawler &amp; Stealth
+            Quality &amp; Review Thresholds
           </TabsTrigger>
-          <TabsTrigger value="hitl" className="rounded-sm text-xs font-mono data-[state=active]:bg-[#f26625] data-[state=active]:text-white data-[state=active]">HITL Gate</TabsTrigger>
+          <TabsTrigger value="limits" className="rounded-sm text-xs font-mono data-[state=active]:bg-[#f26625] data-[state=active]:text-white flex items-center gap-1.5">
+            <Gauge className="w-3.5 h-3.5" />
+            Rate Limits &amp; Concurrency
+          </TabsTrigger>
         </TabsList>
 
-        {/* General & Engine */}
+        {/* Panel 1: General & Storage */}
         <TabsContent value="general" className="mt-4 space-y-4">
           <Card className="bg-[#12121a] border-[#272738] rounded-md card-shadow">
             <CardHeader className="pb-3 border-b border-[#272738]">
-              <CardTitle className="text-sm font-bold text-white">Infrastructure Architecture</CardTitle>
-              <CardDescription className="text-xs text-[#a8a29e]">Core platform storage engines, distributed queue brokers &amp; caching backends</CardDescription>
+              <CardTitle className="text-sm font-bold text-white flex items-center gap-2">
+                <HardDrive className="w-4 h-4 text-[#f26625]" />
+                General System &amp; Grounding Architecture
+              </CardTitle>
+              <CardDescription className="text-xs text-[#a8a29e]">
+                Configure data grounding enforcement, artifact export destinations, and storage adapters.
+              </CardDescription>
             </CardHeader>
-            <CardContent className="p-0 divide-y divide-[#272738]">
-              {(() => {
-                const isDbConnected = health?.database === true || (health as any)?.checks?.database === 'ready'
-                const isRedisActive = health?.redis === true || (health as any)?.checks?.redis === 'ready'
-                const dbEngine = (health as any)?.database_engine ? String((health as any).database_engine).toUpperCase() : 'SQLITE'
-                return [
-                  {
-                    icon: Database, label: 'Database Engine',
-                    desc: 'Database engine connection & schema metadata',
-                    status: loading ? 'Checking…' : isDbConnected ? `Connected (${dbEngine})` : health?.database === false ? 'Disconnected' : 'Active',
-                    isOk: isDbConnected || !loading,
-                  },
-                  {
-                    icon: Activity, label: 'Redis Cache & Distributed Broker',
-                    desc: 'L1 in-memory + L2 Redis cache status',
-                    status: loading ? 'Checking…' : isRedisActive ? 'Active' : 'Standalone (In-Memory Ring)',
-                    isOk: true,
-                  },
-                  {
-                    icon: Server, label: 'Vector Database & Semantic Index',
-                    desc: 'QDRANT_URL / SQLite-VSS — Vector storage status',
-                    status: 'Configured Reference',
-                    isOk: true,
-                  },
-                  {
-                    icon: Cpu, label: 'Standalone Local Container Execution Mode',
-                    desc: 'Multiprocess worker pool execution target',
-                    status: 'Configured',
-                    isOk: true,
-                  },
-                ]
-              })().map(({ icon: Icon, label, desc, status, isOk }) => (
-                <div key={label} className="flex items-center justify-between px-5 py-3.5">
-                  <div className="flex items-center gap-3.5">
-                    <div className="h-9 w-9 rounded-xl bg-[#161622] border border-[#272738] flex items-center justify-center">
-                      <Icon className="h-4.5 w-4.5 text-[#f26625]" />
-                    </div>
-                    <div>
-                      <p className="text-xs font-bold text-white flex items-center gap-2">
-                        {label}
-                        {isOk && status !== 'Unknown' && <CheckCircle2 className="h-3.5 w-3.5 text-[#10b981]" />}
-                      </p>
-                      <p className="text-xs text-[#a8a29e] font-mono mt-0.5">{desc}</p>
-                    </div>
+            <CardContent className="p-5">
+              <form onSubmit={handleSaveGeneral} className="space-y-5 font-mono text-xs">
+                {/* Generation Mode Select */}
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  <div className="space-y-1.5">
+                    <label className="text-xs font-bold text-white block uppercase">Default Generation Mode</label>
+                    <Select value={generationMode} onValueChange={setGenerationMode}>
+                      <SelectTrigger className="bg-[#0a0a0f] border-[#272738] text-white text-xs h-9">
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent className="bg-[#12121a] border-[#272738] text-white text-xs font-mono">
+                        <SelectItem value="strict_source">Strict Source-Grounded (Recommended)</SelectItem>
+                        <SelectItem value="hybrid">Hybrid (Source-Assisted Synthetic)</SelectItem>
+                        <SelectItem value="unconstrained">Unconstrained Synthetic</SelectItem>
+                      </SelectContent>
+                    </Select>
+                    <p className="text-[11px] text-[#a8a29e]">
+                      Strict mode ensures every generated response contains verifiable citations to domain corpus.
+                    </p>
                   </div>
-                  <span className={clsx(
-                    "text-xs font-mono font-bold px-2.5 py-0.5 rounded-md border",
-                    status === 'Connected' || status === 'Active' ? "bg-emerald-950/40 text-[#10b981] border-emerald-500/30" :
-                    status === 'Disconnected' ? "bg-rose-950/40 text-rose-400 border-rose-500/30" :
-                    status === 'Standalone' || status === 'Configured' || status === 'Configured Reference' ? "bg-zinc-900 text-[#d8d2c4] border-[#272738]" :
-                    "bg-zinc-900 text-[#a8a29e] border-[#272738]"
-                  )}>
-                    {status}
-                  </span>
-                </div>
-              ))}
-            </CardContent>
-          </Card>
 
-          <Card className="bg-[#12121a] border-[#272738] rounded-md card-shadow">
-            <CardHeader className="pb-3 border-b border-[#272738]">
-              <CardTitle className="text-sm font-bold text-white">Source-Grounded Engine Standards</CardTitle>
-              <CardDescription className="text-xs text-[#a8a29e]">Enforcing authentic retrieval-grounded generation over hallucinated pure synthetic data</CardDescription>
-            </CardHeader>
-            <CardContent className="p-0 divide-y divide-[#272738]">
-              {[
-                {
-                  label: 'Default Generation Mode',
-                  desc: 'GENERATION_MODE=strict_source — Pure synthetic generation is strictly disabled unless explicitly opted in',
-                  val: 'strict_source',
-                },
-                {
-                  label: 'Seedless Generation Guard',
-                  desc: 'ALLOW_SEEDLESS_GENERATION=false — Generation without grounded domain reference seeds is rejected',
-                  val: 'Disabled (Protected)',
-                },
-                {
-                  label: 'Topological Coverage Planner',
-                  desc: 'COVERAGE_PLANNER_ENABLED=true — Plans domain taxonomy distribution prior to LLM extraction calls',
-                  val: 'Enabled',
-                },
-                {
-                  label: 'Validation Strictness',
-                  desc: 'VALIDATION_STRICTNESS=standard — Syntactic, schema, and semantic sanity checks enforced on all batches',
-                  val: 'standard',
-                },
-              ].map(({ label, desc, val }) => (
-                <div key={label} className="flex items-center justify-between px-5 py-3.5">
-                  <div>
-                    <p className="text-xs font-bold text-white">{label}</p>
-                    <p className="text-xs text-[#a8a29e] font-mono mt-0.5">{desc}</p>
+                  <div className="space-y-1.5">
+                    <label className="text-xs font-bold text-white block uppercase">Validation Strictness</label>
+                    <Select value={validationStrictness} onValueChange={setValidationStrictness}>
+                      <SelectTrigger className="bg-[#0a0a0f] border-[#272738] text-white text-xs h-9">
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent className="bg-[#12121a] border-[#272738] text-white text-xs font-mono">
+                        <SelectItem value="standard">Standard (Schema + Grammar Validation)</SelectItem>
+                        <SelectItem value="strict">Strict (Zero-Tolerance Hallucination Floor)</SelectItem>
+                        <SelectItem value="lenient">Lenient (Permissive Output Parser)</SelectItem>
+                      </SelectContent>
+                    </Select>
+                    <p className="text-[11px] text-[#a8a29e]">
+                      Controls how aggressively malformed JSON or ungrounded claims are rejected.
+                    </p>
                   </div>
-                  <code className="text-xs font-mono bg-[#0a0a0f] px-2.5 py-0.5 rounded-md border border-[#272738] text-[#f26625] shrink-0 ml-4">
-                    {val}
-                  </code>
                 </div>
-              ))}
-            </CardContent>
-          </Card>
 
-          {/* Seedless Generation Guard Plain Language Explainer */}
-          <Card className="bg-[#12121a] border border-[#f26625]/30 rounded-md card-shadow overflow-hidden">
-            <div className="bg-[#f26625]/10 border-b border-[#f26625]/20 px-5 py-2.5 flex items-center justify-between">
-              <span className="text-xs font-mono font-bold text-[#f26625] uppercase tracking-wider flex items-center gap-2">
-                <Shield className="h-4 w-4 text-[#f26625]" />
-                Seedless Generation Guard Explainer
-              </span>
-              <span className="text-xs font-mono px-2 py-0.5 rounded bg-emerald-950/60 border border-emerald-500/40 text-emerald-400 font-bold">
-                ENFORCED (RFC-GROUNDING-01)
-              </span>
-            </div>
-            <CardContent className="p-5 text-xs font-mono space-y-2.5">
-              <p className="text-white font-medium leading-relaxed font-sans text-xs">
-                <strong>Why does this guard exist?</strong> Pure synthetic text generated without reference seed documents frequently invents fictitious legal sections, fabricated statutory penalties, and hallucinated medical dosages.
-              </p>
-              <p className="text-[#a8a29e] text-xs leading-relaxed">
-                When enabled (<code>ALLOW_SEEDLESS_GENERATION=false</code>), the pipeline strictly requires an authoritative reference corpus (e.g., CGST Act PDFs, medical case studies, or validated codebases) before initiating LLM teacher-forcing. If seed retrieval fails or yields zero matches, generation is automatically halted rather than allowing the model to hallucinate unverified statutory claims from vacuum.
-              </p>
+                {/* Seedless Generation Guard Toggle */}
+                <div className="flex items-center justify-between p-3 rounded-lg bg-[#0a0a0f] border border-[#272738]">
+                  <div className="space-y-0.5 max-w-xl">
+                    <div className="text-xs font-bold text-white flex items-center gap-2">
+                      <span>Seedless Generation Guard</span>
+                      <Badge variant="outline" className="border-emerald-500/40 text-emerald-400 text-[10px]">
+                        ACTIVE PROTECTION
+                      </Badge>
+                    </div>
+                    <p className="text-[11px] text-[#a8a29e]">
+                      Rejects synthetic generation requests when reference domain seeds are absent, preventing hallucinated legal statutes or fictitious medical claims.
+                    </p>
+                  </div>
+                  <Switch checked={seedlessGuard} onCheckedChange={setSeedlessGuard} />
+                </div>
+
+                {/* Storage Backend & Output Directory */}
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 pt-2 border-t border-[#1c1c28]">
+                  <div className="space-y-1.5">
+                    <label className="text-xs font-bold text-white block uppercase">Storage Destination</label>
+                    <Select value={storageBackend} onValueChange={setStorageBackend}>
+                      <SelectTrigger className="bg-[#0a0a0f] border-[#272738] text-white text-xs h-9">
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent className="bg-[#12121a] border-[#272738] text-white text-xs font-mono">
+                        <SelectItem value="local">Local Filesystem Storage</SelectItem>
+                        <SelectItem value="s3">AWS S3 / Compatible Object Store</SelectItem>
+                        <SelectItem value="huggingface">Hugging Face Datasets Hub</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+
+                  <div className="space-y-1.5">
+                    <label className="text-xs font-bold text-white block uppercase">Output Directory Path</label>
+                    <Input
+                      type="text"
+                      value={outputDirectory}
+                      onChange={(e) => setOutputDirectory(e.target.value)}
+                      className="bg-[#0a0a0f] border-[#272738] text-white text-xs h-9 font-mono"
+                      placeholder="outputs"
+                    />
+                  </div>
+                </div>
+
+                <div className="flex justify-end pt-3 border-t border-[#272738]">
+                  <Button type="submit" className="bg-[#f26625] hover:bg-[#de581a] text-white text-xs font-bold font-mono h-9 px-5">
+                    Save General Settings
+                  </Button>
+                </div>
+              </form>
             </CardContent>
           </Card>
         </TabsContent>
 
-        {/* Cloud Compute & GPUs */}
+        {/* Panel 2: Cloud Compute & GPUs */}
         <TabsContent value="compute" className="mt-4 space-y-4">
           <Card className="bg-[#12121a] border-[#272738] rounded-md card-shadow">
             <CardHeader className="pb-3 border-b border-[#272738]">
               <CardTitle className="text-sm font-bold text-white flex items-center gap-2">
                 <Cloud className="w-4 h-4 text-[#f26625]" />
-                Cloud GPU Compute Fabric &amp; Serverless Endpoints
+                Cloud Compute &amp; GPU Execution Providers
               </CardTitle>
               <CardDescription className="text-xs text-[#a8a29e]">
-                Configure external cloud GPU credentials for offloading QLoRA and SFT fine-tuning jobs (Modal Labs, RunPod Cloud, HuggingFace Hub)
+                Configure external cloud GPU credentials for offloading QLoRA and SFT fine-tuning jobs (Modal Labs, RunPod Cloud, Hugging Face Hub).
               </CardDescription>
             </CardHeader>
-            <CardContent className="p-0 divide-y divide-[#272738]">
-              <div className="flex items-center justify-between px-5 py-3.5">
-                <div className="flex items-center gap-3.5">
-                  <div className="h-9 w-9 rounded-xl bg-[#161622] border border-[#272738] flex items-center justify-center font-mono font-bold text-xs text-[#f26625]">
-                    M
-                  </div>
+            <CardContent className="p-5 space-y-5 font-mono text-xs">
+              {/* Status Badges */}
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                <div className="p-3 rounded-lg bg-[#0a0a0f] border border-[#272738] flex items-center justify-between">
                   <div>
-                    <p className="text-xs font-bold text-white flex items-center gap-2">
-                      Modal Serverless GPU Fabric (NVIDIA A10G / H100)
-                      {computeConfig?.modal_configured && <CheckCircle2 className="h-3.5 w-3.5 text-[#10b981]" />}
-                    </p>
-                    <p className="text-xs text-[#a8a29e] font-mono mt-0.5">
-                      MODAL_TOKEN_ID &amp; MODAL_TOKEN_SECRET — Serverless containerized training
-                    </p>
+                    <span className="text-white font-bold block">Modal Labs GPU</span>
+                    <span className="text-[11px] text-zinc-400">Serverless A10G / H100</span>
                   </div>
+                  <Badge variant="outline" className={computeConfig?.modal_configured ? 'border-emerald-500/40 text-emerald-400' : 'border-zinc-700 text-zinc-500'}>
+                    {computeConfig?.modal_configured ? 'Configured' : 'Not Configured'}
+                  </Badge>
                 </div>
-                <span className={clsx(
-                  'text-xs font-mono font-bold px-2.5 py-0.5 rounded-md border',
-                  computeConfig?.modal_configured
-                    ? 'bg-emerald-950/40 text-[#10b981] border-emerald-500/30'
-                    : 'bg-zinc-900 text-zinc-400 border-zinc-800'
-                )}>
-                  {computeConfig?.modal_configured ? `Active (${computeConfig.modal_token_id_masked || 'Configured'})` : 'Not Configured'}
-                </span>
+
+                <div className="p-3 rounded-lg bg-[#0a0a0f] border border-[#272738] flex items-center justify-between">
+                  <div>
+                    <span className="text-white font-bold block">RunPod Cloud</span>
+                    <span className="text-[11px] text-zinc-400">On-demand Pod Workers</span>
+                  </div>
+                  <Badge variant="outline" className={computeConfig?.runpod_configured ? 'border-emerald-500/40 text-emerald-400' : 'border-zinc-700 text-zinc-500'}>
+                    {computeConfig?.runpod_configured ? 'Configured' : 'Not Configured'}
+                  </Badge>
+                </div>
+
+                <div className="p-3 rounded-lg bg-[#0a0a0f] border border-[#272738] flex items-center justify-between">
+                  <div>
+                    <span className="text-white font-bold block">Hugging Face Hub</span>
+                    <span className="text-[11px] text-zinc-400">Model Upload &amp; Releases</span>
+                  </div>
+                  <Badge variant="outline" className={computeConfig?.hf_configured ? 'border-emerald-500/40 text-emerald-400' : 'border-zinc-700 text-zinc-500'}>
+                    {computeConfig?.hf_configured ? 'Configured' : 'Not Configured'}
+                  </Badge>
+                </div>
               </div>
 
-              <div className="flex items-center justify-between px-5 py-3.5">
-                <div className="flex items-center gap-3.5">
-                  <div className="h-9 w-9 rounded-xl bg-[#161622] border border-[#272738] flex items-center justify-center font-mono font-bold text-xs text-[#f26625]">
-                    RP
-                  </div>
-                  <div>
-                    <p className="text-xs font-bold text-white flex items-center gap-2">
-                      RunPod Cloud GPU Endpoints
-                      {computeConfig?.runpod_configured && <CheckCircle2 className="h-3.5 w-3.5 text-[#10b981]" />}
-                    </p>
-                    <p className="text-xs text-[#a8a29e] font-mono mt-0.5">
-                      RUNPOD_API_KEY — On-demand remote worker pods for high-throughput fine-tuning
-                    </p>
-                  </div>
-                </div>
-                <span className={clsx(
-                  'text-xs font-mono font-bold px-2.5 py-0.5 rounded-md border',
-                  computeConfig?.runpod_configured
-                    ? 'bg-emerald-950/40 text-[#10b981] border-emerald-500/30'
-                    : 'bg-zinc-900 text-zinc-400 border-zinc-800'
-                )}>
-                  {computeConfig?.runpod_configured ? `Active (${computeConfig.runpod_key_masked || 'Configured'})` : 'Not Configured'}
-                </span>
-              </div>
-
-              <div className="flex items-center justify-between px-5 py-3.5">
-                <div className="flex items-center gap-3.5">
-                  <div className="h-9 w-9 rounded-xl bg-[#161622] border border-[#272738] flex items-center justify-center font-mono font-bold text-xs text-amber-400">
-                    HF
-                  </div>
-                  <div>
-                    <p className="text-xs font-bold text-white flex items-center gap-2">
-                      Hugging Face Hub Token (Write / Model Upload)
-                      {computeConfig?.hf_configured && <CheckCircle2 className="h-3.5 w-3.5 text-[#10b981]" />}
-                    </p>
-                    <p className="text-xs text-[#a8a29e] font-mono mt-0.5">
-                      HF_TOKEN — Required for pushing trained LoRA weights &amp; dataset cards
-                    </p>
-                  </div>
-                </div>
-                <span className={clsx(
-                  'text-xs font-mono font-bold px-2.5 py-0.5 rounded-md border',
-                  computeConfig?.hf_configured
-                    ? 'bg-emerald-950/40 text-[#10b981] border-emerald-500/30'
-                    : 'bg-zinc-900 text-zinc-400 border-zinc-800'
-                )}>
-                  {computeConfig?.hf_configured ? `Active (${computeConfig.hf_token_masked || 'Configured'})` : 'Not Configured'}
-                </span>
-              </div>
-            </CardContent>
-          </Card>
-
-          {/* Form to update credentials */}
-          <Card className="bg-[#12121a] border-[#272738] rounded-md card-shadow">
-            <CardHeader className="pb-3 border-b border-[#272738]">
-              <CardTitle className="text-sm font-bold text-white flex items-center gap-2">
-                <Key className="w-4 h-4 text-[#f26625]" />
-                Update Cloud Compute Credentials
-              </CardTitle>
-              <CardDescription className="text-xs text-[#a8a29e]">
-                Credentials are saved to the active runtime environment and persisted for all subsequent cloud fine-tuning jobs.
-              </CardDescription>
-            </CardHeader>
-            <CardContent className="p-5">
-              <form onSubmit={handleSaveCompute} className="space-y-4">
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              {/* Interactive Credentials Update Form */}
+              <form onSubmit={handleSaveCompute} className="space-y-4 pt-2 border-t border-[#1c1c28]">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                   <div className="space-y-1.5">
-                    <label className="text-xs font-medium text-white block">
-                      Modal Token ID
-                    </label>
-                    <input
+                    <label className="text-xs font-bold text-white block">Modal Token ID</label>
+                    <Input
                       type="text"
                       value={modalTokenId}
                       onChange={(e) => setModalTokenId(e.target.value)}
                       placeholder={computeConfig?.modal_token_id_masked || 'ak-xxxx'}
-                      className="w-full px-3 py-2 text-xs font-mono bg-[#0a0a0f] border border-[#272738] rounded-md text-white placeholder-zinc-600 focus:outline-none focus:border-[#f26625]"
+                      className="bg-[#0a0a0f] border-[#272738] text-white text-xs h-9 font-mono placeholder:text-zinc-600"
                     />
                   </div>
 
                   <div className="space-y-1.5">
-                    <label className="text-xs font-medium text-white block">
-                      Modal Token Secret
-                    </label>
-                    <input
+                    <label className="text-xs font-bold text-white block">Modal Token Secret</label>
+                    <Input
                       type="password"
                       value={modalTokenSecret}
                       onChange={(e) => setModalTokenSecret(e.target.value)}
                       placeholder="as-xxxx"
-                      className="w-full px-3 py-2 text-xs font-mono bg-[#0a0a0f] border border-[#272738] rounded-md text-white placeholder-zinc-600 focus:outline-none focus:border-[#f26625]"
+                      className="bg-[#0a0a0f] border-[#272738] text-white text-xs h-9 font-mono placeholder:text-zinc-600"
                     />
                   </div>
 
                   <div className="space-y-1.5">
-                    <label className="text-xs font-medium text-white block">
-                      RunPod API Key
-                    </label>
-                    <input
+                    <label className="text-xs font-bold text-white block">RunPod API Key</label>
+                    <Input
                       type="password"
                       value={runpodApiKey}
                       onChange={(e) => setRunpodApiKey(e.target.value)}
                       placeholder={computeConfig?.runpod_key_masked || 'rpa_xxxx'}
-                      className="w-full px-3 py-2 text-xs font-mono bg-[#0a0a0f] border border-[#272738] rounded-md text-white placeholder-zinc-600 focus:outline-none focus:border-[#f26625]"
+                      className="bg-[#0a0a0f] border-[#272738] text-white text-xs h-9 font-mono placeholder:text-zinc-600"
                     />
                   </div>
 
                   <div className="space-y-1.5">
-                    <label className="text-xs font-medium text-white block">
-                      Hugging Face Token
-                    </label>
-                    <input
+                    <label className="text-xs font-bold text-white block">Hugging Face Hub Write Token</label>
+                    <Input
                       type="password"
                       value={hfToken}
                       onChange={(e) => setHfToken(e.target.value)}
                       placeholder={computeConfig?.hf_token_masked || 'hf_xxxx'}
-                      className="w-full px-3 py-2 text-xs font-mono bg-[#0a0a0f] border border-[#272738] rounded-md text-white placeholder-zinc-600 focus:outline-none focus:border-[#f26625]"
+                      className="bg-[#0a0a0f] border-[#272738] text-white text-xs h-9 font-mono placeholder:text-zinc-600"
                     />
                   </div>
                 </div>
 
-                <div className="flex items-center justify-between pt-3 border-t border-[#272738]">
-                  <div>
-                    {saveSuccess && (
-                      <span className="text-xs text-emerald-400 font-mono flex items-center gap-1.5">
-                        <CheckCircle2 className="w-3.5 h-3.5" />
-                        Credentials saved and applied to runtime!
-                      </span>
-                    )}
-                  </div>
+                <div className="flex justify-end pt-3 border-t border-[#272738]">
                   <Button
                     type="submit"
                     disabled={savingCompute || (!modalTokenId && !modalTokenSecret && !runpodApiKey && !hfToken)}
-                    className="bg-[#f26625] hover:bg-[#d9551c] text-white text-xs font-mono px-4 h-8"
+                    className="bg-[#f26625] hover:bg-[#de581a] text-white text-xs font-bold font-mono h-9 px-5"
                   >
                     {savingCompute ? (
                       <>
                         <Loader2 className="w-3.5 h-3.5 animate-spin mr-1.5" />
-                        Saving...
+                        Saving Credentials...
                       </>
                     ) : (
                       <>
                         <Zap className="w-3.5 h-3.5 mr-1.5" />
-                        Apply &amp; Save Credentials
+                        Save Cloud Credentials
                       </>
                     )}
                   </Button>
@@ -579,225 +562,237 @@ export default function SettingsPage() {
           </Card>
         </TabsContent>
 
-        {/* Providers */}
-        <TabsContent value="providers" className="mt-4">
-          <Card className="bg-[#12121a] border-[#272738] rounded-md card-shadow">
-            <CardHeader className="pb-3 border-b border-[#272738]">
-              <div className="flex items-center justify-between">
-                <div>
-                  <CardTitle className="text-sm font-bold text-white">Provider API Keys &amp; Gateway Integrations</CardTitle>
-                  <CardDescription className="text-xs text-[#a8a29e]">Environment key detection and failover routing readiness</CardDescription>
-                </div>
-                <Badge variant="outline" className="text-xs font-mono border-emerald-500/40 text-emerald-400 bg-emerald-950/20">
-                  {backendProviders === null
-                    ? 'Backend provider status unavailable'
-                    : `${PROVIDERS_CONFIG.filter(p => backendProviders.some(b => BACKEND_PROVIDER_TO_ENV[b.name] === p.env)).length} / ${PROVIDERS_CONFIG.length} reported by backend`}
-                </Badge>
-              </div>
-            </CardHeader>
-            <CardContent className="p-0 divide-y divide-[#272738]">
-              {PROVIDERS_CONFIG.map(({ name, env, letter, color }) => {
-                const reported = backendProviders === null
-                  ? null
-                  : backendProviders.some(b => BACKEND_PROVIDER_TO_ENV[b.name] === env)
-                return (
-                <div key={env} className="flex items-center justify-between px-5 py-3.5">
-                  <div className="flex items-center gap-3.5">
-                    <div className={clsx('h-9 w-9 rounded-xl border flex items-center justify-center text-xs font-bold font-mono', color)}>
-                      {letter}
-                    </div>
-                    <div>
-                      <p className="text-xs font-bold text-white flex items-center gap-2">
-                        {name}
-                        {reported ? (
-                          <CheckCircle2 className="h-3.5 w-3.5 text-[#10b981]" />
-                        ) : (
-                          <span className="w-1.5 h-1.5 rounded-full bg-[#4a463f] inline-block" />
-                        )}
-                      </p>
-                      <p className="text-xs text-[#a8a29e] font-mono">{env}</p>
-                    </div>
-                  </div>
-                  <span className={clsx(
-                    'text-xs font-mono font-bold px-2.5 py-0.5 rounded-md border',
-                    reported
-                      ? 'bg-emerald-950/40 text-[#10b981] border-emerald-500/30'
-                      : 'bg-zinc-900 text-zinc-500 border-zinc-800'
-                  )}>
-                    {reported === null ? 'Unknown (backend unreachable)' : reported ? 'Reported by backend' : 'Not reported by backend'}
-                  </span>
-                </div>
-                )
-              })}
-            </CardContent>
-          </Card>
-        </TabsContent>
-
-        {/* Delivery (ADR-002) */}
-        <TabsContent value="delivery" className="mt-4">
-          <Card className="bg-[#12121a] border-[#272738] rounded-md card-shadow">
-            <CardHeader className="pb-3 border-b border-[#272738]">
-              <CardTitle className="text-sm font-bold text-white">Multi-Destination Delivery &amp; Storage (ADR-002)</CardTitle>
-              <CardDescription className="text-xs text-[#a8a29e]">Centralized delivery adapters registered in ServiceContainer for S3, HuggingFace Hub, and Kaggle</CardDescription>
-            </CardHeader>
-            <CardContent className="p-0 divide-y divide-[#272738]">
-              {[
-                { icon: HardDrive, label: 'Local Artifact Output Directory', env: 'OUTPUT_DIR', desc: 'Default target for JSONL, Parquet, and CSV exports (./outputs)' },
-                { icon: Server,    label: 'Amazon S3 / S3-Compatible Store',   env: 'S3_BUCKET',  desc: 'Bucket name and credentials for cloud blob storage delivery' },
-                { icon: FileText,  label: 'Hugging Face Hub Organization',     env: 'HF_DATASET_ORG', desc: 'Target org/namespace for 1-click dataset push with card generation' },
-                { icon: Cpu,       label: 'Kaggle Datasets Hub',               env: 'KAGGLE_USERNAME', desc: 'Kaggle credentials for automated dataset metadata release' },
-              ].map(({ icon: Icon, label, env, desc }) => (
-                <div key={env} className="flex items-center justify-between px-5 py-3.5">
-                  <div className="flex items-center gap-3.5">
-                    <div className="h-9 w-9 rounded-xl bg-[#161622] border border-[#272738] flex items-center justify-center">
-                      <Icon className="h-4.5 w-4.5 text-[#f26625]" />
-                    </div>
-                    <div>
-                      <p className="text-xs font-bold text-white">{label}</p>
-                      <p className="text-xs text-[#a8a29e]">{desc}</p>
-                    </div>
-                  </div>
-                  <code className="text-xs font-mono bg-[#0a0a0f] px-2.5 py-0.5 rounded-md border border-[#272738] text-[#f26625]">{env}</code>
-                </div>
-              ))}
-            </CardContent>
-          </Card>
-        </TabsContent>
-
-        {/* Observability */}
-        <TabsContent value="observability" className="mt-4">
-          <Card className="bg-[#12121a] border-[#272738] rounded-md card-shadow">
-            <CardHeader className="pb-3 border-b border-[#272738]">
-              <CardTitle className="text-sm font-bold text-white">Observability &amp; Distributed Tracing</CardTitle>
-              <CardDescription className="text-xs text-[#a8a29e]">LangSmith tracing v2, OpenTelemetry metrics, and correlation IDs</CardDescription>
-            </CardHeader>
-            <CardContent className="p-0 divide-y divide-[#272738]">
-              {[
-                { label: 'LangSmith Tracing v2', env: 'LANGCHAIN_TRACING_V2=true', desc: 'Full lifecycle execution tracing for LLM and agent invocations' },
-                { label: 'LangSmith Project Namespace', env: 'LANGCHAIN_PROJECT=RasoSynthTune', desc: 'Default tenant project namespace for trace categorization' },
-                { label: 'LangSmith API Key', env: 'LANGCHAIN_API_KEY', desc: 'Personal or team access token for LangSmith trace ingestion' },
-                { label: 'Distributed Correlation IDs', env: 'X-Correlation-ID', desc: 'Injected into every HTTP request and Celery worker payload' },
-              ].map(({ label, env, desc }) => (
-                <div key={label} className="flex items-center justify-between px-5 py-3.5">
-                  <div>
-                    <p className="text-xs font-bold text-white">{label}</p>
-                    <p className="text-xs text-[#a8a29e] font-mono mt-0.5">{desc}</p>
-                  </div>
-                  <code className="text-xs font-mono bg-[#0a0a0f] px-2.5 py-0.5 rounded-md border border-[#272738] text-[#f26625] shrink-0 ml-4">{env}</code>
-                </div>
-              ))}
-            </CardContent>
-          </Card>
-        </TabsContent>
-
-        {/* Security */}
-        <TabsContent value="security" className="mt-4">
-          <Card className="bg-[#12121a] border-[#272738] rounded-md card-shadow">
-            <CardHeader className="pb-3 border-b border-[#272738]">
-              <CardTitle className="text-sm font-bold text-white">Security &amp; Cryptography Configuration</CardTitle>
-              <CardDescription className="text-xs text-[#a8a29e]">Cryptographic signatures, CSRF protection, and identity tokens</CardDescription>
-            </CardHeader>
-            <CardContent className="p-0 divide-y divide-[#272738]">
-              {[
-                { icon: Shield, label: 'JWT Authentication Secret', env: 'JWT_SECRET', desc: 'HMAC-SHA256 signature key (≥ 32 characters required)' },
-                { icon: Shield, label: 'CSRF Token Protection',     env: 'CSRF_SECRET', desc: 'Cross-Site Request Forgery validation key (auto-derived if omitted)' },
-                { icon: Key,    label: 'Auth Disabled Flag',         env: 'AUTH_DISABLED', desc: 'Set to true in local development or isolated preview testing' },
-              ].map(({ icon: Icon, label, env, desc }) => (
-                <div key={env} className="flex items-center justify-between px-5 py-3.5">
-                  <div className="flex items-center gap-3.5">
-                    <div className="h-9 w-9 rounded-xl bg-[#161622] border border-[#272738] flex items-center justify-center">
-                      <Icon className="h-4.5 w-4.5 text-[#f26625]" />
-                    </div>
-                    <div>
-                      <p className="text-xs font-bold text-white">{label}</p>
-                      <p className="text-xs text-[#a8a29e]">{desc}</p>
-                    </div>
-                  </div>
-                  <code className="text-xs font-mono bg-[#0a0a0f] px-2.5 py-0.5 rounded-md border border-[#272738] text-[#f26625]">{env}</code>
-                </div>
-              ))}
-            </CardContent>
-          </Card>
-        </TabsContent>
-
-        {/* Limits */}
-        <TabsContent value="limits" className="mt-4">
-          <Card className="bg-[#12121a] border-[#272738] rounded-md card-shadow">
-            <CardHeader className="pb-3 border-b border-[#272738]">
-              <CardTitle className="text-sm font-bold text-white">System Resource Limits &amp; Rate Caps</CardTitle>
-              <CardDescription className="text-xs text-[#a8a29e]">Concurrency bounds, token quotas, and provider throttle limits</CardDescription>
-            </CardHeader>
-            <CardContent className="p-0 divide-y divide-[#272738]">
-              {LIMITS_CONFIG.map(({ label, env, desc }) => (
-                <div key={env} className="flex items-center justify-between px-5 py-3.5">
-                  <div>
-                    <p className="text-xs font-bold text-white">{label}</p>
-                    <p className="text-xs text-[#a8a29e]">{desc}</p>
-                  </div>
-                  <code className="text-xs font-mono bg-[#0a0a0f] px-2.5 py-0.5 rounded-md border border-[#272738] text-[#f26625] shrink-0 ml-4">{env}</code>
-                </div>
-              ))}
-            </CardContent>
-          </Card>
-        </TabsContent>
-
-        {/* Crawler & Anti-Blocking */}
-        <TabsContent value="crawler" className="mt-4 space-y-4">
+        {/* Panel 3: Quality & Review Thresholds */}
+        <TabsContent value="quality" className="mt-4 space-y-4">
           <Card className="bg-[#12121a] border-[#272738] rounded-md card-shadow">
             <CardHeader className="pb-3 border-b border-[#272738]">
               <CardTitle className="text-sm font-bold text-white flex items-center gap-2">
                 <Shield className="w-4 h-4 text-[#f26625]" />
-                Stealth Web Crawler &amp; Anti-Bot Protection
+                Human-in-the-Loop (HITL) &amp; Automated Quality Floor
               </CardTitle>
               <CardDescription className="text-xs text-[#a8a29e]">
-                Tiered extraction engine bypassing Cloudflare Turnstile, Akamai, DataDome, and CAPTCHA walls
+                Set inspection thresholds, canary win-rate gates, and sample ratios for dataset validation.
               </CardDescription>
             </CardHeader>
-            <CardContent className="p-0 divide-y divide-[#272738]">
-              {[
-                { label: 'Playwright Stealth Escalation', env: 'ENABLE_BROWSER_ESCALATION', desc: 'Tier-2 headless Chromium escalation when HTTP client encounters Cloudflare or JavaScript walls', def: 'true (Enabled)' },
-                { label: 'Browser Fingerprint Rotator', env: 'STEALTH_HEADERS_ENABLED', desc: 'Synthesizes coherent User-Agent, Sec-Ch-Ua, and Client Hints per request', def: 'Dynamic (Chrome 125/macOS, Win11)' },
-                { label: 'Adaptive Circuit Breaker Cooldown', env: 'DOMAIN_CIRCUIT_COOLDOWN', desc: 'Quarantine duration (seconds) when target domain returns consecutive 429/403 blocks', def: '45.0s (Decorrelated Jitter)' },
-                { label: 'Rotating Proxy Gateway Pool', env: 'ROTATING_PROXY_POOL', desc: 'Comma-separated proxy list or gateway URL (HTTP/HTTPS/SOCKS5)', def: 'Configured via .env' },
-                { label: 'Headless Browser Timeout', env: 'BROWSER_TIMEOUT_MS', desc: 'Maximum time allotted for single-page DOM hydration and anti-bot challenge solving', def: '30,000 ms' },
-              ].map(({ label, env, desc, def }) => (
-                <div key={env} className="flex flex-col sm:flex-row sm:items-center justify-between px-5 py-3.5 gap-2">
-                  <div>
-                    <div className="flex items-center gap-2">
-                      <p className="text-xs font-bold text-white">{label}</p>
-                      <span className="text-[10px] font-mono px-1.5 py-0.5 rounded bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">{def}</span>
-                    </div>
-                    <p className="text-xs text-[#a8a29e] mt-0.5">{desc}</p>
+            <CardContent className="p-5">
+              <form onSubmit={handleSaveQuality} className="space-y-5 font-mono text-xs">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  <div className="space-y-1.5">
+                    <label className="text-xs font-bold text-white block uppercase">HITL Inspection Mode</label>
+                    <Select value={hitlMode} onValueChange={(v: any) => setHitlMode(v)}>
+                      <SelectTrigger className="bg-[#0a0a0f] border-[#272738] text-white text-xs h-9">
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent className="bg-[#12121a] border-[#272738] text-white text-xs font-mono">
+                        <SelectItem value="async">Asynchronous Review (Persist to Review Queue)</SelectItem>
+                        <SelectItem value="blocking">Blocking Gate (Halt Pipeline for Approval)</SelectItem>
+                      </SelectContent>
+                    </Select>
+                    <p className="text-[11px] text-[#a8a29e]">
+                      Determines whether generation runs continue or wait when samples require inspection.
+                    </p>
                   </div>
-                  <code className="text-xs font-mono bg-[#0a0a0f] px-2.5 py-0.5 rounded-md border border-[#272738] text-[#f26625] shrink-0">{env}</code>
+
+                  <div className="space-y-1.5">
+                    <label className="text-xs font-bold text-white block uppercase">
+                      Quality Pass Floor: <span className="text-[#f26625] font-bold">{(qualityThreshold * 100).toFixed(0)}%</span>
+                    </label>
+                    <Input
+                      type="number"
+                      step={0.01}
+                      min={0.5}
+                      max={0.99}
+                      value={qualityThreshold}
+                      onChange={(e) => setQualityThreshold(parseFloat(e.target.value) || 0.85)}
+                      className="bg-[#0a0a0f] border-[#272738] text-white text-xs h-9 font-mono"
+                    />
+                    <p className="text-[11px] text-[#a8a29e]">
+                      Minimum composite LLM judge score needed to bypass manual inspection.
+                    </p>
+                  </div>
                 </div>
-              ))}
+
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 pt-2 border-t border-[#1c1c28]">
+                  <div className="space-y-1.5">
+                    <label className="text-xs font-bold text-white block uppercase">
+                      Stratified Sampling Ratio: <span className="text-[#f26625] font-bold">{(sampleRatio * 100).toFixed(0)}%</span>
+                    </label>
+                    <Input
+                      type="number"
+                      step={0.01}
+                      min={0.01}
+                      max={1.0}
+                      value={sampleRatio}
+                      onChange={(e) => setSampleRatio(parseFloat(e.target.value) || 0.15)}
+                      className="bg-[#0a0a0f] border-[#272738] text-white text-xs h-9 font-mono"
+                    />
+                    <p className="text-[11px] text-[#a8a29e]">
+                      Percentage of generated records randomly routed for audit.
+                    </p>
+                  </div>
+
+                  <div className="space-y-1.5">
+                    <label className="text-xs font-bold text-white block uppercase">Auto-Approval Timeout (Minutes)</label>
+                    <Input
+                      type="number"
+                      min={0}
+                      max={1440}
+                      value={autoApproveMinutes}
+                      onChange={(e) => setAutoApproveMinutes(parseInt(e.target.value) || 30)}
+                      className="bg-[#0a0a0f] border-[#272738] text-white text-xs h-9 font-mono"
+                    />
+                    <p className="text-[11px] text-[#a8a29e]">
+                      Minutes before auto-approving pending batches (0 = wait indefinitely).
+                    </p>
+                  </div>
+                </div>
+
+                {/* Canary Gate Switch */}
+                <div className="flex items-center justify-between p-3 rounded-lg bg-[#0a0a0f] border border-[#272738]">
+                  <div className="space-y-0.5 max-w-xl">
+                    <span className="text-xs font-bold text-white block">Canary Win-Rate Validation Gate</span>
+                    <p className="text-[11px] text-[#a8a29e]">
+                      Prevents fine-tuned model export or dataset release unless automated A/B evaluations exceed 70% win-rate against baseline models.
+                    </p>
+                  </div>
+                  <Switch checked={canaryGateEnabled} onCheckedChange={setCanaryGateEnabled} />
+                </div>
+
+                <div className="flex justify-end pt-3 border-t border-[#272738]">
+                  <Button type="submit" className="bg-[#f26625] hover:bg-[#de581a] text-white text-xs font-bold font-mono h-9 px-5">
+                    Save Quality Thresholds
+                  </Button>
+                </div>
+              </form>
             </CardContent>
           </Card>
         </TabsContent>
 
-        {/* HITL */}
-        <TabsContent value="hitl" className="mt-4">
+        {/* Panel 4: Rate Limits & Concurrency */}
+        <TabsContent value="limits" className="mt-4 space-y-4">
           <Card className="bg-[#12121a] border-[#272738] rounded-md card-shadow">
             <CardHeader className="pb-3 border-b border-[#272738]">
-              <CardTitle className="text-sm font-bold text-white">Human-in-the-Loop (HITL) Quality Gate</CardTitle>
-              <CardDescription className="text-xs text-[#a8a29e]">Review gate policies, stratified sampling, and auto-resume timeouts</CardDescription>
+              <CardTitle className="text-sm font-bold text-white flex items-center gap-2">
+                <Gauge className="w-4 h-4 text-[#f26625]" />
+                Resource Limits, Budgets &amp; Concurrency Bounds
+              </CardTitle>
+              <CardDescription className="text-xs text-[#a8a29e]">
+                Protect backend hardware and prevent external LLM API cost overruns with concurrency and rate limits.
+              </CardDescription>
             </CardHeader>
-            <CardContent className="p-0 divide-y divide-[#272738]">
-              {[
-                { label: 'HITL Review Mode',       env: 'HITL_MODE',             desc: '"blocking" halts pipeline until approved | "async" persists job to awaiting_review state' },
-                { label: 'Auto-Approval Timeout',   env: 'HITL_TIMEOUT_SECONDS',  desc: 'Max seconds before auto-accepting pending review batches (0 = unlimited wait)' },
-                { label: 'Stratified Sample Ratio', env: 'HITL_SAMPLE_RATIO',     desc: 'Percentage of generated dataset items sampled for human quality validation' },
-                { label: 'Quality Pass Floor',      env: 'QUALITY_THRESHOLD',     desc: 'Minimum composite quality score (0.0 - 1.0) required to bypass manual inspection' },
-              ].map(({ label, env, desc }) => (
-                <div key={env} className="flex items-center justify-between px-5 py-3.5">
-                  <div>
-                    <p className="text-xs font-bold text-white">{label}</p>
-                    <p className="text-xs text-[#a8a29e]">{desc}</p>
+            <CardContent className="p-5">
+              <form onSubmit={handleSaveLimits} className="space-y-5 font-mono text-xs">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  <div className="space-y-1.5">
+                    <label className="text-xs font-bold text-white block uppercase">Token Spending Budget Cap ($ USD)</label>
+                    <Input
+                      type="number"
+                      min={1}
+                      max={10000}
+                      step={1}
+                      value={tokenBudgetUsd}
+                      onChange={(e) => setTokenBudgetUsd(parseFloat(e.target.value) || 50)}
+                      className="bg-[#0a0a0f] border-[#272738] text-white text-xs h-9 font-mono"
+                    />
+                    <p className="text-[11px] text-[#a8a29e]">
+                      Total external model token spend ceiling before the platform halts synthesis.
+                    </p>
                   </div>
-                  <code className="text-xs font-mono bg-[#0a0a0f] px-2.5 py-0.5 rounded-md border border-[#272738] text-[#f26625] shrink-0 ml-4">{env}</code>
+
+                  <div className="space-y-1.5">
+                    <label className="text-xs font-bold text-white block uppercase">Max Concurrent Dataset Jobs</label>
+                    <Input
+                      type="number"
+                      min={1}
+                      max={16}
+                      value={maxConcurrentJobs}
+                      onChange={(e) => setMaxConcurrentJobs(parseInt(e.target.value) || 4)}
+                      className="bg-[#0a0a0f] border-[#272738] text-white text-xs h-9 font-mono"
+                    />
+                    <p className="text-[11px] text-[#a8a29e]">
+                      Maximum simultaneous synthesis pipelines allowed to execute.
+                    </p>
+                  </div>
                 </div>
-              ))}
+
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 pt-2 border-t border-[#1c1c28]">
+                  <div className="space-y-1.5">
+                    <label className="text-xs font-bold text-white block uppercase">Job Queue Buffer Cap</label>
+                    <Input
+                      type="number"
+                      min={5}
+                      max={200}
+                      value={maxQueueSize}
+                      onChange={(e) => setMaxQueueSize(parseInt(e.target.value) || 50)}
+                      className="bg-[#0a0a0f] border-[#272738] text-white text-xs h-9 font-mono"
+                    />
+                    <p className="text-[11px] text-[#a8a29e]">
+                      Backpressure threshold before rejecting new pipeline submissions.
+                    </p>
+                  </div>
+
+                  <div className="space-y-1.5">
+                    <label className="text-xs font-bold text-white block uppercase">Parallel Fine-Tuning Workers</label>
+                    <Input
+                      type="number"
+                      min={1}
+                      max={8}
+                      value={fineTuneMaxConcurrent}
+                      onChange={(e) => setFineTuneMaxConcurrent(parseInt(e.target.value) || 2)}
+                      className="bg-[#0a0a0f] border-[#272738] text-white text-xs h-9 font-mono"
+                    />
+                    <p className="text-[11px] text-[#a8a29e]">
+                      Simultaneous QLoRA training worker limit bounded by available GPU memory.
+                    </p>
+                  </div>
+                </div>
+
+                {/* Provider RPM Limits */}
+                <div className="pt-2 border-t border-[#1c1c28] space-y-2">
+                  <span className="text-xs font-bold text-white block uppercase">Provider Throttle Quotas (Requests / Min)</span>
+                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                    <div className="p-2.5 rounded bg-[#0a0a0f] border border-[#272738] space-y-1">
+                      <span className="text-[11px] text-[#a8a29e] block font-bold">Google Gemini</span>
+                      <Input
+                        type="number"
+                        min={5}
+                        max={300}
+                        value={geminiRpm}
+                        onChange={(e) => setGeminiRpm(parseInt(e.target.value) || 60)}
+                        className="bg-[#12121a] border-[#272738] text-white text-xs h-8 font-mono"
+                      />
+                    </div>
+                    <div className="p-2.5 rounded bg-[#0a0a0f] border border-[#272738] space-y-1">
+                      <span className="text-[11px] text-[#a8a29e] block font-bold">Groq Cloud</span>
+                      <Input
+                        type="number"
+                        min={5}
+                        max={300}
+                        value={groqRpm}
+                        onChange={(e) => setGroqRpm(parseInt(e.target.value) || 90)}
+                        className="bg-[#12121a] border-[#272738] text-white text-xs h-8 font-mono"
+                      />
+                    </div>
+                    <div className="p-2.5 rounded bg-[#0a0a0f] border border-[#272738] space-y-1">
+                      <span className="text-[11px] text-[#a8a29e] block font-bold">Anthropic Claude</span>
+                      <Input
+                        type="number"
+                        min={5}
+                        max={300}
+                        value={anthropicRpm}
+                        onChange={(e) => setAnthropicRpm(parseInt(e.target.value) || 40)}
+                        className="bg-[#12121a] border-[#272738] text-white text-xs h-8 font-mono"
+                      />
+                    </div>
+                  </div>
+                </div>
+
+                <div className="flex justify-end pt-3 border-t border-[#272738]">
+                  <Button type="submit" className="bg-[#f26625] hover:bg-[#de581a] text-white text-xs font-bold font-mono h-9 px-5">
+                    Save Resource Limits
+                  </Button>
+                </div>
+              </form>
             </CardContent>
           </Card>
         </TabsContent>

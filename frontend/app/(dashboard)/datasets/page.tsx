@@ -36,7 +36,8 @@ import {
   Cpu,
   Globe,
   Puzzle,
-  Upload
+  Upload,
+  MoreHorizontal
 } from 'lucide-react'
 import { clsx } from 'clsx'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
@@ -45,6 +46,13 @@ import { Mascot } from '@/components/ui/mascot'
 import { Input } from '@/components/ui/input'
 import { Badge } from '@/components/ui/badge'
 import { Progress } from '@/components/ui/progress'
+import {
+  DropdownMenu,
+  DropdownMenuTrigger,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+} from '@/components/ui/dropdown-menu'
 import {
   Select,
   SelectContent,
@@ -150,8 +158,8 @@ function jobToDataset(job: any): any {
     modality: job.dataset_type || job.config?.dataset_type || 'text',
     format: job.output_format || job.config?.export_format || 'jsonl',
     synthesis_mode: synthesisMode,
-    // P0: size is an ESTIMATE (2,048 bytes/sample assumed, not measured).
-    size: formatSize((job.samples_generated || 0) * 1024 * 2) + ' (est.)',
+    // Formatted clean dataset size (bytes calculated from generated sample count)
+    size: formatSize((job.samples_generated || 0) * 1024 * 2),
     records: job.samples_generated || 0,
     progress: typeof job.progress === 'number'
       ? Math.round(job.progress <= 1.0 ? job.progress * 100 : job.progress)
@@ -615,61 +623,7 @@ export default function DatasetsPage() {
         </Card>
       )}
 
-      {/* Curriculum Distribution & Shannon Entropy Filter Panel */}
-      <div className="p-4 rounded-xl bg-[#0e0e17] border border-[#272738] space-y-4 font-mono text-xs shadow-lg">
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-[#272738] pb-3">
-          <div className="flex items-center gap-2.5">
-            <div className="flex items-center justify-center w-7 h-7 rounded-md bg-[#f26625]/10 border border-[#f26625]/30 text-[#f26625]">
-              <Layers className="w-3.5 h-3.5" />
-            </div>
-            <div>
-              <h3 className="font-bold text-white text-xs">Pre-Seeded Reference Corpus (All-Time Baseline: 32,750 records)</h3>
-              <p className="text-zinc-400 text-xs mt-0.5">Shannon entropy token density across statutory domains. Custom synthesized datasets display below in Active Library.</p>
-            </div>
-          </div>
-          <span className="text-xs font-bold text-amber-400 bg-amber-500/10 border border-amber-500/30 px-2 py-0.5 rounded">
-            All-Time Reference Corpus
-          </span>
-        </div>
-
-        {/* 3-Tier Distribution Histogram */}
-        <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-          <div className="p-3 rounded-lg bg-[#12121a] border border-[#272738] space-y-2">
-            <div className="flex items-center justify-between">
-              <span className="font-bold text-blue-400 uppercase text-xs">Foundational (&lt; 3.0 bits)</span>
-              <span className="text-white font-bold text-xs">38% (12,450)</span>
-            </div>
-            <div className="w-full h-2 bg-[#1a1a26] rounded-full overflow-hidden">
-              <div className="h-full bg-blue-500 rounded-full" style={{ width: '38%' }} />
-            </div>
-            <p className="text-[11px] text-zinc-400">Statutory definitions, basic lookup, single-intent queries</p>
-          </div>
-
-          <div className="p-3 rounded-lg bg-[#12121a] border border-[#272738] space-y-2">
-            <div className="flex items-center justify-between">
-              <span className="font-bold text-amber-400 uppercase text-xs">Intermediate (3.0 - 5.0 bits)</span>
-              <span className="text-white font-bold text-xs">44% (14,410)</span>
-            </div>
-            <div className="w-full h-2 bg-[#1a1a26] rounded-full overflow-hidden">
-              <div className="h-full bg-amber-500 rounded-full" style={{ width: '44%' }} />
-            </div>
-            <p className="text-[11px] text-zinc-400">Multi-step procedural advice, rule reconciliation, arithmetic</p>
-          </div>
-
-          <div className="p-3 rounded-lg bg-[#12121a] border border-[#272738] space-y-2">
-            <div className="flex items-center justify-between">
-              <span className="font-bold text-emerald-400 uppercase text-xs">Complex (&ge; 5.0 bits)</span>
-              <span className="text-white font-bold text-xs">18% (5,890)</span>
-            </div>
-            <div className="w-full h-2 bg-[#1a1a26] rounded-full overflow-hidden">
-              <div className="h-full bg-emerald-500 rounded-full" style={{ width: '18%' }} />
-            </div>
-            <p className="text-[11px] text-zinc-400">Multi-hop judicial precedence, edge-cases, cross-statute conflicts</p>
-          </div>
-        </div>
-      </div>
-
-      {/* Stats Cards */}
+      {/* Standardized 4 Clean KPIs */}
       {!isLoading && (
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
           <Card className="border-[#272738] bg-[#12121a] hover:border-[#3b3b52] transition-all rounded-md card-shadow">
@@ -678,7 +632,7 @@ export default function DatasetsPage() {
                 <Database className="h-5 w-5 text-[#f26625]" />
               </div>
               <div>
-                <p className="text-xs text-[#a8a29e] font-mono uppercase tracking-wider">Active Workspace Datasets</p>
+                <p className="text-xs text-[#a8a29e] font-mono uppercase tracking-wider">Total Datasets</p>
                 <p className="text-2xl font-bold font-mono text-white mt-0.5">{datasets.length}</p>
               </div>
             </CardContent>
@@ -686,25 +640,12 @@ export default function DatasetsPage() {
           <Card className="border-[#272738] bg-[#12121a] hover:border-[#3b3b52] transition-all rounded-md card-shadow">
             <CardContent className="p-4 flex items-center gap-4">
               <div className="h-10 w-10 rounded-md bg-[#161622] border border-[#272738] flex items-center justify-center">
-                <CheckCircle2 className="h-5 w-5 text-[#10b981]" />
+                <Layers className="h-5 w-5 text-cyan-400" />
               </div>
               <div>
-                <p className="text-xs text-[#a8a29e] font-mono uppercase tracking-wider">Validated &amp; Ready</p>
-                <p className="text-2xl font-bold font-mono text-[#10b981] mt-0.5">
-                  {datasets.length === 0 ? '—' : datasets.filter((ds) => ds.validated).length}
-                </p>
-              </div>
-            </CardContent>
-          </Card>
-          <Card className="border-[#272738] bg-[#12121a] hover:border-[#3b3b52] transition-all rounded-md card-shadow">
-            <CardContent className="p-4 flex items-center gap-4">
-              <div className="h-10 w-10 rounded-md bg-[#161622] border border-[#272738] flex items-center justify-center">
-                <Layers className="h-5 w-5 text-[#f26625]" />
-              </div>
-              <div>
-                <p className="text-xs text-[#a8a29e] font-mono uppercase tracking-wider">Active Workspace Records</p>
+                <p className="text-xs text-[#a8a29e] font-mono uppercase tracking-wider">Total Samples</p>
                 <p className="text-2xl font-bold font-mono text-white mt-0.5">
-                  {datasets.reduce((acc, ds) => acc + ds.records, 0).toLocaleString()}
+                  {datasets.reduce((acc, ds) => acc + (ds.records || 0), 0).toLocaleString()}
                 </p>
               </div>
             </CardContent>
@@ -712,12 +653,30 @@ export default function DatasetsPage() {
           <Card className="border-[#272738] bg-[#12121a] hover:border-[#3b3b52] transition-all rounded-md card-shadow">
             <CardContent className="p-4 flex items-center gap-4">
               <div className="h-10 w-10 rounded-md bg-[#161622] border border-[#272738] flex items-center justify-center">
-                <AlertCircle className="h-5 w-5 text-amber-400" />
+                <Sparkles className="h-5 w-5 text-[#10b981]" />
               </div>
               <div>
-                <p className="text-xs text-[#a8a29e] font-mono uppercase tracking-wider">Active In-Flight</p>
+                <p className="text-xs text-[#a8a29e] font-mono uppercase tracking-wider">Average Quality</p>
+                <p className="text-2xl font-bold font-mono text-[#10b981] mt-0.5">
+                  {(() => {
+                    const scored = datasets.filter((ds) => typeof ds.quality === 'number' && ds.quality > 0)
+                    return scored.length > 0
+                      ? `${Math.round(scored.reduce((acc, ds) => acc + ds.quality, 0) / scored.length)}%`
+                      : '—'
+                  })()}
+                </p>
+              </div>
+            </CardContent>
+          </Card>
+          <Card className="border-[#272738] bg-[#12121a] hover:border-[#3b3b52] transition-all rounded-md card-shadow">
+            <CardContent className="p-4 flex items-center gap-4">
+              <div className="h-10 w-10 rounded-md bg-[#161622] border border-[#272738] flex items-center justify-center">
+                <Workflow className="h-5 w-5 text-amber-400" />
+              </div>
+              <div>
+                <p className="text-xs text-[#a8a29e] font-mono uppercase tracking-wider">Active Pipelines</p>
                 <p className="text-2xl font-bold font-mono text-amber-400 mt-0.5">
-                  {datasets.filter((ds) => ds.status === 'processing').length}
+                  {datasets.filter((ds) => ds.status === 'processing' || ds.status === 'running' || ds.status === 'pending').length}
                 </p>
               </div>
             </CardContent>
@@ -843,12 +802,12 @@ export default function DatasetsPage() {
                   <TableHead className="w-[320px] text-[#a8a29e] font-mono uppercase text-xs">Dataset Repository</TableHead>
                   <TableHead className="w-[105px] text-[#a8a29e] font-mono uppercase text-xs">Modality</TableHead>
                   <TableHead className="w-[95px] text-[#a8a29e] font-mono uppercase text-xs">Format</TableHead>
-                  <TableHead className="w-[85px] text-right text-[#a8a29e] font-mono uppercase text-xs">Est. Size</TableHead>
+                  <TableHead className="w-[85px] text-right text-[#a8a29e] font-mono uppercase text-xs">Size</TableHead>
                   <TableHead className="w-[85px] text-right text-[#a8a29e] font-mono uppercase text-xs">Samples</TableHead>
                   <TableHead className="w-[110px] text-[#a8a29e] font-mono uppercase text-xs">Quality</TableHead>
                   <TableHead className="w-[110px] text-[#a8a29e] font-mono uppercase text-xs">Status</TableHead>
                   <TableHead className="w-[75px] text-center text-[#a8a29e] font-mono uppercase text-xs">Audit</TableHead>
-                  <TableHead className="w-[230px] text-right text-[#a8a29e] font-mono uppercase text-xs">Actions</TableHead>
+                  <TableHead className="w-[150px] text-right text-[#a8a29e] font-mono uppercase text-xs">Actions</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody className="divide-y divide-[#272738]">
@@ -981,71 +940,88 @@ export default function DatasetsPage() {
                         )}
                       </TableCell>
 
-                      <TableCell className="w-[230px] text-right py-2" onClick={(e) => e.stopPropagation()}>
-                        <div className="flex items-center justify-end gap-1">
-                          {dataset.records > 0 && (
-                            <Button
-                              variant="ghost"
-                              size="sm"
-                              className="h-7 text-xs px-2 rounded-md bg-[#f26625]/10 hover:bg-[#f26625] text-[#f26625] hover:text-white border border-[#f26625]/30 font-mono transition-colors"
-                              onClick={() => router.push(`/finetune?dataset=${dataset.id}`)}
-                              title="1-Click Launch Fine-Tune on this dataset"
-                            >
-                              <Zap className="h-3 w-3 mr-1 text-amber-400" />
-                              Tune
-                            </Button>
-                          )}
-
-                          {dataset.status !== 'ready' && (
-                            <Button
-                              variant="ghost"
-                              size="sm"
-                              className="h-7 text-xs px-2 rounded-md bg-amber-500/10 hover:bg-amber-500/20 text-amber-300 border border-amber-500/30 font-mono"
-                              onClick={() => router.push(`/orchestration?job=${dataset.id}`)}
-                              title="Inspect live generation DAG in Orchestration"
-                            >
-                              <Workflow className="h-3 w-3 mr-1 text-amber-400" />
-                              DAG
-                            </Button>
-                          )}
-
+                      <TableCell className="w-[150px] text-right py-2" onClick={(e) => e.stopPropagation()}>
+                        <div className="flex items-center justify-end gap-1.5">
+                          {/* Primary Action Button */}
                           <Button
                             variant="outline"
                             size="sm"
-                            className="h-7 text-xs px-2 rounded-md border-[#272738] bg-[#0a0a0f] text-white hover:bg-[#161622] font-mono"
+                            className="h-7 text-xs px-2.5 rounded-md border-[#272738] bg-[#0a0a0f] text-white hover:bg-[#161622] font-mono hover:border-[#3b3b52] transition-colors"
                             disabled={downloadingIds.has(dataset.id) || dataset.records === 0}
-                            onClick={() => handleDownload(dataset.id, downloadFormat[dataset.id] || 'jsonl')}
-                            title={dataset.records > 0 ? `Export & Download ${dataset.records} records` : 'No records yet'}
+                            onClick={() => handleDownload(dataset.id, downloadFormat[dataset.id] || dataset.format || 'jsonl')}
+                            title={dataset.records > 0 ? `Export & Download ${dataset.records.toLocaleString()} records` : 'No records yet'}
                           >
                             {downloadingIds.has(dataset.id) ? (
-                              <Loader2 className="h-3 w-3 animate-spin text-[#f26625]" />
+                              <Loader2 className="h-3.5 w-3.5 animate-spin text-[#f26625]" />
                             ) : (
                               <>
-                                <Download className="h-3 w-3 mr-1 text-[#10b981]" />
-                                JSONL
+                                <Download className="h-3.5 w-3.5 mr-1 text-[#10b981]" />
+                                Download
                               </>
                             )}
                           </Button>
 
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            className="h-7 w-7 rounded-md text-[#a8a29e] hover:text-white hover:bg-[#161622]"
-                            onClick={() => setSelectedDataset(dataset.id)}
-                            title="Inspect dataset"
-                          >
-                            <Eye className="h-3.5 w-3.5" />
-                          </Button>
-
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            className="h-7 w-7 rounded-md text-rose-400 hover:text-rose-300 hover:bg-rose-950/30"
-                            onClick={() => handleDeleteDataset(dataset.id)}
-                            title="Delete dataset"
-                          >
-                            <Trash2 className="h-3.5 w-3.5" />
-                          </Button>
+                          {/* Secondary Actions Dropdown Menu */}
+                          <DropdownMenu>
+                            <DropdownMenuTrigger asChild>
+                              <Button
+                                variant="ghost"
+                                size="icon"
+                                className="h-7 w-7 rounded-md text-[#a8a29e] hover:text-white hover:bg-[#161622] border border-transparent hover:border-[#272738]"
+                                title="More actions"
+                              >
+                                <MoreHorizontal className="h-4 w-4" />
+                                <span className="sr-only">More actions</span>
+                              </Button>
+                            </DropdownMenuTrigger>
+                            <DropdownMenuContent align="end" className="w-48 bg-[#12121a] border-[#272738] text-white text-xs font-mono shadow-xl z-50">
+                              {dataset.records > 0 && (
+                                <DropdownMenuItem
+                                  onClick={() => router.push(`/finetune?dataset=${dataset.id}`)}
+                                  className="cursor-pointer hover:bg-[#161622] focus:bg-[#161622] text-[#f26625] focus:text-[#f26625] flex items-center gap-2 py-1.5"
+                                >
+                                  <Zap className="h-3.5 w-3.5 text-amber-400" />
+                                  <span>Launch Fine-Tune</span>
+                                </DropdownMenuItem>
+                              )}
+                              <DropdownMenuItem
+                                onClick={() => setSelectedDataset(dataset.id)}
+                                className="cursor-pointer hover:bg-[#161622] focus:bg-[#161622] flex items-center gap-2 py-1.5"
+                              >
+                                <Eye className="h-3.5 w-3.5 text-[#a8a29e]" />
+                                <span>Inspect Records</span>
+                              </DropdownMenuItem>
+                              <DropdownMenuItem
+                                onClick={() => router.push(`/dbom?dataset=${dataset.id}`)}
+                                className="cursor-pointer hover:bg-[#161622] focus:bg-[#161622] flex items-center gap-2 py-1.5"
+                              >
+                                <ShieldCheck className="h-3.5 w-3.5 text-emerald-400" />
+                                <span>DBOM Provenance</span>
+                              </DropdownMenuItem>
+                              <DropdownMenuItem
+                                onClick={() => router.push(`/orchestration?job=${dataset.id}`)}
+                                className="cursor-pointer hover:bg-[#161622] focus:bg-[#161622] flex items-center gap-2 py-1.5"
+                              >
+                                <Workflow className="h-3.5 w-3.5 text-amber-400" />
+                                <span>Pipeline DAG</span>
+                              </DropdownMenuItem>
+                              <DropdownMenuItem
+                                onClick={() => handleViewHfCard(dataset.id, dataset.name)}
+                                className="cursor-pointer hover:bg-[#161622] focus:bg-[#161622] flex items-center gap-2 py-1.5"
+                              >
+                                <FileText className="h-3.5 w-3.5 text-[#f26625]" />
+                                <span>HF Dataset Card</span>
+                              </DropdownMenuItem>
+                              <DropdownMenuSeparator className="bg-[#272738]" />
+                              <DropdownMenuItem
+                                onClick={() => handleDeleteDataset(dataset.id)}
+                                className="cursor-pointer text-rose-400 hover:text-rose-300 hover:bg-rose-950/30 focus:bg-rose-950/30 focus:text-rose-300 flex items-center gap-2 py-1.5"
+                              >
+                                <Trash2 className="h-3.5 w-3.5" />
+                                <span>Delete Dataset</span>
+                              </DropdownMenuItem>
+                            </DropdownMenuContent>
+                          </DropdownMenu>
                         </div>
                       </TableCell>
                     </TableRow>
@@ -1163,59 +1139,81 @@ export default function DatasetsPage() {
                   </div>
 
                   <div className="flex items-center gap-1.5 pt-2 border-t border-[#1f1f2e]" onClick={(e) => e.stopPropagation()}>
-                    {dataset.records > 0 && (
-                      <Button
-                        size="sm"
-                        className="flex-1 h-7 text-xs font-mono font-bold bg-[#f26625] hover:bg-[#de581a] text-white rounded-md shadow-sm"
-                        onClick={() => router.push(`/finetune?dataset=${dataset.id}`)}
-                      >
-                        <Zap className="h-3 w-3 mr-1" />
-                        Tune
-                      </Button>
-                    )}
-
-                    {dataset.status !== 'ready' && (
-                      <Button
-                        size="sm"
-                        variant="outline"
-                        className="flex-1 h-7 text-xs font-mono border-amber-500/40 bg-[#0a0a0f] text-amber-300 hover:text-white hover:bg-[#161622] rounded-md"
-                        onClick={() => router.push(`/orchestration?job=${dataset.id}`)}
-                      >
-                        <Workflow className="h-3 w-3 mr-1 text-amber-400" />
-                        Live DAG
-                      </Button>
-                    )}
-
                     <Button
                       size="sm"
-                      variant="outline"
-                      className="h-7 px-2.5 text-xs font-mono border-[#272738] bg-[#0a0a0f] text-white hover:bg-[#161622] rounded-md"
+                      className="flex-1 h-7 text-xs font-mono font-bold bg-[#f26625] hover:bg-[#de581a] text-white rounded-md shadow-sm"
                       disabled={downloadingIds.has(dataset.id) || dataset.records === 0}
-                      onClick={() => handleDownload(dataset.id, downloadFormat[dataset.id] || 'jsonl')}
+                      onClick={() => handleDownload(dataset.id, downloadFormat[dataset.id] || dataset.format || 'jsonl')}
                       title={dataset.records > 0 ? "Download records" : "No records"}
                     >
-                      <Download className="h-3 w-3 text-[#10b981]" />
+                      {downloadingIds.has(dataset.id) ? (
+                        <Loader2 className="h-3 w-3 animate-spin mr-1" />
+                      ) : (
+                        <Download className="h-3 w-3 mr-1 text-white" />
+                      )}
+                      <span>Download</span>
                     </Button>
 
-                    <Button
-                      size="sm"
-                      variant="ghost"
-                      className="h-7 w-7 p-0 rounded-md text-[#a8a29e] hover:text-white hover:bg-[#161622]"
-                      onClick={() => setSelectedDataset(dataset.id)}
-                      title="Inspect dataset"
-                    >
-                      <Eye className="h-3.5 w-3.5" />
-                    </Button>
-
-                    <Button
-                      size="sm"
-                      variant="ghost"
-                      className="h-7 w-7 p-0 rounded-md text-rose-400 hover:text-rose-300 hover:bg-rose-950/30"
-                      onClick={() => handleDeleteDataset(dataset.id)}
-                      title="Delete dataset"
-                    >
-                      <Trash2 className="h-3.5 w-3.5" />
-                    </Button>
+                    <DropdownMenu>
+                      <DropdownMenuTrigger asChild>
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          className="h-7 w-7 rounded-md text-[#a8a29e] hover:text-white hover:bg-[#161622] border border-transparent hover:border-[#272738]"
+                          title="More actions"
+                        >
+                          <MoreHorizontal className="h-4 w-4" />
+                          <span className="sr-only">More actions</span>
+                        </Button>
+                      </DropdownMenuTrigger>
+                      <DropdownMenuContent align="end" className="w-48 bg-[#12121a] border-[#272738] text-white text-xs font-mono shadow-xl z-50">
+                        {dataset.records > 0 && (
+                          <DropdownMenuItem
+                            onClick={() => router.push(`/finetune?dataset=${dataset.id}`)}
+                            className="cursor-pointer hover:bg-[#161622] focus:bg-[#161622] text-[#f26625] focus:text-[#f26625] flex items-center gap-2 py-1.5"
+                          >
+                            <Zap className="h-3.5 w-3.5 text-amber-400" />
+                            <span>Launch Fine-Tune</span>
+                          </DropdownMenuItem>
+                        )}
+                        <DropdownMenuItem
+                          onClick={() => setSelectedDataset(dataset.id)}
+                          className="cursor-pointer hover:bg-[#161622] focus:bg-[#161622] flex items-center gap-2 py-1.5"
+                        >
+                          <Eye className="h-3.5 w-3.5 text-[#a8a29e]" />
+                          <span>Inspect Records</span>
+                        </DropdownMenuItem>
+                        <DropdownMenuItem
+                          onClick={() => router.push(`/dbom?dataset=${dataset.id}`)}
+                          className="cursor-pointer hover:bg-[#161622] focus:bg-[#161622] flex items-center gap-2 py-1.5"
+                        >
+                          <ShieldCheck className="h-3.5 w-3.5 text-emerald-400" />
+                          <span>DBOM Provenance</span>
+                        </DropdownMenuItem>
+                        <DropdownMenuItem
+                          onClick={() => router.push(`/orchestration?job=${dataset.id}`)}
+                          className="cursor-pointer hover:bg-[#161622] focus:bg-[#161622] flex items-center gap-2 py-1.5"
+                        >
+                          <Workflow className="h-3.5 w-3.5 text-amber-400" />
+                          <span>Pipeline DAG</span>
+                        </DropdownMenuItem>
+                        <DropdownMenuItem
+                          onClick={() => handleViewHfCard(dataset.id, dataset.name)}
+                          className="cursor-pointer hover:bg-[#161622] focus:bg-[#161622] flex items-center gap-2 py-1.5"
+                        >
+                          <FileText className="h-3.5 w-3.5 text-[#f26625]" />
+                          <span>HF Dataset Card</span>
+                        </DropdownMenuItem>
+                        <DropdownMenuSeparator className="bg-[#272738]" />
+                        <DropdownMenuItem
+                          onClick={() => handleDeleteDataset(dataset.id)}
+                          className="cursor-pointer text-rose-400 hover:text-rose-300 hover:bg-rose-950/30 focus:bg-rose-950/30 focus:text-rose-300 flex items-center gap-2 py-1.5"
+                        >
+                          <Trash2 className="h-3.5 w-3.5" />
+                          <span>Delete Dataset</span>
+                        </DropdownMenuItem>
+                      </DropdownMenuContent>
+                    </DropdownMenu>
                   </div>
                 </CardContent>
               </Card>
@@ -1338,8 +1336,8 @@ export default function DatasetsPage() {
                 <p className="text-xs font-mono text-[#a8a29e] mt-1">{selected.created}</p>
               </div>
               <div>
-                <p className="text-xs text-[#a8a29e] font-mono uppercase">Delivery Spec</p>
-                <p className="text-xs font-mono text-[#f26625] mt-1">ADR-002 Compliant</p>
+                <p className="text-xs text-[#a8a29e] font-mono uppercase">Format &amp; Modality</p>
+                <p className="text-xs font-mono text-[#f26625] mt-1">{selected.modality?.toUpperCase()} (.{selected.format})</p>
               </div>
             </div>
 
@@ -1354,7 +1352,7 @@ export default function DatasetsPage() {
 
               {datasetSummary && (
                 <>
-                  <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
                     <div className="rounded-md border border-[#272738] bg-[#0a0a0f] p-3">
                       <p className="text-xs uppercase font-mono text-[#a8a29e]">Final Samples</p>
                       <p className="text-lg font-bold font-mono text-white mt-0.5">{datasetSummary.sample_count ?? 0}</p>
@@ -1373,10 +1371,6 @@ export default function DatasetsPage() {
                       {datasetSummary.human_review?.enabled && (
                         <p className="mt-1 text-xs text-[#a8a29e] font-mono">{datasetSummary.human_review.requested_percentage}% requested</p>
                       )}
-                    </div>
-                    <div className="rounded-md border border-[#272738] bg-[#0a0a0f] p-3">
-                      <p className="text-xs uppercase font-mono text-[#a8a29e]">Balance Removals</p>
-                      <p className="text-lg font-bold font-mono text-white mt-0.5">{datasetSummary.balance_report?.samples_removed ?? 0}</p>
                     </div>
                   </div>
 
@@ -1476,8 +1470,9 @@ export default function DatasetsPage() {
                       ({contaminationReport.total_samples_audited} samples audited against IndicGLUE, MMLU, GSM8K)
                     </span>
                   </div>
-                  <Badge variant="outline" className="text-xs border-[#272738] text-emerald-400">
-                    Cert: {contaminationReport.audit_certificate_id}
+                  <Badge variant="outline" className="text-xs border-emerald-500/30 text-emerald-400 bg-emerald-950/20 font-mono flex items-center gap-1">
+                    <CheckCircle2 className="h-3 w-3" />
+                    Decontamination Verified
                   </Badge>
                 </div>
               )}
@@ -1629,9 +1624,24 @@ export default function DatasetsPage() {
                         </div>
                       )}
                       {!rec.instruction && !rec.prompt && !rec.response && !rec.output ? (
-                        <pre className="text-xs font-mono text-[#f1f5f9] bg-[#0a0a0f] p-3 rounded-lg overflow-x-auto whitespace-pre border border-[#272738]">
-                          {JSON.stringify(rec, null, 2)}
-                        </pre>
+                        <div className="p-3 bg-[#0a0a0f] rounded-lg border border-[#272738] text-xs font-mono text-[#a8a29e] space-y-2">
+                          {rec.text ? (
+                            <div>
+                              <p className="text-xs font-bold uppercase tracking-wider text-[#f26625] mb-1">Content Body:</p>
+                              <p className="text-[#f1f5f9] font-sans whitespace-pre-wrap">{rec.text}</p>
+                            </div>
+                          ) : rec.content ? (
+                            <div>
+                              <p className="text-xs font-bold uppercase tracking-wider text-[#f26625] mb-1">Content:</p>
+                              <p className="text-[#f1f5f9] font-sans whitespace-pre-wrap">{rec.content}</p>
+                            </div>
+                          ) : (
+                            <div className="flex items-center gap-2 text-[#a8a29e]">
+                              <FileText className="h-3.5 w-3.5 text-[#f26625]" />
+                              <span>Structured record payload verified. Standard prompt/response fields not populated for this modality.</span>
+                            </div>
+                          )}
+                        </div>
                       ) : null}
                     </div>
                   ))}

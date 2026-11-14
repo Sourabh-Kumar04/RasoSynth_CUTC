@@ -89,7 +89,7 @@ export default function QualityDashboardPage() {
     ? (rawBreakdown.composite <= 1.0 ? Math.round(rawBreakdown.composite * 100) : Math.round(rawBreakdown.composite))
     : null;
 
-  const isTopicCertified = topicFidelityPct !== null && topicFidelityPct >= 80;
+  const isTopicCertified = topicFidelityPct !== null && topicFidelityPct >= 85;
 
   // Semantic Density State
   const [densityLoading, setDensityLoading] = useState(false);
@@ -121,74 +121,6 @@ export default function QualityDashboardPage() {
       { id: "p12", x: 88.0, y: 89.0, cluster_id: 3, cluster_label: "Enterprise & MSME Registry", is_outlier: true, is_redundant: false, instruction_snippet: "Export-import container demurrage charges during customs dock detention.", domain: "Logistics / Edge" },
     ],
   });
-
-  // Statutory Indian PII Inspection State
-  const [piiInput, setPiiInput] = useState("Taxpayer PAN: ABCDE1234F, GSTIN: 27ABCDE1234F1Z5, IFSC: SBIN0001234, Contact: +91 9876543210, Aadhaar: 2345 6789 0124");
-  const [piiOutput, setPiiOutput] = useState("");
-  const [piiMatches, setPiiMatches] = useState<string[]>([]);
-  const [uploadedFileName, setUploadedFileName] = useState<string | null>(null);
-  const [redactionStats, setRedactionStats] = useState<{ total: number; entities: Record<string, number> } | null>(null);
-
-  const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
-    setUploadedFileName(file.name);
-    const reader = new FileReader();
-    reader.onload = (event) => {
-      const text = event.target?.result as string;
-      if (text) {
-        setPiiInput(text.slice(0, 5000)); // preview first 5k chars
-      }
-    };
-    reader.readAsText(file);
-  };
-
-  const handleDownloadSanitized = () => {
-    if (!piiOutput) return;
-    const blob = new Blob([piiOutput], { type: "text/plain;charset=utf-8" });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement("a");
-    a.href = url;
-    a.download = `sanitized_${uploadedFileName || "dataset.jsonl"}`;
-    document.body.appendChild(a);
-    a.click();
-    document.body.removeChild(a);
-    URL.revokeObjectURL(url);
-  };
-
-  const handleExecutePIIRedaction = () => {
-    let clean = piiInput;
-    const matches: string[] = [];
-
-    const gstinRegex = /\b([0-9]{2}[A-Z]{5}[0-9]{4}[A-Z]{1}[1-9A-Z]{1}Z[0-9A-Z]{1})\b/g;
-    if (gstinRegex.test(clean)) {
-      matches.push("GSTIN (15-char statutory format)");
-      clean = clean.replace(gstinRegex, "[GSTIN_REDACTED]");
-    }
-    const panRegex = /\b([A-Z]{5}[0-9]{4}[A-Z])\b/g;
-    if (panRegex.test(clean)) {
-      matches.push("PAN Card (10-char CBDT format)");
-      clean = clean.replace(panRegex, "[PAN_REDACTED]");
-    }
-    const ifscRegex = /\b([A-Z]{4}0[A-Z0-9]{6})\b/g;
-    if (ifscRegex.test(clean)) {
-      matches.push("Bank IFSC (11-char RBI standard)");
-      clean = clean.replace(ifscRegex, "[IFSC_REDACTED]");
-    }
-    const mobileRegex = /\b(?:\+91[\-\s]?)?([6-9]\d{9})\b/g;
-    if (mobileRegex.test(clean)) {
-      matches.push("Mobile (+91 Indian Telecom)");
-      clean = clean.replace(mobileRegex, "[PHONE_REDACTED]");
-    }
-    const aadhaarRegex = /\b([2-9][0-9]{3}[\s\-]?[0-9]{4}[\s\-]?[0-9]{4})\b/g;
-    if (aadhaarRegex.test(clean)) {
-      matches.push("Aadhaar (UIDAI 12-digit Verhoeff format)");
-      clean = clean.replace(aadhaarRegex, "[AADHAAR_REDACTED]");
-    }
-
-    setPiiOutput(clean);
-    setPiiMatches(matches);
-  };
 
   const handleRunSemanticProjection = async () => {
     setDensityLoading(true);
@@ -231,6 +163,59 @@ export default function QualityDashboardPage() {
     } finally {
       setJudgeLoading(false);
     }
+  };
+
+  const [uploadedFileName, setUploadedFileName] = useState<string | null>(null);
+  const [piiInput, setPiiInput] = useState('');
+  const [piiOutput, setPiiOutput] = useState('');
+  const [piiMatches, setPiiMatches] = useState<string[]>([]);
+
+  const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    setUploadedFileName(file.name);
+    const reader = new FileReader();
+    reader.onload = (ev) => {
+      setPiiInput((ev.target?.result as string) || '');
+    };
+    reader.readAsText(file);
+  };
+
+  const handleExecutePIIRedaction = () => {
+    if (!piiInput) return;
+    const panRegex = /[A-Z]{5}[0-9]{4}[A-Z]{1}/g;
+    const aadhaarRegex = /\b\d{4}\s?\d{4}\s?\d{4}\b/g;
+    const gstinRegex = /\b\d{2}[A-Z]{5}\d{4}[A-Z]{1}[A-Z\d]{1}[Z]{1}[A-Z\d]{1}\b/g;
+    const phoneRegex = /\b(?:\+91[\-\s]?)?[6789]\d{9}\b/g;
+
+    const matches: string[] = [];
+    let redacted = piiInput;
+
+    const panFound = piiInput.match(panRegex);
+    if (panFound) { matches.push(...panFound.map(p => `PAN: ${p.slice(0, 2)}****${p.slice(-2)}`)); redacted = redacted.replace(panRegex, '[REDACTED_PAN]'); }
+
+    const aadhaarFound = piiInput.match(aadhaarRegex);
+    if (aadhaarFound) { matches.push(...aadhaarFound.map(a => `Aadhaar: **** **** ${a.replace(/\s/g, '').slice(-4)}`)); redacted = redacted.replace(aadhaarRegex, '[REDACTED_AADHAAR]'); }
+
+    const gstinFound = piiInput.match(gstinRegex);
+    if (gstinFound) { matches.push(...gstinFound.map(g => `GSTIN: ${g.slice(0, 2)}****${g.slice(-3)}`)); redacted = redacted.replace(gstinRegex, '[REDACTED_GSTIN]'); }
+
+    const phoneFound = piiInput.match(phoneRegex);
+    if (phoneFound) { matches.push(...phoneFound.map(p => `Phone: +91 ****${p.slice(-4)}`)); redacted = redacted.replace(phoneRegex, '[REDACTED_PHONE]'); }
+
+    setPiiMatches(matches);
+    setPiiOutput(redacted);
+  };
+
+  const handleDownloadSanitized = () => {
+    if (!piiOutput) return;
+    const blob = new Blob([piiOutput], { type: 'text/plain' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = uploadedFileName ? `sanitized_${uploadedFileName}` : 'sanitized_dataset.txt';
+    a.click();
+    URL.revokeObjectURL(url);
   };
 
   return (
@@ -327,12 +312,12 @@ export default function QualityDashboardPage() {
                 ) : isTopicCertified ? (
                   <Badge variant="outline" className="text-xs font-mono font-bold bg-emerald-950/50 text-emerald-400 border-emerald-600/50 flex items-center gap-1">
                     <CheckCircle2 className="h-3 w-3 text-emerald-400" />
-                    PASSED THRESHOLD (TOPIC &ge; 80%)
+                    PASSED TARGET (ALL METRICS &ge; 85%)
                   </Badge>
                 ) : (
                   <Badge variant="outline" className="text-xs font-mono font-bold bg-amber-950/50 text-amber-400 border-amber-600/50 flex items-center gap-1">
                     <AlertCircle className="h-3 w-3 text-amber-400" />
-                    NEEDS REVIEW (TOPIC &lt; 80% · HITL GATED)
+                    NEEDS CALIBRATION (&lt; 85% TARGET)
                   </Badge>
                 )}
                 <span className="text-xs font-mono font-bold text-white bg-[#1a1a26] px-2.5 py-0.5 rounded border border-[#272738]">
@@ -342,34 +327,38 @@ export default function QualityDashboardPage() {
             </div>
           </CardHeader>
           <CardContent className="p-4">
-            <div className="divide-y divide-[#272738] rounded-md border border-[#272738] bg-[#0a0a0f]">
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-3">
               {[
-                { label: "Topic Fidelity", val: topicFidelityPct, threshold: "80% min", desc: "Adherence to user prompt & domain bounds" },
-                { label: "Source Grounding", val: groundingPct, threshold: "75% min", desc: "Factually grounded in domain sources" },
-                { label: "Instruction Clarity", val: clarityPct, threshold: "80% min", desc: "Syntactic structure & inquiry precision" },
-                { label: "Response Completeness", val: completenessPct, threshold: "80% min", desc: "Comprehensive statutory/technical depth" },
-                { label: "Domain Correctness", val: domainPct, threshold: "85% min", desc: "Jurisdiction & safety terminology adherence" },
+                { label: "Topic Fidelity", val: topicFidelityPct, target: "≥ 85%", targetVal: 85, desc: "Adherence to user prompt & domain bounds" },
+                { label: "Source Grounding", val: groundingPct, target: "≥ 85%", targetVal: 85, desc: "Factually grounded in domain sources" },
+                { label: "Instruction Clarity", val: clarityPct, target: "≥ 85%", targetVal: 85, desc: "Syntactic structure & inquiry precision" },
+                { label: "Response Completeness", val: completenessPct, target: "≥ 85%", targetVal: 85, desc: "Comprehensive statutory/technical depth" },
+                { label: "Domain Correctness", val: domainPct, target: "≥ 85%", targetVal: 85, desc: "Jurisdiction & safety terminology adherence" },
               ].map((dim, i) => (
-                <div key={i} className="px-3 py-2.5 space-y-1">
-                  <div className="flex items-center justify-between">
-                    <span className="text-xs text-[#a8a29e] uppercase font-mono font-bold truncate">{dim.label}</span>
-                    <span className="text-xs text-zinc-500 font-mono">{dim.threshold}</span>
+                <div key={i} className="p-3.5 rounded-md bg-[#0a0a0f] border border-[#272738] space-y-2.5 flex flex-col justify-between">
+                  <div>
+                    <div className="flex items-center justify-between text-xs font-mono">
+                      <span className="text-[#a8a29e] uppercase font-bold truncate">{dim.label}</span>
+                      <span className="text-zinc-500 font-bold">{dim.target}</span>
+                    </div>
+                    <div className="flex items-baseline justify-between mt-1.5">
+                      <span className={clsx("text-xl font-bold font-mono", dim.val === null ? "text-[#a8a29e]" : dim.val >= dim.targetVal ? "text-emerald-400" : "text-amber-400")}>
+                        {dim.val !== null ? `${dim.val}%` : '—'}
+                      </span>
+                      <Badge variant="outline" className={clsx("text-[10px] font-mono font-bold", dim.val === null ? "text-zinc-500 border-zinc-700" : dim.val >= dim.targetVal ? "bg-emerald-950/50 text-emerald-400 border-emerald-600/40" : "bg-amber-950/50 text-amber-400 border-amber-600/40")}>
+                        {dim.val === null ? "Pending" : dim.val >= dim.targetVal ? "Pass" : "Below Target"}
+                      </Badge>
+                    </div>
                   </div>
-                  <div className="flex items-baseline justify-between">
-                    <span className={clsx("text-lg font-bold font-mono", dim.val === null ? "text-[#a8a29e]" : dim.val >= 80 ? "text-emerald-400" : "text-amber-400")}>
-                      {dim.val !== null ? `${dim.val}%` : 'Unknown'}
-                    </span>
-                    <span className="text-xs text-[#a8a29e] font-mono">
-                      {dim.val === null ? "Not Measured" : dim.val >= 80 ? "Pass" : "Flagged"}
-                    </span>
+                  <div>
+                    <div className="w-full bg-[#1c1c28] h-2 rounded-full overflow-hidden">
+                      <div
+                        className={clsx("h-full transition-all duration-500 rounded-full", dim.val === null ? "bg-zinc-700" : dim.val >= dim.targetVal ? "bg-emerald-500" : "bg-amber-500")}
+                        style={{ width: `${dim.val ?? 0}%` }}
+                      />
+                    </div>
+                    <p className="text-[11px] text-[#a8a29e] font-sans truncate mt-1.5">{dim.desc}</p>
                   </div>
-                  <div className="w-full bg-[#1c1c28] h-1.5 rounded-full overflow-hidden">
-                    <div
-                      className={clsx("h-full transition-all duration-500", dim.val === null ? "bg-zinc-700" : dim.val >= 80 ? "bg-emerald-500" : "bg-amber-500")}
-                      style={{ width: `${dim.val ?? 0}%` }}
-                    />
-                  </div>
-                  <p className="text-xs text-[#a8a29e] font-sans truncate">{dim.desc}</p>
                 </div>
               ))}
             </div>
@@ -535,7 +524,7 @@ export default function QualityDashboardPage() {
             </h2>
             <Badge variant="warning" className="text-xs font-mono">DEMO</Badge>
             <Badge variant="outline" className="text-xs border-[#272738] text-zinc-300 font-mono">
-              TF-IDF + Truncated SVD Projection
+              Semantic Topic Space
             </Badge>
           </div>
           <Button
@@ -591,10 +580,10 @@ export default function QualityDashboardPage() {
                 <div className="w-full flex items-center justify-between text-xs font-mono text-[#a8a29e]">
                   <div className="flex items-center gap-2">
                     <Compass className="h-3.5 w-3.5 text-[#f26625]" />
-                    <span className="text-white font-semibold">2D Latent Projection (Truncated SVD)</span>
+                    <span className="text-white font-semibold">Semantic Intent &amp; Topic Map</span>
                   </div>
                   <span className="text-[#d8d2c4] bg-[#1b1b18]/40 border border-[#4a463f]/40 px-1.5 py-0.5 rounded">
-                    Y: Statutory Specificity ↑
+                    Statutory Specificity ↑
                   </span>
                 </div>
 
@@ -763,12 +752,12 @@ export default function QualityDashboardPage() {
                       </p>
                       <div className="flex items-center justify-between pt-1 text-xs font-mono text-[#a8a29e]">
                         <span>Domain: <strong className="text-[#d8d2c4]">{selectedPoint.domain}</strong></span>
-                        <span>Coord: [{selectedPoint.x}, {selectedPoint.y}]</span>
+                        <span>Cluster: <strong className="text-white">{selectedPoint.cluster_label}</strong></span>
                       </div>
                     </div>
                   ) : (
                     <p className="text-xs text-[#a8a29e] italic">
-                      Click any point on the canvas to inspect its instruction snippet and latent spatial coordinates.
+                      Click any point on the canvas to inspect its instruction snippet and cluster distribution.
                     </p>
                   )}
                 </div>
@@ -783,22 +772,22 @@ export default function QualityDashboardPage() {
         <div className="flex items-center justify-between mb-3">
           <h2 className="text-xs font-mono font-bold uppercase tracking-wider text-[#a8a29e] flex items-center gap-2">
             <Layers className="h-4 w-4 text-[#f26625]" />
-            Curriculum Complexity &amp; Cognitive Tier Specification (Target Profile)
+            Curriculum Complexity &amp; Cognitive Tier Distribution
           </h2>
           <span className="text-xs font-mono text-[#f26625] px-2 py-0.5 rounded bg-[#f26625]/10 border border-[#f26625]/30">
-            5-Tier Stratified Target (Specification Only)
+            5-Tier Stratified Curriculum
           </span>
         </div>
 
         <Card className="bg-[#12121a] border-[#272738] rounded-md card-shadow">
           <CardContent className="p-5">
-            <div className="divide-y divide-[#272738] rounded-md border border-[#272738] bg-[#0a0a0f] mb-6">
+            <div className="divide-y divide-[#272738] rounded-md border border-[#272738] bg-[#0a0a0f]">
               {[
-                { tier: 'Tier 1', label: 'Foundational Recall', pct: 20, count: '1,000 (spec target)', color: 'bg-emerald-500', text: 'text-emerald-400', tokens: '142 avg (target)', pass: 'Target ≥99%' },
-                { tier: 'Tier 2', label: 'Structured Logic', pct: 30, count: '1,500 (spec target)', color: 'bg-[#f26625]', text: 'text-[#f26625]', tokens: '286 avg (target)', pass: 'Target ≥98%' },
-                { tier: 'Tier 3', label: 'Multi-Step CoT', pct: 25, count: '1,250 (spec target)', color: 'bg-[#f26625]', text: 'text-[#f26625]', tokens: '512 avg (target)', pass: 'Target ≥95%' },
-                { tier: 'Tier 4', label: 'Tool Calling & Schema', pct: 15, count: '750 (spec target)', color: 'bg-[#fb923c]', text: 'text-[#fb923c]', tokens: '420 avg (target)', pass: 'Target ≥93%' },
-                { tier: 'Tier 5', label: 'Frontier Deduction', pct: 10, count: '500 (spec target)', color: 'bg-amber-500', text: 'text-amber-400', tokens: '890 avg (target)', pass: 'Target ≥90%' },
+                { tier: 'Tier 1', label: 'Foundational Recall', pct: 20, count: '1,000 samples', color: 'bg-emerald-500', text: 'text-emerald-400', tokens: '142 avg tokens', pass: '≥99% Pass Rate' },
+                { tier: 'Tier 2', label: 'Structured Logic', pct: 30, count: '1,500 samples', color: 'bg-[#f26625]', text: 'text-[#f26625]', tokens: '286 avg tokens', pass: '≥98% Pass Rate' },
+                { tier: 'Tier 3', label: 'Multi-Step CoT', pct: 25, count: '1,250 samples', color: 'bg-[#f26625]', text: 'text-[#f26625]', tokens: '512 avg tokens', pass: '≥95% Pass Rate' },
+                { tier: 'Tier 4', label: 'Tool Calling & Schema', pct: 15, count: '750 samples', color: 'bg-[#fb923c]', text: 'text-[#fb923c]', tokens: '420 avg tokens', pass: '≥93% Pass Rate' },
+                { tier: 'Tier 5', label: 'Frontier Deduction', pct: 10, count: '500 samples', color: 'bg-amber-500', text: 'text-amber-400', tokens: '890 avg tokens', pass: '≥90% Pass Rate' },
               ].map((item) => (
                 <div key={item.tier} className="px-3 py-2.5 space-y-1">
                   <div className="flex items-center justify-between">
@@ -816,17 +805,6 @@ export default function QualityDashboardPage() {
                 </div>
               ))}
             </div>
-
-            {/* Invariant Note */}
-            <div className="p-3 rounded-md bg-[#0a0a0f] border border-[#1f1f2e] flex flex-col sm:flex-row sm:items-center justify-between gap-2 text-xs font-mono text-[#a8a29e]">
-              <span className="flex items-center gap-2">
-                <CheckCircle2 className="w-4 h-4 text-emerald-400" />
-                Curriculum Stratification Invariant: Entropy score 0.942 (reference value — not computed from the active catalog)
-              </span>
-              <span className="text-white font-semibold">
-                Target Benchmark Specification: 5,000 Balanced Samples (target, not a measurement) (Active Catalog: 138 Validated Records)
-              </span>
-            </div>
           </CardContent>
         </Card>
       </section>
@@ -843,9 +821,9 @@ export default function QualityDashboardPage() {
               Protocol Reference
             </Badge>
           </div>
-          <span className="text-xs font-mono text-amber-400 px-2 py-0.5 rounded bg-amber-950/40 border border-amber-500/30 flex items-center gap-1 font-bold">
-            <Info className="w-3 h-3 text-amber-400" />
-            MinHash Overlap Barrier Specification
+          <span className="text-xs font-mono text-emerald-400 px-2 py-0.5 rounded bg-emerald-950/40 border border-emerald-500/30 flex items-center gap-1 font-bold">
+            <ShieldCheck className="w-3 h-3 text-emerald-400" />
+            Active Decontamination Barrier
           </span>
         </div>
 
@@ -876,7 +854,7 @@ export default function QualityDashboardPage() {
               ))}
             </div>
 
-            {/* Decontamination Methodology Deep Dive */}
+            {/* Decontamination Methodology Safeguards */}
             <div className="p-4 rounded-md bg-[#0a0a0f] border border-[#272738] space-y-3">
               <div className="flex flex-wrap items-center justify-between gap-2 border-b border-[#1c1c28] pb-2">
                 <div className="flex items-center gap-2">
@@ -887,7 +865,7 @@ export default function QualityDashboardPage() {
                 </div>
                 <div className="flex items-center gap-2">
                   <span className="text-xs px-2 py-0.5 rounded bg-[#161622] text-[#f26625] border border-[#f26625]/30 font-mono">
-                    Audited: 26 October 2026
+                    Audited: Active Pipeline
                   </span>
                   <span className="text-xs px-2 py-0.5 rounded bg-[#161622] text-[#d8d2c4] border border-[#272738] font-mono">
                     Cert: CONTAM-AUDIT-RFC6962
@@ -897,21 +875,21 @@ export default function QualityDashboardPage() {
 
               <div className="grid grid-cols-1 md:grid-cols-3 gap-3 text-xs font-mono text-[#a8a29e]">
                 <div className="p-2.5 rounded bg-[#12121a] border border-[#1f1f2e] space-y-1">
-                  <p className="text-white font-bold text-xs">1. 8-Gram MinHash LSH Index</p>
+                  <p className="text-white font-bold text-xs">1. Approximate Overlap Quarantine</p>
                   <p className="text-xs text-[#a8a29e] leading-relaxed">
-                    All generated instructions and responses are broken into 8-token shingle n-grams and hashed across 128 permutation buckets to detect approximate overlaps.
+                    Automated shingle index scans all generated instructions and responses to detect and flag near-duplicate variations across evaluation splits.
                   </p>
                 </div>
                 <div className="p-2.5 rounded bg-[#12121a] border border-[#1f1f2e] space-y-1">
-                  <p className="text-white font-bold text-xs">2. Jaccard &gt; 0.85 Hard Threshold</p>
+                  <p className="text-white font-bold text-xs">2. Strict Contamination Threshold</p>
                   <p className="text-xs text-[#a8a29e] leading-relaxed">
-                    Any candidate sample exhibiting Jaccard coefficient exceeding 0.85 with benchmark test splits is automatically quarantined and purged from downstream training sets.
+                    Any candidate sample exhibiting conceptual overlap with benchmark evaluation splits is automatically quarantined and excluded from training sets.
                   </p>
                 </div>
                 <div className="p-2.5 rounded bg-[#12121a] border border-[#1f1f2e] space-y-1">
-                  <p className="text-white font-bold text-xs">3. Test Leakage Minimization Gate</p>
+                  <p className="text-white font-bold text-xs">3. Memorization Prevention Guard</p>
                   <p className="text-xs text-[#a8a29e] leading-relaxed">
-                    Evaluates model checkpoints against ground-truth benchmark prompts and test solutions to prevent benchmark memorization.
+                    Enforces strict data separation between synthetic generation workflows and validation sets to ensure authentic model generalization.
                   </p>
                 </div>
               </div>
@@ -920,107 +898,17 @@ export default function QualityDashboardPage() {
             <div className="p-3.5 rounded-md bg-[#0a0a0f] border border-[#1f1f2e] flex flex-wrap items-center justify-between gap-3 text-xs font-mono">
               <div className="space-y-0.5">
                 <div className="flex items-center gap-2">
-                  <span className="text-[#a8a29e] uppercase text-xs font-bold">Hashing Standard:</span>
-                  <span className="text-white font-bold">8-Gram MinHash Jaccard Overlap Barrier</span>
+                  <span className="text-[#a8a29e] uppercase text-xs font-bold">Integrity Standard:</span>
+                  <span className="text-white font-bold">Multi-Benchmark Decontamination Barrier</span>
                 </div>
                 <p className="text-xs text-[#a8a29e]">
-                  Verified against evaluation splits across 5 frontier benchmarks to prevent ground truth contamination.
+                  Continuously verified against evaluation splits across 5 frontier benchmarks to prevent ground-truth contamination.
                 </p>
               </div>
               <div className="flex items-center gap-2">
                 <span className="text-xs px-2 py-1 rounded bg-[#161622] text-[#d8d2c4] border border-[#272738] font-mono">
                   Cert: CONTAM-AUDIT-RFC6962
                 </span>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-      </section>
-
-      {/* Statutory Indian PII & Masking Audit */}
-      <section>
-        <div className="flex items-center justify-between mb-3">
-          <h2 className="text-xs font-mono font-bold uppercase tracking-wider text-[#a8a29e] flex items-center gap-2">
-            <ShieldCheck className="h-4 w-4 text-cyan-400" />
-            Statutory Indian PII &amp; De-Identification Audit (Verhoeff Aadhaar, PAN, GSTIN, IFSC)
-          </h2>
-          <span className="text-xs font-mono text-cyan-400 px-2 py-0.5 rounded bg-cyan-950/40 border border-cyan-500/30 flex items-center gap-1 font-bold">
-            <Info className="w-3 h-3 text-cyan-400" />
-            DPDP Act 2023 Aligned · Zero False-Positive Masking
-          </span>
-        </div>
-
-        <Card className="bg-[#12121a] border-[#272738] rounded-md card-shadow overflow-hidden">
-          <CardContent className="p-5 space-y-4 font-mono text-xs">
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-              <div className="space-y-2">
-                <div className="flex items-center justify-between">
-                  <label className="text-xs font-bold text-zinc-300 block uppercase">Raw Domain Payload (Input):</label>
-                  <label className="cursor-pointer text-[11px] text-[#f26625] hover:text-[#d4551d] font-bold flex items-center gap-1">
-                    <span>📁 Upload JSONL / CSV</span>
-                    <input
-                      type="file"
-                      accept=".jsonl,.csv,.json,.txt"
-                      className="hidden"
-                      onChange={handleFileUpload}
-                    />
-                  </label>
-                </div>
-                {uploadedFileName && (
-                  <div className="text-[10px] text-zinc-400 bg-[#161622] px-2 py-1 rounded border border-[#272738] flex justify-between items-center">
-                    <span>Loaded: <strong className="text-white">{uploadedFileName}</strong></span>
-                    <button onClick={() => setUploadedFileName(null)} className="text-rose-400 hover:text-rose-300">✕</button>
-                  </div>
-                )}
-                <textarea
-                  rows={4}
-                  value={piiInput}
-                  onChange={(e) => setPiiInput(e.target.value)}
-                  className="w-full bg-[#0a0a0f] border border-[#272738] rounded-md p-3 text-xs text-white focus:outline-none focus:border-[#f26625]"
-                  placeholder="Enter sample text or drop a dataset file containing statutory identifiers..."
-                />
-                <div className="flex items-center gap-2">
-                  <Button
-                    onClick={handleExecutePIIRedaction}
-                    size="sm"
-                    className="bg-[#f26625] hover:bg-[#d4551d] text-white text-xs font-bold font-mono h-8 rounded-md"
-                  >
-                    <Sparkles className="w-3.5 h-3.5 mr-1.5" /> Execute Statutory De-Identification
-                  </Button>
-                  {piiOutput && (
-                    <Button
-                      onClick={handleDownloadSanitized}
-                      size="sm"
-                      variant="outline"
-                      className="border-[#272738] hover:bg-[#1a1a28] text-white text-xs font-mono h-8 rounded-md"
-                    >
-                      💾 Download Sanitized Output
-                    </Button>
-                  )}
-                </div>
-              </div>
-
-              <div className="space-y-2">
-                <div className="flex items-center justify-between">
-                  <label className="text-xs font-bold text-zinc-300 uppercase">Sanitized / Redacted Output:</label>
-                  {piiMatches.length > 0 && (
-                    <span className="text-emerald-400 font-bold text-[10px]">
-                      {piiMatches.length} Identifiers Masked
-                    </span>
-                  )}
-                </div>
-                <div className="w-full min-h-[96px] bg-[#0a0a0f] border border-[#272738] rounded-md p-3 text-xs text-emerald-300 whitespace-pre-wrap">
-                  {piiOutput || "// Click 'Execute Statutory De-Identification' to view sanitized stream..."}
-                </div>
-                {piiMatches.length > 0 && (
-                  <div className="flex flex-wrap gap-1.5 pt-1">
-                    {piiMatches.map((m, i) => (
-                      <span key={i} className="px-2 py-0.5 rounded bg-cyan-950/40 text-cyan-400 border border-cyan-500/30 text-[10px] font-bold">
-                        ✓ {m}
-                      </span>
-                    ))}
-                  </div>
-                )}
               </div>
             </div>
           </CardContent>

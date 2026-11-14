@@ -169,3 +169,7 @@ coverage.xml
 # Vercel CLI local state
 frontend/.vercel/
 *.mp4
+
+# Presentation materials (local only, do not push)
+Final_Presentation/
+

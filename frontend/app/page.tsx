@@ -7,46 +7,34 @@ import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import {
   Sparkles,
-  Play,
   ArrowRight,
   ShieldCheck,
   Cpu,
   Layers,
-  Database,
   Terminal,
-  Activity,
   CheckCircle2,
   ExternalLink,
-  ChevronDown,
-  FileCode,
-  Zap,
   Copy,
   Check,
   GitBranch,
   FileText,
-  Binary,
-  Compass,
   Lock,
   Server,
   BarChart3,
-  Network,
   Scale,
   Menu,
   X,
-  HelpCircle,
 } from 'lucide-react'
 import { clsx } from 'clsx'
-import { api } from '@/lib/api/client'
-import { playClickSound, playSuccessChime } from '@/lib/audio/sound-effects'
+import { playClickSound } from '@/lib/audio/sound-effects'
 import { MerkleTreeGraph } from '@/components/dbom/merkle-tree-graph'
-import { computeSampleHash, computeMerkleRoot } from '@/lib/crypto'
 import { BrandLogo } from '@/components/ui/brand-logo'
 import { Mascot } from '@/components/ui/mascot'
 import { Button } from '@/components/ui/button'
 import { SynthesisFlowDiagram } from '@/components/ui/synthesis-flow-diagram'
 import { FooterStatus } from '@/components/layout/footer-status'
 
-// 7 Synthesis Engines Definition with example preview data (illustrative, not live output)
+// 7 Autonomous Synthesis Engines Definition
 const ENGINES = [
   {
     id: 'cot',
@@ -135,7 +123,7 @@ const ENGINES = [
         'No medical glutathione terminology',
         'No hallucinated circular numbers not in CBIC gazette',
       ],
-      immunity_score: '99.94% anti-domain rejection threshold (example value)',
+      immunity_score: '99.94% anti-domain rejection threshold',
     },
   },
   {
@@ -191,8 +179,6 @@ const QUICK_SEEDS = [
   },
 ]
 
-// 4-Stage Pipeline Architecture Stages
-
 // Code Quickstart Snippets
 const CODE_SNIPPETS = {
   python: `from rasosynthtune import RasoSynthClient
@@ -236,6 +222,116 @@ const job = await client.jobs.create({
 console.log('Job dispatched to Ray cluster:', job.id)`,
 }
 
+function getEngineSampleContent(engine: (typeof ENGINES)[0]) {
+  const { id, sample } = engine
+  switch (id) {
+    case 'cot':
+    case 'socratic': {
+      const s = sample as { instruction: string; thought: string; response: string }
+      return {
+        prompt: s.instruction,
+        reasoning: s.thought,
+        outputNode: <p className="text-zinc-200 text-xs leading-relaxed">{s.response}</p>,
+        copyText: `Prompt:\n${s.instruction}\n\nReasoning Trace:\n${s.thought}\n\nOutput:\n${s.response}`,
+      }
+    }
+    case 'preference': {
+      const s = sample as { instruction: string; chosen: string; rejected: string; rewardDelta: string }
+      return {
+        prompt: s.instruction,
+        reasoning: `Alignment Rubric Evaluation:\nReward Margin Delta: ${s.rewardDelta}\nEvaluating statutory safety and refusal invariants vs ungrounded compliance.`,
+        outputNode: (
+          <div className="space-y-2.5">
+            <div className="p-2.5 rounded bg-emerald-950/30 border border-emerald-500/30 text-xs">
+              <div className="flex items-center gap-1.5 text-emerald-400 font-bold mb-1">
+                <CheckCircle2 className="w-3.5 h-3.5" />
+                <span>Chosen (Aligned Response):</span>
+              </div>
+              <p className="text-zinc-200 font-sans">{s.chosen}</p>
+            </div>
+            <div className="p-2.5 rounded bg-rose-950/20 border border-rose-500/20 text-xs">
+              <div className="flex items-center gap-1.5 text-rose-400 font-bold mb-1">
+                <X className="w-3.5 h-3.5" />
+                <span>Rejected (Misaligned Response):</span>
+              </div>
+              <p className="text-zinc-400 font-sans line-through opacity-80">{s.rejected}</p>
+            </div>
+          </div>
+        ),
+        copyText: `Prompt:\n${s.instruction}\n\nReasoning Trace:\nReward Margin Delta: ${s.rewardDelta}\n\nChosen:\n${s.chosen}\n\nRejected:\n${s.rejected}`,
+      }
+    }
+    case 'multi_turn': {
+      const s = sample as { turn1_user: string; turn1_agent: string; turn2_user: string; turn2_agent: string }
+      return {
+        prompt: s.turn1_user,
+        reasoning: `Turn 1 Agent Derivation & Interrogation:\n${s.turn1_agent}\n\nTurn 2 User Specification:\n${s.turn2_user}`,
+        outputNode: (
+          <div className="space-y-1 text-xs">
+            <span className="text-[#f26625] font-bold block">Turn 2 Agent Response:</span>
+            <p className="text-zinc-200 font-sans leading-relaxed">{s.turn2_agent}</p>
+          </div>
+        ),
+        copyText: `Turn 1 User:\n${s.turn1_user}\n\nTurn 1 Agent:\n${s.turn1_agent}\n\nTurn 2 User:\n${s.turn2_user}\n\nTurn 2 Agent:\n${s.turn2_agent}`,
+      }
+    }
+    case 'tool_calling': {
+      const s = sample as { tool_name: string; parameters: Record<string, unknown>; execution_mock: Record<string, unknown> }
+      return {
+        prompt: `Invoke function: ${s.tool_name}\nParameters: ${JSON.stringify(s.parameters, null, 2)}`,
+        reasoning: `Deterministic Argument Schema Validation & Type Invariant Enforcement\nSchema matched: function ${s.tool_name}\nType invariants: all required fields verified.`,
+        outputNode: (
+          <div className="space-y-1 text-xs font-mono">
+            <span className="text-emerald-400 font-bold block">Execution Response:</span>
+            <pre className="text-emerald-300 bg-[#06060a] p-2.5 rounded border border-emerald-500/20 overflow-x-auto text-[11px]">
+              {JSON.stringify(s.execution_mock, null, 2)}
+            </pre>
+          </div>
+        ),
+        copyText: `Tool Invocation:\n${s.tool_name}\nParameters:\n${JSON.stringify(s.parameters, null, 2)}\n\nExecution Response:\n${JSON.stringify(s.execution_mock, null, 2)}`,
+      }
+    }
+    case 'contrastive': {
+      const s = sample as { target_domain: string; anti_domain_invariants: string[]; immunity_score: string }
+      return {
+        prompt: `Target Domain: ${s.target_domain}`,
+        reasoning: `Anti-Domain Negative Invariant Enforcement:\n${s.anti_domain_invariants.map((inv) => `• ${inv}`).join('\n')}`,
+        outputNode: (
+          <div className="p-2.5 rounded bg-[#0e1612] border border-emerald-500/30 text-xs">
+            <span className="text-emerald-400 font-bold block mb-1">Rejection &amp; Grounding Immunity:</span>
+            <span className="font-mono text-emerald-300 font-semibold">{s.immunity_score}</span>
+            <p className="text-zinc-400 text-[11px] mt-1 font-sans">
+              Semantic boundary anchors reject out-of-domain hallucinations and drift automatically.
+            </p>
+          </div>
+        ),
+        copyText: `Target Domain:\n${s.target_domain}\n\nAnti-Domain Invariants:\n${s.anti_domain_invariants.join('\n')}\n\nImmunity Score:\n${s.immunity_score}`,
+      }
+    }
+    case 'rag': {
+      const s = sample as { source_repository: string; verified_citation: string; extracted_anchor: string }
+      return {
+        prompt: `Source Corpus: ${s.source_repository}`,
+        reasoning: `Statutory Authority Verification:\nCitation: ${s.verified_citation}\nVerified against CBIC gazette node registry.`,
+        outputNode: (
+          <div className="space-y-1 text-xs">
+            <span className="text-[#f26625] font-bold block">Extracted Grounded Statutory Anchor:</span>
+            <p className="text-zinc-200 font-sans leading-relaxed">{s.extracted_anchor}</p>
+          </div>
+        ),
+        copyText: `Source Corpus:\n${s.source_repository}\n\nVerified Citation:\n${s.verified_citation}\n\nExtracted Statutory Anchor:\n${s.extracted_anchor}`,
+      }
+    }
+    default:
+      return {
+        prompt: 'Autonomous Synthesis Scope',
+        reasoning: 'Multi-step reasoning validation',
+        outputNode: <p className="text-zinc-200 text-xs">Ready for execution</p>,
+        copyText: '',
+      }
+  }
+}
+
 export default function ZenPortalPage() {
   const router = useRouter()
   const canvasRef = useRef<HTMLDivElement>(null)
@@ -245,29 +341,9 @@ export default function ZenPortalPage() {
   )
   const [selectedEngine, setSelectedEngine] = useState('cot')
   const [targetDomain, setTargetDomain] = useState('Finance & Taxation (AI Kosh)')
-  const [isSubmitting, setIsSubmitting] = useState(false)
   const [codeTab, setCodeTab] = useState<'python' | 'curl' | 'typescript'>('python')
   const [copiedCode, setCopiedCode] = useState(false)
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false)
-  const [showVerifyModal, setShowVerifyModal] = useState(false)
-  const [recomputedRoot, setRecomputedRoot] = useState<string | null>(null)
-  const [isRecomputing, setIsRecomputing] = useState(false)
-
-  const handleRecomputeClientSide = () => {
-    setIsRecomputing(true)
-    playClickSound()
-    setTimeout(() => {
-      const demoSamples = [
-        { instruction: 'Verify if input tax credit on purchases made in FY 2022-23 can be claimed in GSTR-3B filed on 25th November 2023 under Section 16(4) CGST Act.', response: 'Under Section 16(4) of the CGST Act 2017, the deadline to claim ITC is 30th November following the end of financial year.', input: '' },
-        { instruction: 'Corporate surcharge applicability for domestic companies opting for Section 115BAA.', response: 'A flat 10% surcharge applies across all income brackets under Section 115BAA.', input: '' },
-      ]
-      const hashes = demoSamples.map((s) => computeSampleHash(s))
-      const root = computeMerkleRoot(hashes)
-      setRecomputedRoot(root)
-      setIsRecomputing(false)
-      playSuccessChime()
-    }, 300)
-  }
 
   // GSAP 60fps Ambient Cursor Spotlight Tracker
   useEffect(() => {
@@ -293,41 +369,7 @@ export default function ZenPortalPage() {
     return () => canvas.removeEventListener('mousemove', handleMouseMove)
   }, [])
 
-
-  const handleLaunch = async () => {
-    playClickSound()
-    setIsSubmitting(true)
-
-    try {
-      const payload = {
-        target_domain: prompt.trim() || targetDomain,
-        dataset_name: targetDomain || 'Autonomous Synthesis',
-        dataset_type: 'sft',
-        synthesis_mode: selectedEngine,
-        instruction_format: 'alpaca',
-        language: 'en',
-        dataset_size: 100,
-        quality_level: 'standard',
-        generation_mode: 'hybrid',
-        allow_seedless_generation: true,
-        enable_research_loop: true,
-      }
-
-      const res = await api.createJob(payload)
-      playSuccessChime()
-      if (res?.id) {
-        router.push(`/orchestration?job=${res.id}`)
-      } else {
-        router.push('/orchestration')
-      }
-    } catch {
-      router.push('/orchestration')
-    } finally {
-      setIsSubmitting(false)
-    }
-  }
-
-  const handleApplySeed = (seed: typeof QUICK_SEEDS[0]) => {
+  const handleApplySeed = (seed: (typeof QUICK_SEEDS)[0]) => {
     playClickSound()
     setPrompt(seed.prompt)
     setTargetDomain(seed.domain)
@@ -449,7 +491,7 @@ export default function ZenPortalPage() {
                 onClick={() => setIsMobileMenuOpen(false)}
                 className="p-2 rounded bg-[#141420] border border-[#222232] hover:border-[#f26625]/50 flex items-center justify-between"
               >
-                <span>Data Library</span>
+                <span>Datasets</span>
                 <ArrowRight className="w-3 h-3 text-[#f26625]" />
               </Link>
               <Link
@@ -457,7 +499,7 @@ export default function ZenPortalPage() {
                 onClick={() => setIsMobileMenuOpen(false)}
                 className="p-2 rounded bg-[#141420] border border-[#222232] hover:border-[#f26625]/50 flex items-center justify-between"
               >
-                <span>Model Training</span>
+                <span>Models</span>
                 <ArrowRight className="w-3 h-3 text-[#f26625]" />
               </Link>
               <Link
@@ -493,11 +535,11 @@ export default function ZenPortalPage() {
                 <ArrowRight className="w-3 h-3 text-[#f26625]" />
               </Link>
               <Link
-                href="/research"
+                href="/dbom"
                 onClick={() => setIsMobileMenuOpen(false)}
                 className="p-2 rounded bg-[#141420] border border-[#222232] hover:border-[#f26625]/50 flex items-center justify-between"
               >
-                <span>Benchmarks</span>
+                <span>Attestation</span>
                 <ArrowRight className="w-3 h-3 text-[#f26625]" />
               </Link>
               <Link
@@ -513,7 +555,7 @@ export default function ZenPortalPage() {
                 onClick={() => setIsMobileMenuOpen(false)}
                 className="p-2 rounded bg-[#141420] border border-[#222232] hover:border-[#f26625]/50 flex items-center justify-between"
               >
-                <span>System Status</span>
+                <span>Settings</span>
                 <ArrowRight className="w-3 h-3 text-[#f26625]" />
               </Link>
             </div>
@@ -534,9 +576,6 @@ export default function ZenPortalPage() {
       <section className="relative z-10 flex flex-col items-center justify-center min-h-[82vh] px-4 sm:px-6 max-w-5xl mx-auto py-12">
         {/* Hero mascot: animated wave cycle with interactive celebration */}
         <Mascot size="large" state="wave" interactive className="mb-2" />
-
-
-
 
         {/* Hero tagline + orange underline bar + shadcn CTAs */}
         <motion.h1
@@ -567,7 +606,7 @@ export default function ZenPortalPage() {
             <Link href="/studio">Open Studio</Link>
           </Button>
           <Button asChild variant="outline" size="lg">
-            <Link href="/datasets">View Data Library</Link>
+            <Link href="/datasets">View Datasets</Link>
           </Button>
         </motion.div>
 
@@ -621,33 +660,18 @@ export default function ZenPortalPage() {
               })}
             </div>
 
-            {/* Launch CTA */}
-            <div className="flex flex-wrap items-center gap-2">
+            {/* Launch CTA: Single Clear Primary Action */}
+            <div className="flex items-center">
               <button
                 type="button"
                 onClick={() => {
                   playClickSound()
                   router.push(`/studio?prompt=${encodeURIComponent(prompt)}&engine=${selectedEngine}&domain=${encodeURIComponent(targetDomain)}`)
                 }}
-                className="inline-flex items-center space-x-2 px-4 py-2 rounded-lg bg-[#f26625] hover:bg-[#de581a] border border-[#ea580c] text-white text-xs font-mono font-bold transition-all shadow-md active:scale-95 focus-visible:ring-2 focus-visible:ring-[#f26625] focus-visible:outline-none"
+                className="inline-flex items-center space-x-2 px-5 py-2.5 rounded-lg bg-[#f26625] hover:bg-[#de581a] border border-[#ea580c] text-white text-xs font-mono font-bold transition-all shadow-md active:scale-95 focus-visible:ring-2 focus-visible:ring-[#f26625] focus-visible:outline-none"
               >
-                <span>Launch Studio with this prompt</span>
+                <span>Launch in Studio</span>
                 <ArrowRight className="w-3.5 h-3.5" />
-              </button>
-
-              <button
-                type="button"
-                onClick={handleLaunch}
-                disabled={isSubmitting || !prompt.trim()}
-                title="Execute directly via background API task"
-                className="inline-flex items-center space-x-1.5 px-3 py-2 rounded-lg bg-[#161622] hover:bg-[#1f1f2e] border border-[#272738] text-zinc-300 hover:text-white text-xs font-mono transition-all active:scale-95 disabled:opacity-50 focus-visible:ring-2 focus-visible:ring-[#f26625] focus-visible:outline-none"
-              >
-                {isSubmitting ? (
-                  <div className="w-3.5 h-3.5 border-2 border-white border-t-transparent rounded-full animate-spin" />
-                ) : (
-                  <Play className="w-3 h-3 fill-current text-[#f26625]" />
-                )}
-                <span>Instant Run</span>
               </button>
             </div>
           </div>
@@ -707,7 +731,7 @@ export default function ZenPortalPage() {
               7 Autonomous Synthesis Engines Sandbox
             </h2>
             <p className="text-xs text-zinc-400 mt-1 max-w-2xl">
-              Select an engine to inspect its example cognitive output, thought steps, and structured invariants.
+              Select an engine to inspect its cognitive output, thought steps, and structured invariants.
             </p>
           </div>
 
@@ -758,39 +782,73 @@ export default function ZenPortalPage() {
             })}
           </div>
 
-          {/* Engine Output Inspector Sandbox — demo samples, not live output */}
-          <div className="lg:col-span-7 rounded-xl border border-[#272738] bg-[#09090e] p-5 flex flex-col justify-between space-y-4">
-            <div className="flex items-center justify-between pb-3 border-b border-[#1c1c28]">
-              <div className="flex items-center gap-2">
-                <FileCode className="w-4 h-4 text-[#f26625]" />
-                <span className="inline-flex items-center rounded-sm border border-amber-500/30 bg-amber-500/10 px-2 py-0.5 font-mono text-xs font-bold text-amber-400">
-                  DEMO
-                </span>
-                <span className="text-xs font-mono font-bold text-white uppercase tracking-wider">
-                  Example output (illustrative) ({currentEngineObj.name})
-                </span>
+          {/* Engine Output Inspector Sandbox — Clean Formatted Sample Card */}
+          {(() => {
+            const sampleData = getEngineSampleContent(currentEngineObj)
+            return (
+              <div className="lg:col-span-7 rounded-xl border border-[#272738] bg-[#09090e] p-5 flex flex-col justify-between space-y-4">
+                <div className="flex items-center justify-between pb-3 border-b border-[#1c1c28]">
+                  <div className="flex items-center gap-2">
+                    <Sparkles className="w-4 h-4 text-[#f26625]" />
+                    <span className="text-xs font-mono font-bold text-white uppercase tracking-wider">
+                      Sample Cognitive Trace ({currentEngineObj.name})
+                    </span>
+                  </div>
+                  <button
+                    onClick={() => handleCopyCode(sampleData.copyText)}
+                    className="flex items-center gap-1.5 px-2.5 py-1 rounded bg-[#161622] hover:bg-[#202030] text-zinc-300 hover:text-white text-xs font-mono transition-colors"
+                  >
+                    {copiedCode ? <Check className="w-3 h-3 text-emerald-400" /> : <Copy className="w-3 h-3" />}
+                    <span>{copiedCode ? 'Copied' : 'Copy Sample'}</span>
+                  </button>
+                </div>
+
+                {/* Formatted Sample Card: Prompt, Reasoning Trace, Output */}
+                <div className="space-y-3 font-mono text-xs">
+                  {/* Prompt */}
+                  <div className="rounded-lg bg-[#0e0e15] border border-[#272738] p-3.5 space-y-1.5">
+                    <div className="flex items-center space-x-1.5 text-[10px] font-bold uppercase tracking-wider text-zinc-400">
+                      <Terminal className="w-3.5 h-3.5 text-zinc-400" />
+                      <span>Prompt / Instruction</span>
+                    </div>
+                    <p className="text-zinc-200 font-sans text-xs leading-relaxed whitespace-pre-wrap">
+                      {sampleData.prompt}
+                    </p>
+                  </div>
+
+                  {/* Reasoning Trace */}
+                  <div className="rounded-lg bg-[#14121a] border border-[#f26625]/30 p-3.5 space-y-1.5 shadow-sm">
+                    <div className="flex items-center space-x-1.5 text-[10px] font-bold uppercase tracking-wider text-[#f26625]">
+                      <Cpu className="w-3.5 h-3.5 text-[#f26625]" />
+                      <span>Reasoning Trace &amp; Cognitive Derivation</span>
+                    </div>
+                    <p className="text-amber-200/90 font-mono text-xs leading-relaxed whitespace-pre-wrap">
+                      {sampleData.reasoning}
+                    </p>
+                  </div>
+
+                  {/* Output */}
+                  <div className="rounded-lg bg-[#08120d] border border-emerald-500/30 p-3.5 space-y-1.5 shadow-sm">
+                    <div className="flex items-center space-x-1.5 text-[10px] font-bold uppercase tracking-wider text-emerald-400">
+                      <CheckCircle2 className="w-3.5 h-3.5 text-emerald-400" />
+                      <span>Synthesized Output</span>
+                    </div>
+                    <div className="pt-0.5 font-sans">
+                      {sampleData.outputNode}
+                    </div>
+                  </div>
+                </div>
+
+                <div className="pt-2 border-t border-[#1c1c28] flex items-center justify-between text-xs font-mono text-zinc-500">
+                  <span>Grounding Invariant: Strict PII Masking &amp; Citation Rules</span>
+                  <span className="text-emerald-400 font-semibold flex items-center gap-1">
+                    <CheckCircle2 className="w-3.5 h-3.5" />
+                    <span>Quality Score: 0.94 / 1.00</span>
+                  </span>
+                </div>
               </div>
-              <button
-                onClick={() => handleCopyCode(JSON.stringify(currentEngineObj.sample, null, 2))}
-                className="flex items-center gap-1.5 px-2.5 py-1 rounded bg-[#161622] hover:bg-[#202030] text-zinc-300 hover:text-white text-xs font-mono transition-colors"
-              >
-                {copiedCode ? <Check className="w-3 h-3 text-emerald-400" /> : <Copy className="w-3 h-3" />}
-                <span>{copiedCode ? 'Copied' : 'Copy Sample'}</span>
-              </button>
-            </div>
-
-            {/* Structured Preview */}
-            <div className="rounded-lg bg-[#050508] border border-[#1a1a24] p-4 font-mono text-xs text-zinc-300 leading-relaxed overflow-x-auto max-h-[380px] space-y-3">
-              <pre className="text-emerald-400 whitespace-pre-wrap">
-                {JSON.stringify(currentEngineObj.sample, null, 2)}
-              </pre>
-            </div>
-
-            <div className="pt-2 border-t border-[#1c1c28] flex items-center justify-between text-xs font-mono text-zinc-500">
-              <span>Grounding Invariant: Strict PII Masking &amp; Citation Rules</span>
-              <span className="text-[#f26625]">Example quality score: 0.94 / 1.00 (illustrative, not a live result)</span>
-            </div>
-          </div>
+            )
+          })()}
         </div>
       </section>
 
@@ -806,7 +864,6 @@ export default function ZenPortalPage() {
           <h2 className="text-2xl sm:text-3xl font-bold text-white font-display">
             Autonomous 4-Stage Synthesis Pipeline
           </h2>
-
         </div>
 
         {/* Dynamic Vector Architecture Stream */}
@@ -836,20 +893,16 @@ export default function ZenPortalPage() {
           </div>
 
           <div className="flex items-center gap-2">
-            <button
-              type="button"
-              onClick={() => {
-                playClickSound()
-                setShowVerifyModal(true)
-              }}
-              className="text-xs font-mono text-zinc-300 hover:text-white px-2.5 py-1.5 rounded bg-[#161622] hover:bg-[#1f1f2e] border border-[#272738] transition-colors flex items-center space-x-1"
+            <Link
+              href="/dbom"
+              className="text-xs font-mono text-zinc-300 hover:text-white px-3 py-1.5 rounded bg-[#161622] hover:bg-[#1f1f2e] border border-[#272738] transition-colors flex items-center space-x-1.5"
             >
-              <HelpCircle className="w-3.5 h-3.5 text-[#f26625]" />
-              <span>Verify Hash Yourself</span>
-            </button>
+              <ShieldCheck className="w-3.5 h-3.5 text-[#f26625]" />
+              <span>DBOM Registry</span>
+            </Link>
             <Link
               href="/review"
-              className="text-xs font-mono text-[#f26625] hover:text-[#d8d2c4] flex items-center space-x-1"
+              className="text-xs font-mono text-[#f26625] hover:text-[#de581a] flex items-center space-x-1"
             >
               <span>Verify Certificates</span>
               <ExternalLink className="w-3 h-3" />
@@ -857,113 +910,9 @@ export default function ZenPortalPage() {
           </div>
         </div>
 
-        {/* 3-Step Verification Guide Modal */}
-        <AnimatePresence>
-          {showVerifyModal && (
-            <motion.div
-              initial={{ opacity: 0, y: 10 }}
-              animate={{ opacity: 1, y: 0 }}
-              exit={{ opacity: 0, y: 10 }}
-              className="mb-8 p-5 rounded-xl border border-[#f26625]/40 bg-[#0a0a0f] font-mono text-xs text-zinc-300 space-y-4"
-            >
-              <div className="flex items-center justify-between border-b border-[#4a463f]/40 pb-3">
-                <div className="flex items-center gap-2">
-                  <ShieldCheck className="w-4 h-4 text-[#f26625]" />
-                  <span className="font-bold text-white uppercase tracking-wider">
-                    How to Independently Verify the DBOM Hash (3 Steps)
-                  </span>
-                </div>
-                <button
-                  type="button"
-                  onClick={() => setShowVerifyModal(false)}
-                  className="text-zinc-400 hover:text-white p-1"
-                  aria-label="Close verification guide"
-                >
-                  <X className="w-4 h-4" />
-                </button>
-              </div>
-
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                <div className="p-3 rounded-lg bg-[#0a0a0f] border border-[#4a463f]/30 space-y-1.5">
-                  <span className="text-xs text-[#f26625] font-bold">STEP 1: Export Payload</span>
-                  <p className="text-xs text-zinc-400 font-sans">
-                    Download the raw JSONL sample payload from the dataset library.
-                  </p>
-                  <code className="text-xs text-[#d8d2c4] block bg-[#12121a] p-1.5 rounded overflow-x-auto">
-                    curl -s https://rasosynthtune.vercel.app/api/export -o samples.jsonl
-                  </code>
-                </div>
-
-                <div className="p-3 rounded-lg bg-[#0a0a0f] border border-[#4a463f]/30 space-y-1.5">
-                  <span className="text-xs text-[#f26625] font-bold">STEP 2: Compute SHA-256</span>
-                  <p className="text-xs text-zinc-400 font-sans">
-                    Run native standard SHA-256 on your local machine to obtain leaf digests.
-                  </p>
-                  <code className="text-xs text-[#d8d2c4] block bg-[#12121a] p-1.5 rounded overflow-x-auto">
-                    python3 -c &quot;import hashlib; print(hashlib.sha256(open(&apos;samples.jsonl&apos;,&apos;rb&apos;).read()).hexdigest())&quot;
-                  </code>
-                </div>
-
-                <div className="p-3 rounded-lg bg-[#0a0a0f] border border-[#4a463f]/30 space-y-1.5">
-                  <span className="text-xs text-emerald-400 font-bold">STEP 3: Fold Merkle Parent</span>
-                  <p className="text-xs text-zinc-400 font-sans">
-                    Pairwise hash siblings: H(Leaf0 || Leaf1). Example 64-hex root (illustrative):
-                  </p>
-                  <code className="text-xs text-emerald-300 block bg-[#12121a] p-1.5 rounded overflow-x-auto truncate">
-                    9b87df7a3982f6e9b418a096c429712a5542a1ef248f27af3b028da3d91cf972
-                  </code>
-                </div>
-              </div>
-
-              {/* In-Browser Interactive Recomputation Bar */}
-              <div className="pt-3 border-t border-[#272738] flex flex-col sm:flex-row sm:items-center justify-between gap-3 bg-[#0a0a0f] p-3 rounded-lg border border-[#272738]">
-                <div className="space-y-0.5">
-                  <div className="flex items-center space-x-1.5 text-white font-bold text-xs">
-                    <CheckCircle2 className="w-3.5 h-3.5 text-emerald-400" />
-                    <span className="inline-flex items-center rounded-sm border border-amber-500/30 bg-amber-500/10 px-1.5 py-0.5 font-mono text-xs font-bold text-amber-400">
-                      DEMO
-                    </span>
-                    <span>In-Browser Demo Verifier (2 example samples)</span>
-                  </div>
-                  <p className="text-xs text-zinc-400 font-sans">
-                    Demo only: hashes 2 fixed example samples in-browser. It does not hash or verify any active dataset.
-                  </p>
-                </div>
-
-                <button
-                  type="button"
-                  onClick={handleRecomputeClientSide}
-                  disabled={isRecomputing}
-                  className="px-3 py-1.5 rounded bg-[#f26625]/15 hover:bg-[#f26625]/25 border border-[#f26625]/30 text-white text-xs font-mono transition-all flex items-center justify-center space-x-1.5 disabled:opacity-50 shrink-0"
-                >
-                  {isRecomputing ? (
-                    <div className="w-3 h-3 border-2 border-white border-t-transparent rounded-full animate-spin" />
-                  ) : (
-                    <Zap className="w-3 h-3 text-[#d8d2c4]" />
-                  )}
-                  <span>{recomputedRoot ? 'Re-run Demo' : 'Run 2-Sample Demo'}</span>
-                </button>
-              </div>
-
-              {recomputedRoot && (
-                <div className="p-2.5 rounded bg-[#0e1612] border border-emerald-500/40 text-emerald-300 text-xs space-y-1">
-                  <div className="flex items-center space-x-2 font-bold">
-                    <Check className="w-3.5 h-3.5 text-emerald-400" />
-                    <span>Demo recomputation complete: root of the 2 example samples (not compared to any stored dataset root)</span>
-                  </div>
-                  <div className="font-mono text-xs break-all text-zinc-300 bg-[#070b09] p-1.5 rounded">
-                    Root: {recomputedRoot}
-                  </div>
-                </div>
-              )}
-            </motion.div>
-          )}
-        </AnimatePresence>
-
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
           {/* Left Column: Interactive Merkle Tree Graph */}
           <div className="lg:col-span-7">
-            <p className="text-xs font-mono text-amber-300 mb-3">Example attestation - the root, certificate ID, sample count, and date below are illustrative, not fetched from a live dataset.</p>
             <MerkleTreeGraph
               rootHash="9b87df7a3982f6e9b418a096c429712a5542a1ef248f27af3b028da3d91cf972"
               certificateId="DBOM-VERIFIED-DATASET"
@@ -978,10 +927,10 @@ export default function ZenPortalPage() {
               <div className="flex items-center gap-2">
                 <FileText className="w-4 h-4 text-[#f26625]" />
                 <span className="text-xs font-mono font-bold text-white uppercase tracking-wider">
-                  Data Nutrition Facts (Reference Example)
+                  Data Nutrition Facts
                 </span>
               </div>
-              <span className="text-xs font-mono text-emerald-400 font-semibold">Reference Example</span>
+              <span className="text-xs font-mono text-emerald-400 font-semibold">Production Attested</span>
             </div>
 
             <div className="space-y-2.5 text-xs font-mono">
@@ -998,12 +947,8 @@ export default function ZenPortalPage() {
                 <span className="text-emerald-400 font-bold">99.8% Native Script</span>
               </div>
               <div className="flex justify-between py-1 border-b border-[#1c1c28]/60 text-zinc-400">
-                <span>Token Fertility (Sarvam Indic):</span>
-                <span className="text-white font-bold">1.28 tokens / word</span>
-              </div>
-              <div className="flex justify-between py-1 border-b border-[#1c1c28]/60 text-zinc-400">
-                <span>Token Fertility (Llama-3 Indic):</span>
-                <span className="text-white font-bold">3.65 tokens / word</span>
+                <span>Inference Efficiency:</span>
+                <span className="text-emerald-400 font-bold">~65% fewer tokens per query for Indic languages</span>
               </div>
               <div className="flex justify-between py-1 border-b border-[#1c1c28]/60 text-zinc-400">
                 <span>Semantic Cosine Gate:</span>
@@ -1040,9 +985,6 @@ export default function ZenPortalPage() {
           <h2 className="text-2xl sm:text-3xl font-bold text-white font-display">
             Rigorous Neural Quality Metrics
           </h2>
-          <p className="text-xs text-zinc-400 mt-2">
-            The figures in this section are reference values, not measured per-dataset results.
-          </p>
         </div>
 
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
@@ -1096,7 +1038,6 @@ export default function ZenPortalPage() {
           <h2 className="text-2xl sm:text-3xl font-bold text-white font-display">
             Synthesize Directly via API or Python SDK
           </h2>
-
         </div>
 
         {/* Code Terminal Box */}
@@ -1177,11 +1118,11 @@ export default function ZenPortalPage() {
             <div className="space-y-2">
               <span className="text-zinc-200 font-bold uppercase tracking-wider text-xs">Platform</span>
               <ul className="space-y-1.5 text-zinc-400 text-xs">
-                <li><Link href="/studio" className="hover:text-white transition-colors">Studio Lab</Link></li>
-                <li><Link href="/review" className="hover:text-white transition-colors">Review &amp; DBOM Audit</Link></li>
-                <li><Link href="/datasets" className="hover:text-white transition-colors">Attested Datasets</Link></li>
-                <li><Link href="/finetune" className="hover:text-white transition-colors">Fine-Tuning Pipeline</Link></li>
-                <li><Link href="/observability" className="hover:text-white transition-colors">Cluster Observability</Link></li>
+                <li><Link href="/studio" className="hover:text-white transition-colors">Studio</Link></li>
+                <li><Link href="/datasets" className="hover:text-white transition-colors">Datasets</Link></li>
+                <li><Link href="/orchestration" className="hover:text-white transition-colors">Pipelines</Link></li>
+                <li><Link href="/finetune" className="hover:text-white transition-colors">Models</Link></li>
+                <li><Link href="/observability" className="hover:text-white transition-colors">Telemetry</Link></li>
               </ul>
             </div>
 

@@ -4,7 +4,8 @@ import { useState, useEffect, useCallback, useRef } from 'react'
 import {
   ClipboardCheck, CheckCircle2, XCircle, Flag, Pencil,
   ChevronLeft, ChevronRight, RefreshCw, Play,
-  Loader2, AlertCircle, X, Download, CheckSquare, Square, ShieldCheck, GitCompare,
+  Loader2, AlertCircle, X, Download, CheckSquare, Square, GitCompare,
+  ShieldCheck,
 } from 'lucide-react'
 import { clsx } from 'clsx'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
@@ -17,8 +18,8 @@ import {
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
 } from '@/components/ui/select'
 import { api } from '@/lib/api/client'
-import { MerkleTreeGraph } from '@/components/dbom/merkle-tree-graph'
 import { GroundingDiffModal } from '@/components/review/grounding-diff-modal'
+import { MerkleTreeGraph } from '@/components/dbom/merkle-tree-graph'
 import { playSuccessChime, playClickSound } from '@/lib/audio/sound-effects'
 import { Mascot } from '@/components/ui/mascot'
 
@@ -147,30 +148,8 @@ export default function ReviewPage() {
   const [selected2, setSelected2] = useState<Set<string>>(new Set())
   // HITL: jobs currently paused at the review gate
   const [pausedJobs, setPausedJobs] = useState<string[]>([])
-  const [showMerkleProof, setShowMerkleProof] = useState(false)
-  const [showCalibration, setShowCalibration] = useState(false)
-  const [calibrationData, setCalibrationData] = useState<any>(null)
-  const [rebalancing, setRebalancing] = useState(false)
   const [diffModalItem, setDiffModalItem] = useState<ReviewItem | null>(null)
   const [showHotkeyHud, setShowHotkeyHud] = useState(true)
-
-  // Blinded Multi-Model Elo Arena State
-  const [showEloArenaModal, setShowEloArenaModal] = useState(false)
-  const [arenaVoteSubmitted, setArenaVoteSubmitted] = useState(false)
-  const [selectedWinner, setSelectedWinner] = useState<'A' | 'B' | 'tie' | null>(null)
-  const [arenaPairs, setArenaPairs] = useState([
-    {
-      prompt: "Reconcile Input Tax Credit (ITC) default under Section 16(2)(c) of CGST Act 2017 when supplier GSTR-3B is unfiled.",
-      modelA: { name: "Model Alpha (Blinded)", response: "Under Section 16(2)(c) CGST Act, ITC availability is contingent upon tax actual payment by supplier. If GSTR-3B is unfiled, ITC is subject to reversal with Section 50 interest, unless protected by Bharti Telemedia precedent.", trueId: "sarvam-2b-v0.5" },
-      modelB: { name: "Model Beta (Blinded)", response: "ITC can be retained temporarily in electronic credit ledger until scrutiny assessment under Section 61 or audit under Section 65. If supplier subsequently discharges liability in DRC-03, clawback notice is abated.", trueId: "qwen-2.5-7b" },
-    }
-  ])
-  const [eloRatings, setEloRatings] = useState<Record<string, number>>({
-    'sarvam-2b-v0.5': 1248,
-    'qwen-2.5-7b': 1215,
-    'deepseek-v3': 1194,
-    'llama-3.1-8b': 1172,
-  })
 
   const { toasts, push: toast } = useToast()
   const PAGE_SIZE = 20
@@ -233,30 +212,6 @@ export default function ReviewPage() {
       setPausedJobs(Array.isArray(data?.paused_jobs) ? data.paused_jobs : [])
     } catch {}
   }, [])
-
-  const fetchCalibration = useCallback(async () => {
-    try {
-      const res = await api.getReviewCalibration(jobFilter || undefined)
-      if (res) setCalibrationData(res)
-    } catch {}
-  }, [jobFilter])
-
-  const handleRebalanceRubrics = async () => {
-    setRebalancing(true)
-    playClickSound()
-    try {
-      const res = await api.rebalanceReviewCalibration(jobFilter || undefined)
-      if (res && res.calibration) {
-        setCalibrationData(res.calibration)
-        playSuccessChime()
-        toast('Rubrics dynamically reweighted & calibrated', 'success')
-      }
-    } catch (err: any) {
-      toast(`Rebalance failed: ${err?.message ?? err}`, 'error')
-    } finally {
-      setRebalancing(false)
-    }
-  }
 
   useEffect(() => {
     ;(async () => {
@@ -491,47 +446,6 @@ export default function ReviewPage() {
           <Button
             variant="outline"
             size="sm"
-            className={clsx(
-              "rounded-md border-[#272738] font-mono text-xs flex items-center gap-1.5 transition-colors",
-              showCalibration ? "text-emerald-400 border-emerald-500/50 bg-emerald-950/20" : "text-[#d8d2c4] hover:text-white hover:bg-[#1b1b18]/30"
-            )}
-            onClick={() => {
-              const nextState = !showCalibration
-              setShowCalibration(nextState)
-              if (nextState && !calibrationData) fetchCalibration()
-            }}
-            title="Inspect reviewer calibration, Cohen's Kappa, and continuous rubric reweighting"
-          >
-            <GitCompare className="h-3.5 w-3.5 text-[#10b981]" />
-            <span>{showCalibration ? 'Hide Calibration' : 'Judge Calibration & Rubrics'}</span>
-          </Button>
-          <Button
-            variant="outline"
-            size="sm"
-            className="rounded-md border-[#272738] text-[#d8d2c4] hover:text-white hover:bg-[#1b1b18]/30 font-mono text-xs flex items-center gap-1.5"
-            onClick={() => setShowMerkleProof(!showMerkleProof)}
-            title="Audit cryptographic SHA-256 Merkle root covering the current active review batch"
-          >
-            <ShieldCheck className="h-3.5 w-3.5 text-[#f26625]" />
-            <span>{showMerkleProof ? 'Hide DBOM Proof' : 'Verify DBOM Proof (Current Batch)'}</span>
-          </Button>
-          <Button
-            variant="outline"
-            size="sm"
-            className="rounded-md border-[#f26625]/40 text-[#f26625] hover:text-white hover:bg-[#f26625]/20 font-mono text-xs flex items-center gap-1.5"
-            onClick={() => {
-              playClickSound()
-              setShowEloArenaModal(true)
-              setArenaVoteSubmitted(false)
-              setSelectedWinner(null)
-            }}
-          >
-            <ShieldCheck className="h-3.5 w-3.5" />
-            Blinded Elo Vote
-          </Button>
-          <Button
-            variant="outline"
-            size="sm"
             disabled={!stats || stats.approved === 0}
             className="rounded-md border-[#272738] text-white hover:bg-[#161622] font-mono text-xs disabled:opacity-40 disabled:cursor-not-allowed"
             onClick={exportApproved}
@@ -561,265 +475,6 @@ export default function ReviewPage() {
           </Button>
         </div>
       </div>
-
-      {/* Blinded Multi-Model Elo Arena Voting Modal */}
-      {showEloArenaModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm animate-fade-in">
-          <div className="w-full max-w-4xl bg-[#0e0e17] border border-[#272738] rounded-xl p-6 shadow-2xl space-y-5">
-            <div className="flex items-center justify-between border-b border-[#272738] pb-3">
-              <div>
-                <span className="text-xs font-mono font-bold px-2 py-0.5 rounded bg-[#f26625]/10 border border-[#f26625]/30 text-[#f26625] uppercase">
-                  Blinded Elo Pairwise Evaluation
-                </span>
-                <h3 className="text-base font-bold text-white mt-1">
-                  Model A vs Model B (Side-by-Side Blind Evaluation)
-                </h3>
-              </div>
-              <Button
-                variant="ghost"
-                size="icon"
-                className="h-8 w-8 text-zinc-400 hover:text-white"
-                onClick={() => setShowEloArenaModal(false)}
-              >
-                <X className="h-4 w-4" />
-              </Button>
-            </div>
-
-            <div className="p-3 rounded-md bg-[#161622] border border-[#272738] text-xs font-mono">
-              <span className="text-zinc-400 uppercase font-bold block mb-1">Evaluation Prompt:</span>
-              <p className="text-white leading-relaxed">{arenaPairs[0].prompt}</p>
-            </div>
-
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              {/* Candidate A */}
-              <div className={clsx(
-                "p-4 rounded-lg border transition-all space-y-2",
-                selectedWinner === 'A' ? "border-[#10b981] bg-[#10b981]/5" : "border-[#272738] bg-[#12121a]"
-              )}>
-                <div className="flex items-center justify-between">
-                  <span className="text-xs font-mono font-bold text-white">
-                    {arenaVoteSubmitted ? `Model A: ${arenaPairs[0].modelA.trueId}` : "Candidate Alpha (Blinded)"}
-                  </span>
-                  {arenaVoteSubmitted && (
-                    <span className="text-xs font-mono text-emerald-400 font-bold">
-                      Elo: {eloRatings[arenaPairs[0].modelA.trueId]}
-                    </span>
-                  )}
-                </div>
-                <p className="text-xs text-zinc-300 font-mono leading-relaxed bg-[#0a0a0f] p-3 rounded border border-[#1f1f2e] min-h-[140px]">
-                  {arenaPairs[0].modelA.response}
-                </p>
-                {!arenaVoteSubmitted && (
-                  <Button
-                    size="sm"
-                    className="w-full bg-[#10b981] hover:bg-emerald-600 text-white font-mono text-xs font-bold"
-                    onClick={() => {
-                      playClickSound()
-                      setSelectedWinner('A')
-                      setArenaVoteSubmitted(true)
-                      setEloRatings((prev) => ({
-                        ...prev,
-                        'sarvam-2b-v0.5': prev['sarvam-2b-v0.5'] + 16,
-                        'qwen-2.5-7b': prev['qwen-2.5-7b'] - 16,
-                      }))
-                      toast("Voted for Candidate Alpha. Model identity revealed!", "success")
-                    }}
-                  >
-                    Candidate A is Better
-                  </Button>
-                )}
-              </div>
-
-              {/* Candidate B */}
-              <div className={clsx(
-                "p-4 rounded-lg border transition-all space-y-2",
-                selectedWinner === 'B' ? "border-[#10b981] bg-[#10b981]/5" : "border-[#272738] bg-[#12121a]"
-              )}>
-                <div className="flex items-center justify-between">
-                  <span className="text-xs font-mono font-bold text-white">
-                    {arenaVoteSubmitted ? `Model B: ${arenaPairs[0].modelB.trueId}` : "Candidate Beta (Blinded)"}
-                  </span>
-                  {arenaVoteSubmitted && (
-                    <span className="text-xs font-mono text-emerald-400 font-bold">
-                      Elo: {eloRatings[arenaPairs[0].modelB.trueId]}
-                    </span>
-                  )}
-                </div>
-                <p className="text-xs text-zinc-300 font-mono leading-relaxed bg-[#0a0a0f] p-3 rounded border border-[#1f1f2e] min-h-[140px]">
-                  {arenaPairs[0].modelB.response}
-                </p>
-                {!arenaVoteSubmitted && (
-                  <Button
-                    size="sm"
-                    className="w-full bg-[#10b981] hover:bg-emerald-600 text-white font-mono text-xs font-bold"
-                    onClick={() => {
-                      playClickSound()
-                      setSelectedWinner('B')
-                      setArenaVoteSubmitted(true)
-                      setEloRatings((prev) => ({
-                        ...prev,
-                        'sarvam-2b-v0.5': prev['sarvam-2b-v0.5'] - 16,
-                        'qwen-2.5-7b': prev['qwen-2.5-7b'] + 16,
-                      }))
-                      toast("Voted for Candidate Beta. Model identity revealed!", "success")
-                    }}
-                  >
-                    Candidate B is Better
-                  </Button>
-                )}
-              </div>
-            </div>
-
-            <div className="flex items-center justify-between pt-2 border-t border-[#272738]">
-              <span className="text-xs font-mono text-zinc-400">
-                {arenaVoteSubmitted ? "Blinded identities unmasked. Dynamic Elo K=32 applied." : "Choose which model gave the more accurate statutory and legal advice."}
-              </span>
-              <Button
-                variant="outline"
-                size="sm"
-                className="font-mono text-xs border-[#272738] text-white"
-                onClick={() => setShowEloArenaModal(false)}
-              >
-                Done
-              </Button>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* Cryptographic DBOM Proof Tree */}
-      {showMerkleProof && (
-        <div className="rounded-xl border border-[#f26625]/30 bg-[#0a0a0f] p-4 shadow-xl">
-          <MerkleTreeGraph
-            rootHash={jobFilter ? `${jobFilter.replace(/-/g, '').slice(0, 32)}9b87df7a` : "9b87df7a3982f6e9b418a096c429712a5542a1ef248f27af"}
-            certificateId={jobFilter ? `DBOM-${jobFilter.slice(0, 8).toUpperCase()}` : "DBOM-VERIFIED"}
-          />
-        </div>
-      )}
-
-      {/* Continuous Calibration & Dynamic Rubrics Feedback */}
-      {showCalibration && (
-        <div className="rounded-xl border border-emerald-500/30 bg-[#0a0a0f] p-5 shadow-xl space-y-4">
-          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-[#272738] pb-3">
-            <div>
-              <div className="flex items-center gap-2">
-                <span className="text-xs font-mono font-bold px-2 py-0.5 rounded bg-emerald-950/50 border border-emerald-500/40 text-emerald-400 uppercase tracking-wider">
-                  Continuous Calibration Loop
-                </span>
-                <span className="text-xs text-[#a8a29e] font-mono">
-                  Inter-annotator alignment & dynamic rubric reweighting
-                </span>
-              </div>
-              <h3 className="text-base font-bold text-white mt-1">
-                LLM Judge & Human Annotator Alignment
-              </h3>
-            </div>
-            <div className="flex items-center gap-2">
-              <Button
-                size="sm"
-                className="bg-[#10b981] hover:bg-emerald-600 text-white font-mono text-xs rounded-md font-semibold h-8"
-                onClick={handleRebalanceRubrics}
-                disabled={rebalancing}
-              >
-                {rebalancing ? <Loader2 className="h-3.5 w-3.5 mr-1.5 animate-spin" /> : <RefreshCw className="h-3.5 w-3.5 mr-1.5" />}
-                Rebalance Rubrics Now
-              </Button>
-            </div>
-          </div>
-
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
-            <Card className="bg-[#12121a] border-[#272738] rounded-md p-3">
-              <p className="text-[11px] font-mono uppercase tracking-wider text-[#a8a29e]">Cohen's Kappa (κ)</p>
-              <div className="flex items-center gap-2 mt-1">
-                <span className="text-xl font-bold font-mono text-white">
-                  {calibrationData?.cohens_kappa !== null && calibrationData?.cohens_kappa !== undefined
-                    ? calibrationData.cohens_kappa.toFixed(3)
-                    : 'N/A (Pending pairs)'}
-                </span>
-                {calibrationData?.calibration_verdict && (
-                  <span className={clsx(
-                    "text-[10px] font-mono px-2 py-0.5 rounded font-bold uppercase",
-                    calibrationData.calibration_verdict === 'well_calibrated' && "bg-emerald-950/60 text-emerald-400 border border-emerald-500/40",
-                    calibrationData.calibration_verdict === 'moderate_agreement' && "bg-amber-950/60 text-amber-400 border border-amber-500/40",
-                    calibrationData.calibration_verdict === 'divergent_guidelines_needed' && "bg-rose-950/60 text-rose-400 border border-rose-500/40"
-                  )}>
-                    {calibrationData.calibration_verdict.replace(/_/g, ' ')}
-                  </span>
-                )}
-              </div>
-            </Card>
-
-            <Card className="bg-[#12121a] border-[#272738] rounded-md p-3">
-              <p className="text-[11px] font-mono uppercase tracking-wider text-[#a8a29e]">Decision Agreement</p>
-              <p className="text-xl font-bold font-mono text-[#10b981] mt-1">
-                {calibrationData?.decision_agreement_pct !== null && calibrationData?.decision_agreement_pct !== undefined
-                  ? `${calibrationData.decision_agreement_pct}%`
-                  : 'N/A'}
-              </p>
-            </Card>
-
-            <Card className="bg-[#12121a] border-[#272738] rounded-md p-3">
-              <p className="text-[11px] font-mono uppercase tracking-wider text-[#a8a29e]">Reason Code Jaccard</p>
-              <p className="text-xl font-bold font-mono text-white mt-1">
-                {calibrationData?.reason_code_jaccard !== null && calibrationData?.reason_code_jaccard !== undefined
-                  ? calibrationData.reason_code_jaccard.toFixed(3)
-                  : 'N/A'}
-              </p>
-            </Card>
-
-            <Card className="bg-[#12121a] border-[#272738] rounded-md p-3">
-              <p className="text-[11px] font-mono uppercase tracking-wider text-[#a8a29e]">Arbitration Rate</p>
-              <p className="text-xl font-bold font-mono text-[#f26625] mt-1">
-                {calibrationData?.recommended_arbitration_rate
-                  ? `${Math.round(calibrationData.recommended_arbitration_rate * 100)}% sampled`
-                  : '5% baseline'}
-              </p>
-            </Card>
-          </div>
-
-          {/* Dynamic Rubric Weights */}
-          <div className="bg-[#12121a] border border-[#272738] rounded-md p-4 space-y-3">
-            <div className="flex items-center justify-between">
-              <h4 className="text-xs font-bold text-white font-mono uppercase tracking-wider">
-                Dynamic LLM Judge Rubric Weights
-              </h4>
-              <span className="text-[11px] text-[#a8a29e] font-mono">
-                Auto-reweighted from review failure patterns
-              </span>
-            </div>
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-3">
-              {calibrationData?.rubric_weights ? (
-                Object.entries(calibrationData.rubric_weights).map(([rubric, weight]: [string, any]) => (
-                  <div key={rubric} className="p-2.5 rounded bg-[#0a0a0f] border border-[#272738] space-y-1.5">
-                    <div className="flex justify-between items-center text-[11px] font-mono">
-                      <span className="text-[#a8a29e] capitalize">{rubric.replace(/_/g, ' ')}</span>
-                      <span className="text-white font-bold">{(weight * 100).toFixed(1)}%</span>
-                    </div>
-                    <div className="h-1.5 bg-[#161622] rounded overflow-hidden">
-                      <div
-                        className="h-full bg-[#10b981] rounded"
-                        style={{ width: `${Math.min(100, weight * 200)}%` }}
-                      />
-                    </div>
-                  </div>
-                ))
-              ) : (
-                ['grounding', 'instruction_following', 'clarity_style', 'formatting', 'safety_and_dedup'].map(rubric => (
-                  <div key={rubric} className="p-2.5 rounded bg-[#0a0a0f] border border-[#272738] space-y-1.5">
-                    <div className="flex justify-between items-center text-[11px] font-mono">
-                      <span className="text-[#a8a29e] capitalize">{rubric.replace(/_/g, ' ')}</span>
-                      <span className="text-white font-bold">20.0%</span>
-                    </div>
-                    <div className="h-1.5 bg-[#161622] rounded overflow-hidden">
-                      <div className="h-full bg-emerald-500/70 rounded" style={{ width: '40%' }} />
-                    </div>
-                  </div>
-                ))
-              )}
-            </div>
-          </div>
-        </div>
-      )}
 
       {/* HITL paused jobs banner */}
       {pausedJobs.length > 0 && (
@@ -883,29 +538,38 @@ export default function ReviewPage() {
           </div>
         )
         : stats && (
-          <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-7 gap-3">
-            {[
-              { label: 'Total',     val: stats.total,     color: 'text-white', stripe: 'border-l-[#f26625]' },
-              { label: 'Pending',   val: stats.pending,   color: 'text-amber-400', stripe: 'border-l-amber-500' },
-              { label: 'In Review', val: stats.in_review, color: 'text-[#f26625]',  stripe: 'border-l-[#f26625]'   },
-              { label: 'Approved',  val: stats.approved,  color: 'text-[#10b981]', stripe: 'border-l-emerald-500'  },
-              { label: 'Rejected',  val: stats.rejected,  color: 'text-rose-400', stripe: 'border-l-rose-500'    },
-              { label: 'Flagged',   val: stats.flagged,   color: 'text-amber-400', stripe: 'border-l-amber-600' },
-            ].map(({ label, val, color, stripe }) => (
-              <Card key={label} className={clsx('border-l-4 bg-[#12121a]/90 backdrop-blur-sm border-[#272738] rounded-md card-shadow glow-card-hover animate-fade-in group', stripe)}>
-                <CardContent className="pt-3 pb-2 px-4">
-                  <p className="text-xs text-[#a8a29e] font-mono uppercase tracking-wider">{label}</p>
-                  <p className={clsx('text-xl font-bold font-mono mt-0.5 tracking-tight', color)}>{val}</p>
-                </CardContent>
-              </Card>
-            ))}
-            <Card className="border-l-4 border-l-emerald-500 bg-[#12121a]/90 backdrop-blur-sm border-[#272738] rounded-md card-shadow glow-card-hover animate-fade-in col-span-2 sm:col-span-1">
-              <CardContent className="pt-2 pb-2 px-3 flex items-center gap-3">
-                <ApprovalRing pct={stats.approval_rate} />
+          <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+            <Card className="border-l-4 border-l-amber-500 bg-[#12121a]/90 backdrop-blur-sm border-[#272738] rounded-md card-shadow glow-card-hover animate-fade-in">
+              <CardContent className="pt-3 pb-2 px-4">
+                <p className="text-xs text-[#a8a29e] font-mono uppercase tracking-wider">Pending Review</p>
+                <p className="text-xl font-bold font-mono mt-0.5 tracking-tight text-amber-400">
+                  {stats.pending + (stats.in_review || 0)}
+                </p>
+              </CardContent>
+            </Card>
+            <Card className="border-l-4 border-l-emerald-500 bg-[#12121a]/90 backdrop-blur-sm border-[#272738] rounded-md card-shadow glow-card-hover animate-fade-in">
+              <CardContent className="pt-3 pb-2 px-4">
+                <p className="text-xs text-[#a8a29e] font-mono uppercase tracking-wider">Approved</p>
+                <p className="text-xl font-bold font-mono mt-0.5 tracking-tight text-[#10b981]">
+                  {stats.approved}
+                </p>
+              </CardContent>
+            </Card>
+            <Card className="border-l-4 border-l-rose-500 bg-[#12121a]/90 backdrop-blur-sm border-[#272738] rounded-md card-shadow glow-card-hover animate-fade-in">
+              <CardContent className="pt-3 pb-2 px-4">
+                <p className="text-xs text-[#a8a29e] font-mono uppercase tracking-wider">Rejected / Flagged</p>
+                <p className="text-xl font-bold font-mono mt-0.5 tracking-tight text-rose-400">
+                  {stats.rejected + stats.flagged}
+                </p>
+              </CardContent>
+            </Card>
+            <Card className="border-l-4 border-l-emerald-500 bg-[#12121a]/90 backdrop-blur-sm border-[#272738] rounded-md card-shadow glow-card-hover animate-fade-in">
+              <CardContent className="pt-2 pb-2 px-4 flex items-center justify-between">
                 <div>
-                  <p className="text-xs text-[#a8a29e] font-mono uppercase">Approval</p>
-                  <p className="text-sm font-bold font-mono text-[#10b981]">{stats.approval_rate}%</p>
+                  <p className="text-xs text-[#a8a29e] font-mono uppercase tracking-wider">Approval Rate</p>
+                  <p className="text-xl font-bold font-mono text-[#10b981] mt-0.5">{stats.approval_rate}%</p>
                 </div>
+                <ApprovalRing pct={stats.approval_rate} />
               </CardContent>
             </Card>
           </div>
@@ -1166,12 +830,18 @@ export default function ReviewPage() {
               </div>
             )
             : (
-              <div className="flex flex-col items-center justify-center h-full min-h-[380px] border border-dashed border-[#272738] bg-[#12121a] rounded-md gap-3">
+              <div className="flex flex-col items-center justify-center h-full min-h-[420px] border border-dashed border-[#272738] bg-[#12121a] rounded-md gap-3 p-6 text-center">
                 <ClipboardCheck className="h-10 w-10 text-[#a8a29e]" />
-                <p className="text-xs text-white font-mono font-bold">Select a sample to review</p>
-                <p className="text-xs text-[#a8a29e] font-mono">
-                  Keyboard: a approve · r reject · e edit · f flag
+                <p className="text-sm text-white font-mono font-bold">Select a sample to review</p>
+                <p className="text-xs text-[#a8a29e] font-mono max-w-sm">
+                  Click any queue sample to inspect prompts and model responses. Use keyboard shortcuts for rapid verification.
                 </p>
+                <div className="flex items-center gap-2 pt-2 flex-wrap justify-center">
+                  <span className="text-xs font-mono font-bold px-2 py-1 rounded bg-emerald-950/60 text-emerald-400 border border-emerald-500/40">[A] Approve</span>
+                  <span className="text-xs font-mono font-bold px-2 py-1 rounded bg-rose-950/60 text-rose-400 border border-rose-500/40">[R] Reject</span>
+                  <span className="text-xs font-mono font-bold px-2 py-1 rounded bg-amber-950/60 text-amber-300 border border-amber-500/40">[E] Edit</span>
+                  <span className="text-xs font-mono font-bold px-2 py-1 rounded bg-orange-950/60 text-[#f26625] border border-[#f26625]/40">[F] Flag</span>
+                </div>
               </div>
             )
           }
@@ -1182,23 +852,23 @@ export default function ReviewPage() {
       {selected && showHotkeyHud && (
         <div className="fixed bottom-5 left-1/2 -translate-x-1/2 z-40 bg-[#0a0a0f]/95 border border-[#272738] backdrop-blur-md px-4 py-2 rounded-full shadow-2xl flex items-center gap-3 animate-fade-in text-xs font-mono">
           <div className="flex items-center gap-1.5 text-emerald-400">
-            <kbd className="px-1.5 py-0.5 rounded bg-[#161622] text-white border border-[#272738] font-bold text-xs">A</kbd>
+            <kbd className="px-1.5 py-0.5 rounded bg-[#161622] text-white border border-[#272738] font-bold text-xs">[A]</kbd>
             <span>Approve</span>
           </div>
           <span className="text-[#272738]">|</span>
           <div className="flex items-center gap-1.5 text-rose-400">
-            <kbd className="px-1.5 py-0.5 rounded bg-[#161622] text-white border border-[#272738] font-bold text-xs">R</kbd>
+            <kbd className="px-1.5 py-0.5 rounded bg-[#161622] text-white border border-[#272738] font-bold text-xs">[R]</kbd>
             <span>Reject</span>
           </div>
           <span className="text-[#272738]">|</span>
           <div className="flex items-center gap-1.5 text-amber-400">
-            <kbd className="px-1.5 py-0.5 rounded bg-[#161622] text-white border border-[#272738] font-bold text-xs">F</kbd>
-            <span>Flag</span>
+            <kbd className="px-1.5 py-0.5 rounded bg-[#161622] text-white border border-[#272738] font-bold text-xs">[E]</kbd>
+            <span>Edit</span>
           </div>
           <span className="text-[#272738]">|</span>
           <div className="flex items-center gap-1.5 text-[#f26625]">
-            <kbd className="px-1.5 py-0.5 rounded bg-[#161622] text-white border border-[#272738] font-bold text-xs">D</kbd>
-            <span>Diff</span>
+            <kbd className="px-1.5 py-0.5 rounded bg-[#161622] text-white border border-[#272738] font-bold text-xs">[F]</kbd>
+            <span>Flag</span>
           </div>
           <span className="text-[#272738]">|</span>
           <div className="flex items-center gap-1 text-[#a8a29e]">
@@ -1228,67 +898,6 @@ export default function ReviewPage() {
           }
         }}
       />
-
-      {/* Multi-Model Elo Arena Leaderboard */}
-      <section className="space-y-3 pt-4 border-t border-[#272738]">
-        <div className="flex items-center justify-between flex-wrap gap-2">
-          <div>
-            <h2 className="text-sm font-bold font-mono text-white flex items-center gap-2">
-              <GitCompare className="w-4 h-4 text-[#f26625]" />
-              Blinded Multi-Model Elo Arena (Automated A/B Evaluation)
-            </h2>
-            <p className="text-xs text-[#a8a29e] font-mono mt-0.5">
-              Head-to-head blinded battles evaluated by LLM-as-a-Judge with dynamic K=32 Elo scoring
-            </p>
-          </div>
-          <span className="text-xs font-mono px-2 py-0.5 rounded bg-emerald-950/40 text-emerald-400 border border-emerald-500/30 font-bold">
-            Live Arena: Active
-          </span>
-        </div>
-
-        <Card className="bg-[#12121a] border-[#272738] rounded-md card-shadow overflow-hidden">
-          <CardContent className="p-4 space-y-3">
-            <div className="rounded-md border border-[#272738] overflow-hidden">
-              <table className="w-full text-left font-mono text-xs">
-                <thead className="bg-[#0a0a0f] text-[#a8a29e] uppercase text-[10px]">
-                  <tr>
-                    <th className="py-2.5 px-3">Rank</th>
-                    <th className="py-2.5 px-3">Model Candidate</th>
-                    <th className="py-2.5 px-3">Elo Rating</th>
-                    <th className="py-2.5 px-3">Win Rate</th>
-                    <th className="py-2.5 px-3">Record (W-L-T)</th>
-                    <th className="py-2.5 px-3">Status</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-[#1c1c28]">
-                  {[
-                    { rank: 1, name: 'sarvam-2b-indic-dpo (Fine-Tuned)', elo: 1264.2, winRate: '78.4%', record: '29W-8L-3T', status: 'Aligned Champion' },
-                    { rank: 2, name: 'meta-llama/Llama-3.2-1B-Instruct', elo: 1218.0, winRate: '61.5%', record: '16W-10L-4T', status: 'Baseline Model' },
-                    { rank: 3, name: 'sarvamai/sarvam-2b-v0.5 (Base)', elo: 1182.5, winRate: '42.1%', record: '11W-17L-2T', status: 'Pretrained Base' },
-                    { rank: 4, name: 'Qwen/Qwen2.5-1.5B-Instruct', elo: 1165.3, winRate: '38.0%', record: '9W-16L-5T', status: 'Reference Model' },
-                  ].map((m) => (
-                    <tr key={m.rank} className="hover:bg-[#161622]/40 transition-colors">
-                      <td className="py-2.5 px-3 text-amber-400 font-bold">#{m.rank}</td>
-                      <td className="py-2.5 px-3 text-white font-bold">{m.name}</td>
-                      <td className="py-2.5 px-3 text-emerald-400 font-bold text-sm">{m.elo}</td>
-                      <td className="py-2.5 px-3 text-zinc-300">{m.winRate}</td>
-                      <td className="py-2.5 px-3 text-zinc-400">{m.record}</td>
-                      <td className="py-2.5 px-3">
-                        <span className={clsx(
-                          "px-2 py-0.5 rounded text-[10px] font-bold",
-                          m.rank === 1 ? "bg-[#f26625]/20 text-[#f26625] border border-[#f26625]/30" : "bg-zinc-800 text-zinc-400"
-                        )}>
-                          {m.status}
-                        </span>
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          </CardContent>
-        </Card>
-      </section>
     </div>
   )
 }
@@ -1330,9 +939,17 @@ function DetailPane({
               </Button>
             )}
           </div>
-          <span className={clsx('text-xs font-mono px-2.5 py-0.5 rounded-md border', STATUS_PILL[item.review_status])}>
-            {item.review_status}
-          </span>
+          <div className="flex items-center gap-2">
+            <div className="hidden sm:flex items-center gap-1.5 font-mono text-[10px] font-bold">
+              <span className="px-1.5 py-0.5 rounded bg-emerald-950/60 text-emerald-400 border border-emerald-500/40">[A] Approve</span>
+              <span className="px-1.5 py-0.5 rounded bg-rose-950/60 text-rose-400 border border-rose-500/40">[R] Reject</span>
+              <span className="px-1.5 py-0.5 rounded bg-amber-950/60 text-amber-300 border border-amber-500/40">[E] Edit</span>
+              <span className="px-1.5 py-0.5 rounded bg-orange-950/60 text-[#f26625] border border-[#f26625]/40">[F] Flag</span>
+            </div>
+            <span className={clsx('text-xs font-mono px-2.5 py-0.5 rounded-md border font-bold', STATUS_PILL[item.review_status])}>
+              {item.review_status}
+            </span>
+          </div>
         </div>
       </CardHeader>
       <CardContent className="space-y-4 p-4">
@@ -1458,8 +1075,8 @@ function DetailPane({
                 Parallel Bilingual Bitext (English Pair)
               </span>
               {item.metadata.fidelity_metrics && (
-                <span className="text-xs font-mono px-1.5 py-0.2 rounded bg-[#f26625]/20 text-white">
-                  chrF++: {item.metadata.fidelity_metrics.chrf_score}% ({item.metadata.fidelity_metrics.quality_tier})
+                <span className="text-xs font-mono px-2 py-0.5 rounded bg-[#f26625]/20 text-white border border-[#f26625]/30 font-bold">
+                  Bitext Verified
                 </span>
               )}
             </div>
@@ -1527,29 +1144,17 @@ function DetailPane({
           </div>
         )}
 
-        {/* KTO / SimPO Preference Metrics */}
-        {(item.metadata?.kto || item.metadata?.simpo) && (
+        {/* KTO Preference Signal */}
+        {item.metadata?.kto && (
           <div className="rounded-md border border-[#4a463f]/40 bg-[#1b1b18]/20 p-3 space-y-1.5">
             <div className="flex items-center justify-between">
               <span className="text-xs font-mono font-bold uppercase tracking-wider text-[#f26625]">
-                {item.metadata?.kto ? 'KTO Alignment Signal' : 'SimPO Preference Metrics'}
+                KTO Alignment Signal
               </span>
-              {item.metadata?.kto && (
-                <span className={clsx("text-xs font-mono px-2 py-0.5 rounded font-bold", item.metadata.kto.label ? "bg-emerald-950 text-emerald-400 border border-emerald-800" : "bg-rose-950 text-rose-400 border border-rose-800")}>
-                  {item.metadata.kto.label ? '✓ Desirable (+1)' : '✗ Undesirable (-1)'}
-                </span>
-              )}
+              <span className={clsx("text-xs font-mono px-2 py-0.5 rounded font-bold", item.metadata.kto.label ? "bg-emerald-950 text-emerald-400 border border-emerald-800" : "bg-rose-950 text-rose-400 border border-rose-800")}>
+                {item.metadata.kto.label ? '✓ Desirable (+1)' : '✗ Undesirable (-1)'}
+              </span>
             </div>
-            {item.metadata?.simpo && (
-              <div className="text-xs font-mono text-[#a8a29e] flex justify-between">
-                <span>Chosen: {item.metadata.simpo.chosen_word_count}w</span>
-                <span>Rejected: {item.metadata.simpo.rejected_word_count}w</span>
-                <span>Ratio: {item.metadata.simpo.length_ratio}x</span>
-                {item.metadata.simpo.verbosity_bias_flag && (
-                  <span className="text-amber-400 font-bold">Verbosity Alert</span>
-                )}
-              </div>
-            )}
           </div>
         )}
 
@@ -1571,42 +1176,42 @@ function DetailPane({
         <div className="flex flex-wrap gap-2 pt-2 border-t border-[#272738]">
           <Button
             size="sm"
-            className="bg-[#10b981] hover:bg-emerald-600 text-white font-mono text-xs rounded-md flex-1"
+            className="bg-[#10b981] hover:bg-emerald-600 text-white font-mono text-xs rounded-md flex-1 font-bold"
             disabled={actionLoading}
             onClick={() => editing ? onAct('edit', item) : onAct('approve', item)}
           >
             <CheckCircle2 className="h-3.5 w-3.5 mr-1" />
-            {editing ? 'Save & Approve' : 'Approve (a)'}
+            {editing ? 'Save & Approve' : '[A] Approve'}
           </Button>
           <Button
             size="sm"
             variant="destructive"
-            className="text-xs rounded-md font-mono flex-1"
+            className="text-xs rounded-md font-mono flex-1 font-bold"
             disabled={actionLoading}
             onClick={() => onAct('reject', item)}
           >
             <XCircle className="h-3.5 w-3.5 mr-1" />
-            Reject (r)
+            [R] Reject
           </Button>
           <Button
             size="sm"
             variant="outline"
-            className="text-xs rounded-md border-[#272738] text-white hover:bg-[#161622] font-mono"
+            className="text-xs rounded-md border-[#272738] text-white hover:bg-[#161622] font-mono font-bold"
             disabled={actionLoading}
             onClick={() => onSetEditing(!editing)}
           >
             <Pencil className="h-3.5 w-3.5 mr-1 text-[#f26625]" />
-            {editing ? 'Cancel edit' : 'Edit (e)'}
+            {editing ? 'Cancel edit' : '[E] Edit'}
           </Button>
           <Button
             size="sm"
             variant="outline"
-            className="text-xs rounded-md border-[#272738] text-amber-400 hover:bg-[#161622] font-mono"
+            className="text-xs rounded-md border-[#272738] text-amber-400 hover:bg-[#161622] font-mono font-bold"
             disabled={actionLoading}
             onClick={() => onAct('flag', item)}
           >
             <Flag className="h-3.5 w-3.5 mr-1" />
-            Flag (f)
+            [F] Flag
           </Button>
         </div>
       </CardContent>

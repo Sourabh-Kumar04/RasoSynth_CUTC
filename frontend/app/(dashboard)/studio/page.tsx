@@ -7,13 +7,11 @@ import {
   Settings2,
   Play,
   Plus,
-  X,
   ChevronDown,
   ChevronUp,
   Loader2,
   Check,
   CheckCircle2,
-  ExternalLink,
   Layers,
   ShieldCheck,
   AlertCircle,
@@ -35,14 +33,14 @@ const INDUSTRY_PRESETS = [
     title: 'AI Kosh (GST & Indian Tax)',
     domain: 'Finance & Taxation (Indian GST & Tax Compliance)',
     source: 'AI Kosh & CBIC',
-    prompt: 'Indian indirect and direct tax compliance advisory. Focus on Input Tax Credit (ITC) reconciliation under Section 16(4) CGST Act, purchase-register vs GSTR-2B discrepancies, supplier default clawbacks under Section 16(2)(c), and TDS/TCS cross-deductions under Section 194Q / 206C(1H). Apply a 3-tier difficulty curriculum: (1) Definitional statutory citations and filing timelines under CGST/IGST Act 2017; (2) Multi-hop reconciliation calculations with arithmetic proofs and circular citations; (3) Complex multi-party manufacturing disputes grounded in ITAT, High Court, and Supreme Court precedent. Require grounded citations to official CBIC circulars. Exclude foreign tax rules (IRS 45Q, Uzbekistan VAT) and biomedical glutathione collisions.',
+    prompt: 'Indian indirect and direct tax compliance advisory. Focus on Input Tax Credit (ITC) reconciliation under Section 16(4) CGST Act, purchase-register vs GSTR-2B discrepancies, supplier default clawbacks under Section 16(2)(c), and TDS/TCS cross-deductions under Section 194Q / 206C(1H). Apply a 3-tier difficulty curriculum: (1) Definitional statutory citations and filing timelines under CGST/IGST Act 2017; (2) Multi-hop reconciliation calculations with arithmetic proofs and circular citations; (3) Complex multi-party manufacturing disputes grounded in ITAT, High Court, and Supreme Court precedent. Require grounded citations to official CBIC circulars. Exclude foreign tax jurisdictions and unrelated administrative filings.',
     type: 'sft',
     category: 'indic',
     language: 'hinglish',
     scriptMode: 'romanized',
     formalityRegister: 'formal',
     preservedTerms: ['Section 16(4)', 'ITC', 'GSTR-3B', 'GSTR-2B', 'CGST Act', 'Section 194Q', 'Section 206C(1H)', 'ISD', 'Challan', 'ITAT'],
-    antiDomains: ['glutathione', 's-transferase', 'nrf2', 'uzbekistan', 'irs section 45q', 'arteriovenous fistula', 'cancer chemotherapy'],
+    antiDomains: ['foreign tax code', 'unrelated litigation', 'unverified circulars'],
     size: 20000,
     sources: ['AI Kosh', 'CBIC Portals', 'ITAT Bench Rulings'],
   },
@@ -59,7 +57,7 @@ const INDUSTRY_PRESETS = [
     formalityRegister: 'formal',
     parallelBilingual: true,
     preservedTerms: ['BNS 2023', 'Section 479 BNSS', 'BSA Section 61', 'Bharatiya Sakshya Adhiniyam', 'Ratio Decidendi', 'Mandamus', 'Habeas Corpus', 'Mens Rea'],
-    antiDomains: ['us code title 18', 'california penal code', 'uk crown prosecution service', 'hallucinated citations'],
+    antiDomains: ['foreign statutory codes', 'unverified citations', 'informal commentary'],
     size: 20000,
     sources: ['eCourts India', 'Supreme Court Reports', 'Legislative Dept'],
   },
@@ -75,7 +73,7 @@ const INDUSTRY_PRESETS = [
     scriptMode: 'native',
     formalityRegister: 'formal',
     preservedTerms: ['NACA 0012', 'Mach 0.82', 'FAR §25.107', 'FAR §25.629', 'Supercritical Airfoil', 'Navier-Stokes', 'Lift-to-Drag (L/D)', 'Reynolds Number'],
-    antiDomains: ['undergraduate textbook simplifications', 'retracted nasa reports', 'superseded far revisions', 'tin cans'],
+    antiDomains: ['undergraduate simplifications', 'retracted technical reports', 'superseded regulations'],
     size: 15000,
     sources: ['NASA Technical Reports', 'FAA Regulations', 'AIAA'],
   },
@@ -92,7 +90,7 @@ const INDUSTRY_PRESETS = [
     formalityRegister: 'formal',
     parallelBilingual: true,
     preservedTerms: ['Bhashini', 'Jan Dhan', 'PM-KISAN', 'Aadhaar', 'UMANG', 'DigiLocker', 'RTI Act 2005', 'Devanagari', 'Tamil Script', 'Telugu Script'],
-    antiDomains: ['unsupervised machine translation', 'synthetic hallucinated schemes', 'romanized garble', 'unverified medical dosages'],
+    antiDomains: ['unsupervised machine translation', 'synthetic hallucinated schemes', 'romanized phonetic garble'],
     size: 25000,
     sources: ['Bhashini', 'AI Kosh', 'HuggingFace'],
   },
@@ -106,7 +104,7 @@ const INDUSTRY_PRESETS = [
     category: 'code',
     language: 'en',
     preservedTerms: ['asyncio', 'TaskGroup', 'Pydantic v2', 'FastAPI', 'Polars', 'Apache Arrow', 'PEP 484', 'Hypothesis', 'pytest', 'Zero-Copy'],
-    antiDomains: ['python 2 syntax', 'hello world boilerplate', 'hallucinated pypi apis', 'giant panda bear', 'ailuropoda melanoleuca'],
+    antiDomains: ['python 2 syntax', 'boilerplate templates', 'hallucinated package apis', 'deprecated libraries'],
     size: 15000,
     sources: ['HuggingFace', 'GitHub', 'ArXiv'],
   },
@@ -120,7 +118,7 @@ const INDUSTRY_PRESETS = [
     category: 'code',
     language: 'en',
     preservedTerms: ['Raft Term', 'LogCompaction', 'Tokio::select', 'CompareAndSwap', 'Linearizability', 'Byzantine Fault', 'TLA+', 'Crossbeam', 'WAL'],
-    antiDomains: ['wheat rust fungus', 'puccinia', 'crop pathology', 'single threaded nodejs', 'deprecated crates', 'trivial mock code'],
+    antiDomains: ['single-threaded architectures', 'deprecated crates', 'trivial mock code', 'unverified primitives'],
     size: 15000,
     sources: ['GitHub', 'ArXiv', 'USENIX ATC'],
   },
@@ -134,7 +132,7 @@ const INDUSTRY_PRESETS = [
     category: 'stem',
     language: 'en',
     preservedTerms: ['Bayesian Pre-Test Probability', 'Beers Criteria', 'CBC', 'CMP', 'LFTs', 'Troponin', 'ABG', 'SOAP Note', 'ACGME'],
-    antiDomains: ['real patient identifiers', 'prescriptions without disclaimers', 'unverified dosing', 'tax law', 'software bugs'],
+    antiDomains: ['real patient identifiers', 'prescriptions without disclaimers', 'unverified medical dosages', 'speculative diagnoses'],
     size: 10000,
     sources: ['PubMed', 'ArXiv', 'Zenodo'],
   },
@@ -148,7 +146,7 @@ const INDUSTRY_PRESETS = [
     category: 'code',
     language: 'en',
     preservedTerms: ['MITRE ATT&CK', 'NIST CSF 2.0', 'CVE', 'CWE-416', 'ASLR', 'DEP', 'Sigma Rule', 'YARA', 'Zero-Trust', 'Least Privilege'],
-    antiDomains: ['operational exploit payloads', 'malware droppers', 'c2 infrastructure', 'script kiddie tutorials'],
+    antiDomains: ['operational exploit payloads', 'malware droppers', 'c2 command infrastructure'],
     size: 12000,
     sources: ['NVD NIST', 'MITRE ATT&CK', 'CISA Advisories'],
   },
@@ -237,7 +235,7 @@ function StudioContent() {
   const [enableCotReasoning, setEnableCotReasoning] = useState<boolean>(false)
   const [curriculumSort, setCurriculumSort] = useState<'none' | 'ascending' | 'staged_curriculum' | 'replay_interleaved'>('none')
   const [preservedTermsInput, setPreservedTermsInput] = useState<string>('')
-  const [antiDomainsInput, setAntiDomainsInput] = useState<string>('glutathione, s-transferase, nrf2, uzbekistan, irs 45q, arteriovenous fistula')
+  const [antiDomainsInput, setAntiDomainsInput] = useState<string>('foreign statutory codes, out-of-scope domains')
   const [parallelBilingual, setParallelBilingual] = useState<boolean>(false)
   const [datasetSize, setDatasetSize] = useState(10000)
   const [sizeInput, setSizeInput] = useState<string>('10000')
@@ -427,62 +425,6 @@ function StudioContent() {
     }
   }, [prompt, targetDomain, preservedTermsInput, language, synthesisMode, extractSyntacticInvariants])
 
-  // Shannon token entropy & information density computation
-  const tokenEntropyStats = (() => {
-    const text = prompt.trim()
-    if (!text) return { entropy: 0, level: 'Foundational', color: 'text-zinc-400', progress: 0 }
-    const tokens = text.toLowerCase().split(/\s+/).filter(Boolean)
-    if (tokens.length === 0) return { entropy: 0, level: 'Foundational', color: 'text-zinc-400', progress: 0 }
-
-    const freq: Record<string, number> = {}
-    tokens.forEach((t) => { freq[t] = (freq[t] || 0) + 1 })
-    const n = tokens.length
-    let h = 0
-    Object.values(freq).forEach((count) => {
-      const p = count / n
-      h -= p * Math.log2(p)
-    })
-    const entropyVal = Number(h.toFixed(2))
-    const progress = Math.min(100, Math.round((entropyVal / 6.5) * 100))
-
-    if (entropyVal < 3.0) {
-      return { entropy: entropyVal, level: 'Foundational', color: 'text-blue-400', progress }
-    } else if (entropyVal < 5.0) {
-      return { entropy: entropyVal, level: 'Intermediate', color: 'text-amber-400', progress }
-    } else {
-      return { entropy: entropyVal, level: 'Complex', color: 'text-emerald-400', progress }
-    }
-  })()
-
-  // Autonomous Scraper Synthesizer Harness State
-  const [showScraperModal, setShowScraperModal] = useState(false)
-  const [scraperUrl, setScraperUrl] = useState('')
-  const [isSynthesizingScraper, setIsSynthesizingScraper] = useState(false)
-  const [synthesizedResult, setSynthesizedResult] = useState<any>(null)
-
-  const handleSynthesizeScraper = async () => {
-    if (!scraperUrl.trim()) return
-    playClickSound()
-    setIsSynthesizingScraper(true)
-    setSynthesizedResult(null)
-    try {
-      const res = await fetch('/api/proxy/crawler/synthesize-scraper', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ url: scraperUrl.trim() }),
-      })
-      const data = await res.json()
-      setSynthesizedResult(data)
-    } catch (err: any) {
-      setSynthesizedResult({
-        status: 'error',
-        error: err?.message || 'Failed to connect to scraper synthesizer harness',
-      })
-    } finally {
-      setIsSynthesizingScraper(false)
-    }
-  }
-
   // Launch job
   const handleGenerate = async () => {
     playClickSound()
@@ -557,15 +499,7 @@ function StudioContent() {
       }
     } catch (err: any) {
       console.error('Job creation failed:', err)
-      const raw = formatErrorMessage(err) || 'Job creation failed. The backend service may be offline or unreachable.'
-      let cleanMessage = raw
-      if (raw.includes('Traceback (most recent call last)') || raw.includes('File "') || /Traceback/i.test(raw)) {
-        const lines = raw.split('\n').map((l) => l.trim()).filter(Boolean)
-        const lastLine = lines[lines.length - 1]
-        cleanMessage = lastLine && !lastLine.startsWith('File ') && !lastLine.startsWith('Traceback')
-          ? `Generation failed: ${lastLine}`
-          : 'Job generation failed due to an internal server error. Please verify your inputs and try again.'
-      }
+      const cleanMessage = formatErrorMessage(err) || 'Job creation failed. The backend service may be offline or unreachable.'
       setSubmitResult({
         type: 'error',
         message: cleanMessage,
@@ -580,130 +514,43 @@ function StudioContent() {
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-[#272738] pb-5">
         <div>
-          <h1 className="text-2xl font-bold tracking-tight text-white font-display mb-1">
-            Synthetic Dataset Studio
-          </h1>
+          <div className="flex items-center gap-2 mb-1">
+            <span className="px-2 py-0.5 rounded-sm text-xs font-mono font-bold bg-[#f26625]/10 border border-[#f26625]/30 text-[#f26625] uppercase tracking-wider">
+              SYNTHETIC ENGINE
+            </span>
+            <h1 className="text-2xl font-bold tracking-tight text-white font-display">
+              Synthetic Dataset Studio
+            </h1>
+          </div>
+          <p className="text-xs text-[#a8a29e] font-mono">
+            High-fidelity instruction dataset synthesis with grounded sources, linguistic constraints, and verifiable quality.
+          </p>
         </div>
 
         <div className="flex items-center gap-2.5">
           <Button
-            onClick={() => {
-              playClickSound()
-              setShowScraperModal(true)
-            }}
-            variant="outline"
-            className="border-[#272738] bg-[#12121a] text-zinc-300 hover:text-white hover:bg-[#161622] font-mono text-xs h-9 px-4 rounded-md flex items-center gap-2"
+            onClick={handleGenerate}
+            disabled={isSubmitting}
+            className="bg-[#f26625] hover:bg-[#de581a] border border-[#ea580c] text-white font-mono font-bold text-xs h-9 px-4 rounded-md shadow-sm flex items-center gap-2"
           >
-            <Bot className="w-3.5 h-3.5 text-[#f26625]" />
-            <span>AI Scraper Synthesizer</span>
+            {isSubmitting ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Play className="w-3.5 h-3.5 fill-current" />}
+            <span>Execute Generation</span>
           </Button>
         </div>
       </div>
 
-      {/* Autonomous Scraper Synthesizer Harness Modal */}
-      {showScraperModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm animate-fade-in">
-          <div className="w-full max-w-3xl bg-[#0e0e17] border border-[#272738] rounded-xl p-6 shadow-2xl space-y-4 font-mono text-xs max-h-[90vh] overflow-y-auto">
-            <div className="flex items-center justify-between border-b border-[#272738] pb-3">
-              <div className="flex items-center gap-2">
-                <div className="flex items-center justify-center w-7 h-7 rounded-md bg-[#f26625]/10 border border-[#f26625]/30 text-[#f26625]">
-                  <Bot className="w-4 h-4" />
-                </div>
-                <div>
-                  <h3 className="font-bold text-white text-sm">Autonomous Scraper Synthesizer</h3>
-                  <p className="text-zinc-400 text-xs">Search existing scraper recipes or synthesize zero-shot extraction code</p>
-                </div>
-              </div>
-              <Button
-                variant="ghost"
-                size="icon"
-                className="h-8 w-8 text-zinc-400 hover:text-white"
-                onClick={() => setShowScraperModal(false)}
-              >
-                <X className="h-4 w-4" />
-              </Button>
-            </div>
-
-            <div className="space-y-3">
-              <label className="text-zinc-300 font-bold uppercase block">Target Portal or Domain URL</label>
-              <div className="flex gap-2">
-                <Input
-                  value={scraperUrl}
-                  onChange={(e) => setScraperUrl(e.target.value)}
-                  placeholder="e.g. https://itat.gov.in/court/judgments or https://custom-domain.org"
-                  className="bg-[#12121a] border-[#272738] text-white text-xs font-mono h-10"
-                />
-                <Button
-                  onClick={handleSynthesizeScraper}
-                  disabled={isSynthesizingScraper || !scraperUrl.trim()}
-                  className="bg-[#f26625] hover:bg-[#de581a] text-white font-mono text-xs font-bold px-4 shrink-0"
-                >
-                  {isSynthesizingScraper ? <Loader2 className="w-4 h-4 animate-spin mr-1" /> : <Sparkles className="w-4 h-4 mr-1" />}
-                  Synthesize Scraper
-                </Button>
-              </div>
-            </div>
-
-            {synthesizedResult && (
-              <div className="space-y-3 pt-3 border-t border-[#272738]">
-                {synthesizedResult.matched_existing && (
-                  <div className="p-3 rounded-lg bg-emerald-500/10 border border-emerald-500/30 text-emerald-300 space-y-1">
-                    <span className="font-bold flex items-center gap-1.5 uppercase text-xs">
-                      <CheckCircle2 className="w-4 h-4 text-emerald-400" />
-                      Matched Existing Open Scraper Recipe: {synthesizedResult.matched_existing.name}
-                    </span>
-                    <p className="text-zinc-300 text-xs">{synthesizedResult.matched_existing.description}</p>
-                  </div>
-                )}
-
-                <div className="flex items-center justify-between">
-                  <span className="text-zinc-400 uppercase font-bold">Synthesized Python Extractor Class:</span>
-                  <div className="flex items-center gap-2">
-                    <span className="px-2 py-0.5 rounded bg-emerald-500/10 border border-emerald-500/30 text-emerald-400 font-bold uppercase text-xs">
-                      AST Valid
-                    </span>
-                    <span className="px-2 py-0.5 rounded bg-blue-500/10 border border-blue-500/30 text-blue-400 font-bold uppercase text-xs">
-                      Dry-Run Test Passed
-                    </span>
-                  </div>
-                </div>
-
-                <div className="p-3 bg-[#0a0a0f] border border-[#272738] rounded-md font-mono text-xs text-zinc-300 max-h-60 overflow-y-auto whitespace-pre leading-relaxed">
-                  {synthesizedResult.code ? String(synthesizedResult.code) : formatErrorMessage(synthesizedResult.error)}
-                </div>
-
-                <div className="flex items-center justify-between pt-2">
-                  <span className="text-zinc-400 text-xs">Class name: <strong className="text-white">{synthesizedResult.class_name}</strong></span>
-                  <Button
-                    size="sm"
-                    className="bg-[#10b981] hover:bg-emerald-600 text-white font-mono text-xs"
-                    onClick={() => {
-                      playClickSound()
-                      setTargetDomain(synthesizedResult.domain_name || targetDomain)
-                      setShowScraperModal(false)
-                    }}
-                  >
-                    Adopt Extractor into Studio
-                  </Button>
-                </div>
-              </div>
-            )}
-          </div>
-        </div>
-      )}
-
-      {/* Industry Presets */}
+      {/* Industry Presets: Compact Clean Category Cards */}
       {!isZenMode && (
         <div className="space-y-3">
           <div className="flex flex-wrap items-center justify-between gap-2">
             <span className="text-xs font-mono font-bold uppercase tracking-wider text-white flex items-center gap-1.5">
               <Sparkles className="w-3.5 h-3.5 text-[#f26625]" />
-              Domain Curricula & Linguistic Presets
+              Domain Curricula &amp; Linguistic Presets
             </span>
-            <span className="text-xs font-mono text-[#10b981]">Grounded Schemas</span>
+            <span className="text-xs font-mono text-[#10b981] font-semibold">Grounded Schemas</span>
           </div>
 
-          {/* Facet Filter Toolbar */}
+          {/* Category Filter Toolbar */}
           <div className="flex flex-wrap items-center gap-2">
             {[
               { id: 'all', label: 'All Curricula' },
@@ -730,13 +577,15 @@ function StudioContent() {
             ))}
           </div>
 
-          <div className="divide-y divide-[#272738]/40 bg-transparent overflow-hidden">
+          {/* Compact Presets Grid */}
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
             {INDUSTRY_PRESETS.filter(p => selectedCategory === 'all' || (p as any).category === selectedCategory).map((preset) => {
               const isSelected = activePreset === preset.id
               return (
-                <button
+                <div
                   key={preset.id}
-                  type="button"
+                  role="button"
+                  tabIndex={0}
                   onClick={() => {
                     playClickSound()
                     setActivePreset(preset.id)
@@ -763,36 +612,49 @@ function StudioContent() {
                       (preset.source || '').toLowerCase().includes('kosh')
                     setPrioritizeAiKosh(hasAiKosh)
                   }}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter' || e.key === ' ') {
+                      e.preventDefault()
+                      setActivePreset(preset.id)
+                      setTargetDomain(preset.domain)
+                      setPrompt(preset.prompt)
+                      setDatasetSize(preset.size)
+                      setSizeInput(String(preset.size))
+                      setDatasetType(preset.type)
+                    }
+                  }}
                   className={clsx(
-                    'w-full px-3 py-2.5 text-left transition-colors relative flex items-center gap-4',
+                    'p-3.5 rounded-lg border text-left transition-all cursor-pointer flex flex-col justify-between space-y-2.5',
                     isSelected
-                      ? 'bg-[#161622] border-l-2 border-l-[#f26625]'
-                      : 'hover:bg-[#161622]/60'
+                      ? 'bg-[#181826] border-[#f26625] shadow-md shadow-[#f26625]/10 ring-1 ring-[#f26625]/50'
+                      : 'bg-[#101018] border-[#272738] hover:bg-[#141420] hover:border-[#3e3e56]'
                   )}
                 >
-                  <div className="flex flex-col gap-0.5 shrink-0 w-32">
-                    <span className="text-xs font-mono font-bold uppercase text-[#f26625] truncate">
+                  <div className="flex items-center justify-between gap-1.5">
+                    <span className="text-[11px] font-mono font-bold uppercase tracking-wider text-[#f26625] truncate">
                       {preset.source}
                     </span>
-                    <span className="text-xs font-mono text-[#10b981] font-semibold">
-                      {preset.size.toLocaleString()}
+                    <span className="text-[11px] font-mono font-semibold px-1.5 py-0.5 rounded bg-[#161622] text-[#10b981] border border-[#272738]">
+                      {preset.size.toLocaleString()} rows
                     </span>
                   </div>
-                  <h4
-                    className="text-sm font-semibold text-white leading-snug flex-1 min-w-0"
-                    title={preset.title}
-                  >
-                    {preset.title}
-                  </h4>
-                  <div className="flex items-center gap-1 text-xs font-mono text-[#a8a29e] shrink-0">
-                    <span className="px-1.5 py-0.5 rounded-sm bg-[#0a0a0f] border border-[#272738] uppercase">
+                  <div>
+                    <h4 className="text-xs font-bold text-white leading-snug line-clamp-1 mb-1" title={preset.title}>
+                      {preset.title}
+                    </h4>
+                    <p className="text-[11px] text-[#a8a29e] line-clamp-2 leading-relaxed">
+                      {preset.domain}
+                    </p>
+                  </div>
+                  <div className="flex items-center justify-between pt-2 border-t border-[#1c1c28] text-[10px] font-mono text-[#a8a29e]">
+                    <span className="px-1.5 py-0.5 rounded bg-[#0a0a0f] border border-[#272738] uppercase">
                       {preset.type}
                     </span>
-                    <span className="px-1.5 py-0.5 rounded-sm bg-[#0a0a0f] border border-[#272738]">
-                      {preset.language}
+                    <span className="capitalize text-zinc-400">
+                      {preset.language === 'indic_multilingual' ? 'Indic Multilingual' : preset.language}
                     </span>
                   </div>
-                </button>
+                </div>
               )
             })}
           </div>
@@ -901,13 +763,14 @@ function StudioContent() {
                 </label>
                 <div className="flex flex-wrap gap-1.5">
                   {[
-                    { id: 'standard', name: 'Standard' },
-                    { id: 'cot', name: 'CoT Reasoning' },
-                    { id: 'socratic', name: 'Socratic' },
-                    { id: 'preference', name: 'DPO Pairs' },
+                    { id: 'standard', name: 'Standard SFT' },
+                    { id: 'cot', name: 'Chain-of-Thought' },
+                    { id: 'socratic', name: 'Socratic Dialogue' },
                     { id: 'multi_turn', name: 'Multi-Turn' },
+                    { id: 'simpo', name: 'SimPO Pairs' },
+                    { id: 'kto', name: 'KTO Utility' },
                     { id: 'tool_calling', name: 'Tool Calling' },
-                    { id: 'contrastive', name: 'Contrastive' },
+                    { id: 'contrastive', name: 'Contrastive Critique' },
                     { id: 'rag', name: 'RAG Grounded' },
                   ].map((mode) => {
                     const isSelected = synthesisMode === mode.id
@@ -960,828 +823,800 @@ function StudioContent() {
           </div>
         ) : (
           <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
-        
-        {/* Left Column: Intent, Prompt & Grounding Invariants */}
-        <div className="lg:col-span-7 p-5 rounded-md bg-[#12121a] border border-[#272738] space-y-5">
-          <div className="flex items-center justify-between pb-3 border-b border-[#1c1c28]">
-            <div className="flex items-center space-x-2">
-              <FlaskConical className="w-4 h-4 text-[#f26625]" />
-              <h3 className="text-xs font-bold font-mono uppercase tracking-wider text-white">
-                Dataset Intent &amp; Scope
-              </h3>
-            </div>
-            <div className="inline-flex p-0.5 rounded bg-[#0a0a0f] border border-[#272738]">
-              <button
-                type="button"
-                onClick={() => setGenerationMode('grounded')}
-                className={clsx(
-                  'px-3 py-1 rounded text-xs font-mono transition-all',
-                  generationMode === 'grounded'
-                    ? 'bg-[#1a1a24] text-white font-semibold border border-[#272738] shadow-sm'
-                    : 'text-[#a8a29e] hover:text-white'
-                )}
-              >
-                Grounded Source
-              </button>
-              <button
-                type="button"
-                onClick={() => setGenerationMode('synthetic')}
-                className={clsx(
-                  'px-3 py-1 rounded text-xs font-mono transition-all',
-                  generationMode === 'synthetic'
-                    ? 'bg-[#1a1a24] text-white font-semibold border border-[#272738] shadow-sm'
-                    : 'text-[#a8a29e] hover:text-white'
-                )}
-              >
-                Pure Synthetic
-              </button>
-            </div>
-          </div>
-
-          <div className="space-y-4">
-            <div>
-              <label className="text-xs font-mono uppercase text-[#a8a29e] block mb-1.5">
-                Target Domain or Repository Topic
-              </label>
-              <Input
-                value={targetDomain}
-                onChange={(e) => setTargetDomain(e.target.value)}
-                className="bg-[#0a0a0f] border-[#272738] focus:border-[#f26625] text-xs font-mono text-white rounded-md"
-                placeholder="e.g. Aerospace Engineering or Finance & Taxation"
-              />
-            </div>
-
-            <div>
-              <label className="text-xs font-mono uppercase text-[#a8a29e] block mb-1.5">
-                Specification Prompt
-              </label>
-              <textarea
-                value={prompt}
-                onChange={(e) => setPrompt(e.target.value)}
-                rows={4}
-                className="w-full bg-[#0a0a0f] border border-[#272738] focus:border-[#f26625] rounded-md p-3 text-xs font-mono text-white placeholder:text-[#a8a29e] focus:outline-none transition-colors resize-none"
-                placeholder="Describe instruction schema, target personas, and validation constraints..."
-              />
-              {/* Live Prompt Heuristic Linter Strip (Standard) */}
-              {prompt.trim().length > 0 && (
-                <div className="mt-2 p-2.5 rounded-md bg-[#0a0a0f] border border-[#1f1f2e] space-y-2 text-xs font-mono">
-                  {/* Real-time Shannon Entropy & Information Density Gauge */}
-                  <div className="flex flex-wrap items-center justify-between gap-2 pb-2 border-b border-[#1f1f2e]">
-                    <div className="flex items-center gap-2">
-                      <span className="text-zinc-400 font-semibold uppercase text-xs">Shannon Entropy:</span>
-                      <span className={clsx("font-bold text-xs", tokenEntropyStats.color)}>
-                        {tokenEntropyStats.entropy} bits/token
-                      </span>
-                      <span className={clsx("px-2 py-0.5 rounded text-xs border uppercase", {
-                        "bg-blue-500/10 border-blue-500/30 text-blue-400": tokenEntropyStats.level === 'Foundational',
-                        "bg-amber-500/10 border-amber-500/30 text-amber-400": tokenEntropyStats.level === 'Intermediate',
-                        "bg-emerald-500/10 border-emerald-500/30 text-emerald-400": tokenEntropyStats.level === 'Complex',
-                      })}>
-                        Curriculum Tier: {tokenEntropyStats.level}
-                      </span>
-                    </div>
-                    <div className="flex items-center gap-2 min-w-[120px]">
-                      <div className="w-24 h-1.5 bg-[#1a1a24] rounded-full overflow-hidden">
-                        <div
-                          className="h-full bg-gradient-to-r from-blue-500 via-amber-500 to-emerald-500 transition-all duration-300"
-                          style={{ width: `${tokenEntropyStats.progress}%` }}
-                        />
-                      </div>
-                      <span className="text-zinc-500 text-xs">{tokenEntropyStats.progress}%</span>
-                    </div>
-                  </div>
-
-                  <div className="flex items-center justify-between">
-                    <span className="text-xs text-[#a8a29e] uppercase font-bold flex items-center gap-1.5">
-                      <ShieldCheck className="h-3.5 w-3.5 text-[#10b981]" />
-                      Prompt Specification Quality:
-                      <strong className={clsx(
-                        promptLint.score >= 80 ? "text-emerald-400" :
-                        promptLint.score >= 60 ? "text-amber-400" : "text-rose-400"
-                      )}>
-                        {promptLint.score}/100
-                      </strong>
-                    </span>
-                  </div>
-                  {promptLint.warnings.map((w, idx) => (
-                    <div key={idx} className="flex items-center gap-1.5 text-amber-400/90 text-xs">
-                      <AlertCircle className="h-3 w-3 shrink-0" />
-                      <span>{w}</span>
-                    </div>
-                  ))}
-                  {promptLint.tips.map((tip, idx) => (
-                    <div key={idx} className="text-[#a8a29e] text-xs flex items-center justify-between gap-2 bg-[#12121c] p-1.5 rounded border border-[#222232]">
-                      <div className="flex items-center gap-1.5 truncate">
-                        <span className="text-[#f26625] shrink-0">💡</span>
-                        <span className="truncate">{tip.text}</span>
-                      </div>
-                      <button
-                        type="button"
-                        onClick={() => {
-                          playClickSound()
-                          setPrompt((p) => (p.trim() ? `${p.trim()} ${tip.appendSnippet.trim()}` : tip.appendSnippet.trim()))
-                        }}
-                        className="shrink-0 text-xs font-mono text-[#f26625] hover:text-white px-2 py-0.5 rounded bg-[#f26625]/10 hover:bg-[#f26625]/20 border border-[#f26625]/30 transition-all cursor-pointer"
-                      >
-                        {tip.actionLabel}
-                      </button>
-                    </div>
-                  ))}
+            {/* Left Column: Intent, Prompt & Grounding Invariants */}
+            <div className="lg:col-span-7 p-5 rounded-md bg-[#12121a] border border-[#272738] space-y-5">
+              <div className="flex items-center justify-between pb-3 border-b border-[#1c1c28]">
+                <div className="flex items-center space-x-2">
+                  <FlaskConical className="w-4 h-4 text-[#f26625]" />
+                  <h3 className="text-xs font-bold font-mono uppercase tracking-wider text-white">
+                    Dataset Intent &amp; Scope
+                  </h3>
                 </div>
-              )}
-              <div className="flex flex-wrap items-center justify-between gap-2 pt-2">
-                <div className="flex items-center gap-2">
-                  <Button
+                <div className="inline-flex p-0.5 rounded bg-[#0a0a0f] border border-[#272738]">
+                  <button
                     type="button"
-                    size="sm"
-                    variant="outline"
-                    onClick={handleAutoDetect}
-                    disabled={isAutoDetecting}
-                    className="h-8 px-3.5 text-xs font-mono font-bold border-[#f26625]/40 text-[#f26625] bg-[#f26625]/10 hover:bg-[#f26625]/20 rounded-md flex items-center gap-1.5 transition-all"
+                    onClick={() => setGenerationMode('grounded')}
+                    className={clsx(
+                      'px-3 py-1 rounded text-xs font-mono transition-all',
+                      generationMode === 'grounded'
+                        ? 'bg-[#1a1a24] text-white font-semibold border border-[#272738] shadow-sm'
+                        : 'text-[#a8a29e] hover:text-white'
+                    )}
                   >
-                    {isAutoDetecting ? <Loader2 className="w-3.5 h-3.5 animate-spin text-[#f26625]" /> : <Bot className="w-3.5 h-3.5 text-[#f26625]" />}
-                    <span>{isAutoDetecting ? 'Agent Analyzing Domain…' : 'Agent Auto-Detect'}</span>
-                  </Button>
-                </div>
-                {autoDetectNotice && (
-                  <span className="text-xs font-mono text-emerald-400 flex items-center gap-1">
-                    <Check className="w-3.5 h-3.5 text-emerald-400" />
-                    {autoDetectNotice}
-                  </span>
-                )}
-              </div>
-            </div>
-
-            {/* Preserved Domain Terms / Glossary */}
-            <div className="space-y-2 pt-2 border-t border-[#1c1c28]">
-              <label className="text-xs font-mono uppercase text-[#a8a29e] block">
-                Preserved Domain Terms (Invariants)
-              </label>
-              <Input
-                type="text"
-                value={preservedTermsInput}
-                onChange={(e) => setPreservedTermsInput(e.target.value)}
-                placeholder="e.g. NACA 0012, Mach 0.82, Section 16(4), ITC, GSTR-3B"
-                className="bg-[#0a0a0f] border-[#272738] focus:border-[#f26625] text-xs font-mono text-white rounded-md"
-              />
-              {preservedTermsInput && (
-                <div className="flex flex-wrap gap-1.5 pt-1 max-h-24 overflow-y-auto">
-                  {preservedTermsInput
-                    .split(',')
-                    .map((t) => t.trim())
-                    .filter(Boolean)
-                    .map((term, i) => (
-                      <span
-                        key={i}
-                        className="inline-flex items-center gap-1 px-2 py-0.5 rounded-sm bg-[#161622] border border-[#f26625]/30 text-[#f26625] text-xs font-mono"
-                      >
-                        {term}
-                        <button
-                          type="button"
-                          onClick={() => {
-                            const remaining = preservedTermsInput
-                              .split(',')
-                              .map((t) => t.trim())
-                              .filter((t) => t !== term)
-                            setPreservedTermsInput(remaining.join(', '))
-                          }}
-                          className="hover:text-rose-400 font-bold ml-1"
-                        >
-                          ×
-                        </button>
-                      </span>
-                    ))}
-                </div>
-              )}
-            </div>
-
-            {/* Discovered Authoritative Sources */}
-            {discoveredSources.length > 0 && (
-              <div className="space-y-1.5 pt-2 border-t border-[#1c1c28]">
-                <div className="flex items-center justify-between">
-                  <span className="text-xs font-mono uppercase text-[#a8a29e]">
-                    Authoritative Grounding Sources ({discoveredSources.length}):
-                  </span>
-                  <span className="px-1.5 py-0.5 rounded-sm bg-emerald-950/60 border border-emerald-800/60 text-xs font-mono text-emerald-400 flex items-center gap-1">
-                    <ShieldCheck className="w-3 h-3 text-emerald-400" />
-                    Polysemy Filtered
-                  </span>
-                </div>
-                <div className="flex flex-wrap gap-1.5">
-                  {discoveredSources.map((s, idx) => {
-                    const st = (s.source_type || '').toLowerCase()
-                    const typeLabel = st === 'wikipedia' ? 'Wikipedia' :
-                                      st === 'books' ? 'Book' :
-                                      st === 'blog' ? 'Blog' :
-                                      st.includes('dataset') ? 'Dataset' :
-                                      st === 'arxiv_paper' ? 'Paper' :
-                                      st.includes('github') ? 'Repo' : null
-                    const typeColor = st === 'wikipedia' ? 'bg-[#1b1b18]/60 border-[#4a463f]/60 text-[#f26625]' :
-                                      st === 'books' ? 'bg-amber-950/60 border-amber-800/60 text-amber-400' :
-                                      st === 'blog' ? 'bg-[#161622] border-[#272738] text-[#f5f2ea]' :
-                                      st.includes('dataset') ? 'bg-emerald-950/60 border-emerald-800/60 text-emerald-400' :
-                                      'bg-[#161622] border-[#272738] text-zinc-400'
-
-                    return (
-                      <span
-                        key={idx}
-                        className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-sm bg-[#0a0a0f] border border-[#272738] text-xs font-mono text-zinc-200 truncate max-w-[280px]"
-                        title={s.name}
-                      >
-                        {typeLabel && (
-                          <span className={`px-1 py-0.2 rounded-[2px] text-xs uppercase tracking-wider border font-bold ${typeColor}`}>
-                            {typeLabel}
-                          </span>
-                        )}
-                        <span className="truncate">{s.name}</span>
-                      </span>
-                    )
-                  })}
+                    Grounded Source
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setGenerationMode('synthetic')}
+                    className={clsx(
+                      'px-3 py-1 rounded text-xs font-mono transition-all',
+                      generationMode === 'synthetic'
+                        ? 'bg-[#1a1a24] text-white font-semibold border border-[#272738] shadow-sm'
+                        : 'text-[#a8a29e] hover:text-white'
+                    )}
+                  >
+                    Pure Synthetic
+                  </button>
                 </div>
               </div>
-            )}
 
-            {/* Synthetic Diversity & Topic Coverage Matrix */}
-            {coverageMatrix && coverageMatrix.cells && coverageMatrix.cells.length > 0 && (
-              <div className="space-y-2 pt-2 border-t border-[#1c1c28]">
-                <div className="flex items-center justify-between">
-                  <span className="text-xs font-mono uppercase text-[#a8a29e] flex items-center gap-1.5">
-                    <Layers className="w-3.5 h-3.5 text-[#f26625]" />
-                    Topic &amp; Diversity Coverage Matrix ({coverageMatrix.cells.length} cells planned)
-                  </span>
-                  <span className="px-1.5 py-0.5 rounded-sm bg-[#1b1b18]/60 border border-[#4a463f]/60 text-xs font-mono text-[#d8d2c4]">
-                    Balanced Sampling Guarantee
-                  </span>
+              <div className="space-y-4">
+                <div>
+                  <label className="text-xs font-mono uppercase text-[#a8a29e] block mb-1.5">
+                    Target Domain or Repository Topic
+                  </label>
+                  <Input
+                    value={targetDomain}
+                    onChange={(e) => setTargetDomain(e.target.value)}
+                    className="bg-[#0a0a0f] border-[#272738] focus:border-[#f26625] text-xs font-mono text-white rounded-md"
+                    placeholder="e.g. Aerospace Engineering or Finance & Taxation"
+                  />
                 </div>
-                <div className="grid grid-cols-2 sm:grid-cols-3 gap-1.5 max-h-48 overflow-y-auto p-2 bg-[#0a0a0f] border border-[#272738] rounded-md">
-                  {coverageMatrix.cells.map((cell, idx) => (
-                    <div
-                      key={idx}
-                      className="p-1.5 rounded bg-[#161622] border border-[#272738]/60 text-xs font-mono space-y-0.5 hover:border-[#f26625]/40 transition-colors"
-                    >
-                      {Object.entries(cell).map(([k, v]) => (
-                        <div key={k} className="flex items-center justify-between text-xs">
-                          <span className="text-[#a8a29e] truncate max-w-[70px]">{k}:</span>
-                          <span className="text-[#d8d2c4] font-semibold truncate max-w-[90px]" title={String(v)}>
-                            {String(v)}
-                          </span>
+
+                <div>
+                  <label className="text-xs font-mono uppercase text-[#a8a29e] block mb-1.5">
+                    Specification Prompt
+                  </label>
+                  <textarea
+                    value={prompt}
+                    onChange={(e) => setPrompt(e.target.value)}
+                    rows={4}
+                    className="w-full bg-[#0a0a0f] border border-[#272738] focus:border-[#f26625] rounded-md p-3 text-xs font-mono text-white placeholder:text-[#a8a29e] focus:outline-none transition-colors resize-none"
+                    placeholder="Describe instruction schema, target personas, and validation constraints..."
+                  />
+                  {/* Live Prompt Specification Quality Linter */}
+                  {prompt.trim().length > 0 && (
+                    <div className="mt-2 p-2.5 rounded-md bg-[#0a0a0f] border border-[#1f1f2e] space-y-2 text-xs font-mono">
+                      <div className="flex items-center justify-between">
+                        <span className="text-xs text-[#a8a29e] uppercase font-bold flex items-center gap-1.5">
+                          <ShieldCheck className="h-3.5 w-3.5 text-[#10b981]" />
+                          Prompt Specification Quality:
+                          <strong className={clsx(
+                            promptLint.score >= 80 ? "text-emerald-400" :
+                            promptLint.score >= 60 ? "text-amber-400" : "text-rose-400"
+                          )}>
+                            {promptLint.score}/100
+                          </strong>
+                        </span>
+                      </div>
+                      {promptLint.warnings.map((w, idx) => (
+                        <div key={idx} className="flex items-center gap-1.5 text-amber-400/90 text-xs">
+                          <AlertCircle className="h-3 w-3 shrink-0" />
+                          <span>{w}</span>
+                        </div>
+                      ))}
+                      {promptLint.tips.map((tip, idx) => (
+                        <div key={idx} className="text-[#a8a29e] text-xs flex items-center justify-between gap-2 bg-[#12121c] p-1.5 rounded border border-[#222232]">
+                          <div className="flex items-center gap-1.5 truncate">
+                            <span className="text-[#f26625] shrink-0">💡</span>
+                            <span className="truncate">{tip.text}</span>
+                          </div>
+                          <button
+                            type="button"
+                            onClick={() => {
+                              playClickSound()
+                              setPrompt((p) => (p.trim() ? `${p.trim()} ${tip.appendSnippet.trim()}` : tip.appendSnippet.trim()))
+                            }}
+                            className="shrink-0 text-xs font-mono text-[#f26625] hover:text-white px-2 py-0.5 rounded bg-[#f26625]/10 hover:bg-[#f26625]/20 border border-[#f26625]/30 transition-all cursor-pointer"
+                          >
+                            {tip.actionLabel}
+                          </button>
                         </div>
                       ))}
                     </div>
-                  ))}
-                </div>
-              </div>
-            )}
+                  )}
 
-            {/* Collapsible Few-Shot Anchor Examples */}
-            <div className="pt-2 border-t border-[#1c1c28]">
-              <button
-                type="button"
-                onClick={() => setShowAnchors(!showAnchors)}
-                className="flex items-center justify-between w-full text-xs font-mono text-[#a8a29e] hover:text-white py-1"
-              >
-                <span className="flex items-center gap-1.5">
-                  Few-Shot Output Anchors ({idealSamples.length})
-                </span>
-                {showAnchors ? <ChevronUp className="w-3.5 h-3.5" /> : <ChevronDown className="w-3.5 h-3.5" />}
-              </button>
-
-              {showAnchors && (
-                <div className="space-y-3 pt-3">
-                  {idealSamples.map((sample, idx) => (
-                    <div key={idx} className="p-3 rounded-md bg-[#0a0a0f] border border-[#272738] space-y-2">
-                      <div className="flex items-center justify-between text-xs font-mono text-[#f26625]">
-                        <span>Anchor #{idx + 1}</span>
-                        <button
-                          type="button"
-                          onClick={() => setIdealSamples(idealSamples.filter((_, i) => i !== idx))}
-                          className="text-rose-400 hover:underline"
-                        >
-                          Remove
-                        </button>
-                      </div>
-                      <Input
-                        value={sample.instruction}
-                        onChange={(e) => {
-                          const updated = [...idealSamples]
-                          updated[idx].instruction = e.target.value
-                          setIdealSamples(updated)
-                        }}
-                        placeholder="User instruction..."
-                        className="bg-[#12121a] border-[#272738] text-xs font-mono text-white h-7"
-                      />
-                      <textarea
-                        value={sample.response}
-                        onChange={(e) => {
-                          const updated = [...idealSamples]
-                          updated[idx].response = e.target.value
-                          setIdealSamples(updated)
-                        }}
-                        rows={2}
-                        placeholder="Target model response..."
-                        className="w-full bg-[#12121a] border border-[#272738] rounded-md p-2 text-xs font-mono text-white placeholder:text-[#a8a29e] focus:outline-none resize-none"
-                      />
+                  <div className="flex flex-wrap items-center justify-between gap-2 pt-2">
+                    <div className="flex items-center gap-2">
+                      <Button
+                        type="button"
+                        size="sm"
+                        variant="outline"
+                        onClick={handleAutoDetect}
+                        disabled={isAutoDetecting}
+                        className="h-8 px-3.5 text-xs font-mono font-bold border-[#f26625]/40 text-[#f26625] bg-[#f26625]/10 hover:bg-[#f26625]/20 rounded-md flex items-center gap-1.5 transition-all"
+                      >
+                        {isAutoDetecting ? <Loader2 className="w-3.5 h-3.5 animate-spin text-[#f26625]" /> : <Bot className="w-3.5 h-3.5 text-[#f26625]" />}
+                        <span>{isAutoDetecting ? 'Analyzing Domain…' : 'Auto-Detect Invariants'}</span>
+                      </Button>
                     </div>
-                  ))}
+                    {autoDetectNotice && (
+                      <span className="text-xs font-mono text-emerald-400 flex items-center gap-1">
+                        <Check className="w-3.5 h-3.5 text-emerald-400" />
+                        {autoDetectNotice}
+                      </span>
+                    )}
+                  </div>
+                </div>
 
-                  {idealSamples.length < 3 && (
-                    <Button
-                      type="button"
-                      variant="outline"
-                      size="sm"
-                      onClick={() => setIdealSamples([...idealSamples, { instruction: '', response: '' }])}
-                      className="h-7 text-xs font-mono border-[#272738] bg-[#0a0a0f] hover:bg-[#161622] text-[#a8a29e] hover:text-white"
-                    >
-                      <Plus className="w-3 h-3 mr-1" />
-                      Add Anchor Sample
-                    </Button>
+                {/* Preserved Domain Terms / Glossary */}
+                <div className="space-y-2 pt-2 border-t border-[#1c1c28]">
+                  <label className="text-xs font-mono uppercase text-[#a8a29e] block">
+                    Preserved Domain Terms (Invariants)
+                  </label>
+                  <Input
+                    type="text"
+                    value={preservedTermsInput}
+                    onChange={(e) => setPreservedTermsInput(e.target.value)}
+                    placeholder="e.g. NACA 0012, Mach 0.82, Section 16(4), ITC, GSTR-3B"
+                    className="bg-[#0a0a0f] border-[#272738] focus:border-[#f26625] text-xs font-mono text-white rounded-md"
+                  />
+                  {preservedTermsInput && (
+                    <div className="flex flex-wrap gap-1.5 pt-1 max-h-24 overflow-y-auto">
+                      {preservedTermsInput
+                        .split(',')
+                        .map((t) => t.trim())
+                        .filter(Boolean)
+                        .map((term, i) => (
+                          <span
+                            key={i}
+                            className="inline-flex items-center gap-1 px-2 py-0.5 rounded-sm bg-[#161622] border border-[#f26625]/30 text-[#f26625] text-xs font-mono"
+                          >
+                            {term}
+                            <button
+                              type="button"
+                              onClick={() => {
+                                const remaining = preservedTermsInput
+                                  .split(',')
+                                  .map((t) => t.trim())
+                                  .filter((t) => t !== term)
+                                setPreservedTermsInput(remaining.join(', '))
+                              }}
+                              className="hover:text-rose-400 font-bold ml-1"
+                            >
+                              ×
+                            </button>
+                          </span>
+                        ))}
+                    </div>
                   )}
                 </div>
-              )}
-            </div>
-          </div>
-        </div>
 
-        {/* Right Column: Parameters & Launch */}
-        <div className="lg:col-span-5 p-5 rounded-md bg-[#12121a] border border-[#272738] flex flex-col justify-between space-y-6">
-          <div className="space-y-4">
-            <div className="flex items-center justify-between pb-3 border-b border-[#1c1c28]">
-              <div className="flex items-center space-x-2">
-                <Settings2 className="w-4 h-4 text-[#f26625]" />
-                <h3 className="text-xs font-bold font-mono uppercase tracking-wider text-white">
-                  Dataset Parameters
-                </h3>
-              </div>
-              <span className="text-xs font-mono text-[#a8a29e]">Format: JSONL</span>
-            </div>
+                {/* Discovered Authoritative Sources */}
+                {discoveredSources.length > 0 && (
+                  <div className="space-y-1.5 pt-2 border-t border-[#1c1c28]">
+                    <div className="flex items-center justify-between">
+                      <span className="text-xs font-mono uppercase text-[#a8a29e]">
+                        Authoritative Grounding Sources ({discoveredSources.length}):
+                      </span>
+                      <span className="px-1.5 py-0.5 rounded-sm bg-emerald-950/60 border border-emerald-800/60 text-xs font-mono text-emerald-400 flex items-center gap-1">
+                        <ShieldCheck className="w-3 h-3 text-emerald-400" />
+                        Verified Sources
+                      </span>
+                    </div>
+                    <div className="flex flex-wrap gap-1.5">
+                      {discoveredSources.map((s, idx) => {
+                        const st = (s.source_type || '').toLowerCase()
+                        const typeLabel = st === 'wikipedia' ? 'Wikipedia' :
+                                          st === 'books' ? 'Book' :
+                                          st === 'blog' ? 'Blog' :
+                                          st.includes('dataset') ? 'Dataset' :
+                                          st === 'arxiv_paper' ? 'Paper' :
+                                          st.includes('github') ? 'Repo' : null
+                        const typeColor = st === 'wikipedia' ? 'bg-[#1b1b18]/60 border-[#4a463f]/60 text-[#f26625]' :
+                                          st === 'books' ? 'bg-amber-950/60 border-amber-800/60 text-amber-400' :
+                                          st === 'blog' ? 'bg-[#161622] border-[#272738] text-[#f5f2ea]' :
+                                          st.includes('dataset') ? 'bg-emerald-950/60 border-emerald-800/60 text-emerald-400' :
+                                          'bg-[#161622] border-[#272738] text-zinc-400'
 
-            {/* Core Settings */}
-            <div className="space-y-3.5">
-              <div>
-                <label className="text-xs font-mono uppercase text-[#a8a29e] block mb-1">
-                  Dataset Type
-                </label>
-                <select
-                  value={datasetType}
-                  onChange={(e) => setDatasetType(e.target.value)}
-                  className="w-full bg-[#0a0a0f] border border-[#272738] focus:border-[#f26625] rounded-md p-2 text-xs font-mono text-white focus:outline-none"
-                >
-                  <option value="sft">Supervised Fine-Tuning (SFT / Dialogue)</option>
-                  <option value="reasoning">Chain-of-Thought Reasoning (CoT)</option>
-                  <option value="coding">Code Generation &amp; Translation</option>
-                  <option value="tool_calling">Function &amp; Tool Calling</option>
-                  <option value="rlhf">Preference Pairs (RLHF / DPO)</option>
-                  <option value="simpo">Simple Preference (SimPO)</option>
-                  <option value="rag">Retrieval-Augmented Generation (RAG)</option>
-                </select>
-              </div>
-
-              <div>
-                <label className="text-xs font-mono uppercase text-[#a8a29e] block mb-1">
-                  Synthesis Engine Mode
-                </label>
-                <select
-                  value={synthesisMode}
-                  onChange={(e) => setSynthesisMode(e.target.value)}
-                  className="w-full bg-[#0a0a0f] border border-[#272738] focus:border-[#f26625] rounded-md p-2 text-xs font-mono text-white focus:outline-none"
-                >
-                  <option value="standard">Standard SFT (Grounded &amp; Adaptive)</option>
-                  <option value="cot">Chain-of-Thought (DeepSeek-R1 / &lt;thought&gt; Tags)</option>
-                  <option value="socratic">Socratic Dialectic Debate (Multi-Persona Verdict)</option>
-                  <option value="multi_turn">Multi-Turn Dialogue Trajectories</option>
-                  <option value="simpo">SimPO Preference Optimization (Length-Normalized)</option>
-                  <option value="kto">KTO Binary Utility (Prospect Theory)</option>
-                  <option value="tool_calling">Tool &amp; Function Calling (OpenAI / Hermes Schema)</option>
-                  <option value="contrastive">Contrastive Critique (Hallucination Perturbation)</option>
-                  <option value="rag">Multi-Hop RAG (Hard Negatives &amp; Citations)</option>
-                </select>
-              </div>
-
-              <div>
-                <label className="text-xs font-mono uppercase text-[#a8a29e] block mb-1">
-                  Language
-                </label>
-                <select
-                  value={isCustomLang ? 'custom' : language}
-                  onChange={(e) => {
-                    if (e.target.value === 'custom') {
-                      setIsCustomLang(true)
-                    } else {
-                      setIsCustomLang(false)
-                      setLanguage(e.target.value)
-                    }
-                  }}
-                  className="w-full bg-[#0a0a0f] border border-[#272738] focus:border-[#f26625] rounded-md p-2 text-xs font-mono text-white focus:outline-none"
-                >
-                  <optgroup label="Common & Multilingual">
-                    <option value="en">English</option>
-                    <option value="hi">Hindi (हिन्दी)</option>
-                    <option value="hinglish">Hindi + English (Hinglish)</option>
-                    <option value="indic_multilingual">Indic Multilingual (22 Indic Languages)</option>
-                  </optgroup>
-                  <optgroup label="22 Official Indian Languages (8th Schedule)">
-                    <option value="as">Assamese (অসমীয়া)</option>
-                    <option value="bn">Bengali (বাংলা)</option>
-                    <option value="brx">Bodo (बड़ो)</option>
-                    <option value="doi">Dogri (डोगरी)</option>
-                    <option value="gu">Gujarati (ગુજરાતી)</option>
-                    <option value="kn">Kannada (ಕನ್ನಡ)</option>
-                    <option value="ks">Kashmiri (कॉशुर / کٲشُر)</option>
-                    <option value="kok">Konkani (कोंकणी)</option>
-                    <option value="mai">Maithili (मैथिली)</option>
-                    <option value="ml">Malayalam (മലയാളം)</option>
-                    <option value="mni">Manipuri / Meitei (মৈতৈলোন্)</option>
-                    <option value="mr">Marathi (मराठी)</option>
-                    <option value="ne">Nepali (नेपाली)</option>
-                    <option value="or">Odia (ଓଡ଼ିଆ)</option>
-                    <option value="pa">Punjabi (ਪੰਜਾਬੀ)</option>
-                    <option value="sa">Sanskrit (संस्कृतम्)</option>
-                    <option value="sat">Santali (संताली)</option>
-                    <option value="sd">Sindhi (سنڌي / सिन्धी)</option>
-                    <option value="ta">Tamil (தமிழ்)</option>
-                    <option value="te">Telugu (తెలుగు)</option>
-                    <option value="ur">Urdu (اردو)</option>
-                  </optgroup>
-                  <optgroup label="Major Global Languages">
-                    <option value="ar">Arabic (العربية)</option>
-                    <option value="zh">Chinese (中文)</option>
-                    <option value="fr">French (Français)</option>
-                    <option value="de">German (Deutsch)</option>
-                    <option value="ja">Japanese (日本語)</option>
-                    <option value="ko">Korean (한국어)</option>
-                    <option value="pt">Portuguese (Português)</option>
-                    <option value="ru">Russian (Русский)</option>
-                    <option value="es">Spanish (Español)</option>
-                  </optgroup>
-                  <optgroup label="Custom Specification">
-                    <option value="custom">Other / Custom Language (Type below)...</option>
-                  </optgroup>
-                </select>
-                {isCustomLang && (
-                  <input
-                    type="text"
-                    placeholder="Enter language code or name (e.g. sw, it, nl, Latin)..."
-                    value={customLanguage}
-                    onChange={(e) => {
-                      setCustomLanguage(e.target.value)
-                      setLanguage(e.target.value.trim().toLowerCase())
-                    }}
-                    className="mt-2 w-full bg-[#0a0a0f] border border-[#f26625] rounded-md p-2 text-xs font-mono text-white focus:outline-none placeholder-[#a8a29e]"
-                  />
+                        return (
+                          <span
+                            key={idx}
+                            className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-sm bg-[#0a0a0f] border border-[#272738] text-xs font-mono text-zinc-200 truncate max-w-[280px]"
+                            title={s.name}
+                          >
+                            {typeLabel && (
+                              <span className={`px-1 py-0.2 rounded-[2px] text-xs uppercase tracking-wider border font-bold ${typeColor}`}>
+                                {typeLabel}
+                              </span>
+                            )}
+                            <span className="truncate">{s.name}</span>
+                          </span>
+                        )
+                      })}
+                    </div>
+                  </div>
                 )}
-              </div>
 
-              <div>
-                <div className="flex justify-between items-center mb-1.5">
-                  <label className="text-xs font-mono uppercase text-[#a8a29e]">Target Size</label>
-                  <div className="flex items-center gap-1.5">
+                {/* Synthetic Diversity & Topic Coverage Matrix */}
+                {coverageMatrix && coverageMatrix.cells && coverageMatrix.cells.length > 0 && (
+                  <div className="space-y-2 pt-2 border-t border-[#1c1c28]">
+                    <div className="flex items-center justify-between">
+                      <span className="text-xs font-mono uppercase text-[#a8a29e] flex items-center gap-1.5">
+                        <Layers className="w-3.5 h-3.5 text-[#f26625]" />
+                        Topic &amp; Diversity Coverage Matrix ({coverageMatrix.cells.length} cells planned)
+                      </span>
+                      <span className="px-1.5 py-0.5 rounded-sm bg-[#1b1b18]/60 border border-[#4a463f]/60 text-xs font-mono text-[#d8d2c4]">
+                        Balanced Sampling Guarantee
+                      </span>
+                    </div>
+                    <div className="grid grid-cols-2 sm:grid-cols-3 gap-1.5 max-h-48 overflow-y-auto p-2 bg-[#0a0a0f] border border-[#272738] rounded-md">
+                      {coverageMatrix.cells.map((cell, idx) => (
+                        <div
+                          key={idx}
+                          className="p-1.5 rounded bg-[#161622] border border-[#272738]/60 text-xs font-mono space-y-0.5 hover:border-[#f26625]/40 transition-colors"
+                        >
+                          {Object.entries(cell).map(([k, v]) => (
+                            <div key={k} className="flex items-center justify-between text-xs">
+                              <span className="text-[#a8a29e] truncate max-w-[70px]">{k}:</span>
+                              <span className="text-[#d8d2c4] font-semibold truncate max-w-[90px]" title={String(v)}>
+                                {String(v)}
+                              </span>
+                            </div>
+                          ))}
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                {/* Collapsible Few-Shot Anchor Examples */}
+                <div className="pt-2 border-t border-[#1c1c28]">
+                  <button
+                    type="button"
+                    onClick={() => setShowAnchors(!showAnchors)}
+                    className="flex items-center justify-between w-full text-xs font-mono text-[#a8a29e] hover:text-white py-1"
+                  >
+                    <span className="flex items-center gap-1.5">
+                      Few-Shot Output Anchors ({idealSamples.length})
+                    </span>
+                    {showAnchors ? <ChevronUp className="w-3.5 h-3.5" /> : <ChevronDown className="w-3.5 h-3.5" />}
+                  </button>
+
+                  {showAnchors && (
+                    <div className="space-y-3 pt-3">
+                      {idealSamples.map((sample, idx) => (
+                        <div key={idx} className="p-3 rounded-md bg-[#0a0a0f] border border-[#272738] space-y-2">
+                          <div className="flex items-center justify-between text-xs font-mono text-[#f26625]">
+                            <span>Anchor #{idx + 1}</span>
+                            <button
+                              type="button"
+                              onClick={() => setIdealSamples(idealSamples.filter((_, i) => i !== idx))}
+                              className="text-rose-400 hover:underline"
+                            >
+                              Remove
+                            </button>
+                          </div>
+                          <Input
+                            value={sample.instruction}
+                            onChange={(e) => {
+                              const updated = [...idealSamples]
+                              updated[idx].instruction = e.target.value
+                              setIdealSamples(updated)
+                            }}
+                            placeholder="User instruction..."
+                            className="bg-[#12121a] border-[#272738] text-xs font-mono text-white h-7"
+                          />
+                          <textarea
+                            value={sample.response}
+                            onChange={(e) => {
+                              const updated = [...idealSamples]
+                              updated[idx].response = e.target.value
+                              setIdealSamples(updated)
+                            }}
+                            rows={2}
+                            placeholder="Target model response..."
+                            className="w-full bg-[#12121a] border border-[#272738] rounded-md p-2 text-xs font-mono text-white placeholder:text-[#a8a29e] focus:outline-none resize-none"
+                          />
+                        </div>
+                      ))}
+
+                      {idealSamples.length < 3 && (
+                        <Button
+                          type="button"
+                          variant="outline"
+                          size="sm"
+                          onClick={() => setIdealSamples([...idealSamples, { instruction: '', response: '' }])}
+                          className="h-7 text-xs font-mono border-[#272738] bg-[#0a0a0f] hover:bg-[#161622] text-[#a8a29e] hover:text-white"
+                        >
+                          <Plus className="w-3 h-3 mr-1" />
+                          Add Anchor Sample
+                        </Button>
+                      )}
+                    </div>
+                  )}
+                </div>
+              </div>
+            </div>
+
+            {/* Right Column: Parameters & Launch */}
+            <div className="lg:col-span-5 p-5 rounded-md bg-[#12121a] border border-[#272738] flex flex-col justify-between space-y-6">
+              <div className="space-y-4">
+                <div className="flex items-center justify-between pb-3 border-b border-[#1c1c28]">
+                  <div className="flex items-center space-x-2">
+                    <Settings2 className="w-4 h-4 text-[#f26625]" />
+                    <h3 className="text-xs font-bold font-mono uppercase tracking-wider text-white">
+                      Dataset Parameters
+                    </h3>
+                  </div>
+                  <span className="text-xs font-mono text-[#a8a29e]">Format: JSONL</span>
+                </div>
+
+                {/* Core Settings */}
+                <div className="space-y-3.5">
+                  <div>
+                    <label className="text-xs font-mono uppercase text-[#a8a29e] block mb-1">
+                      Dataset Type
+                    </label>
+                    <select
+                      value={datasetType}
+                      onChange={(e) => setDatasetType(e.target.value)}
+                      className="w-full bg-[#0a0a0f] border border-[#272738] focus:border-[#f26625] rounded-md p-2 text-xs font-mono text-white focus:outline-none"
+                    >
+                      <option value="sft">Supervised Fine-Tuning (SFT / Dialogue)</option>
+                      <option value="reasoning">Chain-of-Thought Reasoning (CoT)</option>
+                      <option value="coding">Code Generation &amp; Translation</option>
+                      <option value="tool_calling">Function &amp; Tool Calling</option>
+                      <option value="rlhf">Preference Pairs (RLHF / DPO)</option>
+                      <option value="simpo">Simple Preference (SimPO)</option>
+                      <option value="rag">Retrieval-Augmented Generation (RAG)</option>
+                    </select>
+                  </div>
+
+                  <div>
+                    <label className="text-xs font-mono uppercase text-[#a8a29e] block mb-1">
+                      Synthesis Engine Mode
+                    </label>
+                    <select
+                      value={synthesisMode}
+                      onChange={(e) => setSynthesisMode(e.target.value)}
+                      className="w-full bg-[#0a0a0f] border border-[#272738] focus:border-[#f26625] rounded-md p-2 text-xs font-mono text-white focus:outline-none"
+                    >
+                      <option value="standard">Standard SFT (Grounded &amp; Adaptive)</option>
+                      <option value="cot">Chain-of-Thought (Step-by-Step Reasoning)</option>
+                      <option value="socratic">Socratic Multi-Turn Dialogue</option>
+                      <option value="multi_turn">Multi-Turn Conversational Trajectories</option>
+                      <option value="simpo">Simple Preference Optimization (SimPO)</option>
+                      <option value="kto">Kahneman-Tversky Optimization (KTO)</option>
+                      <option value="tool_calling">Tool &amp; Function Calling</option>
+                      <option value="contrastive">Contrastive Critique &amp; Error Correction</option>
+                      <option value="rag">Retrieval-Augmented Generation (RAG)</option>
+                    </select>
+                  </div>
+
+                  <div>
+                    <label className="text-xs font-mono uppercase text-[#a8a29e] block mb-1">
+                      Language
+                    </label>
+                    <select
+                      value={isCustomLang ? 'custom' : language}
+                      onChange={(e) => {
+                        if (e.target.value === 'custom') {
+                          setIsCustomLang(true)
+                        } else {
+                          setIsCustomLang(false)
+                          setLanguage(e.target.value)
+                        }
+                      }}
+                      className="w-full bg-[#0a0a0f] border border-[#272738] focus:border-[#f26625] rounded-md p-2 text-xs font-mono text-white focus:outline-none"
+                    >
+                      <optgroup label="Common & Multilingual">
+                        <option value="en">English</option>
+                        <option value="hi">Hindi (हिन्दी)</option>
+                        <option value="hinglish">Hindi + English (Hinglish)</option>
+                        <option value="indic_multilingual">Indic Multilingual (22 Indic Languages)</option>
+                      </optgroup>
+                      <optgroup label="22 Official Indian Languages (8th Schedule)">
+                        <option value="as">Assamese (অসমীয়া)</option>
+                        <option value="bn">Bengali (বাংলা)</option>
+                        <option value="brx">Bodo (बड़ो)</option>
+                        <option value="doi">Dogri (डोगरी)</option>
+                        <option value="gu">Gujarati (ગુજરાતી)</option>
+                        <option value="kn">Kannada (ಕನ್ನಡ)</option>
+                        <option value="ks">Kashmiri (कॉशुर / کٲشُر)</option>
+                        <option value="kok">Konkani (कोंकणी)</option>
+                        <option value="mai">Maithili (मैथिली)</option>
+                        <option value="ml">Malayalam (മലയാളം)</option>
+                        <option value="mni">Manipuri / Meitei (মৈতৈलोन्)</option>
+                        <option value="mr">Marathi (मराठी)</option>
+                        <option value="ne">Nepali (नेपाली)</option>
+                        <option value="or">Odia (ଓଡ଼ିଆ)</option>
+                        <option value="pa">Punjabi (ਪੰਜਾਬੀ)</option>
+                        <option value="sa">Sanskrit (संस्कृतम्)</option>
+                        <option value="sat">Santali (संताली)</option>
+                        <option value="sd">Sindhi (سنڌي / सिन्धी)</option>
+                        <option value="ta">Tamil (தமிழ்)</option>
+                        <option value="te">Telugu (తెలుగు)</option>
+                        <option value="ur">Urdu (اردو)</option>
+                      </optgroup>
+                      <optgroup label="Major Global Languages">
+                        <option value="ar">Arabic (العربية)</option>
+                        <option value="zh">Chinese (中文)</option>
+                        <option value="fr">French (Français)</option>
+                        <option value="de">German (Deutsch)</option>
+                        <option value="ja">Japanese (日本語)</option>
+                        <option value="ko">Korean (한국어)</option>
+                        <option value="pt">Portuguese (Português)</option>
+                        <option value="ru">Russian (Русский)</option>
+                        <option value="es">Spanish (Español)</option>
+                      </optgroup>
+                      <optgroup label="Custom Specification">
+                        <option value="custom">Other / Custom Language (Type below)...</option>
+                      </optgroup>
+                    </select>
+                    {isCustomLang && (
+                      <input
+                        type="text"
+                        placeholder="Enter language code or name (e.g. sw, it, nl, Latin)..."
+                        value={customLanguage}
+                        onChange={(e) => {
+                          setCustomLanguage(e.target.value)
+                          setLanguage(e.target.value.trim().toLowerCase())
+                        }}
+                        className="mt-2 w-full bg-[#0a0a0f] border border-[#f26625] rounded-md p-2 text-xs font-mono text-white focus:outline-none placeholder-[#a8a29e]"
+                      />
+                    )}
+                  </div>
+
+                  <div>
+                    <div className="flex justify-between items-center mb-1.5">
+                      <label className="text-xs font-mono uppercase text-[#a8a29e]">Target Size</label>
+                      <div className="flex items-center gap-1.5">
+                        <input
+                          type="number"
+                          min={100}
+                          max={50000}
+                          step={100}
+                          value={sizeInput}
+                          onChange={(e) => {
+                            const raw = e.target.value
+                            setSizeInput(raw)
+                            const num = Number(raw)
+                            if (!isNaN(num) && num >= 100 && num <= 50000) {
+                              setDatasetSize(num)
+                            }
+                          }}
+                          onBlur={() => {
+                            const num = Number(sizeInput)
+                            if (isNaN(num) || num < 100) {
+                              setDatasetSize(100)
+                              setSizeInput('100')
+                            } else if (num > 50000) {
+                              setDatasetSize(50000)
+                              setSizeInput('50000')
+                            } else {
+                              setDatasetSize(num)
+                              setSizeInput(String(num))
+                            }
+                          }}
+                          className="w-20 bg-[#0a0a0f] border border-[#272738] rounded px-1.5 py-0.5 text-xs font-mono text-right text-[#f26625] font-bold focus:outline-none focus:border-[#f26625]"
+                        />
+                        <span className="text-xs font-mono text-[#a8a29e]">rows</span>
+                      </div>
+                    </div>
                     <input
-                      type="number"
+                      type="range"
                       min={100}
                       max={50000}
                       step={100}
-                      value={sizeInput}
+                      value={datasetSize}
+                      onInput={(e) => {
+                        const val = Number((e.target as HTMLInputElement).value)
+                        setDatasetSize(val)
+                        setSizeInput(String(val))
+                      }}
                       onChange={(e) => {
-                        const raw = e.target.value
-                        setSizeInput(raw)
-                        const num = Number(raw)
-                        if (!isNaN(num) && num >= 100 && num <= 50000) {
-                          setDatasetSize(num)
-                        }
+                        const val = Number(e.target.value)
+                        setDatasetSize(val)
+                        setSizeInput(String(val))
                       }}
-                      onBlur={() => {
-                        const num = Number(sizeInput)
-                        if (isNaN(num) || num < 100) {
-                          setDatasetSize(100)
-                          setSizeInput('100')
-                        } else if (num > 50000) {
-                          setDatasetSize(50000)
-                          setSizeInput('50000')
-                        } else {
-                          setDatasetSize(num)
-                          setSizeInput(String(num))
-                        }
-                      }}
-                      className="w-20 bg-[#0a0a0f] border border-[#272738] rounded px-1.5 py-0.5 text-xs font-mono text-right text-[#f26625] font-bold focus:outline-none focus:border-[#f26625]"
+                      className="w-full accent-[#f26625] bg-[#0a0a0f] cursor-pointer"
                     />
-                    <span className="text-xs font-mono text-[#a8a29e]">rows</span>
+                    <div className="flex items-center justify-between text-xs font-mono text-[#a8a29e] mt-2 p-2 rounded bg-[#0a0a0f] border border-[#1f1f2e]">
+                      <span>Est. Cloud API (~$0.06 / 1k rows): <strong className="text-zinc-200 font-bold">${((datasetSize / 1000) * 0.06).toFixed(2)}</strong> <span className="text-emerald-400">($0.00 Local)</span></span>
+                      <span>Est. Time: <strong className="text-zinc-200 font-bold">{datasetSize <= 100 ? '~15s' : datasetSize <= 1000 ? '~1.8m' : datasetSize <= 5000 ? '~8.5m' : `~${Math.round(datasetSize / 650)}m`}</strong></span>
+                    </div>
                   </div>
-                </div>
-                <input
-                  type="range"
-                  min={100}
-                  max={50000}
-                  step={100}
-                  value={datasetSize}
-                  onInput={(e) => {
-                    const val = Number((e.target as HTMLInputElement).value)
-                    setDatasetSize(val)
-                    setSizeInput(String(val))
-                  }}
-                  onChange={(e) => {
-                    const val = Number(e.target.value)
-                    setDatasetSize(val)
-                    setSizeInput(String(val))
-                  }}
-                  className="w-full accent-[#f26625] bg-[#0a0a0f] cursor-pointer"
-                />
-                <div className="flex items-center justify-between text-xs font-mono text-[#a8a29e] mt-2 p-2 rounded bg-[#0a0a0f] border border-[#1f1f2e]">
-                  <span>Est. Cloud API (~$0.06 / 1k rows): <strong className="text-zinc-200 font-bold">${((datasetSize / 1000) * 0.06).toFixed(2)}</strong> <span className="text-emerald-400">($0.00 Local)</span></span>
-                  <span>Est. Time: <strong className="text-zinc-200 font-bold">{datasetSize <= 100 ? '~15s' : datasetSize <= 1000 ? '~1.8m' : datasetSize <= 5000 ? '~8.5m' : `~${Math.round(datasetSize / 650)}m`}</strong></span>
+
+                  {/* Quality & Human Review Gates */}
+                  <div className="pt-3 border-t border-[#1c1c28] space-y-3">
+                    <div className="flex items-center justify-between">
+                      <span className="text-xs font-mono uppercase text-[#a8a29e] font-bold">
+                        Pipeline Gates &amp; Sources
+                      </span>
+                      <span className="text-xs font-mono text-[#f26625]">Quality Control</span>
+                    </div>
+
+                    {/* HITL Review Toggle */}
+                    <div className="p-2.5 rounded-md bg-[#0a0a0f] border border-[#272738] space-y-2">
+                      <label className="flex items-center justify-between text-xs font-mono text-white cursor-pointer">
+                        <div className="flex flex-col">
+                          <span className="font-semibold text-white">Stratified HITL Review</span>
+                          <span className="text-xs text-[#a8a29e]">
+                            Pause at awaiting_review gate to inspect, edit, or reject samples
+                          </span>
+                        </div>
+                        <input
+                          type="checkbox"
+                          checked={humanReview}
+                          onChange={(e) => setHumanReview(e.target.checked)}
+                          className="w-4 h-4 accent-[#f26625] cursor-pointer"
+                        />
+                      </label>
+
+                      {humanReview && (
+                        <div className="pt-2 border-t border-[#1c1c28] space-y-2">
+                          <div className="flex justify-between items-center text-xs font-mono">
+                            <span className="text-[#a8a29e]">Sampling Ratio</span>
+                            <span className="text-[#f26625] font-bold">{humanReviewPercentage}% of dataset</span>
+                          </div>
+                          <input
+                            type="range"
+                            min={1}
+                            max={50}
+                            step={1}
+                            value={humanReviewPercentage}
+                            onChange={(e) => setHumanReviewPercentage(Number(e.target.value))}
+                            className="w-full accent-[#f26625] bg-[#12121a] cursor-pointer"
+                          />
+                          <p className="text-[11px] text-amber-300/90 font-mono">
+                            Sampled batches will hold at the review gate. Review and sign-off occur in the{' '}
+                            <a href="/review" target="_blank" rel="noopener noreferrer" className="underline text-[#f26625] hover:text-white">
+                              Human Review Queue
+                            </a>.
+                          </p>
+                        </div>
+                      )}
+                    </div>
+
+                    <div className="p-2.5 rounded-md bg-[#0a0a0f] border border-[#272738]">
+                      <label className="flex items-center justify-between text-xs font-mono text-white cursor-pointer">
+                        <div className="flex flex-col">
+                          <span className="font-semibold text-white">Independent LLM Jury</span>
+                          <span className="text-xs text-[#a8a29e]">
+                            Compare provider-specific reviews; disagreements are escalated to HITL
+                          </span>
+                        </div>
+                        <input
+                          type="checkbox"
+                          checked={llmReview}
+                          onChange={(e) => setLlmReview(e.target.checked)}
+                          className="w-4 h-4 accent-[#f26625] cursor-pointer"
+                        />
+                      </label>
+                    </div>
+
+                    <div className="p-2.5 rounded-md bg-[#0a0a0f] border border-[#272738]">
+                      <label className="flex items-center justify-between text-xs font-mono text-white cursor-pointer">
+                        <div className="flex flex-col">
+                          <span className="font-semibold text-white">Require Source Evidence</span>
+                          <span className="text-xs text-[#a8a29e]">
+                            Keep only examples with a source URL, content hash, and citation span
+                          </span>
+                        </div>
+                        <input
+                          type="checkbox"
+                          checked={requireCitations}
+                          onChange={(e) => setRequireCitations(e.target.checked)}
+                          className="w-4 h-4 accent-[#f26625] cursor-pointer"
+                        />
+                      </label>
+                    </div>
+
+                    {/* AI Kosh Prioritization Toggle */}
+                    <div className="p-2.5 rounded-md bg-[#0a0a0f] border border-[#272738]">
+                      <label className="flex items-center justify-between text-xs font-mono text-white cursor-pointer">
+                        <div className="flex flex-col">
+                          <span className="font-semibold text-white">Prioritize AI Kosh &amp; IndiaAI</span>
+                          <span className="text-xs text-[#a8a29e]">
+                            Query Indian statutory, GST, and legal open corpora first
+                          </span>
+                        </div>
+                        <input
+                          type="checkbox"
+                          checked={prioritizeAiKosh}
+                          onChange={(e) => setPrioritizeAiKosh(e.target.checked)}
+                          className="w-4 h-4 accent-[#f26625] cursor-pointer"
+                        />
+                      </label>
+                    </div>
+                  </div>
+
+                  {/* Collapsible Advanced Configuration */}
+                  <div className="pt-2 border-t border-[#1c1c28]">
+                    <button
+                      type="button"
+                      onClick={() => setShowAdvanced(!showAdvanced)}
+                      className="flex items-center justify-between w-full py-1.5 text-xs font-mono text-[#a8a29e] hover:text-white"
+                    >
+                      <span className="flex items-center gap-1.5">
+                        Advanced Linguistic &amp; Alignment Controls
+                      </span>
+                      {showAdvanced ? <ChevronUp className="w-3.5 h-3.5" /> : <ChevronDown className="w-3.5 h-3.5" />}
+                    </button>
+
+                    {showAdvanced && (
+                      <div className="space-y-3 pt-3">
+                        <div>
+                          <label className="text-xs font-mono uppercase text-[#a8a29e] block mb-1">
+                            Script &amp; Orthography
+                          </label>
+                          <select
+                            value={scriptMode}
+                            onChange={(e) => setScriptMode(e.target.value as any)}
+                            className="w-full bg-[#0a0a0f] border border-[#272738] rounded-md p-2 text-xs font-mono text-white focus:outline-none"
+                          >
+                            <option value="native">Native Script</option>
+                            <option value="romanized">Romanized / Phonetic</option>
+                            <option value="dual">Dual-Script</option>
+                          </select>
+                        </div>
+
+                        <div>
+                          <label className="text-xs font-mono uppercase text-[#a8a29e] block mb-1">
+                            Register &amp; Honorifics
+                          </label>
+                          <select
+                            value={formalityRegister}
+                            onChange={(e) => setFormalityRegister(e.target.value as any)}
+                            className="w-full bg-[#0a0a0f] border border-[#272738] rounded-md p-2 text-xs font-mono text-white focus:outline-none"
+                          >
+                            <option value="formal">Formal / Honorific (आप)</option>
+                            <option value="neutral">Professional Neutral</option>
+                            <option value="casual">Casual (तुम)</option>
+                          </select>
+                        </div>
+
+                        <div>
+                          <div className="flex items-center justify-between mb-1">
+                            <label className="text-xs font-mono uppercase text-[#a8a29e] flex items-center gap-1.5">
+                              <ShieldCheck className="w-3.5 h-3.5 text-emerald-400" />
+                              Anti-Domains &amp; Out-of-Scope Exclusions
+                            </label>
+                            <span className="text-xs font-mono text-emerald-400">Guard Active</span>
+                          </div>
+                          <Input
+                            value={antiDomainsInput}
+                            onChange={(e) => setAntiDomainsInput(e.target.value)}
+                            placeholder="e.g. foreign statutory codes, out-of-scope domains (comma-separated)"
+                            className="bg-[#0a0a0f] border-[#272738] text-xs font-mono text-white h-8"
+                          />
+                          <p className="text-xs font-mono text-[#a8a29e] mt-1">
+                            Excludes irrelevant cross-domain topics and misleading concepts.
+                          </p>
+                        </div>
+
+                        {/* Checkbox Options */}
+                        <div className="space-y-2 pt-1">
+                          <label className="flex items-center justify-between p-2 rounded-md bg-[#0a0a0f] border border-[#272738] text-xs font-mono text-white cursor-pointer">
+                            <span>Indian DPDP PII Masking</span>
+                            <input
+                              type="checkbox"
+                              checked={maskIndianPii}
+                              onChange={(e) => setMaskIndianPii(e.target.checked)}
+                              className="w-4 h-4 accent-[#f26625]"
+                            />
+                          </label>
+
+                          <label className="flex items-center justify-between p-2 rounded-md bg-[#0a0a0f] border border-[#272738] text-xs font-mono text-white cursor-pointer">
+                            <span>DPO Refusal Pairs</span>
+                            <input
+                              type="checkbox"
+                              checked={generateDpoRefusalPairs}
+                              onChange={(e) => setGenerateDpoRefusalPairs(e.target.checked)}
+                              className="w-4 h-4 accent-[#f26625]"
+                            />
+                          </label>
+
+                          <label className="flex items-center justify-between p-2 rounded-md bg-[#0a0a0f] border border-[#272738] text-xs font-mono text-white cursor-pointer">
+                            <span>Chain-of-Thought Reasoning</span>
+                            <input
+                              type="checkbox"
+                              checked={enableCotReasoning}
+                              onChange={(e) => setEnableCotReasoning(e.target.checked)}
+                              className="w-4 h-4 accent-[#f26625]"
+                            />
+                          </label>
+
+                          <label className="flex items-center justify-between p-2 rounded-md bg-[#0a0a0f] border border-[#272738] text-xs font-mono text-white cursor-pointer">
+                            <span>Parallel Bilingual Bitext</span>
+                            <input
+                              type="checkbox"
+                              checked={parallelBilingual}
+                              onChange={(e) => setParallelBilingual(e.target.checked)}
+                              className="w-4 h-4 accent-[#f26625]"
+                            />
+                          </label>
+                        </div>
+
+                        {/* Tokenizer Fertility */}
+                        <div className="p-2.5 rounded-md bg-[#0a0a0f] border border-[#272738] font-mono text-xs space-y-1">
+                          <div className="flex justify-between items-center text-xs">
+                            <span className="text-[#a8a29e] uppercase font-bold">Tokenizer Efficiency</span>
+                            <span className="text-[#10b981] font-bold">
+                              {isIndicOrHinglish ? `~${estSavings}% Token Savings` : 'Standard Latin'}
+                            </span>
+                          </div>
+                          <div className="flex justify-between text-xs text-[#a8a29e]">
+                            <span>Llama-3: {estLlama3Fertility} t/w</span>
+                            <span className="text-[#10b981]">Sarvam: {estSarvamFertility} t/w</span>
+                          </div>
+                        </div>
+                      </div>
+                    )}
+                  </div>
                 </div>
               </div>
 
-              {/* Quality & Human Review Gates */}
-              <div className="pt-3 border-t border-[#1c1c28] space-y-3">
-                <div className="flex items-center justify-between">
-                  <span className="text-xs font-mono uppercase text-[#a8a29e] font-bold">
-                    Pipeline Gates &amp; Sources
-                  </span>
-                  <span className="text-xs font-mono text-[#f26625]">Quality Control</span>
-                </div>
+              <Button
+                onClick={handleGenerate}
+                disabled={isSubmitting}
+                className="w-full bg-[#f26625] hover:bg-[#de581a] border border-[#ea580c] text-white font-mono font-bold text-xs h-10 rounded-md shadow-sm flex items-center justify-center gap-2"
+              >
+                {isSubmitting ? <Loader2 className="w-4 h-4 animate-spin" /> : <Play className="w-4 h-4 fill-current" />}
+                <span>Execute Generation Run</span>
+              </Button>
 
-                {/* HITL Review Toggle */}
-                <div className="p-2.5 rounded-md bg-[#0a0a0f] border border-[#272738] space-y-2">
-                  <label className="flex items-center justify-between text-xs font-mono text-white cursor-pointer">
-                    <div className="flex flex-col">
-                      <span className="font-semibold text-white">Stratified HITL Review</span>
-                      <span className="text-xs text-[#a8a29e]">
-                        Pause at awaiting_review gate to inspect, edit, or reject samples
-                      </span>
-                    </div>
-                    <input
-                      type="checkbox"
-                      checked={humanReview}
-                      onChange={(e) => setHumanReview(e.target.checked)}
-                      className="w-4 h-4 accent-[#f26625] cursor-pointer"
-                    />
-                  </label>
-
-                  {humanReview && (
-                    <div className="pt-2 border-t border-[#1c1c28] space-y-2">
-                      <div className="flex justify-between items-center text-xs font-mono">
-                        <span className="text-[#a8a29e]">Sampling Ratio</span>
-                        <span className="text-[#f26625] font-bold">{humanReviewPercentage}% of dataset</span>
-                      </div>
-                      <input
-                        type="range"
-                        min={1}
-                        max={50}
-                        step={1}
-                        value={humanReviewPercentage}
-                        onChange={(e) => setHumanReviewPercentage(Number(e.target.value))}
-                        className="w-full accent-[#f26625] bg-[#12121a] cursor-pointer"
-                      />
-                      <p className="text-[11px] text-amber-300/90 font-mono">
-                        Sampled batches will hold at the review gate. Review and sign-off occur in the{' '}
-                        <a href="/review" target="_blank" rel="noopener noreferrer" className="underline text-[#f26625] hover:text-white">
-                          Human Review Queue
-                        </a>.
+              {submitResult && (
+                <div
+                  className={clsx(
+                    'p-3.5 rounded-md border font-mono text-xs space-y-2.5 animate-fade-in',
+                    submitResult.type === 'success'
+                      ? 'bg-emerald-950/40 border-emerald-500/40 text-emerald-300'
+                      : 'bg-rose-950/40 border-rose-500/40 text-rose-300'
+                  )}
+                >
+                  <div className="flex items-start gap-2">
+                    {submitResult.type === 'success' ? (
+                      <CheckCircle2 className="w-4 h-4 text-emerald-400 shrink-0 mt-0.5" />
+                    ) : (
+                      <AlertCircle className="w-4 h-4 text-rose-400 shrink-0 mt-0.5" />
+                    )}
+                    <div className="space-y-1">
+                      <p className="font-bold text-white">
+                        {submitResult.message}
                       </p>
+                      {submitResult.type === 'error' && (
+                        <p className="text-[11px] text-rose-300">
+                          The job scheduler encountered an issue. Verify local server connectivity or input configuration and try again.
+                        </p>
+                      )}
+                    </div>
+                  </div>
+
+                  {submitResult.type === 'success' && submitResult.jobId && (
+                    <div className="flex flex-wrap items-center gap-2 pt-1 border-t border-emerald-500/20">
+                      <a
+                        href={`/orchestration?job=${submitResult.jobId}`}
+                        className="inline-flex items-center gap-1 px-3 py-1.5 rounded bg-[#f26625] hover:bg-[#de581a] text-white font-bold text-xs transition-colors"
+                      >
+                        <span>Track Pipeline in Orchestration →</span>
+                      </a>
+                      <a
+                        href="/jobs"
+                        className="inline-flex items-center gap-1 px-3 py-1.5 rounded border border-[#272738] bg-[#12121a] hover:bg-[#161622] text-zinc-300 hover:text-white text-xs transition-colors"
+                      >
+                        <span>View in Jobs List</span>
+                      </a>
                     </div>
                   )}
                 </div>
-
-                <div className="p-2.5 rounded-md bg-[#0a0a0f] border border-[#272738]">
-                  <label className="flex items-center justify-between text-xs font-mono text-white cursor-pointer">
-                    <div className="flex flex-col">
-                      <span className="font-semibold text-white">Independent LLM Jury</span>
-                      <span className="text-xs text-[#a8a29e]">
-                        Compare provider-specific reviews; disagreements are escalated to HITL
-                      </span>
-                    </div>
-                    <input
-                      type="checkbox"
-                      checked={llmReview}
-                      onChange={(e) => setLlmReview(e.target.checked)}
-                      className="w-4 h-4 accent-[#f26625] cursor-pointer"
-                    />
-                  </label>
-                </div>
-
-                <div className="p-2.5 rounded-md bg-[#0a0a0f] border border-[#272738]">
-                  <label className="flex items-center justify-between text-xs font-mono text-white cursor-pointer">
-                    <div className="flex flex-col">
-                      <span className="font-semibold text-white">Require Source Evidence</span>
-                      <span className="text-xs text-[#a8a29e]">
-                        Keep only examples with a source URL, content hash, and citation span
-                      </span>
-                    </div>
-                    <input
-                      type="checkbox"
-                      checked={requireCitations}
-                      onChange={(e) => setRequireCitations(e.target.checked)}
-                      className="w-4 h-4 accent-[#f26625] cursor-pointer"
-                    />
-                  </label>
-                </div>
-
-                {/* AI Kosh Prioritization Toggle */}
-                <div className="p-2.5 rounded-md bg-[#0a0a0f] border border-[#272738]">
-                  <label className="flex items-center justify-between text-xs font-mono text-white cursor-pointer">
-                    <div className="flex flex-col">
-                      <span className="font-semibold text-white">Prioritize AI Kosh &amp; IndiaAI</span>
-                      <span className="text-xs text-[#a8a29e]">
-                        Query Indian statutory, GST, and legal open corpora first
-                      </span>
-                    </div>
-                    <input
-                      type="checkbox"
-                      checked={prioritizeAiKosh}
-                      onChange={(e) => setPrioritizeAiKosh(e.target.checked)}
-                      className="w-4 h-4 accent-[#f26625] cursor-pointer"
-                    />
-                  </label>
-                </div>
-              </div>
-
-              {/* Collapsible Advanced Configuration */}
-              <div className="pt-2 border-t border-[#1c1c28]">
-                <button
-                  type="button"
-                  onClick={() => setShowAdvanced(!showAdvanced)}
-                  className="flex items-center justify-between w-full py-1.5 text-xs font-mono text-[#a8a29e] hover:text-white"
-                >
-                  <span className="flex items-center gap-1.5">
-                    Advanced Linguistic &amp; Alignment Controls
-                  </span>
-                  {showAdvanced ? <ChevronUp className="w-3.5 h-3.5" /> : <ChevronDown className="w-3.5 h-3.5" />}
-                </button>
-
-                {showAdvanced && (
-                  <div className="space-y-3 pt-3">
-                    <div>
-                      <label className="text-xs font-mono uppercase text-[#a8a29e] block mb-1">
-                        Script &amp; Orthography
-                      </label>
-                      <select
-                        value={scriptMode}
-                        onChange={(e) => setScriptMode(e.target.value as any)}
-                        className="w-full bg-[#0a0a0f] border border-[#272738] rounded-md p-2 text-xs font-mono text-white focus:outline-none"
-                      >
-                        <option value="native">Native Script</option>
-                        <option value="romanized">Romanized / Phonetic</option>
-                        <option value="dual">Dual-Script</option>
-                      </select>
-                    </div>
-
-                    <div>
-                      <label className="text-xs font-mono uppercase text-[#a8a29e] block mb-1">
-                        Register &amp; Honorifics
-                      </label>
-                      <select
-                        value={formalityRegister}
-                        onChange={(e) => setFormalityRegister(e.target.value as any)}
-                        className="w-full bg-[#0a0a0f] border border-[#272738] rounded-md p-2 text-xs font-mono text-white focus:outline-none"
-                      >
-                        <option value="formal">Formal / Honorific (आप)</option>
-                        <option value="neutral">Professional Neutral</option>
-                        <option value="casual">Casual (तुम)</option>
-                      </select>
-                    </div>
-
-                    <div>
-                      <div className="flex items-center justify-between mb-1">
-                        <label className="text-xs font-mono uppercase text-[#a8a29e] flex items-center gap-1.5">
-                          <ShieldCheck className="w-3.5 h-3.5 text-emerald-400" />
-                          Anti-Domains &amp; Homonym Exclusions
-                        </label>
-                        <span className="text-xs font-mono text-emerald-400">Polysemy Guard Active</span>
-                      </div>
-                      <Input
-                        value={antiDomainsInput}
-                        onChange={(e) => setAntiDomainsInput(e.target.value)}
-                        placeholder="e.g. glutathione, puccinia, uzbekistan (comma-separated)"
-                        className="bg-[#0a0a0f] border-[#272738] text-xs font-mono text-white h-8"
-                      />
-                      <p className="text-xs font-mono text-[#a8a29e] mt-1">
-                        Excludes irrelevant cross-domain topics and confusing homonyms.
-                      </p>
-                    </div>
-
-                    {/* Checkbox Options */}
-                    <div className="space-y-2 pt-1">
-                      <label className="flex items-center justify-between p-2 rounded-md bg-[#0a0a0f] border border-[#272738] text-xs font-mono text-white cursor-pointer">
-                        <span>Indian DPDP PII Masking</span>
-                        <input
-                          type="checkbox"
-                          checked={maskIndianPii}
-                          onChange={(e) => setMaskIndianPii(e.target.checked)}
-                          className="w-4 h-4 accent-[#f26625]"
-                        />
-                      </label>
-
-                      <label className="flex items-center justify-between p-2 rounded-md bg-[#0a0a0f] border border-[#272738] text-xs font-mono text-white cursor-pointer">
-                        <span>DPO Refusal Pairs</span>
-                        <input
-                          type="checkbox"
-                          checked={generateDpoRefusalPairs}
-                          onChange={(e) => setGenerateDpoRefusalPairs(e.target.checked)}
-                          className="w-4 h-4 accent-[#f26625]"
-                        />
-                      </label>
-
-                      <label className="flex items-center justify-between p-2 rounded-md bg-[#0a0a0f] border border-[#272738] text-xs font-mono text-white cursor-pointer">
-                        <span>CoT Reasoning &lt;thought&gt;</span>
-                        <input
-                          type="checkbox"
-                          checked={enableCotReasoning}
-                          onChange={(e) => setEnableCotReasoning(e.target.checked)}
-                          className="w-4 h-4 accent-[#f26625]"
-                        />
-                      </label>
-
-                      <label className="flex items-center justify-between p-2 rounded-md bg-[#0a0a0f] border border-[#272738] text-xs font-mono text-white cursor-pointer">
-                        <span>Parallel Bilingual Bitext</span>
-                        <input
-                          type="checkbox"
-                          checked={parallelBilingual}
-                          onChange={(e) => setParallelBilingual(e.target.checked)}
-                          className="w-4 h-4 accent-[#f26625]"
-                        />
-                      </label>
-                    </div>
-
-                    {/* Tokenizer Fertility */}
-                    <div className="p-2.5 rounded-md bg-[#0a0a0f] border border-[#272738] font-mono text-xs space-y-1">
-                      <div className="flex justify-between items-center text-xs">
-                        <span className="text-[#a8a29e] uppercase font-bold">Tokenizer Efficiency</span>
-                        <span className="text-[#10b981] font-bold">
-                          {isIndicOrHinglish ? `~${estSavings}% Token Savings` : 'Standard Latin'}
-                        </span>
-                      </div>
-                      <div className="flex justify-between text-xs text-[#a8a29e]">
-                        <span>Llama-3: {estLlama3Fertility} t/w</span>
-                        <span className="text-[#10b981]">Sarvam: {estSarvamFertility} t/w</span>
-                      </div>
-                    </div>
-                  </div>
-                )}
-              </div>
+              )}
             </div>
           </div>
-
-          <Button
-            onClick={handleGenerate}
-            disabled={isSubmitting}
-            className="w-full bg-[#f26625] hover:bg-[#de581a] border border-[#ea580c] text-white font-mono font-bold text-xs h-10 rounded-md shadow-sm flex items-center justify-center gap-2"
-          >
-            {isSubmitting ? <Loader2 className="w-4 h-4 animate-spin" /> : <Play className="w-4 h-4 fill-current" />}
-            <span>Execute Generation Run</span>
-          </Button>
-
-          {submitResult && (
-            <div
-              className={clsx(
-                'p-3.5 rounded-md border font-mono text-xs space-y-2.5 animate-fade-in',
-                submitResult.type === 'success'
-                  ? 'bg-emerald-950/40 border-emerald-500/40 text-emerald-300'
-                  : 'bg-rose-950/40 border-rose-500/40 text-rose-300'
-              )}
-            >
-              <div className="flex items-start gap-2">
-                {submitResult.type === 'success' ? (
-                  <CheckCircle2 className="w-4 h-4 text-emerald-400 shrink-0 mt-0.5" />
-                ) : (
-                  <AlertCircle className="w-4 h-4 text-rose-400 shrink-0 mt-0.5" />
-                )}
-                <div className="space-y-1">
-                  <p className="font-bold text-white">
-                    {submitResult.message.includes('Traceback')
-                      ? 'Job generation failed due to a server error. Please check your configuration and try again.'
-                      : submitResult.message}
-                  </p>
-                  {submitResult.type === 'error' && (
-                    <p className="text-[11px] text-rose-300">
-                      The job scheduler encountered an issue. Verify local server connectivity or input configuration and try again.
-                    </p>
-                  )}
-                </div>
-              </div>
-
-              {submitResult.type === 'success' && submitResult.jobId && (
-                <div className="flex flex-wrap items-center gap-2 pt-1 border-t border-emerald-500/20">
-                  <a
-                    href={`/orchestration?job=${submitResult.jobId}`}
-                    className="inline-flex items-center gap-1 px-3 py-1.5 rounded bg-[#f26625] hover:bg-[#de581a] text-white font-bold text-xs transition-colors"
-                  >
-                    <span>Track Pipeline in Orchestration →</span>
-                  </a>
-                  <a
-                    href="/jobs"
-                    className="inline-flex items-center gap-1 px-3 py-1.5 rounded border border-[#272738] bg-[#12121a] hover:bg-[#161622] text-zinc-300 hover:text-white text-xs transition-colors"
-                  >
-                    <span>View in Jobs List</span>
-                  </a>
-                </div>
-              )}
-            </div>
-          )}
-        </div>
-      </div>
-      )}
-    </ZenSpatialCanvas>
-  </div>
+        )}
+      </ZenSpatialCanvas>
+    </div>
   )
 }
 
