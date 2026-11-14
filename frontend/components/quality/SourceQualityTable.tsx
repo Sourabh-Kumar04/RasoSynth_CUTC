@@ -27,7 +27,7 @@ export default function SourceQualityTable() {
 
   if (loading) {
     return (
-      <div className="flex items-center gap-2 p-6 text-[#a8a29e] font-mono text-xs bg-[#12121a] rounded-2xl border border-[#272738]">
+      <div className="flex items-center gap-2 py-8 text-[#a8a29e] font-mono text-xs">
         <Loader2 className="h-4 w-4 animate-spin text-[#f26625]" /> Loading source breakdown…
       </div>
     );
@@ -35,44 +35,60 @@ export default function SourceQualityTable() {
 
   if (!data || data.sources.length === 0) {
     return (
-      <div className="flex flex-col items-center justify-center p-10 text-[#a8a29e] font-mono text-xs bg-[#12121a] rounded-2xl border border-[#272738] gap-3">
-        <Database className="h-8 w-8 text-[#a8a29e]" />
-        <p>No source data yet — run a dataset orchestration job to begin.</p>
+      <div className="flex flex-col items-center justify-center py-12 text-[#a8a29e] font-mono text-xs gap-2">
+        <Database className="h-7 w-7 text-zinc-600" />
+        <p>No source data yet — run a dataset orchestration run to begin ingestion.</p>
       </div>
     );
   }
 
   return (
-    <div className="bg-[#12121a] rounded-2xl border border-[#272738] overflow-hidden card-shadow">
-      <div className="px-4 py-3 border-b border-[#272738] flex items-center justify-between">
-        <span className="text-xs font-mono text-[#a8a29e]">{data.total_unique_sources} unique source domains</span>
+    <div className="space-y-3">
+      <div className="flex items-center justify-between">
+        <div>
+          <h4 className="text-sm font-bold text-white flex items-center gap-2">
+            <Database className="h-4 w-4 text-[#f26625]" />
+            Source Ingestion Fidelity Breakdown
+          </h4>
+          <p className="text-xs text-[#a8a29e] mt-0.5">
+            Average accuracy and sample yield per discovered authority domain
+          </p>
+        </div>
+        <span className="text-[11px] font-mono text-[#a8a29e]">
+          {data.total_unique_sources} unique authority sources
+        </span>
       </div>
+
       <div className="overflow-x-auto">
         <table className="w-full text-xs font-mono text-left">
-          <thead className="text-xs uppercase text-[#a8a29e] border-b border-[#272738] bg-[#0a0a0f]">
+          <thead className="text-[11px] uppercase text-[#a8a29e] border-b border-white/[0.08]">
             <tr>
-              <th className="px-4 py-3 font-medium">Source Domain / Category</th>
-              <th className="px-4 py-3 font-medium">Avg Quality</th>
-              <th className="px-4 py-3 font-medium">Samples</th>
-              <th className="px-4 py-3 font-medium">Tier</th>
+              <th className="py-2.5 px-3 font-semibold">Source Domain / Authority</th>
+              <th className="py-2.5 px-3 font-semibold">Avg Quality</th>
+              <th className="py-2.5 px-3 font-semibold">Samples Yielded</th>
+              <th className="py-2.5 px-3 font-semibold text-right">Integrity Tier</th>
             </tr>
           </thead>
-          <tbody className="divide-y divide-[#272738]">
-            {data.sources.map((item) => {
-              const pct = (item.avg_quality * 100).toFixed(1);
-              const tier =
-                item.avg_quality >= 0.8 ? { label: "Excellent", cls: "bg-emerald-950/40 text-emerald-400 border-emerald-500/30" }
-              : item.avg_quality >= 0.6 ? { label: "Good",      cls: "bg-emerald-950/40 text-emerald-400 border-emerald-500/30" }
-              :                           { label: "Needs Review", cls: "bg-rose-950/40 text-rose-400 border-rose-500/30" };
+          <tbody className="divide-y divide-white/[0.04]">
+            {data.sources.map((src) => {
+              const scorePct = Math.round(src.avg_quality * 100);
+              const tier = scorePct >= 85 ? "Authoritative Gold" : scorePct >= 70 ? "Verified Silver" : "Needs Review";
+              const color = scorePct >= 85 ? "text-emerald-400" : scorePct >= 70 ? "text-[#f26625]" : "text-amber-400";
 
               return (
-                <tr key={item.source} className="hover:bg-[#161622]/50 transition-colors">
-                  <td className="px-4 py-3 font-bold text-white capitalize">{item.source}</td>
-                  <td className="px-4 py-3 text-[#10b981] font-bold">{pct}%</td>
-                  <td className="px-4 py-3 text-[#a8a29e]">{item.samples_count.toLocaleString()}</td>
-                  <td className="px-4 py-3">
-                    <span className={`px-2 py-0.5 rounded-full text-xs border font-bold uppercase ${tier.cls}`}>
-                      {tier.label}
+                <tr key={src.source} className="hover:bg-white/[0.02] transition-colors">
+                  <td className="py-3 px-3 font-bold text-white max-w-xs truncate">
+                    {src.source}
+                  </td>
+                  <td className={`py-3 px-3 font-bold ${color}`}>
+                    {scorePct}%
+                  </td>
+                  <td className="py-3 px-3 text-zinc-300">
+                    {src.samples_count.toLocaleString()}
+                  </td>
+                  <td className="py-3 px-3 text-right">
+                    <span className={`px-2 py-0.5 rounded text-[10px] font-bold ${color} bg-white/[0.02]`}>
+                      {tier}
                     </span>
                   </td>
                 </tr>
