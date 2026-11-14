@@ -20,6 +20,7 @@ import {
   Briefcase,
   TrendingUp,
   LogOut,
+  Search,
 } from 'lucide-react'
 import { clsx } from 'clsx'
 import { SpotlightProductTour } from '@/components/onboarding/SpotlightProductTour'
@@ -59,7 +60,7 @@ function SystemHealthIndicator() {
         const rawStatus = (r?.status || 'unknown').toLowerCase()
         const memPct = r?.system_metrics?.memory_used_percent
         const cpuLoad = r?.system_metrics?.cpu_load_1m
-        const critical = (memPct != null && memPct > 85) || (cpuLoad != null && cpuLoad > 3.0)
+        const critical = (memPct != null && memPct > 92) || (cpuLoad != null && cpuLoad > 8.0)
         if (critical || rawStatus === 'degraded' || rawStatus === 'standby') {
           setStatus('degraded')
         } else if (rawStatus === 'healthy') {
@@ -208,8 +209,22 @@ export function TopNav() {
             </div>
           </nav>
 
-          {/* Right Controls: Health Indicator, Settings Cog, + New Dataset */}
+          {/* Right Controls: Health Indicator, Search Command, Settings Cog */}
           <div className="flex items-center space-x-2 sm:space-x-3 shrink-0">
+            {/* Quick Command Palette Button */}
+            <button
+              type="button"
+              onClick={() => {
+                window.dispatchEvent(new CustomEvent('open-command-palette'))
+              }}
+              className="hidden md:inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-white/[0.04] border border-white/[0.08] text-xs text-zinc-400 hover:text-white hover:border-[#f26625]/40 transition-all font-mono cursor-pointer"
+              aria-label="Open command palette"
+            >
+              <Search className="w-3.5 h-3.5 text-zinc-400" />
+              <span className="text-[11px]">Search</span>
+              <kbd className="px-1.5 py-0.2 rounded bg-black/40 border border-white/[0.1] text-[10px] text-zinc-400">⌘K</kbd>
+            </button>
+
             {/* System Health Dot Indicator */}
             <SystemHealthIndicator />
 

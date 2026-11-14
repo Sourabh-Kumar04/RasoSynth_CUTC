@@ -2,6 +2,7 @@ import Link from 'next/link'
 import { TopNav } from '@/components/layout/top-nav'
 import { BrandLogo } from '@/components/ui/brand-logo'
 import { FooterStatus } from '@/components/layout/footer-status'
+import { GlobalCommandPalette } from '@/components/search/CommandPalette'
 
 export default function DashboardLayout({
   children,
@@ -10,6 +11,7 @@ export default function DashboardLayout({
 }) {
   return (
     <div className="relative min-h-screen bg-[#07060a] text-[#f5f2ea] flex flex-col font-sans antialiased bg-dot-grid selection:bg-[#f26625]/30 selection:text-white">
+      <GlobalCommandPalette />
       <div className="relative z-10 flex flex-col min-h-screen">
         <TopNav />
         <main className="flex-1 w-full max-w-[1600px] mx-auto p-4 sm:p-6 lg:p-8 space-y-6">

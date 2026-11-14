@@ -27,6 +27,9 @@ interface TelemetryChartProps {
   allocatedVramGb?: number
   totalVramGb?: number
   throughputTokSec?: number
+  startedAt?: string | null
+  completedAt?: string | null
+  isSimulated?: boolean
 }
 
 const HARDWARE_DEFAULTS = {
@@ -72,6 +75,9 @@ export function TelemetryChart({
   allocatedVramGb,
   totalVramGb,
   throughputTokSec,
+  startedAt,
+  completedAt,
+  isSimulated,
 }: TelemetryChartProps) {
   const [hoveredIdx, setHoveredIdx] = useState<number | null>(null)
 
@@ -112,8 +118,17 @@ export function TelemetryChart({
     ? (((initialLoss - latestLoss) / initialLoss) * 100).toFixed(1)
     : '48.2'
 
-  // Dynamic GPU training duration
-  const estGpuHours = ((totalEpochs || 1) * 0.12).toFixed(2)
+  // Dynamic GPU training duration: use actual elapsed wall time if available
+  const estGpuHours = useMemo(() => {
+    if (startedAt && completedAt) {
+      const s = new Date(startedAt).getTime()
+      const c = new Date(completedAt).getTime()
+      const diffSec = Math.max(1, Math.round((c - s) / 1000))
+      if (diffSec < 60) return `${diffSec}s`
+      return `${(diffSec / 60).toFixed(1)}m`
+    }
+    return `${((totalEpochs || 1) * 0.12).toFixed(2)} hrs`
+  }, [startedAt, completedAt, totalEpochs])
 
   // SVG Chart Dimensions
   const SVG_W = 500

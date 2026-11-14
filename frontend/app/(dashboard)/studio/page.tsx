@@ -745,6 +745,9 @@ function StudioContent() {
                           onClick={() => {
                             playClickSound()
                             setPrompt((p) => (p.trim() ? `${p.trim()} ${tip.appendSnippet.trim()}` : tip.appendSnippet.trim()))
+                            if (tip.actionLabel.includes('Curriculum')) {
+                              setCurriculumSort('staged_curriculum')
+                            }
                           }}
                           className="shrink-0 text-xs font-mono text-[#f26625] hover:text-white px-2 py-0.5 rounded bg-[#f26625]/10 hover:bg-[#f26625]/20 border border-[#f26625]/30 transition-all cursor-pointer"
                         >
@@ -916,6 +919,9 @@ function StudioContent() {
                             onClick={() => {
                               playClickSound()
                               setPrompt((p) => (p.trim() ? `${p.trim()} ${tip.appendSnippet.trim()}` : tip.appendSnippet.trim()))
+                              if (tip.actionLabel.includes('Curriculum')) {
+                                setCurriculumSort('staged_curriculum')
+                              }
                             }}
                             className="shrink-0 text-xs font-mono text-[#f26625] hover:text-white px-2 py-0.5 rounded bg-[#f26625]/10 hover:bg-[#f26625]/20 border border-[#f26625]/30 transition-all cursor-pointer"
                           >
@@ -1270,27 +1276,27 @@ function StudioContent() {
 
                   <div>
                     <div className="flex justify-between items-center mb-1.5">
-                      <label className="text-xs font-mono uppercase text-[#a8a29e]">Target Size</label>
+                      <label className="text-xs font-mono uppercase text-[#a8a29e]">Target Size (10 – 50,000)</label>
                       <div className="flex items-center gap-1.5">
                         <input
                           type="number"
-                          min={100}
+                          min={10}
                           max={50000}
-                          step={100}
+                          step={10}
                           value={sizeInput}
                           onChange={(e) => {
                             const raw = e.target.value
                             setSizeInput(raw)
                             const num = Number(raw)
-                            if (!isNaN(num) && num >= 100 && num <= 50000) {
+                            if (!isNaN(num) && num >= 10 && num <= 50000) {
                               setDatasetSize(num)
                             }
                           }}
                           onBlur={() => {
                             const num = Number(sizeInput)
-                            if (isNaN(num) || num < 100) {
-                              setDatasetSize(100)
-                              setSizeInput('100')
+                            if (isNaN(num) || num < 10) {
+                              setDatasetSize(10)
+                              setSizeInput('10')
                             } else if (num > 50000) {
                               setDatasetSize(50000)
                               setSizeInput('50000')
@@ -1306,9 +1312,9 @@ function StudioContent() {
                     </div>
                     <input
                       type="range"
-                      min={100}
+                      min={10}
                       max={50000}
-                      step={100}
+                      step={10}
                       value={datasetSize}
                       onInput={(e) => {
                         const val = Number((e.target as HTMLInputElement).value)

@@ -103,11 +103,11 @@ export default function SettingsPage() {
           if (parsed.storageBackend) setStorageBackend(parsed.storageBackend)
           if (parsed.validationStrictness) setValidationStrictness(parsed.validationStrictness)
           if (parsed.hitlMode) setHitlMode(parsed.hitlMode)
-          if (parsed.qualityThreshold != null) setQualityThreshold(parsed.qualityThreshold)
-          if (parsed.sampleRatio != null) setSampleRatio(parsed.sampleRatio)
+          if (parsed.qualityThreshold != null) setQualityThreshold(Math.round(Number(parsed.qualityThreshold) * 100) / 100)
+          if (parsed.sampleRatio != null) setSampleRatio(Math.round(Number(parsed.sampleRatio) * 100) / 100)
           if (parsed.autoApproveMinutes != null) setAutoApproveMinutes(parsed.autoApproveMinutes)
           if (parsed.canaryGateEnabled != null) setCanaryGateEnabled(parsed.canaryGateEnabled)
-          if (parsed.tokenBudgetUsd != null) setTokenBudgetUsd(parsed.tokenBudgetUsd)
+          if (parsed.tokenBudgetUsd != null) setTokenBudgetUsd(Math.round(Number(parsed.tokenBudgetUsd) * 100) / 100)
           if (parsed.maxConcurrentJobs != null) setMaxConcurrentJobs(parsed.maxConcurrentJobs)
           if (parsed.maxQueueSize != null) setMaxQueueSize(parsed.maxQueueSize)
           if (parsed.fineTuneMaxConcurrent != null) setFineTuneMaxConcurrent(parsed.fineTuneMaxConcurrent)
@@ -602,8 +602,8 @@ export default function SettingsPage() {
                       step={0.01}
                       min={0.5}
                       max={0.99}
-                      value={qualityThreshold}
-                      onChange={(e) => setQualityThreshold(parseFloat(e.target.value) || 0.85)}
+                      value={Number(qualityThreshold).toFixed(2)}
+                      onChange={(e) => setQualityThreshold(Math.round((parseFloat(e.target.value) || 0.85) * 100) / 100)}
                       className="bg-[#0a0a0f] border-[#272738] text-white text-xs h-9 font-mono"
                     />
                     <p className="text-[11px] text-[#a8a29e]">
@@ -622,8 +622,8 @@ export default function SettingsPage() {
                       step={0.01}
                       min={0.01}
                       max={1.0}
-                      value={sampleRatio}
-                      onChange={(e) => setSampleRatio(parseFloat(e.target.value) || 0.15)}
+                      value={Number(sampleRatio).toFixed(2)}
+                      onChange={(e) => setSampleRatio(Math.round((parseFloat(e.target.value) || 0.15) * 100) / 100)}
                       className="bg-[#0a0a0f] border-[#272738] text-white text-xs h-9 font-mono"
                     />
                     <p className="text-[11px] text-[#a8a29e]">

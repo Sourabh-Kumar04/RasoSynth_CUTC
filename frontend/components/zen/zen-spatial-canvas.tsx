@@ -91,7 +91,7 @@ export function ZenSpatialCanvas({
         {/* GSAP Cursor Spotlight */}
         <div
           ref={auraRef}
-          className="pointer-events-none absolute -top-0 -left-0 w-[350px] h-[350px] rounded-full bg-[#f26625]/5"
+          className="pointer-events-none absolute -top-0 -left-0 w-[350px] h-[350px] rounded-full bg-[#f26625]/10 blur-3xl transition-opacity duration-300"
         />
 
         {/* Subtle Micro-Grid Backdrop */}

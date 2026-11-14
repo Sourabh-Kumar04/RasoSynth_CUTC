@@ -339,8 +339,10 @@ export default function ReviewPage() {
     window.open(url, '_blank')
   }
 
-  const reviewProgress = stats
-    ? Math.round((stats.approved / Math.max(stats.approved + stats.pending, 1)) * 100)
+  const reviewedCount = stats ? (stats.approved + (stats.rejected || 0)) : 0
+  const reviewTotal = stats ? (stats.total || (stats.approved + stats.pending + (stats.rejected || 0))) : 0
+  const reviewProgress = reviewTotal > 0
+    ? Math.round((reviewedCount / reviewTotal) * 100)
     : 0
 
   return (
@@ -512,7 +514,7 @@ export default function ReviewPage() {
         <div className="space-y-1.5">
           <div className="flex items-center justify-between text-xs font-mono text-[#a8a29e]">
             <span>Review progress</span>
-            <span className="font-bold text-[#10b981]">{stats.approved} / {stats.approved + stats.pending} reviewed ({reviewProgress}%)</span>
+            <span className="font-bold text-[#10b981]">{reviewedCount} / {reviewTotal} reviewed ({reviewProgress}%)</span>
           </div>
           <div className="h-2 bg-[#161622] rounded-md overflow-hidden">
             <div

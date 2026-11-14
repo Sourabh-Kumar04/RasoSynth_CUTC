@@ -16,7 +16,10 @@ import {
   Terminal,
   Eye,
   EyeOff,
-  Flame
+  Flame,
+  Search,
+  Trophy,
+  Sliders
 } from 'lucide-react'
 import { clsx } from 'clsx'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
@@ -38,6 +41,7 @@ import { TelemetryChart } from '@/components/finetune/telemetry-chart'
 import { StatusStrip } from '@/components/ui/status-strip'
 import { Mascot } from '@/components/ui/mascot'
 import { formatErrorMessage } from '@/lib/utils'
+import { AutoResearchView, AutoResearchTrial } from '@/components/finetune/autoresearch-view'
 
 const API_BASE = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000'
 
@@ -468,9 +472,26 @@ function DetailPane({ job, logs, lossHistory, onCancel, onCopy, onReconnect, log
       <Card className="bg-[#12121a] border-[#272738] rounded-md card-shadow">
         <CardHeader className="pb-2 border-b border-[#272738]">
           <div className="flex flex-wrap items-start justify-between gap-2">
-            <CardTitle className="text-sm font-bold text-white truncate max-w-[200px]">
-              {job.output_model_name || job.id.slice(0, 16)}
-            </CardTitle>
+            <div>
+              <CardTitle className="text-sm font-bold text-white truncate max-w-[260px]">
+                {job.output_model_name || job.id.slice(0, 16)}
+              </CardTitle>
+              <div className="flex items-center gap-1.5 mt-1 font-mono text-[11px] text-[#a8a29e]">
+                <span>ID:</span>
+                <code className="text-zinc-300 font-bold bg-[#0a0a0f] px-1.5 py-0.5 rounded border border-[#272738] select-all">
+                  {job.id.slice(0, 8)}...
+                </code>
+                <button
+                  type="button"
+                  onClick={() => onCopy(job.id)}
+                  title="Copy full Job ID"
+                  className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded bg-[#161622] hover:bg-[#1f1f2e] border border-[#272738] text-[10px] text-zinc-300 hover:text-white transition-colors cursor-pointer"
+                >
+                  <Copy className="w-2.5 h-2.5 text-[#f26625]" />
+                  <span>Copy ID</span>
+                </button>
+              </div>
+            </div>
             <div className="flex items-center gap-2">
               <StatusPill status={job.status} />
               {(job.status === 'running' || job.status === 'pending') && (
@@ -1043,7 +1064,13 @@ function FineTuneContent() {
   const [logs, setLogs] = useState<LogLine[]>([])
   const [loading, setLoading] = useState(true)
   const [submitting, setSubmitting] = useState(false)
-  const [tab, setTab] = useState<'jobs' | 'new'>(datasetParam ? 'new' : 'jobs')
+  const [tab, setTab] = useState<'jobs' | 'new' | 'autoresearch'>(datasetParam ? 'new' : 'jobs')
+  const [showAdvanced, setShowAdvanced] = useState(false)
+  const [activePreset, setActivePreset] = useState<'fast' | 'balanced' | 'dpo' | 'custom'>('balanced')
+  const [searchQuery, setSearchQuery] = useState('')
+  const [statusFilter, setStatusFilter] = useState<'all' | 'running' | 'completed' | 'failed'>('all')
+  const [sortBy, setSortBy] = useState<'recent' | 'loss' | 'progress'>('recent')
+  const [copiedJobId, setCopiedJobId] = useState<string | null>(null)
   const [mobileSheet, setMobileSheet] = useState(false)
   const [formError, setFormError] = useState('')
   const [pipelineDatasets, setPipelineDatasets] = useState<any[]>([])
@@ -1051,15 +1078,91 @@ function FineTuneContent() {
   const wsRef = useRef<WebSocket | null>(null)
   const logsEndRef = useRef<HTMLDivElement>(null)
 
+  const handleCopyJobId = useCallback((id: string, e?: React.MouseEvent) => {
+    e?.stopPropagation()
+    navigator.clipboard.writeText(id)
+    setCopiedJobId(id)
+    toast(`Copied Job ID: ${id}`, 'info')
+    setTimeout(() => setCopiedJobId(null), 2000)
+  }, [toast])
+
+  const applyPreset = useCallback((preset: 'fast' | 'balanced' | 'dpo') => {
+    setActivePreset(preset)
+    if (preset === 'fast') {
+      setForm(prev => ({
+        ...prev,
+        training_method: 'sft',
+        num_train_epochs: 1,
+        lora_r: 8,
+        lora_alpha: 16,
+        learning_rate: 0.0002,
+        per_device_train_batch_size: 4,
+        gradient_accumulation_steps: 2,
+        load_in_4bit: true,
+      }))
+    } else if (preset === 'balanced') {
+      setForm(prev => ({
+        ...prev,
+        training_method: 'sft',
+        num_train_epochs: 3,
+        lora_r: 16,
+        lora_alpha: 32,
+        learning_rate: 0.00015,
+        per_device_train_batch_size: 4,
+        gradient_accumulation_steps: 4,
+        load_in_4bit: true,
+      }))
+    } else if (preset === 'dpo') {
+      setForm(prev => ({
+        ...prev,
+        training_method: 'dpo',
+        num_train_epochs: 2,
+        lora_r: 16,
+        lora_alpha: 32,
+        learning_rate: 0.0001,
+        dpo_beta: 0.1,
+        dpo_loss_type: 'sigmoid',
+        canary_gate_enabled: true,
+        canary_min_win_rate: 0.70,
+      }))
+    }
+    toast(`Applied ${preset.toUpperCase()} training preset`, 'info')
+  }, [toast])
+
+  const handleAdoptChampion = useCallback((trial: AutoResearchTrial) => {
+    setForm(prev => ({
+      ...prev,
+      lora_r: trial.lora_r,
+      lora_alpha: trial.lora_alpha,
+      learning_rate: trial.learning_rate,
+      output_model_name: `champ-${trial.name.toLowerCase().replace(/[^a-z0-9]+/g, '-')}`,
+    }))
+    setActivePreset('custom')
+    setTab('new')
+    toast(`Adopted AutoResearch Champion parameters (r=${trial.lora_r}, lr=${trial.learning_rate}) into training configuration!`, 'success')
+  }, [toast])
+
   useEffect(() => {
     api.getJobs({ limit: 50 })
       .then(res => {
         const raw = res as any
         const list = Array.isArray(raw) ? raw : (raw?.data || raw?.jobs || [])
-        setPipelineDatasets(list.filter((j: any) => j.status === 'completed' || (j.samples_generated && j.samples_generated > 0)))
+        const valid = list.filter((j: any) => j.status === 'completed' || (j.samples_generated && j.samples_generated > 0))
+        setPipelineDatasets(valid)
+        if (!datasetParam && valid.length > 0) {
+          const mostRecent = valid[0]
+          setForm(prev => {
+            if (prev.dataset_id) return prev
+            return {
+              ...prev,
+              dataset_id: mostRecent.id,
+              output_model_name: prev.output_model_name || `finetune-${mostRecent.id.slice(0, 8)}`,
+            }
+          })
+        }
       })
       .catch(() => {})
-  }, [])
+  }, [datasetParam])
 
   const [showModalSecret, setShowModalSecret] = useState(false)
   const [showRunpodKey, setShowRunpodKey] = useState(false)
@@ -1244,6 +1347,34 @@ function FineTuneContent() {
     completed: jobs.filter(j => j.status === 'completed').length,
     failed:    jobs.filter(j => j.status === 'failed').length,
   }), [jobs])
+
+  const filteredJobs = useMemo(() => {
+    return jobs
+      .filter((j) => {
+        if (statusFilter !== 'all' && j.status !== statusFilter) return false
+        if (!searchQuery.trim()) return true
+        const q = searchQuery.toLowerCase()
+        return (
+          j.id.toLowerCase().includes(q) ||
+          (j.output_model_name && j.output_model_name.toLowerCase().includes(q)) ||
+          (j.base_model && j.base_model.toLowerCase().includes(q))
+        )
+      })
+      .sort((a, b) => {
+        if (sortBy === 'recent') {
+          return new Date(b.created_at || 0).getTime() - new Date(a.created_at || 0).getTime()
+        }
+        if (sortBy === 'loss') {
+          const lossA = a.train_loss ?? 999
+          const lossB = b.train_loss ?? 999
+          return lossA - lossB
+        }
+        if (sortBy === 'progress') {
+          return (b.progress ?? 0) - (a.progress ?? 0)
+        }
+        return 0
+      })
+  }, [jobs, searchQuery, statusFilter, sortBy])
 
   // ── Data ──────────────────────────────────────────────────────────────────
 
@@ -1549,6 +1680,20 @@ function FineTuneContent() {
           >
             <Plus className="h-3.5 w-3.5 mr-1" />Train New Model
           </Button>
+          <Button
+            variant={tab === 'autoresearch' ? 'default' : 'outline'}
+            size="sm"
+            className={clsx(
+              'rounded-md text-xs font-mono font-medium',
+              tab === 'autoresearch'
+                ? 'bg-gradient-to-r from-purple-600 to-[#f26625] text-white shadow-md'
+                : 'border-purple-500/40 text-purple-400 hover:text-white hover:bg-purple-950/20'
+            )}
+            onClick={() => setTab('autoresearch')}
+          >
+            <Sparkles className="h-3.5 w-3.5 mr-1 text-purple-300" />
+            AutoResearch Loop
+          </Button>
         </div>
       </div>
 
@@ -1576,11 +1721,22 @@ function FineTuneContent() {
         ))}
       </div>
 
+      {/* ── AutoResearch Loop (Karpathy Mode) ── */}
+      {tab === 'autoresearch' && (
+        <AutoResearchView
+          pipelineDatasets={pipelineDatasets}
+          onAdoptChampion={handleAdoptChampion}
+        />
+      )}
+
       {/* ── New job form ── */}
       {tab === 'new' && (
         <Card className="bg-[#12121a] border-[#272738] rounded-md card-shadow">
-          <CardHeader className="pb-3 border-b border-[#272738]">
-            <CardTitle className="text-sm font-bold text-white">Configure Model Training</CardTitle>
+          <CardHeader className="pb-3 border-b border-[#272738] flex flex-row items-center justify-between">
+            <div>
+              <CardTitle className="text-sm font-bold text-white">Configure Model Training</CardTitle>
+              <p className="text-xs text-[#a8a29e] mt-0.5">Streamlined setup with 1-click profiles and optional advanced parameter tuning.</p>
+            </div>
           </CardHeader>
           <CardContent className="p-6">
             <form onSubmit={handleSubmit} className="space-y-4">
@@ -1591,13 +1747,94 @@ function FineTuneContent() {
                 </div>
               )}
 
+              {/* 1-Click Simplified Profiles */}
+              <div className="space-y-1.5 mb-2">
+                <label className="text-xs font-bold font-mono uppercase text-[#a8a29e] flex items-center gap-1.5">
+                  <Sparkles className="w-3.5 h-3.5 text-[#f26625]" />
+                  1-Click Training Profiles (Streamlined)
+                </label>
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5">
+                  <button
+                    type="button"
+                    onClick={() => applyPreset('fast')}
+                    className={clsx(
+                      'p-3 rounded-lg border text-left transition-all font-mono cursor-pointer',
+                      activePreset === 'fast'
+                        ? 'border-[#f26625] bg-[#f26625]/10 text-white shadow-sm'
+                        : 'border-[#272738] bg-[#0a0a0f] text-zinc-400 hover:border-zinc-500'
+                    )}
+                  >
+                    <div className="flex items-center justify-between mb-1">
+                      <span className="font-bold text-xs text-white flex items-center gap-1.5">
+                        <Zap className="w-3.5 h-3.5 text-amber-400" />
+                        Fast Prototype
+                      </span>
+                      <span className="text-[10px] px-1.5 py-0.2 rounded bg-amber-500/20 text-amber-300 border border-amber-500/40">~15s</span>
+                    </div>
+                    <p className="text-[11px] text-zinc-400 font-sans">1 Epoch · Rank-8 QLoRA · Free Cloud GPU</p>
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() => applyPreset('balanced')}
+                    className={clsx(
+                      'p-3 rounded-lg border text-left transition-all font-mono cursor-pointer',
+                      activePreset === 'balanced'
+                        ? 'border-[#f26625] bg-[#f26625]/10 text-white shadow-sm'
+                        : 'border-[#272738] bg-[#0a0a0f] text-zinc-400 hover:border-zinc-500'
+                    )}
+                  >
+                    <div className="flex items-center justify-between mb-1">
+                      <span className="font-bold text-xs text-white flex items-center gap-1.5">
+                        <CheckCircle2 className="w-3.5 h-3.5 text-emerald-400" />
+                        Balanced SFT
+                      </span>
+                      <span className="text-[10px] px-1.5 py-0.2 rounded bg-emerald-500/20 text-emerald-300 border border-emerald-500/40">Standard</span>
+                    </div>
+                    <p className="text-[11px] text-zinc-400 font-sans">3 Epochs · Rank-16 QLoRA · High Convergence</p>
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() => applyPreset('dpo')}
+                    className={clsx(
+                      'p-3 rounded-lg border text-left transition-all font-mono cursor-pointer',
+                      activePreset === 'dpo'
+                        ? 'border-[#f26625] bg-[#f26625]/10 text-white shadow-sm'
+                        : 'border-[#272738] bg-[#0a0a0f] text-zinc-400 hover:border-zinc-500'
+                    )}
+                  >
+                    <div className="flex items-center justify-between mb-1">
+                      <span className="font-bold text-xs text-white flex items-center gap-1.5">
+                        <Trophy className="w-3.5 h-3.5 text-purple-400" />
+                        DPO Alignment
+                      </span>
+                      <span className="text-[10px] px-1.5 py-0.2 rounded bg-purple-500/20 text-purple-300 border border-purple-500/40">Advanced</span>
+                    </div>
+                    <p className="text-[11px] text-zinc-400 font-sans">Preference Pair Alignment · Canary Gated</p>
+                  </button>
+                </div>
+              </div>
+
               <Section title="Dataset Source">
                 {pipelineDatasets.length > 0 && (
-                  <div className="mb-3">
-                    <label className="text-xs mb-1 block font-bold font-mono uppercase text-[#f26625] flex items-center gap-1.5">
-                      <Sparkles className="w-3 h-3 text-[#f26625]" />
-                      Synthesized Datasets ({pipelineDatasets.length} available from pipeline)
-                    </label>
+                  <div className="mb-3 space-y-1.5">
+                    <div className="flex items-center justify-between">
+                      <label className="text-xs font-bold font-mono uppercase text-[#f26625] flex items-center gap-1.5">
+                        <Sparkles className="w-3 h-3 text-[#f26625]" />
+                        Synthesized Datasets ({pipelineDatasets.length} available from pipeline)
+                      </label>
+                      {form.dataset_id && (
+                        <button
+                          type="button"
+                          onClick={() => handleCopyJobId(form.dataset_id)}
+                          className="text-[11px] text-zinc-400 hover:text-white flex items-center gap-1 font-mono transition-colors cursor-pointer"
+                        >
+                          <Copy className="w-3 h-3 text-[#f26625]" />
+                          <span>{copiedJobId === form.dataset_id ? 'Copied!' : `#${form.dataset_id.slice(0, 8)}`}</span>
+                        </button>
+                      )}
+                    </div>
                     <Select
                       value={form.dataset_id}
                       onValueChange={v => {
@@ -1610,8 +1847,9 @@ function FineTuneContent() {
                         <SelectValue placeholder="Choose a synthesized pipeline dataset..." />
                       </SelectTrigger>
                       <SelectContent className="bg-[#12121a] border-[#272738] text-white text-xs font-mono max-h-56">
-                        {pipelineDatasets.map(ds => (
+                        {pipelineDatasets.map((ds, idx) => (
                           <SelectItem key={ds.id} value={ds.id}>
+                            {idx === 0 ? '★ [Most Recent] ' : ''}
                             {ds.config?.target_domain || ds.target_domain || ds.dataset_name || ds.id.slice(0, 8)} ({ds.samples_generated || 0} samples · DBOM Sealed)
                           </SelectItem>
                         ))}
@@ -2432,18 +2670,71 @@ LORA_ALPHA = ${form.lora_alpha}`}
         <div className="grid grid-cols-1 lg:grid-cols-5 gap-4">
           {/* List */}
           <div className="lg:col-span-2 space-y-2">
+            {/* Runs Search, Filter & Sort Bar */}
+            <div className="p-2.5 rounded-lg bg-[#0a0a0f] border border-[#272738] space-y-2 font-mono text-xs">
+              <div className="relative">
+                <Search className="w-3.5 h-3.5 absolute left-2.5 top-2.5 text-zinc-500" />
+                <input
+                  type="text"
+                  placeholder="Filter by Job ID, model, name..."
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  className="w-full bg-[#12121a] border border-[#272738] rounded-md pl-8 pr-3 py-1.5 text-xs text-white placeholder-zinc-500 focus:outline-none focus:border-[#f26625]"
+                />
+              </div>
+
+              <div className="flex items-center justify-between gap-2 flex-wrap">
+                {/* Status filter pills */}
+                <div className="flex items-center gap-1">
+                  {(['all', 'running', 'completed', 'failed'] as const).map((st) => (
+                    <button
+                      key={st}
+                      type="button"
+                      onClick={() => setStatusFilter(st)}
+                      className={clsx(
+                        'px-2 py-0.5 rounded text-[10px] uppercase font-bold transition-colors cursor-pointer',
+                        statusFilter === st
+                          ? 'bg-[#f26625] text-white'
+                          : 'bg-[#161622] text-zinc-400 hover:text-white'
+                      )}
+                    >
+                      {st}
+                    </button>
+                  ))}
+                </div>
+
+                {/* Sort selector */}
+                <div className="flex items-center gap-1">
+                  <span className="text-[10px] text-zinc-500 uppercase">Sort:</span>
+                  <select
+                    value={sortBy}
+                    onChange={(e: any) => setSortBy(e.target.value)}
+                    className="bg-[#161622] border border-[#272738] text-[10px] text-zinc-300 rounded px-1.5 py-0.5 focus:outline-none cursor-pointer"
+                  >
+                    <option value="recent">Most Recent</option>
+                    <option value="loss">Lowest Loss</option>
+                    <option value="progress">Highest Progress</option>
+                  </select>
+                </div>
+              </div>
+            </div>
+
             {loading
               ? Array.from({ length: 4 }).map((_, i) => <JobSkeleton key={i} />)
-              : jobs.length === 0
+              : filteredJobs.length === 0
                 ? (
                   <div className="flex flex-col items-center justify-center py-16 space-y-4 bg-[#12121a] rounded-md border border-[#272738]">
-                    <p className="text-xs text-[#a8a29e] font-mono">No fine-tuning sessions recorded</p>
-                    <Button size="sm" className="bg-[#f26625] hover:bg-[#de581a] border border-[#ea580c] text-white rounded-md font-mono text-xs" onClick={() => setTab('new')}>
-                      <Plus className="h-3.5 w-3.5 mr-1 text-white" />Create first job
-                    </Button>
+                    <p className="text-xs text-[#a8a29e] font-mono">
+                      {jobs.length === 0 ? 'No fine-tuning sessions recorded' : 'No runs match filter'}
+                    </p>
+                    {jobs.length === 0 && (
+                      <Button size="sm" className="bg-[#f26625] hover:bg-[#de581a] border border-[#ea580c] text-white rounded-md font-mono text-xs" onClick={() => setTab('new')}>
+                        <Plus className="h-3.5 w-3.5 mr-1 text-white" />Create first job
+                      </Button>
+                    )}
                   </div>
                 )
-                : jobs.map(job => (
+                : filteredJobs.map(job => (
                   <div
                     key={job.id}
                     onClick={() => handleSelectJob(job)}
@@ -2456,10 +2747,21 @@ LORA_ALPHA = ${form.lora_alpha}`}
                     )}
                   >
                     <div className="flex items-start justify-between gap-2">
-                      <div className="min-w-0">
-                        <p className="text-xs font-bold text-white truncate">
-                          {job.output_model_name || job.id.slice(0, 8)}
-                        </p>
+                      <div className="min-w-0 flex-1">
+                        <div className="flex items-center gap-1.5 flex-wrap">
+                          <p className="text-xs font-bold text-white truncate">
+                            {job.output_model_name || job.id.slice(0, 8)}
+                          </p>
+                          <button
+                            type="button"
+                            onClick={(e) => handleCopyJobId(job.id, e)}
+                            title="Copy full Job ID"
+                            className="inline-flex items-center gap-1 px-1.5 py-0.2 rounded bg-[#0a0a0f] hover:bg-[#1f1f2e] border border-[#272738] text-[10px] font-mono text-[#a8a29e] hover:text-[#f26625] transition-colors cursor-pointer"
+                          >
+                            <Copy className="w-2.5 h-2.5" />
+                            <span>{copiedJobId === job.id ? 'Copied!' : `#${job.id.slice(0, 8)}`}</span>
+                          </button>
+                        </div>
                         <p className="text-xs text-[#a8a29e] font-mono truncate mt-0.5">
                           {job.base_model}
                         </p>

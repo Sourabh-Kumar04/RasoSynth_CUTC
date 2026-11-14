@@ -967,7 +967,7 @@ class APIClient {
     }>(`/datasets/${jobId}/dbom`)
   }
 
-  async verifyDbom(payload: { samples: any[]; dbom_certificate: any }) {
+  async verifyDbom(payload: { samples: any[]; dbom_certificate: any; job_id?: string; dataset_id?: string }) {
     return this.request<{
       is_valid: boolean
       certificate_id: string

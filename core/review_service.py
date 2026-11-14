@@ -272,8 +272,8 @@ class ReviewService:
 
     # ── Stats & export ────────────────────────────────────────────────────────
 
-    async def get_stats(self) -> dict:
-        return await self.db.review_stats()
+    async def get_stats(self, owner: Optional[str] = None) -> dict:
+        return await self.db.review_stats(owner=owner)
 
     async def get_feedback_signals(self, job_id: Optional[str] = None, owner: Optional[str] = None) -> dict:
         """Aggregate structured review reason signals for pipeline feedback."""

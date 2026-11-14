@@ -41,16 +41,28 @@ if _HAS_FASTAPI:
     ) -> Dict[str, Any]:
         """Cryptographically verify samples against a DBOM certificate Merkle root."""
         samples = payload.get("samples")
+        job_id = payload.get("job_id") or payload.get("dataset_id")
         certificate = payload.get("dbom_certificate") or payload.get("certificate")
         merkle_root = payload.get("merkle_root") or payload.get("merkle_root_hash")
 
         if not certificate and merkle_root:
             certificate = {"merkle_root_hash": merkle_root}
 
+        # If job_id is provided and samples is empty, load samples from DB
+        if (not samples or not isinstance(samples, list)) and job_id:
+            try:
+                from core.db import get_db, DatasetRecord
+                with get_db() as db:
+                    db_samples = db.query(DatasetRecord).filter(DatasetRecord.job_id == job_id).all()
+                    if db_samples:
+                        samples = [s.to_dict() for s in db_samples]
+            except Exception as e:
+                logger.warning(f"Failed to load records for DBOM verification of job {job_id}: {e}")
+
         if not isinstance(samples, list) or not certificate or not isinstance(certificate, dict):
             raise HTTPException(
                 status_code=400,
-                detail="Payload must include 'samples' (list) and either 'dbom_certificate' (dict) or 'merkle_root' (str).",
+                detail="Payload must include 'samples' (list) or valid 'job_id', and either 'dbom_certificate' (dict) or 'merkle_root' (str).",
             )
         res = verify_dataset_dbom(samples=samples, dbom_certificate=certificate)
         res["verified"] = res.get("is_valid", False)

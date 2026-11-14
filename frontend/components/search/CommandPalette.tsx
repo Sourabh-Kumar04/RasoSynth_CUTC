@@ -139,6 +139,26 @@ export function CommandPalette({
   const [selectedIndex, setSelectedIndex] = useState(0)
   const inputRef = useRef<HTMLInputElement>(null)
 
+  // Listen for global Cmd+K / Ctrl+K and custom event
+  useEffect(() => {
+    const handleGlobalKeyDown = (e: KeyboardEvent) => {
+      if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === 'k') {
+        e.preventDefault()
+        onOpenChange(!open)
+      }
+    }
+    const handleCustomOpen = () => {
+      onOpenChange(true)
+    }
+
+    window.addEventListener('keydown', handleGlobalKeyDown)
+    window.addEventListener('open-command-palette', handleCustomOpen)
+    return () => {
+      window.removeEventListener('keydown', handleGlobalKeyDown)
+      window.removeEventListener('open-command-palette', handleCustomOpen)
+    }
+  }, [open, onOpenChange])
+
   // Auto-focus input when opened
   useEffect(() => {
     if (open) {
@@ -275,4 +295,9 @@ export function CommandPalette({
       </div>
     </div>
   )
+}
+
+export function GlobalCommandPalette() {
+  const [open, setOpen] = useState(false)
+  return <CommandPalette open={open} onOpenChange={setOpen} />
 }

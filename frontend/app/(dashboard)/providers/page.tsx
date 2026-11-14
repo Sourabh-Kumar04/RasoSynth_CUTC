@@ -369,7 +369,7 @@ export default function ProvidersPage() {
                         <div className="grid grid-cols-2 gap-x-4 gap-y-1.5 text-xs bg-[#0a0a0f] p-3 rounded-xl border border-[#272738]">
                           <div className="flex justify-between">
                             <span className="text-[#a8a29e] font-mono text-xs">Latency</span>
-                            <span className="font-mono text-xs font-bold text-[#f26625]">{p.latency_ms ? `${p.latency_ms}ms` : '—'}</span>
+                            <span className="font-mono text-xs font-bold text-[#f26625]">{p.latency_ms ? `${Math.round(p.latency_ms)}ms` : '—'}</span>
                           </div>
                           <div className="flex justify-between">
                             <span className="text-[#a8a29e] font-mono text-xs">Success Rate</span>

@@ -55,7 +55,7 @@ export function FooterStatus() {
   const memPct = snapshot.system_metrics?.memory_used_percent
   const cpuLoad = snapshot.system_metrics?.cpu_load_1m
   const hostPressureCritical =
-    (memPct != null && memPct > 85) || (cpuLoad != null && cpuLoad > 3.0)
+    (memPct != null && memPct > 92) || (cpuLoad != null && cpuLoad > 8.0)
   const rawStatus = (snapshot.status || 'unknown').toLowerCase()
   const displayStatus = hostPressureCritical ? 'degraded' : rawStatus
 

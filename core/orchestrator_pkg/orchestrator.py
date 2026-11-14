@@ -568,13 +568,14 @@ class DatasetOrchestrator(
 
         job = self.active_jobs[job_id]
         job.current_stage = stage
-        job.progress = progress
+        job.progress = max(getattr(job, "progress", 0.0), progress)
         job.updated_at = datetime.now(timezone.utc)
         if error:
             job.error = error
             job.status = JobStatus.FAILED
         elif stage == "completed":
             job.status = JobStatus.COMPLETED
+            job.progress = 1.0
         elif stage == "cancelled":
             job.status = JobStatus.CANCELLED
         for k, v in kwargs.items():
@@ -665,9 +666,11 @@ class DatasetOrchestrator(
     def _update_job_progress(self, job_id: str, progress: float):
         """Update job progress."""
         if job_id in self.active_jobs:
-            self.active_jobs[job_id].progress = progress
+            current = getattr(self.active_jobs[job_id], "progress", 0.0)
+            monotonic_progress = max(current, progress)
+            self.active_jobs[job_id].progress = monotonic_progress
             if self.db:
-                asyncio.create_task(self._safe_db_update(job_id, {"progress": progress}))
+                asyncio.create_task(self._safe_db_update(job_id, {"progress": monotonic_progress}))
 
             # Broadcast via WebSocket (best-effort)
             if self.ws_manager:

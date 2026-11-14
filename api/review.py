@@ -337,7 +337,8 @@ async def bulk_action(action: BulkAction,
 async def review_stats(
     current_user: User = Depends(get_current_user),
     svc=Depends(_svc)):
-    return await svc.get_stats()
+    owner_filter = None if current_user.role == UserRole.ADMIN else current_user.username
+    return await svc.get_stats(owner=owner_filter)
 
 
 @router.get("/signals")

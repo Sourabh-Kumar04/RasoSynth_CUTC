@@ -871,7 +871,10 @@ async def get_dataset_dbom(
     nutrition_label = generate_nutrition_label_markdown(dbom)
 
     return {
+        "job_id": job_id,
+        "dbom": dbom,
         "dbom_certificate": dbom,
+        "nutrition_label_md": nutrition_label,
         "nutrition_label_markdown": nutrition_label,
     }
 

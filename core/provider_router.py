@@ -622,13 +622,15 @@ class ProviderRouter:
 
     def get_stats(self) -> dict[str, Any]:
         """Get comprehensive router statistics."""
+        healthy_names = set(self.get_healthy_providers())
         return {
             name: {
+                "available": (name in healthy_names) or (s.requests == 0 and name in self._providers),
                 "requests": s.requests,
                 "failures": len([r for r in self._success_rates.get(name, []) if not r]),
                 "total_tokens": s.total_tokens,
                 "total_cost_usd": s.total_cost,
-                "avg_latency_ms": s.avg_latency_ms,
+                "avg_latency_ms": round(s.avg_latency_ms, 1) if s.avg_latency_ms else 0.0,
                 "success_rate": s.success_rate,
                 "cache_hit_rate": s.cache_hits / max(s.cache_hits + s.cache_misses, 1),
             }
