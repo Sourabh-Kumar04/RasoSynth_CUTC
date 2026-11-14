@@ -151,6 +151,16 @@ export function Mascot({
       aria-label={altText}
       onClick={interactive ? handleClick : undefined}
     >
+      {/* Contrast guardian halo: ensures white robot body and helmet stand out cleanly on any light or dark background */}
+      <div
+        className="absolute inset-1 -z-10 rounded-full pointer-events-none"
+        style={{
+          background:
+            "radial-gradient(circle at 50% 52%, rgba(14, 13, 22, 0.72) 0%, rgba(10, 10, 16, 0.45) 55%, transparent 75%)",
+          filter: "blur(10px)",
+        }}
+      />
+
       {/* eslint-disable-next-line @next/next/no-img-element */}
       <img
         src={imageSrc}
@@ -163,7 +173,8 @@ export function Mascot({
           objectFit: "contain",
           background: "transparent",
           display: "block",
-          filter: "drop-shadow(0 8px 24px rgba(242, 102, 37, 0.18))",
+          filter:
+            "drop-shadow(0 4px 14px rgba(0, 0, 0, 0.55)) drop-shadow(0 1px 3px rgba(0, 0, 0, 0.45)) drop-shadow(0 10px 28px rgba(242, 102, 37, 0.26))",
         }}
       />
     </div>
