@@ -37,6 +37,7 @@ const NAV_ITEMS = [
   { href: '/finetune', label: 'Models', icon: Cpu },
   { href: '/jobs', label: 'Jobs', icon: Briefcase },
   { href: '/research', label: 'Benchmarks', icon: TrendingUp },
+  { href: '/observability', label: 'Telemetry', icon: Activity },
 ]
 
 // Settings & Governance dropdown items
@@ -44,7 +45,6 @@ const SETTINGS_DROPDOWN_ITEMS = [
   { href: '/settings', label: 'Settings', desc: 'System status & compute config', icon: SettingsIcon },
   { href: '/providers', label: 'API Keys', desc: 'Model providers & credentials', icon: Key },
   { href: '/dbom', label: 'Provenance', desc: 'Cryptographic DBOM attestations', icon: ShieldCheck },
-  { href: '/observability', label: 'Telemetry', desc: 'Cluster resources & health', icon: Activity },
 ]
 
 function SystemHealthIndicator() {
@@ -182,7 +182,7 @@ export function TopNav() {
 
           {/* Center: Evenly Spaced Primary Navigation */}
           <nav className="hidden md:flex items-center justify-center flex-1 mx-2 lg:mx-4">
-            <div className="flex items-center justify-evenly w-full max-w-4xl gap-0.5 sm:gap-1">
+            <div className="flex items-center justify-evenly w-full max-w-5xl gap-0.5 sm:gap-1">
               {NAV_ITEMS.map((item) => {
                 const active = pathname === item.href || (item.href !== '/' && pathname.startsWith(item.href))
                 const Icon = item.icon
