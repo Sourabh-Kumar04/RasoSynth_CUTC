@@ -432,6 +432,7 @@ async def get_current_user(
     - AUTH_DISABLED=true still validates token format for audit trail
     """
     auth = get_auth_manager()
+    allow_anon = os.getenv("ALLOW_ANONYMOUS", "true").lower() == "true"
 
     if not credentials:
         if auth.auth_disabled:
@@ -442,7 +443,6 @@ async def get_current_user(
                 )
             raise HTTPException(status_code=401, detail="Authentication required")
 
-        allow_anon = os.getenv("ALLOW_ANONYMOUS", "true").lower() == "true"
         if allow_anon and "anonymous" in auth._users:
             anon_user = auth.get_user("anonymous")
             if anon_user:
