@@ -12,7 +12,6 @@ import {
   Menu,
   X,
   Sparkles,
-  Plus,
   ShieldCheck,
   Activity,
   Key,
@@ -290,15 +289,6 @@ export function TopNav() {
                 </div>
               )}
             </div>
-
-            {/* Primary CTA: + New Dataset */}
-            <Link
-              href="/studio"
-              className="inline-flex items-center space-x-1.5 px-3.5 py-1.5 rounded-md bg-[#f26625] hover:bg-[#de581a] text-white text-xs font-semibold tracking-wide transition-all active:scale-95 shadow-sm shrink-0"
-            >
-              <Plus className="w-3.5 h-3.5" />
-              <span className="hidden sm:inline">New Dataset</span>
-            </Link>
 
             {/* Mobile menu toggle */}
             <button
