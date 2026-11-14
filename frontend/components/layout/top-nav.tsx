@@ -31,6 +31,7 @@ import { api } from '@/lib/api/client'
 const NAV_ITEMS = [
   { href: '/studio', label: 'Studio', icon: FlaskConical },
   { href: '/datasets', label: 'Datasets', icon: Database },
+  { href: '/quality', label: 'Quality', icon: BarChart2 },
   { href: '/review', label: 'Review', icon: ClipboardCheck },
   { href: '/orchestration', label: 'Pipelines', icon: Workflow },
   { href: '/finetune', label: 'Models', icon: Cpu },
@@ -43,7 +44,6 @@ const SETTINGS_DROPDOWN_ITEMS = [
   { href: '/settings', label: 'Settings', desc: 'System status & compute config', icon: SettingsIcon },
   { href: '/providers', label: 'API Keys', desc: 'Model providers & credentials', icon: Key },
   { href: '/dbom', label: 'Provenance', desc: 'Cryptographic DBOM attestations', icon: ShieldCheck },
-  { href: '/quality', label: 'Quality Hub', desc: '5D Jury scoring & certification', icon: BarChart2 },
   { href: '/observability', label: 'Telemetry', desc: 'Cluster resources & health', icon: Activity },
 ]
 
@@ -181,8 +181,8 @@ export function TopNav() {
           </div>
 
           {/* Center: Evenly Spaced Primary Navigation */}
-          <nav className="hidden md:flex items-center justify-center flex-1 mx-2 lg:mx-6">
-            <div className="flex items-center justify-evenly w-full max-w-3xl gap-1">
+          <nav className="hidden md:flex items-center justify-center flex-1 mx-2 lg:mx-4">
+            <div className="flex items-center justify-evenly w-full max-w-4xl gap-0.5 sm:gap-1">
               {NAV_ITEMS.map((item) => {
                 const active = pathname === item.href || (item.href !== '/' && pathname.startsWith(item.href))
                 const Icon = item.icon
