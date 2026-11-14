@@ -9,6 +9,8 @@ import hmac
 import json
 import logging
 import os
+from dotenv import load_dotenv
+load_dotenv()
 from pathlib import Path
 import secrets
 import time

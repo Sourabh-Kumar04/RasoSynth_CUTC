@@ -26,6 +26,7 @@ type HealthSnapshot = {
 export function FooterStatus() {
   const [snapshot, setSnapshot] = useState<HealthSnapshot | null>(null)
   const [failed, setFailed] = useState(false)
+  const wsStatus = useStreamingStore((s) => s.connectionStatus)
 
   useEffect(() => {
     let cancelled = false
@@ -77,8 +78,6 @@ export function FooterStatus() {
     dotColor = 'bg-[#a8a29e]'
     label = displayStatus.charAt(0).toUpperCase() + displayStatus.slice(1)
   }
-
-  const wsStatus = useStreamingStore((s) => s.connectionStatus)
 
   return (
     <div className="flex items-center gap-2">

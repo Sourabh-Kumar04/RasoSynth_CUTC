@@ -11,6 +11,12 @@ Supports:
 
 import argparse
 import sys
+import os
+from dotenv import load_dotenv
+
+# Load environment variables from .env file immediately
+load_dotenv()
+
 import uvicorn
 from cli import main as cli_main
 

@@ -348,6 +348,9 @@ class APIClient {
       }
 
       if (!response.ok) {
+        if (response.status === 401 && typeof window !== 'undefined') {
+          this.setToken(null)
+        }
         const error = await response.json().catch(() => ({ message: 'Request failed' }))
         throw new Error(formatErrorMessage(error, `HTTP ${response.status}`))
       }
