@@ -1,5 +1,6 @@
 services:
-  # RasoSynthTune 100% FREE Tier API Server on Render
+  # RasoSynthTune Free Tier Cloud Control Plane on Render
+  # Handles API, DBOM signing, synthetic generation, and dispatches compute to Modal/Colab
   - type: web
     name: rasosynthtune-api
     runtime: docker
@@ -17,7 +18,13 @@ services:
         value: "false"
       - key: ENABLE_CELERY
         value: "false"
-      # Add your free API key (e.g. Gemini 1.5 Flash has a free tier)
+      - key: WORKERS
+        value: "1"
+      - key: MALLOC_ARENA_MAX
+        value: "2"
+      - key: PYTHONUNBUFFERED
+        value: "1"
+      # Free AI Provider keys (e.g. Gemini 1.5 Flash, Groq)
       - key: GEMINI_API_KEY
         sync: false
       - key: OPENAI_API_KEY
@@ -25,5 +32,10 @@ services:
       - key: GROQ_API_KEY
         sync: false
       - key: HF_TOKEN
+        sync: false
+      # Modal Labs Free Tier ($30/mo free compute) for offloaded fine-tuning
+      - key: MODAL_TOKEN_ID
+        sync: false
+      - key: MODAL_TOKEN_SECRET
         sync: false
     healthCheckPath: /health

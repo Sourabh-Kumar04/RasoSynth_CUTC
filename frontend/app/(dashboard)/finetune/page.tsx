@@ -1082,7 +1082,7 @@ function FineTuneContent() {
     load_in_4bit: true, bf16: true,
     push_to_hub: false, hf_token: '', hf_org: '',
     chat_template: 'alpaca', output_dir: 'outputs/finetune',
-    execution_target: 'local',
+    execution_target: 'colab',
     distributed_strategy: 'none',
     webhook_url: '',
     // Engine-specific parameters:
@@ -1760,10 +1760,10 @@ function FineTuneContent() {
                       onValueChange={v => f('execution_target', v)}>
                       <SelectTrigger className="rounded-md border-[#272738] bg-[#0a0a0f] text-white text-xs font-mono"><SelectValue /></SelectTrigger>
                       <SelectContent className="bg-[#12121a] border-[#272738] text-white text-xs font-mono">
-                        <SelectItem value="local">Local Hardware (PyTorch / Unsloth)</SelectItem>
-                        <SelectItem value="colab">Google Colab (Cloud GPU Acceleration)</SelectItem>
-                        <SelectItem value="modal">Modal Serverless GPU (NVIDIA A10G)</SelectItem>
+                        <SelectItem value="colab">Google Colab (Free Cloud T4 GPU · Zero Cost)</SelectItem>
+                        <SelectItem value="modal">Modal Serverless GPU (NVIDIA A10G · Cloud Offload)</SelectItem>
                         <SelectItem value="runpod">RunPod Cloud GPU (A40 / H100)</SelectItem>
+                        <SelectItem value="local">Local Hardware (Local PyTorch / CUDA)</SelectItem>
                       </SelectContent>
                     </Select>
                   </div>
