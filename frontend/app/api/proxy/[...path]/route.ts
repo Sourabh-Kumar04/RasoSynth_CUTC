@@ -4,11 +4,13 @@ export const dynamic = 'force-dynamic'
 export const maxDuration = 60
 
 // Server-side backend URL (never exposed to browser)
-const BACKEND_URL = (
+const PRIMARY_BACKEND_URL = (
   process.env.BACKEND_API_URL ||
   process.env.HF_SPACE_URL ||
-  'https://sourabh-kumar04-rasosynthtune.hf.space'
+  'https://boundless-tidings-tanning.ngrok-free.dev'
 ).replace(/\/$/, '')
+
+const FALLBACK_BACKEND_URL = 'https://boundless-tidings-tanning.ngrok-free.dev'
 
 // Server-side private Hugging Face token (never exposed to browser)
 const HF_TOKEN = process.env.HF_TOKEN || process.env.HUGGINGFACE_TOKEN || process.env.HF_API_KEY || ''
@@ -173,11 +175,14 @@ async function handleProxy(req: NextRequest, { params }: { params: { path?: stri
   }
 
   const search = req.nextUrl.search
-  const targetUrl = `${BACKEND_URL}/${path}${search}`
+  const primaryUrl = `${PRIMARY_BACKEND_URL}/${path}${search}`
+  const fallbackUrl = `${FALLBACK_BACKEND_URL}/${path}${search}`
   const isHealthCheck = path === 'health' || path === 'health/ready'
 
   // Header hygiene: forward only explicitly permitted headers, never cookies or ambient auth
-  const headers: Record<string, string> = {}
+  const headers: Record<string, string> = {
+    'ngrok-skip-browser-warning': '69420',
+  }
   
   // Explicitly forward content-type, accept, and correlation headers if present
   const contentType = req.headers.get('content-type')
@@ -199,26 +204,55 @@ async function handleProxy(req: NextRequest, { params }: { params: { path?: stri
   }
 
   // Hugging Face private space gateway token: pass as custom header to avoid corrupting backend JWT auth
-  if (HF_TOKEN && (BACKEND_URL.includes('hf.space') || BACKEND_URL.includes('huggingface.co'))) {
+  if (HF_TOKEN && (PRIMARY_BACKEND_URL.includes('hf.space') || PRIMARY_BACKEND_URL.includes('huggingface.co'))) {
     headers['x-hf-token'] = HF_TOKEN
   }
 
   const body = ['GET', 'HEAD'].includes(method) ? undefined : await req.arrayBuffer()
 
   const timeoutMs = isHealthCheck ? 8000 : 45000
-  const controller = new AbortController()
-  const timeoutId = setTimeout(() => controller.abort(), timeoutMs)
+
+  async function executeFetch(targetUrl: string) {
+    const controller = new AbortController()
+    const timeoutId = setTimeout(() => controller.abort(), timeoutMs)
+    try {
+      const response = await fetch(targetUrl, {
+        method,
+        headers,
+        body,
+        signal: controller.signal,
+        // @ts-ignore
+        duplex: 'half',
+      })
+      clearTimeout(timeoutId)
+      return response
+    } catch (err) {
+      clearTimeout(timeoutId)
+      throw err
+    }
+  }
 
   try {
-    const response = await fetch(targetUrl, {
-      method,
-      headers,
-      body,
-      signal: controller.signal,
-      // @ts-ignore
-      duplex: 'half',
-    })
-    clearTimeout(timeoutId)
+    let response: Response | null = null
+    try {
+      response = await executeFetch(primaryUrl)
+      // Check if primary response was an offline ngrok tunnel error or bad gateway
+      const ngrokErr = response.headers.get('ngrok-error-code')
+      if ((ngrokErr || response.status === 404 || response.status === 502 || response.status === 503) && primaryUrl !== fallbackUrl) {
+        // Fall back to active live ngrok tunnel
+        response = await executeFetch(fallbackUrl)
+      }
+    } catch (primaryErr) {
+      if (primaryUrl !== fallbackUrl) {
+        response = await executeFetch(fallbackUrl)
+      } else {
+        throw primaryErr
+      }
+    }
+
+    if (!response) {
+      throw new Error('No response from backend')
+    }
 
     // Detect Hugging Face Space sleeping or paused state (503 / 504 / 404 / 429)
     const isSleeping = response.status === 503 || response.status === 504 ||
@@ -250,8 +284,6 @@ async function handleProxy(req: NextRequest, { params }: { params: { path?: stri
       headers: responseHeaders,
     })
   } catch (err: any) {
-    clearTimeout(timeoutId)
-
     return NextResponse.json(
       {
         error: 'Backend service unavailable',
