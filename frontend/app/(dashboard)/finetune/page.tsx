@@ -1597,7 +1597,7 @@ function FineTuneContent() {
               Autonomous Training
             </span>
             <h1 className="text-2xl font-bold tracking-tight text-white font-display">
-              Model Training Studio
+              Model Training (QLoRA)
             </h1>
           </div>
           <p className="text-xs text-[#a8a29e]">
@@ -1607,7 +1607,7 @@ function FineTuneContent() {
         <div className="flex items-center gap-2 self-start sm:self-auto flex-wrap">
           <div className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md text-xs font-mono font-medium border border-emerald-500/30 bg-emerald-950/30 text-emerald-300">
             <Zap className="h-3.5 w-3.5 text-emerald-400" />
-            <span>Zero-Setup Cloud GPU Ready</span>
+            <span>Cloud GPU Accelerated</span>
           </div>
           <Button
             variant={tab === 'jobs' ? 'default' : 'outline'}
@@ -2258,7 +2258,6 @@ LORA_ALPHA = ${form.lora_alpha}`}
               : jobs.length === 0
                 ? (
                   <div className="flex flex-col items-center justify-center py-16 space-y-4 bg-[#12121a] rounded-md border border-[#272738]">
-                    <Mascot size="medium" state="working" className="mb-2" />
                     <p className="text-xs text-[#a8a29e] font-mono">No fine-tuning sessions recorded</p>
                     <Button size="sm" className="bg-[#f26625] hover:bg-[#de581a] border border-[#ea580c] text-white rounded-md font-mono text-xs" onClick={() => setTab('new')}>
                       <Plus className="h-3.5 w-3.5 mr-1 text-white" />Create first job

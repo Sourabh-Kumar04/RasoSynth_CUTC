@@ -23,7 +23,7 @@ export default function DashboardLayout({
         {/* Global App Shell Footer */}
         <footer className="w-full border-t border-[#1f1f2e] bg-[#08080d]/90 backdrop-blur-md mt-auto py-5 px-4 sm:px-8 text-xs font-mono text-[#a8a29e]">
           <div className="max-w-[1600px] mx-auto flex flex-col md:flex-row items-center justify-between gap-4">
-            {/* Left: Brand Identity & Honesty Note */}
+            {/* Left: Brand Identity & Status */}
             <div className="flex flex-wrap items-center gap-3 text-center md:text-left">
               <Link href="/" className="flex items-center gap-2 text-white hover:text-[#f26625] transition-colors">
                 <BrandLogo size={20} />
@@ -31,12 +31,9 @@ export default function DashboardLayout({
               </Link>
               <span className="text-[#4a463f] hidden sm:inline">|</span>
               <FooterStatus />
-              <span className="text-xs text-amber-400/90 hidden lg:inline">
-                (Demo Guard: $50 Cap · In-Memory Ring Logging)
-              </span>
             </div>
 
-            {/* Right: Quick Links, Docs, GitHub, Open Source */}
+            {/* Right: Quick Links, GitHub, License */}
             <div className="flex flex-wrap items-center justify-center gap-4 text-xs">
               <Link href="/observability" className="hover:text-white transition-colors flex items-center gap-1">
                 <Activity className="w-3 h-3 text-[#f26625]" />
@@ -56,7 +53,7 @@ export default function DashboardLayout({
               </Link>
               <span className="text-[#4a463f]">|</span>
               <span className="text-[#a8a29e]">
-                Apache-2.0 License · Self-Hostable
+                Open Source · Self-Hostable
               </span>
             </div>
           </div>

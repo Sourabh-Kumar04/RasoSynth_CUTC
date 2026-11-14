@@ -54,16 +54,16 @@ import { api } from '@/lib/api/client'
 
 // Pipeline stages for live DAG matching industry-standard non-linear architecture
 const PIPELINE_STAGES = [
-  { id: 'query_optimizer', label: '1. Optimizer', desc: 'LLM Fast-Pass', icon: Zap },
-  { id: 'preview_acceptance', label: '2. Early Preview', desc: 'Acceptance Gate', icon: Eye },
-  { id: 'discovering_sources', label: '3. Crawling', desc: 'AI Kosh & Open Repos', icon: Globe },
-  { id: 'extracting_content', label: '4. Extract', desc: 'Concurrent Chunks', icon: FileText },
-  { id: 'filtering_quality', label: '5. Filter', desc: 'DPDP & Statutory LSH', icon: Sparkles },
-  { id: 'constructing_dataset', label: '6. Synthesis', desc: 'VRAM-Budgeted LLM', icon: Puzzle },
-  { id: 'human_review', label: '7. HITL Gate', desc: 'Stratified Review', icon: Users },
-  { id: 'balance', label: '8. Balancing', desc: 'Exact Size Guarantee', icon: Scale },
-  { id: 'exporting', label: '9. Packaging', desc: 'ADR-002 Merkle Manifest', icon: Package },
-  { id: 'finetuning', label: '10. Fine-Tune', desc: '1-Click QLoRA / SFT', icon: Rocket },
+  { id: 'query_optimizer', label: '1. Optimizer', desc: 'Prompt Optimization', icon: Zap },
+  { id: 'preview_acceptance', label: '2. Early Preview', desc: 'Spec Verification', icon: Eye },
+  { id: 'discovering_sources', label: '3. Crawling', desc: 'Authority Sources', icon: Globe },
+  { id: 'extracting_content', label: '4. Extract', desc: 'Document Extraction', icon: FileText },
+  { id: 'filtering_quality', label: '5. Filter', desc: 'Quality & PII Filter', icon: Sparkles },
+  { id: 'constructing_dataset', label: '6. Synthesis', desc: 'Multi-Turn Synthesis', icon: Puzzle },
+  { id: 'human_review', label: '7. HITL Gate', desc: 'Human Review Gate', icon: Users },
+  { id: 'balance', label: '8. Balancing', desc: 'Curriculum Balancing', icon: Scale },
+  { id: 'exporting', label: '9. Packaging', desc: 'Merkle Provenance', icon: Package },
+  { id: 'finetuning', label: '10. Fine-Tune', desc: 'Model Fine-Tuning', icon: Rocket },
 ]
 
 export default function OrchestrationPage() {
@@ -431,7 +431,7 @@ export default function OrchestrationPage() {
                   <div className="p-2.5 rounded bg-[#0a0a0f] border border-[#4a463f] space-y-1">
                     <span className="text-zinc-500 text-xs uppercase block">Stage Telemetry</span>
                     <p className="text-zinc-300">
-                      Est. Latency: <strong className="text-white">— (per-stage timing not yet measured)</strong><br />
+                      Est. Latency: <strong className="text-white">—</strong><br />
                       Checkpoint: <span className="text-[#f26625]">ckpt-{selectedStageNode.id}</span>
                     </p>
                   </div>
@@ -452,7 +452,7 @@ export default function OrchestrationPage() {
                     <span className="text-[#10b981] font-bold">{selectedJob.samples_generated || 0}</span>
                   </div>
                   <div className="p-2 rounded bg-[#0a0a0f] border border-[#272738]">
-                    <span className="text-[#a8a29e] text-xs block">Total Cost Accrued (provider spend not attributed per job)</span>
+                    <span className="text-[#a8a29e] text-xs block">Total Compute Spend</span>
                     <span className="text-[#f26625] font-bold">${(typeof selectedJob.cost_usd === 'number' ? selectedJob.cost_usd : 0.0).toFixed(3)}</span>
                   </div>
                   <div className="p-2 rounded bg-[#0a0a0f] border border-[#272738]">
@@ -499,7 +499,7 @@ export default function OrchestrationPage() {
                   </div>
                   <div className="flex flex-wrap items-center justify-between gap-2 text-xs text-[#a8a29e]">
                     <span>
-                      Task Responsibility: <strong className="text-zinc-200 font-normal">{selectedJob.active_agent?.role || 'Decentralized LangGraph state transition'}</strong>
+                      Task Responsibility: <strong className="text-zinc-200 font-normal">{selectedJob.active_agent?.role || 'Autonomous pipeline state transition'}</strong>
                     </span>
                     <span className="flex items-center gap-1 text-[11px] text-[#f26625]">
                       <GitMerge className="w-3 h-3" /> Consensus Protocol: Multi-Agent Quorum
@@ -594,7 +594,7 @@ export default function OrchestrationPage() {
                   <div className="space-y-1">
                     <span className="text-xs font-mono font-bold uppercase tracking-wider text-amber-400 flex items-center gap-1.5">
                       <Users className="w-4 h-4 text-amber-400" />
-                      Pipeline Stalled: Awaiting Human Review
+                      Pipeline Paused: Awaiting Human Review
                     </span>
                     <p className="text-xs text-zinc-300 max-w-xl">
                       Stratified quality sampling holds this pipeline at the human verification gate. Outlier and edge-case samples must be inspected, edited, or approved in the review queue before downstream synthesis and export proceed.

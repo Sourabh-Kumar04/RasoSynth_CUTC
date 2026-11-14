@@ -165,8 +165,8 @@ export default function JobsPage() {
         </div>
       </div>
 
-      {/* Error banner if non-auth failure occurs */}
-      {error && (
+      {/* Error banner if non-auth failure occurs when jobs list is present */}
+      {error && jobs.length > 0 && (
         <Card className="border border-rose-500/30 bg-rose-950/20 text-rose-300 rounded-md">
           <CardContent className="p-4 flex items-center justify-between text-xs font-mono">
             <div className="flex items-center gap-2.5">
@@ -271,7 +271,7 @@ export default function JobsPage() {
                           : 'border-zinc-700 text-zinc-400'
                       }`}
                     >
-                      {job.status}
+                      {job.status?.replace(/_/g, ' ')}
                     </Badge>
                   </div>
 
@@ -310,7 +310,7 @@ export default function JobsPage() {
                   <div>
                     <span className="text-[#a8a29e] block text-[10px] uppercase">Est. Compute</span>
                     <span className="text-emerald-400 font-bold">
-                      ${((job.cost_usd ?? 0)).toFixed(2)} (Free Local Demo)
+                      ${((job.cost_usd ?? 0)).toFixed(2)} (Local Compute)
                     </span>
                   </div>
                 </div>
@@ -329,7 +329,15 @@ export default function JobsPage() {
                 {/* Error string if failed */}
                 {job.error && (
                   <div className="p-2 rounded bg-rose-950/30 border border-rose-500/30 text-rose-300 text-xs">
-                    {formatErrorMessage(job.error)}
+                    {(() => {
+                      const msg = formatErrorMessage(job.error)
+                      if (msg.includes('Traceback (most recent call last)') || /Traceback/i.test(msg)) {
+                        const lines = msg.split('\n').map((l) => l.trim()).filter(Boolean)
+                        const lastLine = lines[lines.length - 1]
+                        return lastLine && !lastLine.startsWith('File ') ? `Execution error: ${lastLine}` : 'Job execution failed due to an internal server error.'
+                      }
+                      return msg
+                    })()}
                   </div>
                 )}
               </Card>

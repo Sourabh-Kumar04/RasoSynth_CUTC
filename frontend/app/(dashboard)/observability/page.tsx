@@ -619,7 +619,7 @@ export default function ObservabilityPage() {
                     <Network className="h-3.5 w-3.5 text-cyan-400" /> Active Egress Proxy Gateways &amp; Sticky Routing
                   </span>
                   <span className="text-[10px] font-mono text-zinc-400">
-                    TLS JA3/JA4 Spoofing: Active
+                    TLS Fingerprint: Standard Profile
                   </span>
                 </div>
                 <div className="rounded-md border border-[#1c1c28] overflow-hidden">

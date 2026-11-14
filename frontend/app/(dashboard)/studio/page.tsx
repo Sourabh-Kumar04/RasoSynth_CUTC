@@ -162,7 +162,7 @@ function usePromptLint(text: string) {
   if (len === 0) return { score: 0, warnings: [], tips: [] }
 
   if (len < 45) {
-    warnings.push('Sparse instruction prompt: add explicit curriculum criteria or difficulty split.')
+    warnings.push('Short prompt: specify instruction curriculum, target domains, or difficulty criteria.')
   }
 
   const lower = text.toLowerCase()
@@ -172,7 +172,7 @@ function usePromptLint(text: string) {
     tips.push({
       text: 'Ground legal reasoning in statutory provisions (e.g. Section 16(4) CGST Act or BNS 2023).',
       actionLabel: '+ Add Statutory Grounding',
-      appendSnippet: ' Ground all reasoning steps in relevant statutory provisions (e.g. Section 16(4) CGST Act or BNS 2023) with zero hallucinated citations.',
+      appendSnippet: ' Ground all reasoning steps in relevant statutory provisions (e.g. Section 16(4) CGST Act or BNS 2023) with verified citations.',
     })
   }
 
@@ -557,9 +557,18 @@ function StudioContent() {
       }
     } catch (err: any) {
       console.error('Job creation failed:', err)
+      const raw = formatErrorMessage(err) || 'Job creation failed. The backend service may be offline or unreachable.'
+      let cleanMessage = raw
+      if (raw.includes('Traceback (most recent call last)') || raw.includes('File "') || /Traceback/i.test(raw)) {
+        const lines = raw.split('\n').map((l) => l.trim()).filter(Boolean)
+        const lastLine = lines[lines.length - 1]
+        cleanMessage = lastLine && !lastLine.startsWith('File ') && !lastLine.startsWith('Traceback')
+          ? `Generation failed: ${lastLine}`
+          : 'Job generation failed due to an internal server error. Please verify your inputs and try again.'
+      }
       setSubmitResult({
         type: 'error',
-        message: formatErrorMessage(err) || 'Job creation failed. The backend service may be offline or unreachable.',
+        message: cleanMessage,
       })
     } finally {
       setIsSubmitting(false)
@@ -1477,7 +1486,7 @@ function StudioContent() {
                   className="w-full accent-[#f26625] bg-[#0a0a0f] cursor-pointer"
                 />
                 <div className="flex items-center justify-between text-xs font-mono text-[#a8a29e] mt-2 p-2 rounded bg-[#0a0a0f] border border-[#1f1f2e]">
-                  <span>Est. Cloud API (planning estimate: $0.06/1000 rows, not metered spend): <strong className="text-zinc-200 font-bold">${((datasetSize / 1000) * 0.06).toFixed(2)}</strong> <span className="text-emerald-400">($0.00 Local)</span></span>
+                  <span>Est. Cloud API (~$0.06 / 1k rows): <strong className="text-zinc-200 font-bold">${((datasetSize / 1000) * 0.06).toFixed(2)}</strong> <span className="text-emerald-400">($0.00 Local)</span></span>
                   <span>Est. Time: <strong className="text-zinc-200 font-bold">{datasetSize <= 100 ? '~15s' : datasetSize <= 1000 ? '~1.8m' : datasetSize <= 5000 ? '~8.5m' : `~${Math.round(datasetSize / 650)}m`}</strong></span>
                 </div>
               </div>
@@ -1646,7 +1655,7 @@ function StudioContent() {
                         className="bg-[#0a0a0f] border-[#272738] text-xs font-mono text-white h-8"
                       />
                       <p className="text-xs font-mono text-[#a8a29e] mt-1">
-                        Excludes cross-discipline collisions, foreign statutory codes, and unrelated scientific homonyms.
+                        Excludes irrelevant cross-domain topics and confusing homonyms.
                       </p>
                     </div>
 
@@ -1737,10 +1746,14 @@ function StudioContent() {
                   <AlertCircle className="w-4 h-4 text-rose-400 shrink-0 mt-0.5" />
                 )}
                 <div className="space-y-1">
-                  <p className="font-bold text-white">{submitResult.message}</p>
+                  <p className="font-bold text-white">
+                    {submitResult.message.includes('Traceback')
+                      ? 'Job generation failed due to a server error. Please check your configuration and try again.'
+                      : submitResult.message}
+                  </p>
                   {submitResult.type === 'error' && (
                     <p className="text-[11px] text-rose-300">
-                      The job scheduler could not be reached. Verify local server connectivity and try again.
+                      The job scheduler encountered an issue. Verify local server connectivity or input configuration and try again.
                     </p>
                   )}
                 </div>

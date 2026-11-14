@@ -24,20 +24,20 @@ import { api } from '@/lib/api/client'
 
 const PRIMARY_NAV_LINKS = [
   { href: '/dashboard', label: 'Dashboard', fullLabel: 'Workspace Dashboard', icon: LayoutDashboard },
-  { href: '/studio', label: 'Studio', fullLabel: 'Dataset Studio', icon: FlaskConical },
+  { href: '/studio', label: 'Studio', fullLabel: 'Dataset Synthesis Studio', icon: FlaskConical },
   { href: '/datasets', label: 'Data Library', fullLabel: 'Data Library & Exports', icon: Database },
-  { href: '/finetune', label: 'Model Training', fullLabel: 'QLoRA Training Studio', icon: Cpu },
-  { href: '/orchestration', label: 'Pipelines', fullLabel: 'DAG Execution Engine', icon: Workflow },
-  { href: '/quality', label: 'Quality', fullLabel: 'Quality Inspector', icon: Sparkles },
+  { href: '/finetune', label: 'Model Training', fullLabel: 'Model Training & Fine-Tuning', icon: Cpu },
+  { href: '/orchestration', label: 'Pipelines', fullLabel: 'Synthesis & Execution Pipelines', icon: Workflow },
+  { href: '/quality', label: 'Quality', fullLabel: 'Dataset Quality Analysis', icon: Sparkles },
   { href: '/review', label: 'Review', fullLabel: 'Human-in-the-Loop Review', icon: ClipboardCheck },
-  { href: '/observability', label: 'Telemetry', fullLabel: 'System Insights', icon: Activity },
+  { href: '/observability', label: 'Telemetry', fullLabel: 'Telemetry & Observability', icon: Activity },
 ]
 
 const SECONDARY_NAV_LINKS = [
-  { href: '/jobs', label: 'Jobs', fullLabel: 'Jobs & Execution Runs', icon: Briefcase },
-  { href: '/dbom', label: 'DBOM', fullLabel: 'Cryptographic DBOM Attestation', icon: ShieldCheck },
-  { href: '/research', label: 'Benchmarks', fullLabel: 'Benchmarks & ROI', icon: BarChart2 },
-  { href: '/providers', label: 'Providers', fullLabel: 'AI Providers & Failover', icon: Beaker },
+  { href: '/jobs', label: 'Jobs', fullLabel: 'Jobs & Execution History', icon: Briefcase },
+  { href: '/dbom', label: 'DBOM', fullLabel: 'DBOM Provenance & Attestation', icon: ShieldCheck },
+  { href: '/research', label: 'Benchmarks', fullLabel: 'Benchmarks & Model Evaluation', icon: BarChart2 },
+  { href: '/providers', label: 'Providers', fullLabel: 'Model Providers & API Configuration', icon: Beaker },
   { href: '/settings', label: 'System Status', fullLabel: 'System Status & Configuration', icon: Settings },
 ]
 

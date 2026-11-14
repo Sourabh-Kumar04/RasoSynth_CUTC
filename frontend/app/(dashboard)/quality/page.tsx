@@ -393,7 +393,7 @@ export default function QualityDashboardPage() {
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-2">
                 <Sparkles className="h-4 w-4 text-[#f26625]" />
-                <CardTitle className="text-sm font-bold text-white font-mono">Sample Quality Jury</CardTitle>
+                <CardTitle className="text-sm font-bold text-white font-mono">Sample Quality Scoring</CardTitle>
                 <Badge variant="outline" className="border-amber-500/40 bg-amber-500/10 text-amber-300 font-mono text-[10px] font-bold">
                   Demo / Reference Data
                 </Badge>
@@ -548,7 +548,7 @@ export default function QualityDashboardPage() {
             {densityLoading ? "Projecting..." : "Recompute 2D Clusters"}
           </Button>
         </div>
-        <p className="text-xs font-mono text-amber-300 mb-3">Demo data: the initial plot and the recompute run use fixed example samples, not the selected dataset&apos;s records.</p>
+        <p className="text-xs font-mono text-amber-300 mb-3">Demo data — run an inspection for real results.</p>
 
         <Card className="border-[#272738] bg-[#12121a] rounded-md card-shadow overflow-hidden">
           <CardHeader className="pb-3 border-b border-[#272738] bg-[#0e0e14]">

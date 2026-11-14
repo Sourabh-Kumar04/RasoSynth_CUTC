@@ -134,7 +134,7 @@ export function TopNav() {
             <button
               onClick={() => setShowTour(true)}
               className="hidden sm:inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md border border-[#272738] bg-[#12121a] hover:bg-[#181826] hover:border-amber-500/40 text-xs font-mono text-zinc-300 hover:text-white transition-all"
-              title="Launch Guided Product Tour"
+              title="Guided Product Tour"
             >
               <Sparkles className="w-3.5 h-3.5 text-amber-400" />
               <span>Tour</span>
@@ -150,6 +150,7 @@ export function TopNav() {
 
             <Link
               href="/studio"
+              title="Create New Dataset"
               className="inline-flex items-center space-x-1.5 px-3 py-1.5 rounded-md bg-[#f26625] hover:bg-[#de581a] border border-[#ea580c] text-white text-xs font-mono font-bold transition-all active:scale-95 shadow-sm"
             >
               <FlaskConical className="w-3.5 h-3.5 text-white" />

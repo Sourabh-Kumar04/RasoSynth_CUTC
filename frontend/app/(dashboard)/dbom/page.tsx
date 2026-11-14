@@ -149,13 +149,13 @@ export default function DbomPage() {
           <CardHeader className="pb-2">
             <CardTitle className="text-xs font-mono uppercase tracking-wider text-[#a8a29e] flex items-center gap-2">
               <Binary className="w-4 h-4 text-amber-400" />
-              <span>Zero Leakage</span>
+              <span>Contamination Guard</span>
             </CardTitle>
           </CardHeader>
           <CardContent className="text-xs font-mono space-y-1">
-            <p className="text-white font-bold text-sm">Contamination Guard</p>
+            <p className="text-white font-bold text-sm">Benchmark Separation</p>
             <p className="text-[#a8a29e]">
-              13-gram min-hash sliding filters verify zero overlap with standard evaluation benchmarks.
+              13-gram min-hash sliding filters screen for overlap against evaluation benchmark splits.
             </p>
           </CardContent>
         </Card>

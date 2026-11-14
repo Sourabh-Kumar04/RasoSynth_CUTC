@@ -52,8 +52,8 @@ const ENGINES = [
     id: 'cot',
     name: 'Chain-of-Thought',
     badge: 'CoT',
-    description: 'Multi-step deliberate cognitive paths with self-correction verification.',
-    detail: 'Enforces rigorous step-by-step mathematical, statutory, and causal derivations.',
+    description: 'Multi-step cognitive paths with verified derivations.',
+    detail: 'Step-by-step mathematical, statutory, and causal reasoning.',
     sample: {
       instruction:
         'Verify if input tax credit on purchases made in FY 2022-23 can be claimed in GSTR-3B filed on 25th November 2023 under Section 16(4) CGST Act.',
@@ -67,8 +67,8 @@ const ENGINES = [
     id: 'socratic',
     name: 'Socratic Dialectic',
     badge: 'Socratic',
-    description: 'Inquisitive guided dialogue probing edge-cases and latent assumptions.',
-    detail: 'Iterative dialectical reasoning that draws out edge-case nuances and proofs.',
+    description: 'Guided dialectic probing edge cases and latent assumptions.',
+    detail: 'Iterative questioning that surfaces boundary conditions and proofs.',
     sample: {
       instruction: 'Is a machine learning model capable of true causal reasoning from observational data?',
       thought:
@@ -81,8 +81,8 @@ const ENGINES = [
     id: 'preference',
     name: 'DPO Preference Pairs',
     badge: 'DPO',
-    description: 'Rigorous chosen vs rejected comparative pairs for policy alignment.',
-    detail: 'Direct Preference Optimization pairs calibrated by LLM-Judge rubric.',
+    description: 'Comparative chosen vs. rejected pairs for alignment.',
+    detail: 'Preference optimization pairs evaluated against alignment rubrics.',
     sample: {
       instruction: 'A customer demands immediate tax exemption without presenting an authorized GST registration.',
       chosen:
@@ -96,8 +96,8 @@ const ENGINES = [
     id: 'multi_turn',
     name: 'Multi-Turn Agentic',
     badge: 'Multi-Turn',
-    description: 'Extended conversational sessions with state tracking & context drift.',
-    detail: 'Simulates complex long-horizon human-agent collaboration and memory retention.',
+    description: 'Multi-turn agent sessions with state tracking.',
+    detail: 'Long-horizon conversational context with state preservation.',
     sample: {
       turn1_user: 'We want to optimize our transonic wing design for Mach 0.82 cruise.',
       turn1_agent: 'At Mach 0.82, shock-induced boundary layer separation dominates drag. Are you targeting supercritical airfoil profiles or active suction?',
@@ -109,8 +109,8 @@ const ENGINES = [
     id: 'tool_calling',
     name: 'Tool Calling & API',
     badge: 'Tool Calling',
-    description: 'Executable JSON function schemas with arguments & structured outputs.',
-    detail: 'Synthesizes enterprise-grade function calling tokens and deterministic execution.',
+    description: 'Structured JSON function schemas and execution traces.',
+    detail: 'Validates API argument schemas and deterministic tool responses.',
     sample: {
       tool_name: 'query_gstin_ledger',
       parameters: { gstin: '27AABCU9603R1ZM', period: '2023-Q3', return_type: 'GSTR_2B' },
@@ -126,8 +126,8 @@ const ENGINES = [
     id: 'contrastive',
     name: 'Contrastive Anchors',
     badge: 'Contrastive',
-    description: 'Direct negative boundary calibration against anti-domain pollution.',
-    detail: 'Maps negative semantic boundaries to immunize against out-of-domain hallucinations.',
+    description: 'Negative boundary calibration against domain drift.',
+    detail: 'Semantic boundary anchors rejecting out-of-domain drift.',
     sample: {
       target_domain: 'Indian Indirect Taxation (GST & Customs)',
       anti_domain_invariants: [
@@ -142,8 +142,8 @@ const ENGINES = [
     id: 'rag',
     name: 'RAG Grounded Corpus',
     badge: 'RAG',
-    description: 'Statutory citations and factual grounding against verified document nodes.',
-    detail: 'Extracts real circulars, legal rulings, and technical repos without hallucination.',
+    description: 'Factual grounding against verified document nodes.',
+    detail: 'Extracts real statutory citations and source references with grounded citations.',
     sample: {
       source_repository: 'AI Kosh / CBIC Statutory Gazettes',
       verified_citation: 'CBIC Circular No. 183/15/2022-GST dated 27-Dec-2022',
@@ -678,7 +678,7 @@ export default function ZenPortalPage() {
         <div className="mt-12 flex flex-wrap items-center justify-center gap-6 text-xs font-mono text-zinc-500 border-t border-[#1c1c28]/60 pt-6">
           <Link href="/observability" className="flex items-center gap-2 hover:text-zinc-300 transition-colors group">
             <Server className="w-3.5 h-3.5 text-[#f26625]" />
-            <span>Worker Pool: <strong className="text-zinc-200 font-normal group-hover:text-white">8 Container Threads Target</strong></span>
+            <span>Execution Engine: <strong className="text-zinc-200 font-normal group-hover:text-white">Parallel Task Workers</strong></span>
           </Link>
           <span className="text-zinc-700">·</span>
           <Link href="/review" className="flex items-center gap-2 hover:text-zinc-300 transition-colors group">
@@ -813,7 +813,7 @@ export default function ZenPortalPage() {
         <SynthesisFlowDiagram />
 
         <div className="mt-4 p-3 rounded-lg bg-[#0e0e16] border border-[#1f1f2e] text-xs font-mono text-zinc-400 text-center">
-          * Latency benchmarked on local multi-worker container setup (45ms corpus discovery, 280ms synthesis, 120ms neural evaluation, 15ms Merkle packaging). Real LLM provider API latency varies from 1.2s to 4.5s depending on model and context window size.
+          * Pipeline stages span corpus discovery, synthesis, neural quality evaluation, and Merkle packaging. API response times depend on selected provider and context size.
         </div>
       </section>
 
@@ -825,13 +825,13 @@ export default function ZenPortalPage() {
           <div>
             <div className="flex items-center space-x-2 text-xs font-mono uppercase tracking-widest text-[#f26625] mb-1">
               <ShieldCheck className="w-3.5 h-3.5" />
-              <span>Cryptographic Provenance Guarantee</span>
+              <span>Cryptographic Merkle Guarantee</span>
             </div>
             <h2 className="text-xl sm:text-2xl font-bold text-white font-display">
               Data Bill of Materials (DBOM) &amp; Nutrition Labels
             </h2>
             <p className="text-xs text-zinc-400 mt-1 max-w-2xl">
-              Certificates attest to zero PII leakage and statutory fidelity.
+              Certificates attest to Automated PII Guard and statutory fidelity.
             </p>
           </div>
 
@@ -990,8 +990,8 @@ export default function ZenPortalPage() {
                 <span className="text-white font-bold">DBOM-VERIFIED-DATASET</span>
               </div>
               <div className="flex justify-between py-1 border-b border-[#1c1c28]/60 text-zinc-400">
-                <span>Indic DPDP PII Exposure:</span>
-                <span className="text-emerald-400 font-bold">0.00% (Zero Leakage)</span>
+                <span>Indic DPDP PII Protection:</span>
+                <span className="text-emerald-400 font-bold">Automated PII Guard</span>
               </div>
               <div className="flex justify-between py-1 border-b border-[#1c1c28]/60 text-zinc-400">
                 <span>Script Purity (Devanagari):</span>
@@ -1058,7 +1058,7 @@ export default function ZenPortalPage() {
           <div className="p-5 rounded-xl border border-[#272738] bg-[#0a0a0f] space-y-2">
             <span className="text-xs font-mono text-zinc-500 uppercase">Statutory Grounding</span>
             <div className="text-2xl font-bold text-emerald-400 font-mono">99.4%</div>
-            <p className="text-xs text-zinc-400">Verified statutory and circular citations with zero hallucination.</p>
+            <p className="text-xs text-zinc-400">Verified statutory and circular citations with Grounded Citations.</p>
             <div className="w-full bg-[#1c1c28] h-1.5 rounded-full overflow-hidden mt-3">
               <div className="bg-emerald-400 h-full rounded-full" style={{ width: '99%' }} />
             </div>
@@ -1067,7 +1067,7 @@ export default function ZenPortalPage() {
           <div className="p-5 rounded-xl border border-[#272738] bg-[#0a0a0f] space-y-2">
             <span className="text-xs font-mono text-zinc-500 uppercase">Script Fidelity</span>
             <div className="text-2xl font-bold text-[#f26625] font-mono">99.8%</div>
-            <p className="text-xs text-zinc-400">Zero Romanized transliteration leakage on native Indic corpora.</p>
+            <p className="text-xs text-zinc-400">Verified Indic Transliteration on native Indic corpora.</p>
             <div className="w-full bg-[#1c1c28] h-1.5 rounded-full overflow-hidden mt-3">
               <div className="bg-[#f26625] h-full rounded-full" style={{ width: '99.8%' }} />
             </div>
@@ -1190,10 +1190,10 @@ export default function ZenPortalPage() {
               <span className="text-zinc-200 font-bold uppercase tracking-wider text-xs">Governance</span>
               <ul className="space-y-1.5 text-zinc-400 text-xs">
                 <li>SHA-256 Merkle Provenance</li>
-                <li>Indian PII Masking</li>
+                <li>Automated PII Guard</li>
                 <li>Data Nutrition Labels</li>
-                <li>Redis Sliding Limiter</li>
-                <li>LLM Judge Rubric v2</li>
+                <li>Grounded Citations</li>
+                <li>Neural Quality Scoring</li>
               </ul>
             </div>
           </div>
@@ -1210,10 +1210,15 @@ export default function ZenPortalPage() {
               >
                 GitHub Repository
               </a>
-
             </div>
             <div className="flex items-center space-x-3 text-zinc-400">
-              <span>Python 3.12 · Next.js 14</span>
+              <Link href="/settings" className="hover:text-white transition-colors">
+                System Status
+              </Link>
+              <span className="text-zinc-700">·</span>
+              <Link href="/observability" className="hover:text-white transition-colors">
+                Telemetry
+              </Link>
             </div>
           </div>
         </div>

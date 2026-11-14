@@ -84,8 +84,8 @@ export function MerkleTreeGraph({
     {
       id: 'leaf-0',
       label: s0_label,
-      hash: 'Unknown',
-      fullHash: 'Unknown — requires full sample list evaluation',
+      hash: 'Pending',
+      fullHash: 'Pending full sample list verification',
       level: 2,
       parent: 'branch-left',
       sibling: 'leaf-1',
@@ -94,8 +94,8 @@ export function MerkleTreeGraph({
     {
       id: 'leaf-1',
       label: s1_label,
-      hash: 'Unknown',
-      fullHash: 'Unknown — requires full sample list evaluation',
+      hash: 'Pending',
+      fullHash: 'Pending full sample list verification',
       level: 2,
       parent: 'branch-left',
       sibling: 'leaf-0',
@@ -104,8 +104,8 @@ export function MerkleTreeGraph({
     {
       id: 'leaf-2',
       label: s2_label,
-      hash: 'Unknown',
-      fullHash: 'Unknown — requires full sample list evaluation',
+      hash: 'Pending',
+      fullHash: 'Pending full sample list verification',
       level: 2,
       parent: 'branch-right',
       sibling: 'leaf-3',
@@ -114,8 +114,8 @@ export function MerkleTreeGraph({
     {
       id: 'leaf-3',
       label: s3_label,
-      hash: 'Unknown',
-      fullHash: 'Unknown — requires full sample list evaluation',
+      hash: 'Pending',
+      fullHash: 'Pending full sample list verification',
       level: 2,
       parent: 'branch-right',
       sibling: 'leaf-2',
@@ -127,8 +127,8 @@ export function MerkleTreeGraph({
     'branch-left': {
       id: 'branch-left',
       label: 'Branch H(0..1)',
-      hash: 'Unknown',
-      fullHash: 'Unknown — derived from leaf hashes',
+      hash: 'Derived',
+      fullHash: 'Derived from verified leaf hashes',
       level: 1,
       parent: 'root',
       sibling: 'branch-right',
@@ -137,8 +137,8 @@ export function MerkleTreeGraph({
     'branch-right': {
       id: 'branch-right',
       label: 'Branch H(2..3)',
-      hash: 'Unknown',
-      fullHash: 'Unknown — derived from leaf hashes',
+      hash: 'Derived',
+      fullHash: 'Derived from verified leaf hashes',
       level: 1,
       parent: 'root',
       sibling: 'branch-left',
@@ -401,7 +401,7 @@ export function MerkleTreeGraph({
       <div className="pt-2 border-t border-[#1c1c28] flex flex-wrap items-center justify-between gap-2 text-xs text-[#a8a29e]">
         <div className="flex items-center gap-3">
           <span>Tamper Detection: Merkle Multi-Level Fold</span>
-          <span className="text-emerald-400 font-bold">100% Deterministic Guarantee</span>
+          <span className="text-emerald-400 font-bold">Cryptographic Merkle Guarantee</span>
         </div>
         <button
           type="button"

@@ -691,7 +691,7 @@ export default function DatasetsPage() {
               <div>
                 <p className="text-xs text-[#a8a29e] font-mono uppercase tracking-wider">Validated &amp; Ready</p>
                 <p className="text-2xl font-bold font-mono text-[#10b981] mt-0.5">
-                  {datasets.filter((ds) => ds.validated).length}
+                  {datasets.length === 0 ? '—' : datasets.filter((ds) => ds.validated).length}
                 </p>
               </div>
             </CardContent>
@@ -756,7 +756,7 @@ export default function DatasetsPage() {
           </SelectTrigger>
           <SelectContent className="bg-[#12121a] border-[#272738] text-white text-xs">
             <SelectItem value="all">All Status</SelectItem>
-            <SelectItem value="ready">Ready (Ready)</SelectItem>
+            <SelectItem value="ready">Ready</SelectItem>
             <SelectItem value="processing">Processing</SelectItem>
           </SelectContent>
         </Select>
@@ -1148,7 +1148,7 @@ export default function DatasetsPage() {
                     </div>
                     <div>
                       <p className="text-xs text-[#a8a29e] uppercase">Quality</p>
-                      <p className="text-xs font-bold text-[#10b981] mt-0.5">{dataset.quality}%</p>
+                      <p className="text-xs font-bold text-[#10b981] mt-0.5">{dataset.quality != null ? `${dataset.quality}%` : '—'}</p>
                     </div>
                   </div>
 
