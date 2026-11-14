@@ -1784,7 +1784,8 @@ class AsyncDB:
                 "config": config,
                 "target_domain": config.get('target_domain') or getattr(job, 'target_domain', 'Custom'),
                 "dataset_type": config.get('dataset_type') or getattr(job, 'dataset_type', 'sft'),
-                "dataset_size": config.get('dataset_size') or getattr(job, 'dataset_size', 100),
+                "dataset_size": config.get('dataset_size') or config.get('target_samples') or getattr(job, 'dataset_size', 100),
+                "target_size": config.get('dataset_size') or config.get('target_samples') or getattr(job, 'dataset_size', 100),
             }
             result.append(job_dict)
         return result

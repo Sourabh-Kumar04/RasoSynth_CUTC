@@ -36,6 +36,8 @@ interface JobRecord {
   progress?: number
   samples_generated?: number
   target_size?: number
+  dataset_size?: number
+  config?: Record<string, any>
   cost_usd?: number
   dataset_type?: string
   error?: string
@@ -300,7 +302,9 @@ export default function JobsPage() {
                     <span className="text-[#a8a29e] block text-[10px] uppercase">Yield</span>
                     <span className="text-zinc-200">
                       {job.samples_generated != null ? job.samples_generated.toLocaleString() : '0'} /{' '}
-                      {job.target_size != null ? job.target_size.toLocaleString() : '10,000'} rows
+                      {((job.dataset_size ?? job.config?.dataset_size ?? job.config?.target_samples ?? job.target_size) != null
+                        ? (job.dataset_size ?? job.config?.dataset_size ?? job.config?.target_samples ?? job.target_size)?.toLocaleString()
+                        : (job.samples_generated != null && job.samples_generated > 0 ? job.samples_generated.toLocaleString() : '100'))} rows
                     </span>
                   </div>
                   <div>
