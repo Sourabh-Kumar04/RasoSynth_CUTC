@@ -7,7 +7,7 @@ from typing import Any, Dict, List, Optional
 import logging
 
 try:
-    from fastapi import APIRouter, Body, Depends, HTTPException, Request
+    from fastapi import APIRouter, Body, Depends, HTTPException, Query, Request, Response
     from api.auth import User, get_current_user
     _HAS_FASTAPI = True
 except Exception:
@@ -42,12 +42,19 @@ if _HAS_FASTAPI:
         """Cryptographically verify samples against a DBOM certificate Merkle root."""
         samples = payload.get("samples")
         certificate = payload.get("dbom_certificate") or payload.get("certificate")
+        merkle_root = payload.get("merkle_root") or payload.get("merkle_root_hash")
+
+        if not certificate and merkle_root:
+            certificate = {"merkle_root_hash": merkle_root}
+
         if not isinstance(samples, list) or not certificate or not isinstance(certificate, dict):
             raise HTTPException(
                 status_code=400,
-                detail="Payload must include 'samples' (list) and 'dbom_certificate' (dict).",
+                detail="Payload must include 'samples' (list) and either 'dbom_certificate' (dict) or 'merkle_root' (str).",
             )
-        return verify_dataset_dbom(samples=samples, dbom_certificate=certificate)
+        res = verify_dataset_dbom(samples=samples, dbom_certificate=certificate)
+        res["verified"] = res.get("is_valid", False)
+        return res
 
     @router.post("/attest")
     async def create_dbom_attestation_endpoint(
@@ -78,7 +85,11 @@ if _HAS_FASTAPI:
             sources=payload.get("sources"),
         )
         label = generate_nutrition_label_markdown(dbom)
+        merkle_root = dbom.get("merkle_root_hash")
         return {
+            **dbom,
+            "merkle_root": merkle_root,
+            "merkle_root_hash": merkle_root,
             "dbom_certificate": dbom,
             "nutrition_label_markdown": label,
         }
@@ -110,6 +121,7 @@ if _HAS_FASTAPI:
             "statement": bundle.statement,
             "merkle_root": bundle.merkle_root,
             "signature": bundle.signature,
+            "signature_hex": bundle.signature,
             "public_key_pem": bundle.public_key_pem,
             "timestamp": bundle.timestamp,
         }
@@ -141,6 +153,23 @@ if _HAS_FASTAPI:
             "is_valid": is_valid,
             "status": "signature_verified" if is_valid else "signature_verification_failed",
         }
+
+    @router.get("/badge")
+    async def get_dbom_badge_svg_endpoint(
+        certificate_id: Optional[str] = Query(None),
+        dataset_id: Optional[str] = Query(None),
+        merkle_root: Optional[str] = Query(None),
+    ):
+        """Generate dynamic cryptographic DBOM verification SVG badge."""
+        from core.export.badge_generator import generate_dbom_badge_svg
+        cid = certificate_id or (f"DBOM-{merkle_root[:8].upper()}" if merkle_root else "DBOM-VERIFIED")
+        svg = generate_dbom_badge_svg(
+            certificate_id=cid,
+            merkle_root=merkle_root or "",
+            status="verified",
+            verified=True,
+        )
+        return Response(content=svg, media_type="image/svg+xml")
 else:
     router = None
 
@@ -178,6 +207,7 @@ else:
             "statement": bundle.statement,
             "merkle_root": bundle.merkle_root,
             "signature": bundle.signature,
+            "signature_hex": bundle.signature,
             "public_key_pem": bundle.public_key_pem,
             "timestamp": bundle.timestamp,
         }

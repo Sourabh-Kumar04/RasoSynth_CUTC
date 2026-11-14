@@ -346,6 +346,17 @@ async def lifespan(app: FastAPI):
         await db.connect()
         app.state.db = db
         logger.info("  ✓ AsyncDB connected")
+
+        # Auto-seed reference datasets if database is fresh/empty
+        try:
+            existing_datasets = await db.list_datasets(limit=1)
+            if not existing_datasets:
+                logger.info("  🌱 Database empty: seeding reference demo datasets...")
+                from scripts.seed_demo_data import seed_database
+                await seed_database(db=db)
+                logger.info("  ✓ Reference demo datasets seeded successfully")
+        except Exception as seed_err:
+            logger.warning(f"  ⚠ Auto-seed reference datasets skipped: {seed_err}")
     except Exception as e:
         logger.warning(f"  ⚠ AsyncDB failed to connect (using in-memory fallback where possible): {e}")
 

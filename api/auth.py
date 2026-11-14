@@ -452,6 +452,14 @@ async def get_current_user(
     try:
         token_data = auth.verify_token(credentials.credentials)
         user = auth.get_user(token_data.username)
+        if not user and token_data and token_data.username:
+            role_val = UserRole(token_data.role) if isinstance(token_data.role, str) else (token_data.role or UserRole.USER)
+            user = User(
+                user_id=token_data.user_id or f"usr-{token_data.username}",
+                username=token_data.username,
+                role=role_val,
+                email=f"{token_data.username}@local",
+            )
         if not user:
             raise HTTPException(status_code=401, detail="User not found")
         return user
@@ -474,7 +482,16 @@ async def get_current_user_optional(
         token_data = auth.verify_token(credentials.credentials)
         if not token_data:
             return None
-        return auth.get_user(token_data.username)
+        user = auth.get_user(token_data.username)
+        if not user and token_data.username:
+            role_val = UserRole(token_data.role) if isinstance(token_data.role, str) else (token_data.role or UserRole.USER)
+            user = User(
+                user_id=token_data.user_id or f"usr-{token_data.username}",
+                username=token_data.username,
+                role=role_val,
+                email=f"{token_data.username}@local",
+            )
+        return user
     except Exception:
         return None
 

@@ -147,11 +147,78 @@ def seed_demo_artifacts(output_base: str = "outputs/demo_seed") -> Dict[str, Any
     }
 
 
+async def seed_database(db=None, output_base: str = "outputs/demo_seed") -> list[dict]:
+    """Seed demo datasets, parent jobs, and sample records into AsyncDB."""
+    import uuid
+    from core.db import AsyncDB
+
+    if db is None:
+        db = AsyncDB()
+        await db.connect()
+
+    artifacts = seed_demo_artifacts(output_base)
+    seeded_records = []
+
+    for item in DEMO_DATASETS:
+        job_uuid = str(uuid.uuid5(uuid.NAMESPACE_DNS, item["job_id"]))
+
+        # Check if job already exists
+        job = await db.get_job(job_uuid)
+        if not job:
+            await db.create_job({
+                "id": job_uuid,
+                "status": "completed",
+                "target_domain": item["domain"],
+                "synthesis_mode": item["synthesis_mode"],
+                "sample_count": len(item["samples"]),
+                "language": item["language"],
+                "export_format": "jsonl",
+            })
+
+        d_dir = Path(output_base) / item["job_id"]
+        jsonl_path = (d_dir / "dataset.jsonl").resolve()
+
+        leaves = [compute_sample_hash(s) for s in item["samples"]]
+        merkle_root = compute_merkle_root(leaves)
+        cert_id = f"DBOM-DEMO-{merkle_root[:8].upper()}"
+
+        ds = await db.create_dataset(
+            job_id=job_uuid,
+            name=f"{item['domain']} Instruct",
+            type="jsonl",
+            size=len(item["samples"]),
+            metadata={
+                "domain": item["domain"],
+                "language": item["language"],
+                "script": item["script"],
+                "synthesis_mode": item["synthesis_mode"],
+                "merkle_root": merkle_root,
+                "certificate_id": cert_id,
+            },
+            output_path=str(jsonl_path),
+        )
+
+        sample_records = [
+            {
+                "instruction": s["instruction"],
+                "response": s["response"],
+                "quality_score": 0.95,
+                "metadata": {"domain": item["domain"], "language": item["language"]},
+            }
+            for s in item["samples"]
+        ]
+        await db.create_samples(ds["id"], sample_records)
+        seeded_records.append(ds)
+
+    return seeded_records
+
+
 def main():
     parser = argparse.ArgumentParser(description="Seed RasoSynthTune demo artifacts & DBOMs")
     parser.add_argument("--output-dir", default="outputs/demo_seed", help="Target output directory")
     parser.add_argument("--json", action="store_true", help="Output JSON summary")
     parser.add_argument("--dry-run", action="store_true", help="Validate demo dataset configurations without writing to disk")
+    parser.add_argument("--seed-db", action="store_true", help="Also seed database with datasets and jobs")
     args = parser.parse_args()
 
     if args.dry_run:
@@ -180,13 +247,22 @@ def main():
         sys.exit(0)
 
     res = seed_demo_artifacts(args.output_dir)
+    if args.seed_db:
+        try:
+            seeded_records = asyncio.run(seed_database(output_base=args.output_dir))
+            res["db_seeded_count"] = len(seeded_records)
+        except Exception as e:
+            print(f"Warning: Failed to seed DB: {e}")
+
     if args.json:
         print(json.dumps(res, indent=2))
     else:
         print("=" * 72)
         print("  RasoSynthTune: Demo Data & Cryptographic DBOM Seeder")
         print("=" * 72)
-        print(f"Total Datasets Seeded: {res['datasets_created']}")
+        print(f"Total Datasets Seeded on Disk: {res['datasets_created']}")
+        if args.seed_db:
+            print(f"Total Datasets Registered in DB: {res.get('db_seeded_count', 0)}")
         print("-" * 72)
         for d in res["details"]:
             print(f"  • {d['domain']}")

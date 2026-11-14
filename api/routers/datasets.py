@@ -105,6 +105,31 @@ async def get_dataset_records(
         enforce_owner(dataset, current_user, resource_name="Dataset")
 
         samples = await db.get_samples(dataset["id"], limit=limit)
+        # If DB samples table is empty, fall back to streaming sample records from output_path on disk
+        if not samples and dataset.get("output_path") and os.path.isfile(dataset["output_path"]):
+            import json as _json
+            samples = []
+            try:
+                with open(dataset["output_path"], "r", encoding="utf-8") as f:
+                    for i, line in enumerate(f):
+                        if i >= limit:
+                            break
+                        l_str = line.strip()
+                        if l_str:
+                            row = _json.loads(l_str)
+                            samples.append({
+                                "id": f"{dataset['id']}-{i}",
+                                "dataset_id": dataset["id"],
+                                "instruction": row.get("instruction", ""),
+                                "response": row.get("response") or row.get("output", ""),
+                                "input": row.get("input", ""),
+                                "quality_score": row.get("quality_score") or row.get("metadata", {}).get("quality_score", 0.95),
+                                "difficulty_tier": row.get("difficulty_tier", 2),
+                                "metadata": row.get("metadata", {}),
+                            })
+            except Exception as e:
+                logger.warning(f"Failed to read samples from disk {dataset['output_path']}: {e}")
+
         records = []
         for sample in samples:
             records.append({
@@ -119,6 +144,7 @@ async def get_dataset_records(
             })
         return {
             "records": records,
+            "data": records,
             "count": len(records),
             "total_available": dataset.get("sample_count", len(records)),
         }

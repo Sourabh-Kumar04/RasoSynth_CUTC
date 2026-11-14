@@ -86,7 +86,12 @@ def generate_dbom_attestation(
     leaf_hashes = [compute_sample_hash(s) for s in samples]
     merkle_root = compute_merkle_root(leaf_hashes)
 
-    flags = compliance_flags or {}
+    if isinstance(compliance_flags, list):
+        flags = {str(flag): True for flag in compliance_flags}
+    elif isinstance(compliance_flags, dict):
+        flags = dict(compliance_flags)
+    else:
+        flags = {}
     now_iso = datetime.now(timezone.utc).isoformat()
 
     pii_masked = flags.get("pii_masked")

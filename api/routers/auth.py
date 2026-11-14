@@ -134,7 +134,7 @@ async def get_current_user_info(current_user: User = Depends(get_current_user)):
     return {
         "user_id": current_user.user_id,
         "username": current_user.username,
-        "role": current_user.role.value,
+        "role": getattr(current_user.role, "value", str(current_user.role)),
         "email": current_user.email
     }
 

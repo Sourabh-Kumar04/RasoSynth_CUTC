@@ -848,10 +848,10 @@ class DatabaseManager:
     async def list_datasets(self, limit: int = 100, owner: Optional[str] = None) -> list[Dataset]:
         """List all datasets ordered by creation date, optionally filtered by owner."""
         async with self.session_maker() as session:
-            from sqlalchemy import select
+            from sqlalchemy import select, or_
             stmt = select(Dataset).order_by(Dataset.created_at.desc())
             if owner is not None:
-                stmt = stmt.where(Dataset.owner == owner)
+                stmt = stmt.where(or_(Dataset.owner == owner, Dataset.owner.is_(None)))
             result = await session.execute(stmt.limit(limit))
             datasets = list(result.scalars().all())
             for d in datasets:

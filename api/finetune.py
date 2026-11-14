@@ -701,21 +701,18 @@ async def download_finetuned_model(job_id: str,
     job = await manager.get_job(job_id)
     _enforce_owner(job, current_user)
 
-    # Check job completion: incomplete -> 409
+    # Check job completion: incomplete -> 409 (unless valid weights are already compiled on disk)
     job_status = getattr(job, "status", None) or (job.get("status") if isinstance(job, dict) else None)
-    if job_status and job_status != "completed":
+    output_path = getattr(job, "output_path", None) or (job.get("output_path") if isinstance(job, dict) else None) or f"outputs/finetune/{job_id}"
+    out_dir = Path(output_path)
+    source_dir = out_dir if out_dir.is_dir() else out_dir.parent
+    has_weights = _looks_like_real_weights(source_dir / "adapter_model.safetensors") or (source_dir / "finetuned_model_lora.zip").exists()
+
+    if job_status and job_status != "completed" and not has_weights:
         raise HTTPException(
             status_code=409,
             detail=f"Fine-tuning job '{job_id}' is not complete (status: {job_status}).",
         )
-
-    output_path = getattr(job, "output_path", None) or (job.get("output_path") if isinstance(job, dict) else None)
-    if not output_path:
-        # Check standard default path
-        output_path = f"outputs/finetune/{job_id}"
-
-    out_dir = Path(output_path)
-    source_dir = out_dir if out_dir.is_dir() else out_dir.parent
     if not _looks_like_real_weights(source_dir / "adapter_model.safetensors"):
         raise HTTPException(
             status_code=404,
