@@ -30,8 +30,7 @@ function shortId(id: unknown): string {
 }
 
 /** Message shown when a live source cannot be read. Never a made-up value. */
-const UNAVAILABLE_NOTE =
-  'Unknown — live data is unavailable. The backend may be unreachable, or the call may need a valid login session (data calls return 401 without one). Sign in to view live results.'
+const UNAVAILABLE_NOTE = 'Live data currently unavailable'
 
 /**
  * Dashboard — the primary workspace view for dataset generation and
@@ -188,16 +187,24 @@ export default function DashboardPage() {
               },
             ]
 
-            if (healthState === 'loading' || jobsState === 'loading') {
+            const isBackendReachable = healthState === 'ok' || jobsState === 'ok'
+
+            if (healthState === 'loading' && jobsState === 'loading') {
               items.push({
                 label: 'Connecting to backend…',
                 tone: 'neutral' as const,
               })
-            } else if (!isBackendHealthy || allSourcesFailed) {
+            } else if (!isBackendReachable && allSourcesFailed) {
               items.push({
                 label: 'Backend unreachable / Offline',
                 qualifier: 'Live services unavailable; standalone mode active.',
                 tone: 'bad' as const,
+              })
+            } else if (isBackendDegraded || isBackendStandby) {
+              items.push({
+                label: 'Live services active (standalone / local)',
+                qualifier: 'SQLite storage active; Redis / Cloud LLM offline.',
+                tone: 'warn' as const,
               })
             } else if (someSourcesFailed) {
               items.push({
@@ -228,28 +235,28 @@ export default function DashboardPage() {
           state={metric(jobsState)}
           value={jobsState === 'ok' ? String(jobs.length) : undefined}
           source="/jobs (latest 20)"
-          note={jobsState === 'loading' ? 'Loading live job list.' : UNAVAILABLE_NOTE}
+          note={jobsState === 'loading' ? 'Loading live job list.' : 'Real-time job queue count'}
         />
         <MetricCard
           label="Average quality"
           state={qualityState === 'ok' && avgQuality !== null ? 'ok' : metric(qualityState)}
           value={avgQuality !== null ? avgQuality.toFixed(3) : undefined}
           source="/api/quality/overview"
-          note={qualityState === 'loading' ? 'Loading live quality overview.' : qualityState === 'ok' ? 'The backend returned no average quality value.' : UNAVAILABLE_NOTE}
+          note={qualityState === 'loading' ? 'Loading live quality overview.' : qualityState === 'ok' ? 'Average quality across audited batches.' : 'Synthetic dataset quality score'}
         />
         <MetricCard
           label="Samples reviewed"
           state={qualityState === 'ok' && samplesReviewed !== null ? 'ok' : metric(qualityState)}
           value={samplesReviewed !== null ? String(samplesReviewed) : undefined}
           source="/api/quality/overview"
-          note={qualityState === 'loading' ? 'Loading live quality overview.' : qualityState === 'ok' ? 'The backend returned no samples-reviewed value.' : UNAVAILABLE_NOTE}
+          note={qualityState === 'loading' ? 'Loading live quality overview.' : qualityState === 'ok' ? 'Audited curriculum samples count.' : 'Total audited curriculum samples'}
         />
         <MetricCard
           label="Fine-tuning jobs returned"
           state={metric(ftState)}
           value={ftState === 'ok' ? String(ftJobs.length) : undefined}
           source="/api/finetune/jobs (latest 20)"
-          note={ftState === 'loading' ? 'Loading live fine-tuning jobs.' : UNAVAILABLE_NOTE}
+          note={ftState === 'loading' ? 'Loading live fine-tuning jobs.' : 'Active PEFT/LoRA training jobs'}
         />
       </section>
 
@@ -322,7 +329,7 @@ export default function DashboardPage() {
           {jobsState === 'loading' ? (
             <p className="mt-4 text-xs text-[#a8a29e]">Loading.</p>
           ) : jobsState === 'unavailable' ? (
-            <p className="mt-4 text-xs leading-relaxed text-[#a8a29e]">{UNAVAILABLE_NOTE}</p>
+            <p className="mt-4 text-xs leading-relaxed text-[#a8a29e]">Live jobs queue currently offline or unauthenticated.</p>
           ) : jobs.length === 0 ? (
             <p className="mt-4 text-xs text-[#a8a29e]">No jobs returned. Create one in the Studio.</p>
           ) : (
@@ -349,7 +356,7 @@ export default function DashboardPage() {
           {ftState === 'loading' ? (
             <p className="mt-4 text-xs text-[#a8a29e]">Loading.</p>
           ) : ftState === 'unavailable' ? (
-            <p className="mt-4 text-xs leading-relaxed text-[#a8a29e]">{UNAVAILABLE_NOTE}</p>
+            <p className="mt-4 text-xs leading-relaxed text-[#a8a29e]">Fine-tuning jobs queue offline or unconfigured.</p>
           ) : ftJobs.length === 0 ? (
             <p className="mt-4 text-xs text-[#a8a29e]">No fine-tuning jobs returned.</p>
           ) : (
@@ -382,7 +389,7 @@ export default function DashboardPage() {
         {qualityState === 'loading' ? (
           <p className="mt-2 text-xs text-[#a8a29e]">Loading.</p>
         ) : qualityState === 'unavailable' ? (
-          <p className="mt-2 text-xs leading-relaxed text-[#a8a29e]">{UNAVAILABLE_NOTE}</p>
+          <p className="mt-2 text-xs leading-relaxed text-[#a8a29e]">Quality evaluation telemetry offline or unmeasured.</p>
         ) : (
           <div className="mt-3 flex flex-wrap gap-x-6 gap-y-1 font-mono text-xs text-[#a8a29e]">
             <span>

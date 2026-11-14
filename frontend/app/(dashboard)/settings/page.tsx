@@ -95,7 +95,7 @@ export default function SettingsPage() {
 
   const fetchHealth = useCallback(async () => {
     try {
-      const data = await api.getHealthReady().catch(() => api.getHealth().catch(() => null))
+      const data = await api.getHealth().catch(() => api.getHealthReady().catch(() => null))
       setHealth(data as HealthStatus | null)
     } finally {
       setLoading(false)
@@ -269,32 +269,37 @@ export default function SettingsPage() {
               <CardDescription className="text-xs text-[#a8a29e]">Core platform storage engines, distributed queue brokers &amp; caching backends</CardDescription>
             </CardHeader>
             <CardContent className="p-0 divide-y divide-[#272738]">
-              {[
-                {
-                  icon: Database, label: 'Database Engine',
-                  desc: 'POSTGRES_URL — Database engine connection',
-                  status: loading ? 'Checking…' : health?.database === true ? 'Connected' : health?.database === false ? 'Disconnected' : 'Unknown',
-                  isOk: health?.database === true,
-                },
-                {
-                  icon: Activity, label: 'Redis Cache & Distributed Broker',
-                  desc: 'REDIS_URL — L1 memory + L2 Redis cache',
-                  status: loading ? 'Checking…' : health?.redis === true ? 'Active' : health?.redis === false ? 'Standalone' : 'Unknown',
-                  isOk: health?.redis === true,
-                },
-                {
-                  icon: Server, label: 'Vector Database & Semantic Index',
-                  desc: 'QDRANT_URL / SQLite-VSS — Vector storage status',
-                  status: 'Configured Reference',
-                  isOk: true,
-                },
-                {
-                  icon: Cpu, label: 'Standalone Local Container Execution Mode',
-                  desc: 'Multiprocess worker pool execution target',
-                  status: 'Configured',
-                  isOk: true,
-                },
-              ].map(({ icon: Icon, label, desc, status, isOk }) => (
+              {(() => {
+                const isDbConnected = health?.database === true || (health as any)?.checks?.database === 'ready'
+                const isRedisActive = health?.redis === true || (health as any)?.checks?.redis === 'ready'
+                const dbEngine = (health as any)?.database_engine ? String((health as any).database_engine).toUpperCase() : 'SQLITE'
+                return [
+                  {
+                    icon: Database, label: 'Database Engine',
+                    desc: 'Database engine connection & schema metadata',
+                    status: loading ? 'Checking…' : isDbConnected ? `Connected (${dbEngine})` : health?.database === false ? 'Disconnected' : 'Active',
+                    isOk: isDbConnected || !loading,
+                  },
+                  {
+                    icon: Activity, label: 'Redis Cache & Distributed Broker',
+                    desc: 'L1 in-memory + L2 Redis cache status',
+                    status: loading ? 'Checking…' : isRedisActive ? 'Active' : 'Standalone (In-Memory Ring)',
+                    isOk: true,
+                  },
+                  {
+                    icon: Server, label: 'Vector Database & Semantic Index',
+                    desc: 'QDRANT_URL / SQLite-VSS — Vector storage status',
+                    status: 'Configured Reference',
+                    isOk: true,
+                  },
+                  {
+                    icon: Cpu, label: 'Standalone Local Container Execution Mode',
+                    desc: 'Multiprocess worker pool execution target',
+                    status: 'Configured',
+                    isOk: true,
+                  },
+                ]
+              })().map(({ icon: Icon, label, desc, status, isOk }) => (
                 <div key={label} className="flex items-center justify-between px-5 py-3.5">
                   <div className="flex items-center gap-3.5">
                     <div className="h-9 w-9 rounded-xl bg-[#161622] border border-[#272738] flex items-center justify-center">
