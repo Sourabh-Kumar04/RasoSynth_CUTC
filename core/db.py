@@ -1627,8 +1627,11 @@ class AsyncDB:
             if not database_url:
                 try:
                     from core.config import get_settings
-                    database_url = get_settings().database_url
+                    s = get_settings()
+                    database_url = getattr(s, "database_url", None) or getattr(s, "postgres_url", None)
                 except Exception:
+                    database_url = None
+                if not database_url:
                     database_url = "sqlite+aiosqlite:///data/app.db"
             self.db = DatabaseManager(database_url)
 

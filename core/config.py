@@ -350,6 +350,11 @@ class Settings(BaseSettings):
 
         return self
 
+    @property
+    def database_url(self) -> str:
+        """Alias property for postgres_url."""
+        return self.postgres_url
+
     def model_dump(self, **kwargs) -> dict:
         """Dump settings as dictionary for provider initialization."""
         return super().model_dump(**kwargs)
