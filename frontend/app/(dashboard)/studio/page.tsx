@@ -240,6 +240,7 @@ function StudioContent() {
   const [antiDomainsInput, setAntiDomainsInput] = useState<string>('glutathione, s-transferase, nrf2, uzbekistan, irs 45q, arteriovenous fistula')
   const [parallelBilingual, setParallelBilingual] = useState<boolean>(false)
   const [datasetSize, setDatasetSize] = useState(10000)
+  const [sizeInput, setSizeInput] = useState<string>('10000')
   const [generationMode, setGenerationMode] = useState<'grounded' | 'synthetic'>('grounded')
   const [humanReview, setHumanReview] = useState<boolean>(false)
   const [llmReview, setLlmReview] = useState<boolean>(true)
@@ -267,7 +268,10 @@ function StudioContent() {
         const parsed = JSON.parse(saved)
         if (parsed.prompt && !searchParams.get('prompt')) setPrompt(parsed.prompt)
         if (parsed.targetDomain && !searchParams.get('domain')) setTargetDomain(parsed.targetDomain)
-        if (parsed.datasetSize) setDatasetSize(Number(parsed.datasetSize))
+        if (parsed.datasetSize) {
+          setDatasetSize(Number(parsed.datasetSize))
+          setSizeInput(String(parsed.datasetSize))
+        }
         if (parsed.datasetType) setDatasetType(parsed.datasetType)
         if (parsed.synthesisMode && !searchParams.get('engine')) setSynthesisMode(parsed.synthesisMode)
         if (parsed.language && !searchParams.get('language')) setLanguage(parsed.language)
@@ -730,6 +734,7 @@ function StudioContent() {
                     setTargetDomain(preset.domain)
                     setPrompt(preset.prompt)
                     setDatasetSize(preset.size)
+                    setSizeInput(String(preset.size))
                     setDatasetType(preset.type)
                     if ((preset as any).language) setLanguage((preset as any).language)
                     if ((preset as any).scriptMode) setScriptMode((preset as any).scriptMode)
@@ -1426,10 +1431,27 @@ function StudioContent() {
                       min={100}
                       max={50000}
                       step={100}
-                      value={datasetSize}
+                      value={sizeInput}
                       onChange={(e) => {
-                        const val = Math.max(100, Math.min(50000, Number(e.target.value) || 100))
-                        setDatasetSize(val)
+                        const raw = e.target.value
+                        setSizeInput(raw)
+                        const num = Number(raw)
+                        if (!isNaN(num) && num >= 100 && num <= 50000) {
+                          setDatasetSize(num)
+                        }
+                      }}
+                      onBlur={() => {
+                        const num = Number(sizeInput)
+                        if (isNaN(num) || num < 100) {
+                          setDatasetSize(100)
+                          setSizeInput('100')
+                        } else if (num > 50000) {
+                          setDatasetSize(50000)
+                          setSizeInput('50000')
+                        } else {
+                          setDatasetSize(num)
+                          setSizeInput(String(num))
+                        }
                       }}
                       className="w-20 bg-[#0a0a0f] border border-[#272738] rounded px-1.5 py-0.5 text-xs font-mono text-right text-[#f26625] font-bold focus:outline-none focus:border-[#f26625]"
                     />
@@ -1442,7 +1464,16 @@ function StudioContent() {
                   max={50000}
                   step={100}
                   value={datasetSize}
-                  onChange={(e) => setDatasetSize(Number(e.target.value))}
+                  onInput={(e) => {
+                    const val = Number((e.target as HTMLInputElement).value)
+                    setDatasetSize(val)
+                    setSizeInput(String(val))
+                  }}
+                  onChange={(e) => {
+                    const val = Number(e.target.value)
+                    setDatasetSize(val)
+                    setSizeInput(String(val))
+                  }}
                   className="w-full accent-[#f26625] bg-[#0a0a0f] cursor-pointer"
                 />
                 <div className="flex items-center justify-between text-xs font-mono text-[#a8a29e] mt-2 p-2 rounded bg-[#0a0a0f] border border-[#1f1f2e]">
