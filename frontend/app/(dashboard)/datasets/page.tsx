@@ -623,12 +623,12 @@ export default function DatasetsPage() {
               <Layers className="w-3.5 h-3.5" />
             </div>
             <div>
-              <h3 className="font-bold text-white text-xs">Curriculum Complexity Histogram &amp; Slice Filtering</h3>
-              <p className="text-zinc-400 text-xs mt-0.5">Categorized by Shannon token information density (bits/token)</p>
+              <h3 className="font-bold text-white text-xs">Pre-Seeded Reference Corpus (All-Time Baseline: 32,750 records)</h3>
+              <p className="text-zinc-400 text-xs mt-0.5">Shannon entropy token density across statutory domains. Custom synthesized datasets display below in Active Library.</p>
             </div>
           </div>
-          <span className="text-xs font-bold text-emerald-400 bg-emerald-500/10 border border-emerald-500/30 px-2 py-0.5 rounded">
-            Adaptive Slicing Enabled
+          <span className="text-xs font-bold text-amber-400 bg-amber-500/10 border border-amber-500/30 px-2 py-0.5 rounded">
+            All-Time Reference Corpus
           </span>
         </div>
 
@@ -678,7 +678,7 @@ export default function DatasetsPage() {
                 <Database className="h-5 w-5 text-[#f26625]" />
               </div>
               <div>
-                <p className="text-xs text-[#a8a29e] font-mono uppercase tracking-wider">Total Datasets</p>
+                <p className="text-xs text-[#a8a29e] font-mono uppercase tracking-wider">Active Workspace Datasets</p>
                 <p className="text-2xl font-bold font-mono text-white mt-0.5">{datasets.length}</p>
               </div>
             </CardContent>
@@ -702,7 +702,7 @@ export default function DatasetsPage() {
                 <Layers className="h-5 w-5 text-[#f26625]" />
               </div>
               <div>
-                <p className="text-xs text-[#a8a29e] font-mono uppercase tracking-wider">Total Records</p>
+                <p className="text-xs text-[#a8a29e] font-mono uppercase tracking-wider">Active Workspace Records</p>
                 <p className="text-2xl font-bold font-mono text-white mt-0.5">
                   {datasets.reduce((acc, ds) => acc + ds.records, 0).toLocaleString()}
                 </p>

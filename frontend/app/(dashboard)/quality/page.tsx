@@ -394,6 +394,9 @@ export default function QualityDashboardPage() {
               <div className="flex items-center gap-2">
                 <Sparkles className="h-4 w-4 text-[#f26625]" />
                 <CardTitle className="text-sm font-bold text-white font-mono">Sample Quality Jury</CardTitle>
+                <Badge variant="outline" className="border-amber-500/40 bg-amber-500/10 text-amber-300 font-mono text-[10px] font-bold">
+                  Demo / Reference Data
+                </Badge>
               </div>
               <Button
                 size="sm"
@@ -831,13 +834,18 @@ export default function QualityDashboardPage() {
       {/* Benchmark Decontamination & Test Leakage Purity Audit */}
       <section>
         <div className="flex items-center justify-between mb-3">
-          <h2 className="text-xs font-mono font-bold uppercase tracking-wider text-[#a8a29e] flex items-center gap-2">
-            <ShieldCheck className="h-4 w-4 text-[#10b981]" />
-            Evaluation Benchmark Decontamination Purity (Protocol Reference)
-          </h2>
-          <span className="text-xs font-mono text-[#10b981] px-2 py-0.5 rounded bg-emerald-950/40 border border-emerald-500/30 flex items-center gap-1 font-bold">
-            <Info className="w-3 h-3 text-[#10b981]" />
-            MinHash Overlap Barrier Protocol · Per-Dataset Audit Below
+          <div className="flex items-center gap-2">
+            <h2 className="text-xs font-mono font-bold uppercase tracking-wider text-[#a8a29e] flex items-center gap-2">
+              <ShieldCheck className="h-4 w-4 text-[#10b981]" />
+              Evaluation Benchmark Decontamination Purity (Protocol Reference)
+            </h2>
+            <Badge variant="outline" className="border-amber-500/40 bg-amber-500/10 text-amber-300 font-mono text-[10px] font-bold">
+              Protocol Reference
+            </Badge>
+          </div>
+          <span className="text-xs font-mono text-amber-400 px-2 py-0.5 rounded bg-amber-950/40 border border-amber-500/30 flex items-center gap-1 font-bold">
+            <Info className="w-3 h-3 text-amber-400" />
+            MinHash Overlap Barrier Specification
           </span>
         </div>
 

@@ -53,7 +53,13 @@ export default function JobsPage() {
     if (isManual) setRefreshing(true)
     setError(null)
     try {
-      const response = await api.getJobs({ limit: 50 })
+      const timeoutPromise = new Promise((_, reject) =>
+        setTimeout(() => reject(new Error("Request timed out (~10s): Can't reach the job scheduler")), 10000)
+      )
+      const response = (await Promise.race([
+        api.getJobs({ limit: 50 }),
+        timeoutPromise,
+      ])) as any
       const rawList = response?.data || (Array.isArray(response) ? response : [])
       const list = Array.isArray(rawList) ? rawList : []
       setJobs(list)
@@ -183,6 +189,30 @@ export default function JobsPage() {
           <Loader2 className="w-6 h-6 animate-spin text-[#f26625] mx-auto mb-3" />
           <p className="text-xs font-mono text-[#a8a29e]">Connecting to job scheduler...</p>
         </Card>
+      ) : error && jobs.length === 0 ? (
+        <Card className="border-[#272738] bg-[#12121a]/60 rounded-md p-12 text-center">
+          <AlertCircle className="w-8 h-8 text-amber-500 mx-auto mb-3" />
+          <h3 className="text-sm font-bold font-mono text-white mb-1">
+            Can&apos;t reach the scheduler
+          </h3>
+          <p className="text-xs font-mono text-[#a8a29e] max-w-md mx-auto mb-6">
+            The job scheduler did not respond. The backend may be offline or unreachable.
+          </p>
+          <div className="flex items-center justify-center gap-3">
+            <Button
+              onClick={() => fetchJobs(true)}
+              className="text-xs font-mono bg-[#f26625] hover:bg-[#de581a] text-white font-bold"
+            >
+              <RefreshCw className="w-3.5 h-3.5 mr-1.5" />
+              Retry Connection
+            </Button>
+            <Link href="/studio">
+              <Button variant="outline" className="text-xs font-mono border-[#272738] bg-[#12121a] hover:bg-[#161622] text-zinc-300">
+                Create your first dataset
+              </Button>
+            </Link>
+          </div>
+        </Card>
       ) : filteredJobs.length === 0 ? (
         <Card className="border-[#272738] bg-[#12121a]/60 rounded-md p-12 text-center">
           <Briefcase className="w-8 h-8 text-zinc-600 mx-auto mb-3" />
@@ -197,7 +227,7 @@ export default function JobsPage() {
           <Link href="/studio">
             <Button className="text-xs font-mono bg-[#f26625] hover:bg-[#de581a] text-white font-bold">
               <Play className="w-3.5 h-3.5 mr-1.5 fill-current" />
-              Launch Studio Run
+              Create your first dataset
             </Button>
           </Link>
         </Card>

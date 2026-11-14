@@ -359,9 +359,9 @@ class ConstraintReasoningEngine:
     ) -> None:
         """Calculate estimated duration and cost."""
         sample_count = context.get("sample_count", 1000)
-        estimated_per_sample = context.get("estimated_cost_per_sample", 0.001)
+        estimated_per_sample = context.get("estimated_cost_per_sample", 0.00006)
 
-        result.estimated_cost_usd = sample_count * estimated_per_sample
+        result.estimated_cost_usd = round(sample_count * estimated_per_sample, 2)
         result.estimated_duration_hours = sample_count / 1000 * 0.1
 
         result.confidence = result.estimated_success_probability

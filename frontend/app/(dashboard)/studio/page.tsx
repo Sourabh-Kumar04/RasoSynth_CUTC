@@ -241,13 +241,14 @@ function StudioContent() {
   const [parallelBilingual, setParallelBilingual] = useState<boolean>(false)
   const [datasetSize, setDatasetSize] = useState(10000)
   const [generationMode, setGenerationMode] = useState<'grounded' | 'synthetic'>('grounded')
-  const [humanReview, setHumanReview] = useState<boolean>(true)
+  const [humanReview, setHumanReview] = useState<boolean>(false)
   const [llmReview, setLlmReview] = useState<boolean>(true)
   const [requireCitations, setRequireCitations] = useState<boolean>(true)
   const [humanReviewPercentage, setHumanReviewPercentage] = useState<number>(10)
   const [prioritizeAiKosh, setPrioritizeAiKosh] = useState<boolean>(true)
   const [isZenMode, setIsZenMode] = useState<boolean>(false)
   const [isSubmitting, setIsSubmitting] = useState(false)
+  const [submitResult, setSubmitResult] = useState<{ type: 'success' | 'error'; message: string; jobId?: string } | null>(null)
   const [isAutoDetecting, setIsAutoDetecting] = useState(false)
   const [discoveredSources, setDiscoveredSources] = useState<Array<{ name: string; url?: string; source_type?: string }>>([])
   const [autoDetectNotice, setAutoDetectNotice] = useState<string | null>(null)
@@ -257,6 +258,44 @@ function StudioContent() {
   const [idealSamples, setIdealSamples] = useState<Array<{ instruction: string; response: string }>>([])
   const [showAdvanced, setShowAdvanced] = useState(false)
   const [showAnchors, setShowAnchors] = useState(false)
+
+  // Persist Studio form state so leaving and returning restores values
+  useEffect(() => {
+    try {
+      const saved = localStorage.getItem('rasosynth_studio_draft')
+      if (saved) {
+        const parsed = JSON.parse(saved)
+        if (parsed.prompt && !searchParams.get('prompt')) setPrompt(parsed.prompt)
+        if (parsed.targetDomain && !searchParams.get('domain')) setTargetDomain(parsed.targetDomain)
+        if (parsed.datasetSize) setDatasetSize(Number(parsed.datasetSize))
+        if (parsed.datasetType) setDatasetType(parsed.datasetType)
+        if (parsed.synthesisMode && !searchParams.get('engine')) setSynthesisMode(parsed.synthesisMode)
+        if (parsed.language && !searchParams.get('language')) setLanguage(parsed.language)
+        if (typeof parsed.humanReview === 'boolean') setHumanReview(parsed.humanReview)
+        if (parsed.generationMode) setGenerationMode(parsed.generationMode)
+      }
+    } catch {
+      // Ignore private browsing or parse errors
+    }
+  }, [searchParams])
+
+  useEffect(() => {
+    try {
+      const draft = {
+        prompt,
+        targetDomain,
+        datasetSize,
+        datasetType,
+        synthesisMode,
+        language,
+        humanReview,
+        generationMode,
+      }
+      localStorage.setItem('rasosynth_studio_draft', JSON.stringify(draft))
+    } catch {
+      // Ignore storage errors
+    }
+  }, [prompt, targetDomain, datasetSize, datasetType, synthesisMode, language, humanReview, generationMode])
 
   // Live Tokenizer Fertility Estimation
   const isIndicOrHinglish = ['hi', 'hinglish', 'indic_multilingual', 'ta', 'te', 'bn', 'mr', 'gu', 'kn', 'ml', 'pa', 'as', 'or', 'ur', 'sa', 'ne', 'mai', 'sat', 'ks', 'kok', 'sd', 'doi', 'mni', 'brx', 'ar', 'zh', 'ja', 'ko', 'ru'].includes(language)
@@ -504,11 +543,20 @@ function StudioContent() {
 
       const response = await api.createJob(payload)
       if (response && response.id) {
-        router.push(`/orchestration?job=${response.id}`)
+        setSubmitResult({
+          type: 'success',
+          jobId: response.id,
+          message: `Job created successfully — ID: ${response.id}`,
+        })
+      } else {
+        throw new Error('Scheduler did not return a valid job ID.')
       }
     } catch (err: any) {
       console.error('Job creation failed:', err)
-      router.push('/orchestration')
+      setSubmitResult({
+        type: 'error',
+        message: formatErrorMessage(err) || 'Job creation failed. The backend service may be offline or unreachable.',
+      })
     } finally {
       setIsSubmitting(false)
     }
@@ -522,7 +570,6 @@ function StudioContent() {
           <h1 className="text-2xl font-bold tracking-tight text-white font-display mb-1">
             Synthetic Dataset Studio
           </h1>
-
         </div>
 
         <div className="flex items-center gap-2.5">
@@ -536,15 +583,6 @@ function StudioContent() {
           >
             <Bot className="w-3.5 h-3.5 text-[#f26625]" />
             <span>AI Scraper Synthesizer</span>
-          </Button>
-
-          <Button
-            onClick={handleGenerate}
-            disabled={isSubmitting}
-            className="bg-[#f26625] hover:bg-[#de581a] border border-[#ea580c] text-white font-mono text-xs font-bold h-9 px-5 shadow-sm flex items-center gap-2 rounded-md self-start sm:self-auto"
-          >
-            {isSubmitting ? <Loader2 className="w-4 h-4 animate-spin" /> : <Play className="w-3.5 h-3.5 fill-current" />}
-            <span>Synthesize Dataset</span>
           </Button>
         </div>
       </div>
@@ -1382,9 +1420,21 @@ function StudioContent() {
               <div>
                 <div className="flex justify-between items-center mb-1.5">
                   <label className="text-xs font-mono uppercase text-[#a8a29e]">Target Size</label>
-                  <span className="text-xs font-mono text-[#f26625] font-bold">
-                    {datasetSize.toLocaleString()} rows
-                  </span>
+                  <div className="flex items-center gap-1.5">
+                    <input
+                      type="number"
+                      min={100}
+                      max={50000}
+                      step={100}
+                      value={datasetSize}
+                      onChange={(e) => {
+                        const val = Math.max(100, Math.min(50000, Number(e.target.value) || 100))
+                        setDatasetSize(val)
+                      }}
+                      className="w-20 bg-[#0a0a0f] border border-[#272738] rounded px-1.5 py-0.5 text-xs font-mono text-right text-[#f26625] font-bold focus:outline-none focus:border-[#f26625]"
+                    />
+                    <span className="text-xs font-mono text-[#a8a29e]">rows</span>
+                  </div>
                 </div>
                 <input
                   type="range"
@@ -1428,7 +1478,7 @@ function StudioContent() {
                   </label>
 
                   {humanReview && (
-                    <div className="pt-2 border-t border-[#1c1c28] space-y-1.5">
+                    <div className="pt-2 border-t border-[#1c1c28] space-y-2">
                       <div className="flex justify-between items-center text-xs font-mono">
                         <span className="text-[#a8a29e]">Sampling Ratio</span>
                         <span className="text-[#f26625] font-bold">{humanReviewPercentage}% of dataset</span>
@@ -1442,6 +1492,12 @@ function StudioContent() {
                         onChange={(e) => setHumanReviewPercentage(Number(e.target.value))}
                         className="w-full accent-[#f26625] bg-[#12121a] cursor-pointer"
                       />
+                      <p className="text-[11px] text-amber-300/90 font-mono">
+                        Sampled batches will hold at the review gate. Review and sign-off occur in the{' '}
+                        <a href="/review" target="_blank" rel="noopener noreferrer" className="underline text-[#f26625] hover:text-white">
+                          Human Review Queue
+                        </a>.
+                      </p>
                     </div>
                   )}
                 </div>
@@ -1633,6 +1689,50 @@ function StudioContent() {
             {isSubmitting ? <Loader2 className="w-4 h-4 animate-spin" /> : <Play className="w-4 h-4 fill-current" />}
             <span>Execute Generation Run</span>
           </Button>
+
+          {submitResult && (
+            <div
+              className={clsx(
+                'p-3.5 rounded-md border font-mono text-xs space-y-2.5 animate-fade-in',
+                submitResult.type === 'success'
+                  ? 'bg-emerald-950/40 border-emerald-500/40 text-emerald-300'
+                  : 'bg-rose-950/40 border-rose-500/40 text-rose-300'
+              )}
+            >
+              <div className="flex items-start gap-2">
+                {submitResult.type === 'success' ? (
+                  <CheckCircle2 className="w-4 h-4 text-emerald-400 shrink-0 mt-0.5" />
+                ) : (
+                  <AlertCircle className="w-4 h-4 text-rose-400 shrink-0 mt-0.5" />
+                )}
+                <div className="space-y-1">
+                  <p className="font-bold text-white">{submitResult.message}</p>
+                  {submitResult.type === 'error' && (
+                    <p className="text-[11px] text-rose-300">
+                      The job scheduler could not be reached. Verify local server connectivity and try again.
+                    </p>
+                  )}
+                </div>
+              </div>
+
+              {submitResult.type === 'success' && submitResult.jobId && (
+                <div className="flex flex-wrap items-center gap-2 pt-1 border-t border-emerald-500/20">
+                  <a
+                    href={`/orchestration?job=${submitResult.jobId}`}
+                    className="inline-flex items-center gap-1 px-3 py-1.5 rounded bg-[#f26625] hover:bg-[#de581a] text-white font-bold text-xs transition-colors"
+                  >
+                    <span>Track Pipeline in Orchestration →</span>
+                  </a>
+                  <a
+                    href="/jobs"
+                    className="inline-flex items-center gap-1 px-3 py-1.5 rounded border border-[#272738] bg-[#12121a] hover:bg-[#161622] text-zinc-300 hover:text-white text-xs transition-colors"
+                  >
+                    <span>View in Jobs List</span>
+                  </a>
+                </div>
+              )}
+            </div>
+          )}
         </div>
       </div>
       )}

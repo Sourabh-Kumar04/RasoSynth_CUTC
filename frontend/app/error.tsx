@@ -39,8 +39,9 @@ export default function RootError({
             try {
               reset()
             } catch {
-              window.location.reload()
+              // Ignore boundary reset exception
             }
+            window.location.reload()
           }}
           className="bg-[#f26625] hover:bg-[#de581a] text-white text-xs font-bold font-mono h-9 px-4 rounded-md flex items-center gap-2"
         >

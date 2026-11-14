@@ -188,10 +188,15 @@ export default function DashboardPage() {
               },
             ]
 
-            if (allSourcesFailed) {
+            if (healthState === 'loading' || jobsState === 'loading') {
               items.push({
-                label: 'All data sources unavailable',
-                qualifier: 'Backend unreachable or authentication required. Please sign in.',
+                label: 'Connecting to backend…',
+                tone: 'neutral' as const,
+              })
+            } else if (!isBackendHealthy || allSourcesFailed) {
+              items.push({
+                label: 'Backend unreachable / Offline',
+                qualifier: 'Live services unavailable; standalone mode active.',
                 tone: 'bad' as const,
               })
             } else if (someSourcesFailed) {

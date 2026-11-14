@@ -1735,9 +1735,7 @@ dataset_samples_generated_total 4520`
       const bodyObj = options.body ? JSON.parse(options.body as string) : {};
       const requestedSamples = Number(bodyObj.dataset_size) || 1000;
       const estimatedSamples = Math.min(requestedSamples, 1500);
-      const qualityMultiplier = bodyObj.quality_level === 'research' ? 3 : bodyObj.quality_level === 'high' ? 1.5 : 1;
-      const languageMultiplier = bodyObj.language && bodyObj.language !== 'en' ? 1.2 : 1;
-      const estimatedCost = requestedSamples * 0.001 * qualityMultiplier * languageMultiplier;
+      const estimatedCost = Number(((requestedSamples / 1000) * 0.06).toFixed(2));
       const budget = Number(bodyObj.cost_budget_usd) || 0;
       return parse({
         estimated_sources: 150,

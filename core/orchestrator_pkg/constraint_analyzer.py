@@ -194,16 +194,6 @@ class ConstraintAnalyzer:
         return int(base_estimate)
 
     def _estimate_cost(self, config: dict, sample_count: int) -> float:
-        """Estimate cost for dataset generation."""
-        base_cost = sample_count * 0.001
-
-        quality_level = config.get("quality_level", "standard")
-        if quality_level == "high":
-            base_cost *= 1.5
-        elif quality_level == "research":
-            base_cost *= 3
-
-        if config.get("language") != "en":
-            base_cost *= 1.2
-
-        return base_cost
+        """Estimate cost for dataset generation: unified price model of $0.06 per 1,000 rows ($0.00006/row)."""
+        base_cost = (sample_count / 1000.0) * 0.06
+        return round(base_cost, 2)

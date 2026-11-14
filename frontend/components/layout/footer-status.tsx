@@ -45,8 +45,8 @@ export function FooterStatus() {
   if (failed || snapshot === null) {
     return (
       <span className="flex items-center gap-1.5 px-2 py-0.5 rounded bg-[#12121a] border border-[#272738] text-xs text-zinc-300">
-        <span className="w-1.5 h-1.5 rounded-full bg-[#a8a29e]" />
-        <span>{failed ? 'System status unknown' : 'Checking system status…'}</span>
+        <span className={`w-1.5 h-1.5 rounded-full ${failed ? 'bg-rose-400' : 'bg-zinc-500 animate-pulse'}`} />
+        <span>{failed ? 'Backend offline / Unreachable' : 'Checking system health…'}</span>
       </span>
     )
   }

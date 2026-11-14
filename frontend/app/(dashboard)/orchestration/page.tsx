@@ -304,10 +304,17 @@ export default function OrchestrationPage() {
               <div className="flex items-center space-x-3 text-xs font-mono">
                 <span className="text-[#a8a29e]">DAG LATENCY: <strong className="text-white">—</strong></span>
                 <span className="text-[#a8a29e]">CHECKPOINT: <strong className="text-[#10b981]">ckpt-latest</strong></span>
-                <span className="text-[#10b981] flex items-center gap-1">
-                  <span className="w-1.5 h-1.5 rounded-full bg-[#10b981] animate-pulse" />
-                  SYNAPSE ACTIVE
-                </span>
+                {selectedJob ? (
+                  <span className="text-[#10b981] flex items-center gap-1">
+                    <span className="w-1.5 h-1.5 rounded-full bg-[#10b981] animate-pulse" />
+                    RUNNING
+                  </span>
+                ) : (
+                  <span className="text-zinc-500 flex items-center gap-1">
+                    <span className="w-1.5 h-1.5 rounded-full bg-zinc-600" />
+                    IDLE (NO RUN SELECTED)
+                  </span>
+                )}
               </div>
             </div>
 
@@ -318,9 +325,9 @@ export default function OrchestrationPage() {
                 <div className="absolute left-10 right-10 top-1/2 -translate-y-1/2 h-[2px] bg-[#1c1c28] -z-0" />
 
                 {PIPELINE_STAGES.map((stage, i, arr) => {
-                  const currentStage = selectedJob?.current_stage || 'unknown'
-                  const isCurrent = currentStage.includes(stage.id.split('_')[0])
-                  const isPast = selectedJob?.progress ? selectedJob.progress * arr.length > i : i < 3
+                  const currentStage = selectedJob?.current_stage || ''
+                  const isCurrent = Boolean(selectedJob && currentStage && currentStage.includes(stage.id.split('_')[0]))
+                  const isPast = Boolean(selectedJob?.progress && (selectedJob.progress * arr.length > i))
 
                   // Check if node has active feedback loop capability
                   const hasFeedbackLoop = stage.id === 'preview_acceptance' || stage.id === 'filtering_quality' || stage.id === 'constructing_dataset'
@@ -576,6 +583,29 @@ export default function OrchestrationPage() {
                     )}
                   </div>
                 )}
+              </div>
+            )}
+
+            {/* Human Review Gate / Awaiting Review Notice */}
+            {selectedJob && (selectedJob.status === 'awaiting_review' || selectedJob.status === 'awaiting_human_review' || selectedJob.current_stage === 'human_review') && (
+              <div className="pt-4 border-t border-[#1c1c28] space-y-3">
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 p-4 rounded-md bg-amber-950/30 border border-amber-500/50">
+                  <div className="space-y-1">
+                    <span className="text-xs font-mono font-bold uppercase tracking-wider text-amber-400 flex items-center gap-1.5">
+                      <Users className="w-4 h-4 text-amber-400" />
+                      Pipeline Stalled: Awaiting Human Review
+                    </span>
+                    <p className="text-xs text-zinc-300 max-w-xl">
+                      Stratified quality sampling holds this pipeline at the human verification gate. Outlier and edge-case samples must be inspected, edited, or approved in the review queue before downstream synthesis and export proceed.
+                    </p>
+                  </div>
+                  <Button
+                    onClick={() => router.push(`/review?job=${selectedJob.id}`)}
+                    className="bg-[#f26625] hover:bg-[#de581a] text-white text-xs font-mono font-bold h-9 px-4 rounded-md shadow-sm flex items-center gap-2 shrink-0"
+                  >
+                    <span>Open Review Queue →</span>
+                  </Button>
+                </div>
               </div>
             )}
 
@@ -1111,7 +1141,12 @@ export default function OrchestrationPage() {
               {/* Sample Trajectory Card */}
               <div className="p-4 rounded-lg bg-[#0a0a0f] border border-[#1f1f2e] space-y-3 font-mono text-xs">
                 <div className="flex items-center justify-between border-b border-[#1c1c28] pb-2">
-                  <span className="text-white font-bold uppercase">Sample Revision Trajectory (Legal / Taxation Domain)</span>
+                  <div className="flex items-center gap-2">
+                    <span className="text-white font-bold uppercase">Sample Revision Trajectory (Legal / Taxation Domain)</span>
+                    <Badge variant="outline" className="border-amber-500/40 bg-amber-500/10 text-amber-300 font-mono text-[10px] font-bold">
+                      Demo / Reference Example
+                    </Badge>
+                  </div>
                   <div className="flex items-center gap-2">
                     <span className="text-emerald-400 text-xs font-bold">Converged in 2 iterations</span>
                     <Button
