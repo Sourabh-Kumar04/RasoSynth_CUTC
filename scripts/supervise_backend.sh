@@ -20,7 +20,7 @@ HOST="0.0.0.0"
 HEALTH_URL="http://127.0.0.1:${PORT}/health"
 
 is_backend_alive() {
-    curl -sf --connect-timeout 2 --max-time 3 "$HEALTH_URL" > /dev/null 2>&1
+    curl -sf --connect-timeout 3 --max-time 10 "$HEALTH_URL" > /dev/null 2>&1
 }
 
 start_backend() {
@@ -72,12 +72,24 @@ case "${1:-}" in
         echo "Supervisor daemon started with PID $$"
         trap 'rm -f "$SUPERVISOR_PID_FILE"; exit 0' SIGTERM SIGINT
 
+        # A single slow /health response must NOT kill the backend: the
+        # backend legitimately goes slow while it is busy (LLM calls, job
+        # work, frontend polling). Restart only after 3 consecutive
+        # failures (~15-20s of unresponsiveness).
+        FAIL_COUNT=0
         while true; do
             if ! is_backend_alive; then
-                echo "[$(date -u '+%Y-%m-%d %H:%M:%SZ')] Health probe failed. Restarting backend..." >> "$LOG_FILE"
-                stop_backend
-                start_backend
-                sleep 5
+                FAIL_COUNT=$((FAIL_COUNT + 1))
+                echo "[$(date -u '+%Y-%m-%d %H:%M:%SZ')] Health probe failed ($FAIL_COUNT/3)." >> "$LOG_FILE"
+                if [ "$FAIL_COUNT" -ge 3 ]; then
+                    echo "[$(date -u '+%Y-%m-%d %H:%M:%SZ')] Health probe failed 3x consecutively. Restarting backend..." >> "$LOG_FILE"
+                    stop_backend
+                    start_backend
+                    FAIL_COUNT=0
+                    sleep 150
+                fi
+            else
+                FAIL_COUNT=0
             fi
             sleep 5
         done
