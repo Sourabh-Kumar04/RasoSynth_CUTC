@@ -1,5 +1,7 @@
 "use client"
 
+import React from "react"
+
 export interface BrandLogoProps {
   className?: string
   size?: number
@@ -9,74 +11,71 @@ export interface BrandLogoProps {
   variant?: "dark" | "light"
 }
 
-// C1 Original: a flat dot-grid R on a 5x5 grid, viewBox 0 0 64 64,
-// coordinates 12, 22, 32, 42, 52 on both axes. Flat colours only.
-// The leg steps diagonally from (42,42) to the orange final point (52,52)
-// at full size. At header size the final dot is pulled in to (49,49)
-// so it touches the leg dot instead of floating as a stray dot.
-// Small-size rule: at 44px or below the faint field dots are dropped and
-// the R dots are bolder (r4.9, so neighbouring dots ~touch at header size
-// instead of reading blocky/pixel-y), so the R stays crisp in headers.
-// The full C1 (field plus R, r3.6, final dot at (52,52)) is kept above 44px. Dark variant is the default:
-// R dots are paper on dark UI, field dots are dark stone. Light variant
-// inverts them. The final point is flat orange in both variants.
-const FIELD_DOTS: ReadonlyArray<readonly [number, number]> = [
-  [52, 12],
-  [22, 22], [32, 22], [52, 22],
-  [52, 32],
-  [22, 42], [32, 42], [52, 42],
-  [22, 52], [32, 52], [42, 52],
-]
-
-const R_DOTS: ReadonlyArray<readonly [number, number]> = [
-  [12, 12], [22, 12], [32, 12], [42, 12],
-  [12, 22], [42, 22],
-  [12, 32], [22, 32], [32, 32], [42, 32],
-  [12, 42], [42, 42],
-  [12, 52],
-]
-
 export function BrandLogo({
   className = "",
-  size = 34,
+  size = 32,
   showWordmark = false,
   wordmarkClassName = "",
   showBadge = false,
-  variant = "dark",
 }: BrandLogoProps) {
-  const rFill = variant === "light" ? "#1b1b18" : "#f5f2ea"
-  const fieldFill = variant === "light" ? "#d8d2c4" : "#4a463f"
-  const small = size <= 44
-  const rRadius = small ? 4.9 : 3.6
-  const finalDot: readonly [number, number] = small ? [49, 49] : [52, 52]
+  const uid = React.useId().replace(/:/g, "")
+  const gradId = `raso-grad-${uid}`
+  const glowId = `raso-glow-${uid}`
+
   return (
     <div className={"inline-flex items-center gap-2.5 " + className}>
       <svg
         width={size}
         height={size}
-        viewBox="0 0 64 64"
+        viewBox="0 0 40 40"
         fill="none"
         xmlns="http://www.w3.org/2000/svg"
-        className="shrink-0"
+        className="shrink-0 transition-transform duration-200 group-hover:scale-105"
         role="img"
         aria-label="RasoSynthTune"
       >
-        {small ? null : FIELD_DOTS.map(([cx, cy]) => (
-          <circle key={"f-" + cx + "-" + cy} cx={cx} cy={cy} r={2.6} fill={fieldFill} />
-        ))}
-        {R_DOTS.map(([cx, cy]) => (
-          <circle key={"r-" + cx + "-" + cy} cx={cx} cy={cy} r={rRadius} fill={rFill} />
-        ))}
-        <circle cx={finalDot[0]} cy={finalDot[1]} r={rRadius} fill="#f26625" />
+        <defs>
+          <linearGradient id={gradId} x1="0%" y1="0%" x2="100%" y2="100%">
+            <stop offset="0%" stopColor="#FF7A1A" />
+            <stop offset="48%" stopColor="#FF385C" />
+            <stop offset="100%" stopColor="#8A3FFC" />
+          </linearGradient>
+          <radialGradient id={glowId} cx="50%" cy="50%" r="50%">
+            <stop offset="0%" stopColor="#FF385C" stopOpacity="0.25" />
+            <stop offset="100%" stopColor="#FF7A1A" stopOpacity="0" />
+          </radialGradient>
+        </defs>
+
+        {/* Ambient subtle backplate */}
+        <rect
+          x="2"
+          y="2"
+          width="36"
+          height="36"
+          rx="10"
+          fill="#0c0b12"
+          stroke="rgba(255, 255, 255, 0.1)"
+          strokeWidth="1"
+        />
+        <circle cx="20" cy="20" r="13" fill={`url(#${glowId})`} />
+
+        {/* Convergent synthesis glyph */}
+        <path
+          d="M13 11C13 10.45 13.45 10 14 10H22C26.14 10 29.5 13.36 29.5 17.5C29.5 21.05 27.04 24.03 23.7 24.81L29.4 30.08C29.98 30.62 29.6 31.6 28.82 31.6H26.15C25.7 31.6 25.26 31.4 24.95 31.05L19.45 24.8H16.2V30.6C16.2 31.15 15.75 31.6 15.2 31.6H14C13.45 31.6 13 31.15 13 30.6V11ZM16.2 20.8H21.8C23.62 20.8 25.1 19.32 25.1 17.5C25.1 15.68 23.62 14.2 21.8 14.2H16.2V20.8Z"
+          fill={`url(#${gradId})`}
+        />
+        {/* Luminous beacon */}
+        <circle cx="29" cy="17.5" r="2.2" fill="#FFB020" />
       </svg>
+
       {showWordmark && (
-        <div className="flex items-center gap-1.5">
-          <span className={"font-display font-bold tracking-[-0.04em] text-white leading-none " + wordmarkClassName}>
-            Raso<span className="text-[#f26625]">Synth</span><span className="text-[#d8d2c4] font-semibold">Tune</span>
+        <div className="flex items-center gap-2">
+          <span className={"font-sans tracking-tight font-bold text-white text-[15px] leading-none " + wordmarkClassName}>
+            Raso<span className="bg-gradient-to-r from-[#FF7A1A] via-[#FF385C] to-[#A855F7] bg-clip-text text-transparent font-extrabold">Synth</span><span className="text-zinc-300 font-medium">Tune</span>
           </span>
           {showBadge && (
-            <span className="px-1.5 py-0.5 text-xs font-mono font-bold tracking-wider text-[#f26625] bg-[#f26625]/10 border border-[#f26625]/25 rounded">
-              2.0
+            <span className="px-1.5 py-0.5 text-[10px] font-mono font-bold tracking-wider text-[#FF7A1A] bg-[#FF7A1A]/10 border border-[#FF7A1A]/20 rounded-full">
+              Enterprise
             </span>
           )}
         </div>

@@ -7,40 +7,40 @@
 @layer base {
   :root {
     /* Obsidian Cybernetic Studio Palette */
-    --background: #0a0a0f;
-    --background-secondary: #12121a;
-    --background-tertiary: #1a1a24;
+    --background: #07060a;
+    --background-secondary: #0e0d16;
+    --background-tertiary: #141320;
     --foreground: #f5f2ea;
-    --surface: #12121a;
-    --surface-hover: #1a1a24;
-    --border: #272738;
-    --border-subtle: #1c1c28;
+    --surface: rgba(255, 255, 255, 0.02);
+    --surface-hover: rgba(255, 255, 255, 0.05);
+    --border: rgba(255, 255, 255, 0.08);
+    --border-subtle: rgba(255, 255, 255, 0.04);
     --muted-foreground: #a8a29e;
     
-    /* Authentic YC Signal Orange Palette */
-    --accent: #f26625;
-    --accent-hover: #de581a;
-    --accent-muted: #ea580c;
+    /* Modern Radiant AI Palette */
+    --accent: #FF7A1A;
+    --accent-hover: #FF5E3A;
+    --accent-muted: #FF385C;
     
     --success: #10b981;
     --warning: #f59e0b;
     --error: #f43f5e;
     --info: #d8d2c4;
-    --card: #12121a;
+    --card: transparent;
     --card-foreground: #f5f2ea;
-    --popover: #161622;
+    --popover: #0e0d16;
     --popover-foreground: #f5f2ea;
-    --radius: 0.375rem;
+    --radius: 0.5rem;
   }
 }
 
 @layer base {
   * {
-    border-color: #272738;
+    border-color: rgba(255, 255, 255, 0.08);
   }
 
   body {
-    background-color: #0a0a0f;
+    background-color: #07060a;
     color: #f5f2ea;
     font-family: 'Manrope', sans-serif;
     font-feature-settings: "cv02", "cv03", "cv04", "cv11", "tnum";
@@ -54,16 +54,16 @@
   }
 
   ::-webkit-scrollbar-track {
-    background-color: #0a0a0f;
+    background-color: #07060a;
   }
 
   ::-webkit-scrollbar-thumb {
-    background-color: #272738;
+    background-color: rgba(255, 255, 255, 0.12);
     border-radius: 9999px;
   }
 
   ::-webkit-scrollbar-thumb:hover {
-    background-color: #f26625;
+    background-color: #FF7A1A;
   }
 }
 
@@ -72,15 +72,30 @@
     text-wrap: balance;
   }
 
-  /* Dot-Grid Background Canvas */
+  /* Ambient Cosmic Canvas - Borderless, Soft, Fluid */
   .bg-dot-grid {
-    background-image: radial-gradient(#4a463f 1px, transparent 1px);
-    background-size: 24px 24px;
+    background-color: #07060a;
+    background-image:
+      radial-gradient(ellipse 80% 50% at 50% -20%, rgba(255, 122, 26, 0.06), transparent 70%),
+      radial-gradient(ellipse 60% 40% at 90% 40%, rgba(138, 63, 252, 0.035), transparent 60%);
   }
 
-
-
-
+  /* De-boxify rigid card/box backgrounds and harsh borders */
+  .border-\[\#272738\] {
+    border-color: rgba(255, 255, 255, 0.07) !important;
+  }
+  .border-\[\#1c1c28\] {
+    border-color: rgba(255, 255, 255, 0.04) !important;
+  }
+  .bg-\[\#12121a\] {
+    background-color: rgba(255, 255, 255, 0.02) !important;
+  }
+  .bg-\[\#161622\] {
+    background-color: rgba(255, 255, 255, 0.035) !important;
+  }
+  .bg-\[\#0a0a0f\] {
+    background-color: rgba(255, 255, 255, 0.015) !important;
+  }
 
   .card-shadow,
   .card-yc,
