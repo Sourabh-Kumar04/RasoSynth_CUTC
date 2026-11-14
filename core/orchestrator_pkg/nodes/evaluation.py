@@ -685,7 +685,8 @@ class EvaluationNodeMixin:
 
             try:
                 loop = asyncio.get_running_loop()
-                deadline = loop.time() + hitl_timeout if hitl_timeout > 0 else None
+                hitl_timeout_effective = hitl_timeout if hitl_timeout > 0 else 15
+                deadline = loop.time() + hitl_timeout_effective
                 # Review decisions are stored in the shared database, but a
                 # Celery worker and the API process have separate asyncio
                 # events. Poll the DB periodically so API-side approvals also

@@ -125,3 +125,6 @@ class AgentState(TypedDict):
     quality_eval_passed: bool | None
     quality_breakdown: dict | None
     agent_artifacts: dict
+    synthesis_retries: int
+    missing_reference_count: int
+    evidence_context: list
