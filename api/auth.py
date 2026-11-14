@@ -432,21 +432,27 @@ async def get_current_user(
     """
     auth = get_auth_manager()
 
+    allow_anon = os.getenv("ALLOW_ANONYMOUS", "true").lower() == "true"
+
     if not credentials:
-        allow_anon = os.getenv("ALLOW_ANONYMOUS", "true").lower() == "true"
         if allow_anon and "anonymous" in auth._users:
             anon_user = auth.get_user("anonymous")
             if anon_user:
                 return anon_user
         raise HTTPException(status_code=401, detail="Authentication required")
 
-    token_data = auth.verify_token(credentials.credentials)
-    user = auth.get_user(token_data.username)
-
-    if not user:
-        raise HTTPException(status_code=401, detail="User not found")
-
-    return user
+    try:
+        token_data = auth.verify_token(credentials.credentials)
+        user = auth.get_user(token_data.username)
+        if not user:
+            raise HTTPException(status_code=401, detail="User not found")
+        return user
+    except HTTPException:
+        if allow_anon and "anonymous" in auth._users:
+            anon_user = auth.get_user("anonymous")
+            if anon_user:
+                return anon_user
+        raise
 
 
 async def get_current_user_optional(
