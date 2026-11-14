@@ -168,3 +168,4 @@ id_rsa*
 coverage.xml
 # Vercel CLI local state
 frontend/.vercel/
+*.mp4
