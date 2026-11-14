@@ -34,6 +34,8 @@ services:
       # AI Provider API Keys from your .env
       - key: GOOGLE_API_KEY
         sync: false
+      - key: GEMINI_API_KEY
+        sync: false
       - key: GROQ_API_KEY
         sync: false
       - key: NVIDIA_API_KEY

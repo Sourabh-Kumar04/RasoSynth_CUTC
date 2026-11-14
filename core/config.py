@@ -36,7 +36,10 @@ class Settings(BaseSettings):
     )
 
     # NVIDIA NIM
-    nvidia_api_key: Optional[str] = Field(default=None)
+    nvidia_api_key: Optional[str] = Field(
+        default=None,
+        validation_alias=AliasChoices("nvidia_api_key", "nvidia_nim_api_key")
+    )
     nvidia_nim_base_url: str = Field(default="https://integrate.api.nvidia.com/v1")
 
     # Anthropic Claude
@@ -49,7 +52,22 @@ class Settings(BaseSettings):
     openai_api_key: Optional[str] = Field(default=None)
 
     # Hugging Face
-    hf_token: Optional[str] = Field(default=None)
+    hf_token: Optional[str] = Field(
+        default=None,
+        validation_alias=AliasChoices("hf_token", "huggingface_token", "huggingface_api_key", "hf_api_key")
+    )
+
+    # Sarvam AI
+    sarvam_api_key: Optional[str] = Field(
+        default=None,
+        validation_alias=AliasChoices("sarvam_api_key", "sarvam_ai_api_key")
+    )
+
+    # Tavily Search
+    tavily_api_key: Optional[str] = Field(
+        default=None,
+        validation_alias=AliasChoices("tavily_api_key", "tavily_api_token")
+    )
 
     # AIKosh dataset catalogue API (optional; requires an account API key)
     aikosh_api_key: Optional[str] = Field(

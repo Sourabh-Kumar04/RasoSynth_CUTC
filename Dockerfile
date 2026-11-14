@@ -19,8 +19,7 @@ COPY README.md ./
 
 # Copy and install dependencies (layer caching)
 COPY pyproject.toml uv.lock ./
-RUN sed -i 's/name = "rasosynthtune"/name = "ai-dataset-engineer"/' pyproject.toml && \
-    uv sync --frozen --no-dev --no-install-project
+RUN uv sync --frozen --no-dev --no-install-project
 # AIKosh is optional for local installs, but the production container should
 # support its authenticated dataset API when AIKOSH_API_KEY is configured.
 RUN uv pip install --python /app/.venv/bin/python "aikosh>=2.0.0,<3.0.0"
