@@ -7,10 +7,11 @@ export const maxDuration = 60
 const PRIMARY_BACKEND_URL = (
   process.env.BACKEND_API_URL ||
   process.env.HF_SPACE_URL ||
-  'https://boundless-tidings-tanning.ngrok-free.dev'
+  process.env.NEXT_PUBLIC_API_URL ||
+  'http://127.0.0.1:8000'
 ).replace(/\/$/, '')
 
-const FALLBACK_BACKEND_URL = 'https://boundless-tidings-tanning.ngrok-free.dev'
+const FALLBACK_BACKEND_URL = (process.env.FALLBACK_BACKEND_URL || '').replace(/\/$/, '')
 
 // Server-side private Hugging Face token (never exposed to browser)
 const HF_TOKEN = process.env.HF_TOKEN || process.env.HUGGINGFACE_TOKEN || process.env.HF_API_KEY || ''
@@ -177,7 +178,7 @@ async function handleProxy(req: NextRequest, { params }: { params: { path?: stri
 
   const search = req.nextUrl.search
   const primaryUrl = `${PRIMARY_BACKEND_URL}/${path}${search}`
-  const fallbackUrl = `${FALLBACK_BACKEND_URL}/${path}${search}`
+  const fallbackUrl = FALLBACK_BACKEND_URL ? `${FALLBACK_BACKEND_URL}/${path}${search}` : ''
   const isHealthCheck = path === 'health' || path === 'health/ready'
 
   // Header hygiene: forward only explicitly permitted headers, never cookies or ambient auth
@@ -237,14 +238,14 @@ async function handleProxy(req: NextRequest, { params }: { params: { path?: stri
     let response: Response | null = null
     try {
       response = await executeFetch(primaryUrl)
-      // Check if primary response was an offline ngrok tunnel error or bad gateway
+      // Check if primary response was an offline ngrok tunnel error or network bad gateway
       const ngrokErr = response.headers.get('ngrok-error-code')
-      if ((ngrokErr || response.status === 404 || response.status === 502 || response.status === 503) && primaryUrl !== fallbackUrl) {
-        // Fall back to active live ngrok tunnel
+      if ((ngrokErr || response.status === 502 || response.status === 504) && fallbackUrl && primaryUrl !== fallbackUrl) {
+        // Fall back to secondary backend only if configured
         response = await executeFetch(fallbackUrl)
       }
     } catch (primaryErr) {
-      if (primaryUrl !== fallbackUrl) {
+      if (fallbackUrl && primaryUrl !== fallbackUrl) {
         response = await executeFetch(fallbackUrl)
       } else {
         throw primaryErr

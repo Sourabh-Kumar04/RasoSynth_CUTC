@@ -358,7 +358,26 @@ async def lifespan(app: FastAPI):
         except Exception as seed_err:
             logger.warning(f"  ⚠ Auto-seed reference datasets skipped: {seed_err}")
     except Exception as e:
-        logger.warning(f"  ⚠ AsyncDB failed to connect (using in-memory fallback where possible): {e}")
+        logger.warning(f"  ⚠ AsyncDB failed to connect to configured database: {e}. Falling back to persistent SQLite...")
+        try:
+            db = AsyncDB(database_url="sqlite+aiosqlite:///data/app.db")
+            await db.connect()
+            app.state.db = db
+            logger.info("  ✓ AsyncDB connected with fallback SQLite")
+        except Exception as sqlite_err:
+            logger.error(f"  ❌ AsyncDB fallback SQLite also failed: {sqlite_err}")
+
+    # 3b. ReviewService
+    try:
+        from core.review_service import ReviewService
+        import core
+        db_mgr = getattr(getattr(app.state, "db", None), "db", getattr(app.state, "db", None))
+        review_svc = ReviewService(db=db_mgr)
+        app.state.review_service = review_svc
+        core._review_service_instance = review_svc
+        logger.info("  ✓ ReviewService initialized")
+    except Exception as e:
+        logger.warning(f"  ⚠ ReviewService initialization deferred: {e}")
 
     # 4. Cache
     try:

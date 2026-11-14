@@ -61,4 +61,7 @@ services:
         sync: false
       - key: RUNPOD_API_KEY
         sync: false
+      # Rate-limit & memory-safe synthesis concurrency for free-tier control plane
+      - key: SYNTHESIS_CONCURRENCY
+        value: "4"
     healthCheckPath: /health

@@ -120,9 +120,18 @@ class Job(Base):
 
     def to_dict(self) -> dict:
         q = self.quality_score
-        if q is None and self.datasets:
-            meta = self.datasets[0].metadata_ or {}
+        ds = []
+        try:
+            ds = getattr(self, "datasets", []) or []
+        except Exception:
+            ds = []
+        if q is None and ds:
+            meta = getattr(ds[0], "metadata_", {}) or {}
             q = meta.get("quality_score") or (meta.get("quality_breakdown") or {}).get("composite")
+        merkle = self.merkle_root
+        if not merkle and ds:
+            meta = getattr(ds[0], "metadata_", {}) or {}
+            merkle = meta.get("merkle_root_hash")
         return {
             "id": str(self.id),
             "status": self.status,
@@ -130,7 +139,7 @@ class Job(Base):
             "progress": self.progress,
             "current_stage": self.current_stage,
             "quality_score": q,
-            "merkle_root": self.merkle_root or (self.datasets[0].metadata_.get("merkle_root_hash") if self.datasets and self.datasets[0].metadata_ else None),
+            "merkle_root": merkle,
             "owner": getattr(self, "owner", None),
             "is_simulated": getattr(self, "is_simulated", False),
             "created_at": (self.created_at.isoformat() + "Z") if self.created_at and not self.created_at.isoformat().endswith("Z") else (self.created_at.isoformat() if self.created_at else None),
@@ -720,8 +729,12 @@ class DatabaseManager:
         """Get a job by ID."""
         if not _is_valid_uuid(job_id):
             return None
+        from sqlalchemy.orm import selectinload
         async with self.session_maker() as session:
-            job = await session.get(Job, job_id)
+            try:
+                job = await session.get(Job, job_id, options=[selectinload(Job.datasets)])
+            except Exception:
+                job = await session.get(Job, job_id)
             if job:
                 _ = (job.id, job.status, job.created_at, job.updated_at, job.config, job.progress, job.current_stage)
             return job
@@ -743,8 +756,9 @@ class DatabaseManager:
     async def list_jobs(self, status: Optional[str] = None, limit: int = 100, owner: Optional[str] = None) -> list[Job]:
         """List jobs with optional status and owner filters."""
         from sqlalchemy import select
+        from sqlalchemy.orm import selectinload
         async with self.session_maker() as session:
-            stmt = select(Job).order_by(Job.created_at.desc())
+            stmt = select(Job).options(selectinload(Job.datasets)).order_by(Job.created_at.desc())
             if status:
                 stmt = stmt.where(Job.status == status)
             if owner is not None:
@@ -752,7 +766,7 @@ class DatabaseManager:
             result = await session.execute(stmt.limit(limit))
             jobs = list(result.scalars().all())
             for j in jobs:
-                _ = (j.id, j.status, j.created_at, j.updated_at, j.config, j.progress, j.current_stage)
+                _ = (j.id, job_status := j.status, j.created_at, j.updated_at, j.config, j.progress, j.current_stage)
             return jobs
 
     async def clear_all_jobs(self):
@@ -1715,12 +1729,16 @@ class AsyncDB:
         q = getattr(job, "quality_score", None)
         root = getattr(job, "merkle_root", None)
         meta = {}
-        if job.datasets:
-            meta = job.datasets[0].metadata_ or {}
-            if q is None:
-                q = meta.get("quality_score") or (meta.get("quality_breakdown") or {}).get("composite")
-            if not root:
-                root = meta.get("merkle_root_hash")
+        try:
+            datasets = getattr(job, "datasets", []) or []
+            if datasets:
+                meta = getattr(datasets[0], "metadata_", {}) or {}
+                if q is None:
+                    q = meta.get("quality_score") or (meta.get("quality_breakdown") or {}).get("composite")
+                if not root:
+                    root = meta.get("merkle_root_hash")
+        except Exception:
+            meta = {}
         return {
             "id": job.id,
             "status": job.status,
@@ -1765,12 +1783,16 @@ class AsyncDB:
             q = getattr(job, "quality_score", None)
             root = getattr(job, "merkle_root", None)
             meta = {}
-            if job.datasets:
-                meta = job.datasets[0].metadata_ or {}
-                if q is None:
-                    q = meta.get("quality_score") or (meta.get("quality_breakdown") or {}).get("composite")
-                if not root:
-                    root = meta.get("merkle_root_hash")
+            try:
+                datasets = getattr(job, "datasets", []) or []
+                if datasets:
+                    meta = getattr(datasets[0], "metadata_", {}) or {}
+                    if q is None:
+                        q = meta.get("quality_score") or (meta.get("quality_breakdown") or {}).get("composite")
+                    if not root:
+                        root = meta.get("merkle_root_hash")
+            except Exception:
+                meta = {}
             c_at = job.created_at
             if hasattr(c_at, "isoformat"):
                 c_str = c_at.isoformat()

@@ -44,13 +44,17 @@ def _svc(request: Request):
     svc = getattr(request.app.state, "review_service", None)
     if svc is None:
         db = getattr(request.app.state, "db", None)
-        if db is not None:
+        try:
             from core.review_service import ReviewService
-            db_mgr = getattr(db, "db", db)
+            import core
+            db_mgr = getattr(db, "db", db) if db is not None else None
             svc = ReviewService(db=db_mgr)
             request.app.state.review_service = svc
+            core._review_service_instance = svc
             return svc
-        raise HTTPException(status_code=503, detail="Review service not initialised")
+        except Exception as e:
+            logger.warning(f"Could not initialize ReviewService: {e}")
+            raise HTTPException(status_code=503, detail="Review service not initialised")
     return svc
 
 
