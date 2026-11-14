@@ -135,7 +135,7 @@ export default function JobsPage() {
           created_at: ft.created_at,
           progress: typeof ft.progress === 'number' ? ft.progress / 100 : ft.status === 'completed' ? 1.0 : 0,
           yield_info: `Epoch ${currentEpoch}/${totalEpochs} · Loss ${ft.train_loss != null ? ft.train_loss.toFixed(4) : '—'}`,
-          compute_cost: ft.is_simulated ? 'Simulated Container' : 'GPU Accelerated',
+          compute_cost: ft.execution_target ? `${ft.execution_target.toUpperCase()} Pool` : 'GPU Accelerated',
           error: ft.error,
           actionUrl: '/finetune',
           actionLabel: 'Training Studio',

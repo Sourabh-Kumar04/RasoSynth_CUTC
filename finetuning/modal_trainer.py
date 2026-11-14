@@ -153,4 +153,4 @@ try:
 
 except ImportError:
     # Modal not installed locally; file is ready for serverless deployment
-    pass
+    train_remote = None  # type: ignore

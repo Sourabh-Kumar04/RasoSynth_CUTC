@@ -375,9 +375,14 @@ class ProviderRouter:
         """Route request with intelligent selection and fallback."""
         from providers.core_lib.base import LLMRequest
 
-        base_providers = list(preferred_providers or self.TASK_PROVIDER_MAPPING.get(
-            task, self.config.provider_priority
-        ))
+        if preferred_providers:
+            base_providers = list(preferred_providers)
+        elif self.config.provider_priority != RouterConfig().provider_priority:
+            base_providers = list(self.config.provider_priority)
+        else:
+            base_providers = list(self.TASK_PROVIDER_MAPPING.get(
+                task, self.config.provider_priority
+            ))
 
         # Include any configured provider not already in base_providers as fallbacks
         all_configured = [

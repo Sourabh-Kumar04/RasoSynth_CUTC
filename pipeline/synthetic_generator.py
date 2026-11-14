@@ -316,10 +316,11 @@ class SeedlessGenerator:
           #4 — temporal/live-data instructions are rejected and regenerated
           #5 — duplicate topics tracked and rejected
         """
-        dataset_type = str(self.config.get("dataset_type", "sft")).lower()
+        dataset_type = str(self.config.get("dataset_type", "sft")).lower().strip()
+        synth_mode = str(self.config.get("synthesis_mode", "")).lower().strip()
         tier = _resolve_difficulty_tier(cell, cell_index, total_cells)
 
-        if "conversational" in dataset_type:
+        if "conversational" in dataset_type or synth_mode in ("multi_turn", "conversational"):
             return await self._generate_conversational(plan, cell, tier, cell_index=cell_index, total_cells=total_cells)
         else:
             return await self._generate_sft(plan, cell, tier, cell_index=cell_index, total_cells=total_cells)
@@ -330,6 +331,9 @@ class SeedlessGenerator:
         self, plan: DatasetPlan, cell: dict, tier: int, cell_index: int = 0, total_cells: int = 1
     ) -> ConstructedSample:
         lang = str(self.config.get("language", "en"))
+        synth_mode = str(self.config.get("synthesis_mode", "")).lower().strip()
+        enable_cot = bool(self.config.get("enable_cot_reasoning", False) or synth_mode in ("cot", "reasoning"))
+
         lang_rule = _build_language_instruction(
             language=lang,
             script_mode=self.config.get("script_mode", "native"),
@@ -342,29 +346,30 @@ class SeedlessGenerator:
             generate_dpo_refusal_pairs=self.config.get("generate_dpo_refusal_pairs", False),
             speech_normalization=self.config.get("speech_normalization", False),
             turn_language_drift=self.config.get("turn_language_drift", False),
-            enable_cot_reasoning=self.config.get("enable_cot_reasoning", False),
+            enable_cot_reasoning=enable_cot,
         )
 
         tool_prompt = ""
-        ds_type = str(self.config.get("dataset_type", "")).lower()
-        if ds_type == "tool_calling":
+        ds_type = str(self.config.get("dataset_type", "")).lower().strip()
+        if ds_type == "tool_calling" or synth_mode in ("tool_calling", "tools"):
             tools = self.config.get("tools_definition") or DEFAULT_FINANCE_TOOLS
             tool_prompt = "\n" + build_tool_calling_system_prompt(tools)
 
         pref_prompt = ""
-        if ds_type in ("kto", "simpo"):
-            pref_prompt = "\n" + build_preference_directive(ds_type)
+        if ds_type in ("kto", "simpo") or synth_mode in ("preference", "simpo", "kto", "dpo"):
+            target_pref = "kto" if (ds_type == "kto" or synth_mode == "kto") else "simpo"
+            pref_prompt = "\n" + build_preference_directive(target_pref)
 
         rag_prompt = ""
-        if ds_type == "rag":
+        if ds_type == "rag" or synth_mode in ("rag",):
             rag_prompt = "\n" + build_rag_prompt_directive(include_hard_negatives=True)
 
         multi_turn_prompt = ""
-        if ds_type == "multi_turn":
+        if ds_type == "multi_turn" or synth_mode in ("multi_turn", "conversational"):
             multi_turn_prompt = "\n" + build_multi_turn_directive(num_turns=4, language=lang)
 
         dialectic_prompt = ""
-        if ds_type == "dialectic":
+        if ds_type == "dialectic" or synth_mode in ("socratic", "dialectic"):
             dialectic_prompt = "\n" + build_dialectic_prompt_directive(domain=plan.domain, rounds=2)
 
         system_prompt = (
@@ -491,7 +496,8 @@ class SeedlessGenerator:
                         "mask_indian_pii": self.config.get("mask_indian_pii", True),
                         "generate_dpo_refusal_pairs": self.config.get("generate_dpo_refusal_pairs", False),
                         "turn_language_drift": self.config.get("turn_language_drift", False),
-                        "enable_cot_reasoning": self.config.get("enable_cot_reasoning", False),
+                        "enable_cot_reasoning": enable_cot,
+                        "synthesis_mode": synth_mode or "standard",
                         "curriculum_sort": self.config.get("curriculum_sort", "none"),
                         "pii_detected": pii_found,
                     }
@@ -509,12 +515,12 @@ class SeedlessGenerator:
                             rejected_text = mask_indian_pii(rejected_text, replacement_mode="redact")
                         meta["rejected_response"] = rejected_text
 
-                    if ds_type == "kto":
+                    if ds_type == "kto" or synth_mode == "kto":
                         meta["kto"] = {
                             "label": data.get("kto_label", True),
                             "feedback_reason": data.get("feedback_reason", "Statutory accuracy and alignment"),
                         }
-                    elif ds_type == "simpo":
+                    elif ds_type == "simpo" or synth_mode in ("simpo", "preference", "dpo"):
                         c_len = len(resp_text.split())
                         rej = str(data.get("rejected_response", "") or "")
                         r_len = len(rej.split())
@@ -524,7 +530,7 @@ class SeedlessGenerator:
                             "rejected_word_count": r_len,
                             "length_ratio": round(c_len / max(r_len, 1), 2),
                         }
-                    elif ds_type == "rag":
+                    elif ds_type == "rag" or synth_mode in ("rag",):
                         pos_ctx = data.get("positive_contexts") or []
                         neg_ctx = data.get("hard_negatives") or []
                         citations = data.get("citations") or []
@@ -533,7 +539,7 @@ class SeedlessGenerator:
                             "hard_negatives": neg_ctx,
                             "citations": citations,
                         }
-                    elif ds_type == "multi_turn":
+                    elif ds_type == "multi_turn" or synth_mode in ("multi_turn", "conversational"):
                         raw_turns = data.get("turns") or []
                         coherence = evaluate_dialogue_coherence(raw_turns)
                         meta["multi_turn"] = {
@@ -541,7 +547,7 @@ class SeedlessGenerator:
                             "coherence": coherence,
                             "turns": raw_turns,
                         }
-                    elif ds_type == "dialectic":
+                    elif ds_type == "dialectic" or synth_mode in ("socratic", "dialectic"):
                         rounds = data.get("debate_rounds") or []
                         verdict = str(data.get("verdict", ""))
                         coherence = evaluate_dialectic_coherence(rounds, verdict)

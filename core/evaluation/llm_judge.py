@@ -5,5 +5,11 @@ See `core.evaluation.heuristic_rubric` for full details.
 """
 
 from core.evaluation.heuristic_rubric import evaluate_sample_rubric
+from core.evaluation.alignment_judge import AlignmentJudge, ComparativeBenchmarkResult, EvaluationComparisonItem
 
-__all__ = ["evaluate_sample_rubric"]
+__all__ = [
+    "evaluate_sample_rubric",
+    "AlignmentJudge",
+    "ComparativeBenchmarkResult",
+    "EvaluationComparisonItem",
+]

@@ -249,7 +249,7 @@ class EvaluationNodeMixin:
 
         target_dataset_size = int(config.get("dataset_size") or config.get("target_samples") or 0)
         if target_dataset_size > 0 and len(samples) < target_dataset_size and len(samples) > 0:
-            samples = self._top_up_exact_quota(samples, target_dataset_size, seen_eval_keys)
+            samples = self._top_up_exact_quota(samples, target_dataset_size, seen_eval_keys, job_config=config)
 
         state["constructed_samples"] = samples
 
@@ -445,7 +445,7 @@ class EvaluationNodeMixin:
                 " ".join(f"{s.get('instruction', '')} {s.get('response', '')}".lower().split())
                 for s in balanced if isinstance(s, dict)
             }
-            balanced = self._top_up_exact_quota(balanced, target_size, seen_balance_keys)
+            balanced = self._top_up_exact_quota(balanced, target_size, seen_balance_keys, job_config=config)
 
         logger.info(f"[{job_id}] Balanced Dataset Engine: guaranteed {len(balanced)} rows (target: {target_size})")
 
@@ -495,7 +495,7 @@ class EvaluationNodeMixin:
 
         target_dataset_size = int(config.get("dataset_size") or config.get("target_samples") or 0)
         if target_dataset_size > 0 and len(samples) < target_dataset_size and len(samples) > 0:
-            samples = self._top_up_exact_quota(samples, target_dataset_size, seen_eval_keys)
+            samples = self._top_up_exact_quota(samples, target_dataset_size, seen_eval_keys, job_config=config)
 
         state["constructed_samples"] = samples
         constructed_count = len(samples)

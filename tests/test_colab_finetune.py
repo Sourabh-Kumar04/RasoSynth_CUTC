@@ -33,21 +33,20 @@ def test_colab_bridge_headless_execution():
         
         assert artifacts_path.exists()
         assert (artifacts_path / "adapter_config.json").exists()
-        # P0 honesty: no loadable weights are fabricated. The only weights
-        # file is explicitly suffixed .PLACEHOLDER; a bare .safetensors
-        # file must NOT exist.
-        assert not (artifacts_path / "adapter_model.safetensors").exists()
-        assert (artifacts_path / "adapter_model.safetensors.PLACEHOLDER").exists()
+        # Verified usable adapter weights: real .safetensors exists and placeholder is absent
+        assert (artifacts_path / "adapter_model.safetensors").exists()
+        assert not (artifacts_path / "adapter_model.safetensors.PLACEHOLDER").exists()
         assert (artifacts_path / "README.md").exists()
         
         # Verify downloadable zip
-        zip_path = temp_dir / "finetuned_model_lora_PLACEHOLDER.zip"
+        zip_path = temp_dir / "finetuned_model_lora.zip"
         assert zip_path.exists()
         assert zip_path.stat().st_size > 0
         
         # Verify GGUF output
-        gguf_path = temp_dir / "test-indic-lora-q4_k_m.gguf.PLACEHOLDER"
+        gguf_path = temp_dir / "model-q4_k_m.gguf"
         assert gguf_path.exists()
+        assert gguf_path.stat().st_size > 0
         
         # Verify event stream produced progress and completed
         event_types = [e["type"] for e in events]
@@ -56,9 +55,10 @@ def test_colab_bridge_headless_execution():
         assert "completed" in event_types
         
         completed = next(e for e in events if e["type"] == "completed")
-        assert completed.get("is_simulated") is True
-        assert completed.get("weights_are_placeholders") is True
-        assert "SIMULATED" in str(completed.get("message", "")).upper()
+        assert completed.get("is_simulated") is False
+        assert completed.get("weights_are_placeholders") is False
+        assert completed.get("final_train_loss") is not None
+        assert "completed" in str(completed.get("message", "")).lower()
         
     finally:
         shutil.rmtree(temp_dir, ignore_errors=True)

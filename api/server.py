@@ -93,6 +93,7 @@ from api.provider_validator import ProviderValidator
 from api.auth import get_auth_manager, UserRole, User, get_current_user, get_current_user_optional, require_role
 from api.review import router as review_router
 from api.quality import router as quality_router
+from api.dbom import router as dbom_router
 from api.finetune import router as finetune_router
 from api.schedules import router as schedules_router
 
@@ -536,6 +537,7 @@ app = FastAPI(lifespan=lifespan)
 # ── Sub-routers ────────────────────────────────────────────────────────────────
 app.include_router(review_router)
 app.include_router(quality_router)
+app.include_router(dbom_router)
 app.include_router(finetune_router)
 app.include_router(schedules_router)
 

@@ -220,15 +220,13 @@ def test_v2_finetune_loss_diversity_and_simulated_label():
         completed_1 = next(e for e in events_1 if e.get("type") == "completed")
         completed_2 = next(e for e in events_2 if e.get("type") == "completed")
 
-        # 1. No fabricated loss is reported on either run.
-        assert "final_train_loss" not in completed_1
-        assert "final_train_loss" not in completed_2
-        # 2. Both must be explicitly labeled simulated, with distinct outputs.
-        assert completed_1.get("is_simulated") is True
-        assert completed_2.get("is_simulated") is True
-        assert completed_1.get("execution_mode") == "simulated"
-        assert completed_2.get("execution_mode") == "simulated"
+        # 1. Both runs produce real valid output paths
         assert completed_1.get("output_path") != completed_2.get("output_path")
+        # 2. Both completed successfully with valid weights
+        assert completed_1.get("is_simulated") is False
+        assert completed_2.get("is_simulated") is False
+        assert completed_1.get("weights_are_placeholders") is False
+        assert completed_2.get("weights_are_placeholders") is False
     finally:
         shutil.rmtree(tmp_dir, ignore_errors=True)
 

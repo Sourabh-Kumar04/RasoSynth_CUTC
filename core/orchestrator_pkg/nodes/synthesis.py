@@ -324,7 +324,7 @@ class SynthesisNodeMixin:
                 logger.info(
                     f"[{job_id}] Construct stage quota replenishment: expanding {len(samples)} samples to exact target {target_dataset_size}."
                 )
-                samples = self._top_up_exact_quota(samples, target_dataset_size, seen_sample_keys)
+                samples = self._top_up_exact_quota(samples, target_dataset_size, seen_sample_keys, job_config=config)
 
         if not filtered and (generation_mode in ("synthetic", "hybrid") or allow_seedless):
             logger.info("No crawled reference data found. Launching Pure Synthetic concurrent batch planning & generation.")
@@ -563,7 +563,7 @@ class SynthesisNodeMixin:
                         })
                     samples.extend(base_seed_samples)
                     if len(samples) < target_dataset_size:
-                        samples = self._top_up_exact_quota(samples, target_dataset_size, seen_sample_keys)
+                        samples = self._top_up_exact_quota(samples, target_dataset_size, seen_sample_keys, job_config=config)
             except Exception as seed_err:
                 logger.error(f"Failed to load seed bank fallback: {seed_err}")
 
@@ -571,7 +571,7 @@ class SynthesisNodeMixin:
         if len(samples) > target_dataset_size:
             samples = samples[:target_dataset_size]
         elif len(samples) < target_dataset_size and len(samples) > 0:
-            samples = self._top_up_exact_quota(samples, target_dataset_size, seen_sample_keys)
+            samples = self._top_up_exact_quota(samples, target_dataset_size, seen_sample_keys, job_config=config)
 
         self._update_job_status(
             job_id,
@@ -697,6 +697,7 @@ class SynthesisNodeMixin:
         samples: list[dict],
         target_count: int,
         seen_keys: set[str],
+        job_config: Optional[dict] = None,
     ) -> list[dict]:
         """
         Guarantee exact quota fulfillment by expanding verified samples
@@ -716,7 +717,8 @@ class SynthesisNodeMixin:
         if not base_samples:
             return topped_up
 
-        target_lang = str(self.config.get("language") or (base_samples[0].get("metadata", {}).get("language") if base_samples else "en")).lower().strip()
+        cfg = job_config or getattr(self, "config", {}) or {}
+        target_lang = str(cfg.get("language") or (base_samples[0].get("metadata", {}).get("language") if base_samples else "en")).lower().strip()
         if target_lang in ("hi", "hindi", "mr", "marathi"):
             variation_templates = [
                 ("एक विशेषज्ञ के दृष्टिकोण से, {inst}", "डोमेन विशेषज्ञ के दृष्टिकोण से:\n\n{resp}"),

@@ -116,7 +116,7 @@ class ExportNodeMixin:
         # Final exact quota delivery: replenish any deficit post-dedup, or cap if over target
         if requested_samples > 0:
             if len(raw_samples) < requested_samples and len(raw_samples) > 0:
-                raw_samples = self._top_up_exact_quota(raw_samples, requested_samples, seen_canonical)
+                raw_samples = self._top_up_exact_quota(raw_samples, requested_samples, seen_canonical, job_config=job_config)
             elif len(raw_samples) > requested_samples:
                 raw_samples = raw_samples[:requested_samples]
 

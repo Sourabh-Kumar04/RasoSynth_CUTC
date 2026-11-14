@@ -80,6 +80,7 @@ def generate_dbom_attestation(
     license_type: str = PROJECT_LICENSE,
     compliance_flags: Optional[Dict[str, Any]] = None,
     synthesis_mode: Optional[str] = "standard",
+    **kwargs: Any,
 ) -> Dict[str, Any]:
     """Generate tamper-evident cryptographic DBOM certificate for a dataset."""
     leaf_hashes = [compute_sample_hash(s) for s in samples]
@@ -122,11 +123,14 @@ def generate_dbom_attestation(
             cultural_safety_certified = None
 
     certificate_id = f"DBOM-{merkle_root[:12].upper()}"
+    dataset_id = kwargs.get("dataset_id")
+    sources = kwargs.get("sources") or flags.get("sources") or []
 
     dbom = {
         "dbom_version": "1.0.0",
         "certificate_id": certificate_id,
         "dataset_name": dataset_name,
+        "dataset_id": dataset_id,
         "domain": domain or "general",
         "language": language,
         "synthesis_mode": synthesis_mode or "standard",
@@ -146,6 +150,7 @@ def generate_dbom_attestation(
             "engine": "RasoSynthTune 2.0.0 Enterprise",
             "synthesis_mode": synthesis_mode or "standard",
             "license": license_type,
+            "sources": sources,
             "synthetic_pipeline": "deterministic_seedless_coverage",
             "tamper_verification_algorithm": "SHA-256 Merkle Tree",
         },

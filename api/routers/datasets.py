@@ -828,16 +828,19 @@ async def get_dataset_dbom(
 
     dbom = generate_dbom_attestation(
         dataset_name=domain,
-        dataset_id=job_id,
-        sample_count=sample_count,
+        samples=samples,
         domain=domain,
         language=config.get("language", "en"),
-        license_type=config.get("license", "ODC-By 1.0"),
+        license_type=config.get("license", "PolyForm-Noncommercial-1.0.0"),
+        compliance_flags={
+            "pii_entity_counts": pii_counts,
+            "statutory_compliance_act": config.get("statutory_compliance_act"),
+            "contamination_rate_pct": config.get("contamination_rate_pct"),
+            "diversity_entropy": config.get("diversity_entropy"),
+        },
+        synthesis_mode=config.get("synthesis_mode", "standard"),
+        dataset_id=job_id,
         sources=sources,
-        samples=samples,
-        pii_entity_counts=pii_counts,
-        contamination_score=0.012,
-        pipeline_version="2.0.0",
     )
     nutrition_label = generate_nutrition_label_markdown(dbom)
 
