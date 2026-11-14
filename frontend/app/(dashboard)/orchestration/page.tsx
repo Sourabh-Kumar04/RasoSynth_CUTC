@@ -326,15 +326,14 @@ export default function OrchestrationPage() {
 
                 {PIPELINE_STAGES.map((stage, i, arr) => {
                   const currentStage = selectedJob?.current_stage || ''
-                  const isCurrent = Boolean(selectedJob && currentStage && currentStage.includes(stage.id.split('_')[0]))
-                  const isPast = Boolean(selectedJob?.progress && (selectedJob.progress * arr.length > i))
+                  const liveNode = dagInfo?.nodes?.find((n: any) => n.id.includes(stage.id.split('_')[0]))
+                  const isCurrent = liveNode ? liveNode.status === 'running' : Boolean(selectedJob && currentStage && currentStage.includes(stage.id.split('_')[0]))
+                  const isPast = liveNode ? liveNode.status === 'completed' : Boolean(selectedJob?.progress && (selectedJob.progress * arr.length > i))
+                  const isFailed = liveNode?.status === 'failed'
 
                   // Check if node has active feedback loop capability
                   const hasFeedbackLoop = stage.id === 'preview_acceptance' || stage.id === 'filtering_quality' || stage.id === 'constructing_dataset'
                   const feedbackLabel = stage.id === 'preview_acceptance' ? '↺ Refine Query Loop' : stage.id === 'filtering_quality' ? '↺ Re-extract Loop' : '↺ Synthesis Loop'
-
-                  // Check duration from live DAG endpoint if matched
-                  const liveNode = dagInfo?.nodes?.find((n: any) => n.id.includes(stage.id.split('_')[0]))
 
                   return (
                     <div key={stage.id} className="flex items-center relative z-10">
@@ -344,7 +343,9 @@ export default function OrchestrationPage() {
                         title="Click to inspect node inputs, outputs, and logs"
                         className={clsx(
                           'w-40 p-3 rounded-md border transition-all cursor-pointer',
-                          isCurrent
+                          isFailed
+                            ? 'bg-[#1a0e12] border-rose-500/70 shadow-sm'
+                            : isCurrent
                             ? 'bg-[#161622] border-[#f26625] shadow-sm'
                             : isPast
                             ? 'bg-[#12121a] border-[#10b981]/50'
@@ -357,7 +358,7 @@ export default function OrchestrationPage() {
                           </span>
                           <span className={clsx(
                             'w-2 h-2 rounded-full',
-                            isCurrent ? 'bg-[#10b981] animate-pulse' : isPast ? 'bg-[#10b981]' : 'bg-[#a8a29e]'
+                            isFailed ? 'bg-rose-500' : isCurrent ? 'bg-[#10b981] animate-pulse' : isPast ? 'bg-[#10b981]' : 'bg-[#a8a29e]'
                           )} />
                         </div>
                         <h4 className="text-xs font-semibold text-white truncate">{stage.label}</h4>

@@ -75,10 +75,12 @@ async def get_orchestration_dag(
         "analyzing_constraints": "analyzing_constraints",
         "constraints": "analyzing_constraints",
         "query_optimizer": "query_optimizer",
+        "query_optimization": "query_optimizer",
         "query_opt": "query_optimizer",
         "early_preview": "early_preview",
         "awaiting_preview_approval": "early_preview",
         "preview": "early_preview",
+        "preview_acceptance": "early_preview",
         "discovery": "discovering_sources",
         "discovering": "discovering_sources",
         "discovering_sources": "discovering_sources",
@@ -112,6 +114,8 @@ async def get_orchestration_dag(
         "export": "exporting",
         "exporting": "exporting",
         "export_formatting": "exporting",
+        "completed": "exporting",
+        "failed": "constructing_dataset",
     }
 
     orchestrator = _get_orchestrator(req)
@@ -157,7 +161,21 @@ async def get_orchestration_dag(
         if isinstance(target_job, dict)
         else getattr(target_job, "status", None)
     ) if target_job else None
+    if hasattr(job_status, "value"):
+        job_status = job_status.value
+    if isinstance(job_status, str):
+        job_status = job_status.lower()
+
     normalized_active = stage_map.get(active_stage) if active_stage else None
+
+    active_idx = -1
+    if job_status == "completed":
+        active_idx = len(stage_order)
+    elif normalized_active and normalized_active in stage_order:
+        active_idx = stage_order.index(normalized_active)
+    elif target_job:
+        prog = float((target_job.get("progress") if isinstance(target_job, dict) else getattr(target_job, "progress", 0.0)) or 0.0)
+        active_idx = min(len(stage_order) - 1, max(0, int(prog * len(stage_order))))
 
     elapsed_ms = 0
     elapsed_basis = "no_job"
@@ -213,8 +231,7 @@ async def get_orchestration_dag(
     }
 
     nodes = []
-    found_active = False
-    for step_id in stage_order:
+    for i, step_id in enumerate(stage_order):
         weight = stage_weights.get(step_id, 0.08)
         measured_duration = max(50, int(elapsed_ms * weight))
 
@@ -225,21 +242,15 @@ async def get_orchestration_dag(
         elif job_status == "completed":
             status = "completed"
             duration = measured_duration
-        elif job_status == "failed" and normalized_active == step_id:
+        elif job_status == "failed" and i == active_idx:
             status = "failed"
             duration = measured_duration
-            found_active = True
-        elif normalized_active:
-            if step_id == normalized_active:
-                status = "running"
-                found_active = True
-                duration = measured_duration
-            elif not found_active:
-                status = "completed"
-                duration = measured_duration
-            else:
-                status = "pending"
-                duration = 0
+        elif i < active_idx:
+            status = "completed"
+            duration = measured_duration
+        elif i == active_idx:
+            status = "running"
+            duration = measured_duration
         else:
             status = "pending"
             duration = 0
