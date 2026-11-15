@@ -3,7 +3,7 @@ import uuid
 import os
 import hashlib
 from datetime import datetime, timezone, timedelta
-from typing import Optional
+from typing import Optional, Any
 
 def utc_now() -> datetime:
     """Return naive UTC datetime compatible with PostgreSQL asyncpg and SQLite."""

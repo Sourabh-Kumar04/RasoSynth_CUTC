@@ -89,7 +89,7 @@ class CreateFineTuneJobRequest(BaseModel):
     export_ollama: bool = Field(False, description="Generate Ollama Modelfile upon completion")
     system_prompt: str = Field("", description="System prompt for template")
     execution_target: str = Field(
-        "local",
+        default_factory=lambda: "modal" if os.getenv("MODAL_TOKEN_ID") and os.getenv("MODAL_TOKEN_SECRET") else "local",
         pattern="^(local|modal|runpod|serverless|colab|cloud_accelerated)$",
         description="Target execution backend ('local', 'colab', 'modal', 'runpod').",
     )
