@@ -296,7 +296,7 @@ export default function SettingsPage() {
               <div className="text-[#a8a29e] text-xs mt-1 flex flex-wrap items-center gap-3">
                 <span className="flex items-center gap-1.5">
                   <span className={`w-2 h-2 rounded-full ${isDbConnected ? 'bg-emerald-400' : 'bg-rose-400'}`} />
-                  Primary Database ({health?.database_engine === 'postgres' ? 'PostgreSQL' : 'SQLite'})
+                  Primary Database ({health?.database_engine === 'sqlite' ? 'SQLite' : 'Supabase PostgreSQL'})
                 </span>
                 <span className="flex items-center gap-1.5">
                   <span className={`w-2 h-2 rounded-full ${isRedisConnected && health?.redis === true ? 'bg-emerald-400' : 'bg-zinc-500'}`} />
@@ -463,7 +463,9 @@ export default function SettingsPage() {
                   <div className="p-3 rounded bg-[#0a0a0f] border border-[#272738]">
                     <div className="text-[#a8a29e] text-[10px] uppercase">Platform Stack</div>
                     <div className="text-[#f26625] font-bold text-sm mt-0.5">Next.js 14 + FastAPI</div>
-                    <div className="text-zinc-500 text-[10px]">SQLite + In-Memory Queue</div>
+                    <div className="text-zinc-500 text-[10px]">
+                      {health?.database_engine === 'sqlite' ? 'SQLite + In-Memory Queue' : 'Supabase PostgreSQL + Live Queue'}
+                    </div>
                   </div>
                 </div>
               </div>

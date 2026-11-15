@@ -341,12 +341,32 @@ async def lifespan(app: FastAPI):
         logger.warning(f"  ⚠ ObservabilityManager failed to initialize: {e}")
 
     # 3. Database
-    try:
-        db = AsyncDB()
-        await db.connect()
-        app.state.db = db
-        logger.info("  ✓ AsyncDB connected")
+    has_postgres = bool(
+        os.getenv("POSTGRES_URL") or
+        os.getenv("DATABASE_URL") or
+        os.getenv("SUPABASE_DATABASE_URL") or
+        os.getenv("SUPABASE_DB_URL") or
+        (getattr(settings, "postgres_url", None) and "sqlite" not in str(settings.postgres_url).lower())
+    )
 
+    db_connected = False
+    max_retries = 5 if has_postgres else 1
+    for attempt in range(1, max_retries + 1):
+        try:
+            db = AsyncDB()
+            await db.connect()
+            app.state.db = db
+            db_connected = True
+            logger.info("  ✓ AsyncDB connected to PostgreSQL (Supabase)")
+            break
+        except Exception as e:
+            if has_postgres and attempt < max_retries:
+                logger.warning(f"  ⚠ AsyncDB connection attempt {attempt}/{max_retries} failed ({e}); retrying in {attempt}s...")
+                await asyncio.sleep(attempt)
+            else:
+                logger.error(f"  ❌ AsyncDB connection failed: {e}")
+
+    if db_connected:
         # Auto-seed reference datasets if database is fresh/empty
         try:
             existing_datasets = await db.list_datasets(limit=1)
@@ -357,8 +377,11 @@ async def lifespan(app: FastAPI):
                 logger.info("  ✓ Reference demo datasets seeded successfully")
         except Exception as seed_err:
             logger.warning(f"  ⚠ Auto-seed reference datasets skipped: {seed_err}")
-    except Exception as e:
-        logger.warning(f"  ⚠ AsyncDB failed to connect to configured database: {e}. Falling back to persistent SQLite...")
+    elif has_postgres:
+        logger.error("  ❌ Fatal: PostgreSQL/Supabase database is configured but unreachable. SQLite fallback is disabled.")
+        raise RuntimeError("PostgreSQL connection to Supabase failed. SQLite fallback is disabled when POSTGRES_URL is provided.")
+    else:
+        logger.warning("  ⚠ No PostgreSQL URL configured; using persistent SQLite...")
         try:
             db = AsyncDB(database_url="sqlite+aiosqlite:///data/app.db")
             await db.connect()
@@ -456,13 +479,13 @@ async def lifespan(app: FastAPI):
 
     # 11. Checkpoint Manager & Store
     try:
-        from core.checkpoints import CheckpointManager, SQLiteCheckpointStore
-        checkpoint_store = SQLiteCheckpointStore()
+        from core.checkpoints import CheckpointManager, CheckpointStore
+        checkpoint_store = CheckpointStore(postgres_url=getattr(settings, "postgres_url", None), redis_url=getattr(settings, "redis_url", None))
         await checkpoint_store.initialize()
         checkpoint_manager = CheckpointManager(store=checkpoint_store, db=db)
         app.state.checkpoint_manager = checkpoint_manager
         app.state.checkpoint_store = checkpoint_store
-        logger.info("  ✓ CheckpointManager and SQLiteCheckpointStore initialized")
+        logger.info("  ✓ CheckpointManager and CheckpointStore initialized")
     except Exception as e:
         logger.warning(f"  ⚠ CheckpointManager failed to initialize: {e}")
 

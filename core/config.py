@@ -116,7 +116,7 @@ class Settings(BaseSettings):
     redis_url: str = Field(default="redis://redis:6379/0")
     postgres_url: str = Field(
         default="",
-        validation_alias=AliasChoices("postgres_url", "database_url")
+        validation_alias=AliasChoices("postgres_url", "database_url", "supabase_database_url", "supabase_db_url")
     )
 
     @field_validator("postgres_url", mode="before")
@@ -133,6 +133,8 @@ class Settings(BaseSettings):
         # asyncpg requires ?ssl=... instead of ?sslmode=...
         if "sslmode=" in val:
             val = val.replace("sslmode=", "ssl=")
+        if "pgbouncer=true" in val.lower():
+            val = val.replace("?pgbouncer=true", "").replace("&pgbouncer=true", "")
         return val
     # JWT Secret (required for security)
     jwt_secret: str = Field(default="")  # No default: JWT_SECRET env is required (see validate_production_secrets).

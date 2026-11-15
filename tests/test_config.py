@@ -59,3 +59,22 @@ def test_model_dump():
     assert "featherless_api_key" in dump
     assert "provider_priority" in dump
     assert "rate_limits" in dump
+
+
+def test_supabase_postgres_url_normalization():
+    """Verify Supabase PostgreSQL URLs with pooler params and sslmode normalize correctly."""
+    from core.db import DatabaseManager
+    # 1. Direct connection
+    s1 = Settings(postgres_url="postgresql://postgres:secret@db.projectref.supabase.co:5432/postgres?sslmode=require")
+    assert s1.postgres_url.startswith("postgresql+asyncpg://")
+    assert "sslmode=" not in s1.postgres_url
+
+    # 2. Transaction pooler with pgbouncer
+    s2 = Settings(postgres_url="postgresql://postgres.projectref:secret@aws-0-us-east-1.pooler.supabase.com:6543/postgres?sslmode=require&pgbouncer=true")
+    assert s2.postgres_url.startswith("postgresql+asyncpg://")
+    assert "pgbouncer" not in s2.postgres_url
+
+    # 3. DatabaseManager engine instantiation
+    mgr = DatabaseManager(s2.postgres_url)
+    assert mgr.is_postgresql is True
+    assert mgr.engine.url.drivername == "postgresql+asyncpg"

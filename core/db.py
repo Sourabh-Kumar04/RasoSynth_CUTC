@@ -496,17 +496,50 @@ class DatabaseManager:
     def __init__(self, database_url: str):
         connect_args = {}
         engine_kwargs = {}
-        if "postgresql" in database_url:
-            if "sslmode=" in database_url:
-                database_url = database_url.replace("sslmode=", "ssl=")
-            # Disable prepared statement caching for Supabase Connection Pooler / pgbouncer
+        if "postgresql" in database_url or "postgres" in database_url:
+            from sqlalchemy.engine.url import make_url
+            try:
+                url_obj = make_url(database_url)
+                if not url_obj.drivername.startswith("postgresql+asyncpg"):
+                    url_obj = url_obj._replace(drivername="postgresql+asyncpg")
+
+                query_params = dict(url_obj.query)
+                # Handle Supabase and PostgreSQL SSL requirements
+                if "sslmode" in query_params:
+                    mode = query_params.pop("sslmode")
+                    if mode in ("require", "prefer", "verify-ca", "verify-full"):
+                        connect_args["ssl"] = "require"
+                elif "ssl" in query_params:
+                    connect_args["ssl"] = query_params.pop("ssl")
+                else:
+                    if "supabase" in str(url_obj.host).lower():
+                        connect_args["ssl"] = "require"
+
+                # Strip query parameters not recognized by asyncpg.connect
+                is_pgbouncer = False
+                if "pgbouncer" in query_params:
+                    is_pgbouncer = str(query_params.pop("pgbouncer")).lower() in ("true", "1", "yes")
+                if "supa" in query_params:
+                    query_params.pop("supa")
+
+                url_obj = url_obj._replace(query=query_params)
+                database_url = url_obj.render_as_string(hide_password=False)
+
+                # Supabase transaction pooler (port 6543) or PgBouncer works best with NullPool
+                if url_obj.port == 6543 or is_pgbouncer or "pooler.supabase.com" in str(url_obj.host).lower():
+                    from sqlalchemy.pool import NullPool
+                    engine_kwargs["poolclass"] = NullPool
+                else:
+                    engine_kwargs["pool_size"] = 10
+                    engine_kwargs["max_overflow"] = 20
+                    engine_kwargs["pool_pre_ping"] = True
+                    engine_kwargs["pool_recycle"] = 3600
+            except Exception as parse_err:
+                import logging
+                logging.getLogger(__name__).warning("Error formatting PostgreSQL URL: %s", parse_err)
+
             connect_args["statement_cache_size"] = 0
             connect_args["prepared_statement_cache_size"] = 0
-            # Production PostgreSQL connection pooling and health checks
-            engine_kwargs["pool_size"] = 10
-            engine_kwargs["max_overflow"] = 20
-            engine_kwargs["pool_pre_ping"] = True
-            engine_kwargs["pool_recycle"] = 3600
         else:
             connect_args["check_same_thread"] = False
             if ":memory:" in database_url:
@@ -520,7 +553,7 @@ class DatabaseManager:
                 except Exception:
                     pass
         self.database_url = database_url
-        self.is_postgresql = "postgresql" in database_url
+        self.is_postgresql = "postgresql" in database_url or "postgres" in database_url
         self.engine = create_async_engine(database_url, echo=False, connect_args=connect_args, **engine_kwargs)
         self.session_maker = async_sessionmaker(self.engine, class_=AsyncSession, expire_on_commit=False)
 
@@ -1642,12 +1675,21 @@ class AsyncDB:
             self.db = db_manager
         else:
             if not database_url:
-                try:
-                    from core.config import get_settings
-                    s = get_settings()
-                    database_url = getattr(s, "database_url", None) or getattr(s, "postgres_url", None)
-                except Exception:
-                    database_url = None
+                env_url = (
+                    os.getenv("POSTGRES_URL") or
+                    os.getenv("DATABASE_URL") or
+                    os.getenv("SUPABASE_DATABASE_URL") or
+                    os.getenv("SUPABASE_DB_URL")
+                )
+                if env_url and env_url.strip():
+                    database_url = env_url.strip()
+                else:
+                    try:
+                        from core.config import get_settings
+                        s = get_settings()
+                        database_url = getattr(s, "database_url", None) or getattr(s, "postgres_url", None)
+                    except Exception:
+                        database_url = None
                 if not database_url:
                     database_url = "sqlite+aiosqlite:///data/app.db"
             self.db = DatabaseManager(database_url)

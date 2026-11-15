@@ -27,9 +27,10 @@ services:
       # JWT Authentication (Auto-generated 64-char cryptographically secure secret)
       - key: JWT_SECRET
         generateValue: true
-      # Database: Remote PostgreSQL connection string (e.g. Neon, Supabase, Render Postgres)
-      # If left empty, the server automatically defaults to SQLite.
+      # Database: Remote PostgreSQL connection string (e.g. Supabase, Neon)
       - key: POSTGRES_URL
+        sync: false
+      - key: DATABASE_URL
         sync: false
       # AI Provider API Keys from your .env
       - key: GOOGLE_API_KEY

@@ -203,7 +203,7 @@ export default function DashboardPage() {
             } else if (isBackendDegraded || isBackendStandby) {
               items.push({
                 label: 'Live services active (standalone / local)',
-                qualifier: 'SQLite storage active; Redis / Cloud LLM offline.',
+                qualifier: 'Supabase PostgreSQL storage active; Cloud LLM offline.',
                 tone: 'warn' as const,
               })
             } else if (someSourcesFailed) {

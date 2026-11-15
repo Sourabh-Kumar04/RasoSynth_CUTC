@@ -69,10 +69,14 @@ async def health_check(request: Request):
     db_engine_name = "postgresql"
     if db and hasattr(db, "db") and hasattr(db.db, "engine"):
         driver = str(getattr(db.db.engine.url, "drivername", "")).lower()
+        host = str(getattr(db.db.engine.url, "host", "")).lower()
         if "sqlite" in driver:
             db_engine_name = "sqlite"
         elif "postgres" in driver or "asyncpg" in driver:
-            db_engine_name = "postgresql"
+            if "supabase" in host:
+                db_engine_name = "supabase_postgresql"
+            else:
+                db_engine_name = "postgresql"
 
     system_metrics: dict[str, Any] = {}
     try:
