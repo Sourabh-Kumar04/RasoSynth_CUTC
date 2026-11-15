@@ -2284,8 +2284,13 @@ dataset_samples_generated_total 4520`
     return this.request<any>('/api/quality/trends', { params: { days } })
   }
 
-  async getQualityDistributions() {
-    return this.request<any>('/api/quality/distributions')
+  async getQualityDistributions(params?: { job_id?: string; limit?: number; offset?: number }) {
+    const q = new URLSearchParams()
+    if (params?.job_id) q.set('job_id', params.job_id)
+    if (params?.limit) q.set('limit', String(params.limit))
+    if (params?.offset) q.set('offset', String(params.offset))
+    const query = q.toString()
+    return this.request<any>(query ? `/api/quality/distributions?${query}` : '/api/quality/distributions')
   }
 
   async getQualitySources() {

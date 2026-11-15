@@ -1140,7 +1140,16 @@ export default function ZenPortalPage() {
           </div>
 
           <div className="pt-8 border-t border-[#1c1c28]/60 flex flex-col sm:flex-row items-center justify-between text-xs font-mono text-zinc-500 gap-4">
-            <p>© 2026 RasoSynthTune · Enterprise Synthetic Data &amp; Alignment</p>
+            <div className="flex items-center gap-2">
+              <p>© 2026 RasoSynthTune · Enterprise Synthetic Data &amp; Alignment</p>
+              <span>·</span>
+              <span>v{process.env.NEXT_PUBLIC_APP_VERSION || '2.0.0'}</span>
+              {process.env.NEXT_PUBLIC_GIT_COMMIT_SHA && (
+                <span className="px-1.5 py-0.5 rounded bg-white/[0.04] border border-white/10 text-[10px] text-zinc-400 font-bold">
+                  {process.env.NEXT_PUBLIC_GIT_COMMIT_SHA}
+                </span>
+              )}
+            </div>
             <div className="flex items-center space-x-3 text-zinc-400">
               <Link href="/studio" className="hover:text-white transition-colors">
                 Launch Studio →

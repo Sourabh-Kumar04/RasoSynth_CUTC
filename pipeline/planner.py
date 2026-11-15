@@ -28,9 +28,16 @@ class DatasetPlanner:
 
     async def create_plan(self, prompt: str) -> DatasetPlan:
         """Analyze user prompt and extract a structured plan using the LLM."""
+        target_lang = str(self.config.get("language", "en")).lower().strip()
+        lang_directive = (
+            f" The target language is strictly '{target_lang}'. Do NOT vary languages or propose non-{target_lang} languages in diversity_attributes."
+            if target_lang
+            else ""
+        )
         system_prompt = (
             "You are an expert ML/AI data architect. Analyze the user prompt to build a comprehensive, structured plan for generating a high-quality dataset "
-            "following enterprise curriculum design (Domain, 35/45/20 difficulty split, Structural Invariants, and Anti-Domain boundaries). "
+            "following enterprise curriculum design (Domain, 35/45/20 difficulty split, Structural Invariants, and Anti-Domain boundaries)."
+            f"{lang_directive} "
             "Output ONLY a valid JSON object matching the schema: "
             "{\n"
             "  \"domain\": \"string\",\n"
@@ -83,6 +90,15 @@ class DatasetPlanner:
                             sanitized_attrs[k] = v
                         else:
                             sanitized_attrs[k] = [str(v)]
+                    
+                    # Strictly prevent language drift if target language is specified
+                    if target_lang in ("en", "english"):
+                        if "language" in sanitized_attrs:
+                            sanitized_attrs["language"] = ["English"]
+                    elif target_lang:
+                        if "language" in sanitized_attrs:
+                            sanitized_attrs["language"] = [target_lang]
+
                     data["diversity_attributes"] = sanitized_attrs
 
                 return DatasetPlan(**data)

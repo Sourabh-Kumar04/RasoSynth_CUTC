@@ -337,7 +337,18 @@ export default function ProvidersPage() {
                                   Priority #{idx + 1} {idx === 0 ? '(Primary)' : '(Fallback)'}
                                 </span>
                               </div>
-                              <p className={clsx('text-xs font-mono uppercase mt-0.5', statusVariant(p.status))}>{p.status}</p>
+                              {(() => {
+                                const effectiveStatus = testResults[p.name]?.ok === false
+                                  ? 'unreachable'
+                                  : testResults[p.name]?.ok === true
+                                  ? 'available'
+                                  : p.status;
+                                return (
+                                  <p className={clsx('text-xs font-mono uppercase mt-0.5', statusVariant(effectiveStatus))}>
+                                    {effectiveStatus}
+                                  </p>
+                                );
+                              })()}
                             </div>
                           </div>
 

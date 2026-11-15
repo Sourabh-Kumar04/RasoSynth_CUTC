@@ -11,12 +11,13 @@ interface Distribution {
   is_reference?: boolean;
 }
 
-export default function QualityScoreChart() {
+export default function QualityScoreChart({ jobId }: { jobId?: string }) {
   const [data, setData] = useState<Distribution | null>(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    api.getQualityDistributions()
+    setLoading(true);
+    api.getQualityDistributions(jobId ? { job_id: jobId } : undefined)
       .then((res: any) => {
         const mockMode = typeof window !== 'undefined' && localStorage.getItem('mockMode') === 'true';
         if (!res || res.total_scores === 0) {
@@ -29,7 +30,7 @@ export default function QualityScoreChart() {
         setData(null);
       })
       .finally(() => setLoading(false));
-  }, []);
+  }, [jobId]);
 
   if (loading) {
     return (

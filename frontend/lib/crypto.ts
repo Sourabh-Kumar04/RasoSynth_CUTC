@@ -84,14 +84,15 @@ export function computeSha256(str: string): string {
   return sha256Sync(str)
 }
 
-export function computeSampleHash(sample: { instruction?: string; response?: string; input?: string }): string {
+export function computeSampleHash(sample: { instruction?: string; response?: string; input?: string; metadata?: any }): string {
   const canonical = {
     input: sample.input ? String(sample.input).trim() : '',
     instruction: String(sample.instruction || '').trim(),
+    metadata: (sample.metadata && typeof sample.metadata === 'object') ? sample.metadata : {},
     response: String(sample.response || '').trim(),
   }
   // Deterministic JSON string matching python's json.dumps(..., sort_keys=True, separators=(',', ':'))
-  const serialized = `{"input":${JSON.stringify(canonical.input)},"instruction":${JSON.stringify(canonical.instruction)},"response":${JSON.stringify(canonical.response)}}`
+  const serialized = JSON.stringify(canonical, Object.keys(canonical).sort())
   return computeSha256(serialized)
 }
 

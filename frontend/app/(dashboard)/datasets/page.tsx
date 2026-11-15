@@ -46,6 +46,7 @@ import { Mascot } from '@/components/ui/mascot'
 import { Input } from '@/components/ui/input'
 import { Badge } from '@/components/ui/badge'
 import { Progress } from '@/components/ui/progress'
+import { toast } from '@/components/ui/toaster'
 import {
   DropdownMenu,
   DropdownMenuTrigger,
@@ -534,6 +535,7 @@ export default function DatasetsPage() {
       a.click()
       window.URL.revokeObjectURL(url)
       document.body.removeChild(a)
+      toast.success('Download Initiated', `Saving dataset-${datasetId.slice(0, 8)}.${format}`)
     } catch (err: any) {
       console.error('Download failed:', err)
       const msg = err?.message || ''
@@ -816,7 +818,30 @@ export default function DatasetsPage() {
                 </TableRow>
               </TableHeader>
               <TableBody className="divide-y divide-[#272738]">
-                {filteredDatasets.map((dataset) => {
+                {filteredDatasets.length === 0 ? (
+                  <TableRow>
+                    <TableCell colSpan={10} className="h-44 text-center">
+                      <div className="flex flex-col items-center justify-center gap-2 text-[#a8a29e] font-mono text-xs py-8">
+                        <Search className="h-6 w-6 text-zinc-600 mb-1" />
+                        <p className="font-bold text-white text-sm">No datasets found matching your search</p>
+                        <p className="text-zinc-500 text-[11px]">
+                          {search ? `No results for "${search}". Try adjusting your keywords or clearing the filter.` : "No datasets match the current filter selection."}
+                        </p>
+                        {search && (
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => setSearch('')}
+                            className="mt-2 h-7 text-xs font-mono border-[#272738] text-[#f26625] hover:bg-[#161622]"
+                          >
+                            Clear Search Filter
+                          </Button>
+                        )}
+                      </div>
+                    </TableCell>
+                  </TableRow>
+                ) : (
+                  filteredDatasets.map((dataset) => {
                   const ModalityIcon = modalityIcons[dataset.modality as keyof typeof modalityIcons] || FileText
                   return (
                     <TableRow
@@ -980,6 +1005,13 @@ export default function DatasetsPage() {
                               </Button>
                             </DropdownMenuTrigger>
                             <DropdownMenuContent align="end" className="w-48 bg-[#12121a] border-[#272738] text-white text-xs font-mono shadow-xl z-50">
+                              <DropdownMenuItem
+                                onClick={() => handleDownload(dataset.id, 'jsonl')}
+                                className="cursor-pointer hover:bg-[#161622] focus:bg-[#161622] flex items-center gap-2 py-1.5 text-emerald-400 focus:text-emerald-400 font-bold"
+                              >
+                                <Download className="h-3.5 w-3.5 text-emerald-400" />
+                                <span>Download JSONL</span>
+                              </DropdownMenuItem>
                               {dataset.records > 0 && (
                                 <DropdownMenuItem
                                   onClick={() => router.push(`/finetune?dataset=${dataset.id}`)}
@@ -1031,7 +1063,7 @@ export default function DatasetsPage() {
                       </TableCell>
                     </TableRow>
                   )
-                })}
+                }))}
               </TableBody>
             </Table>
           </div>
@@ -1040,8 +1072,25 @@ export default function DatasetsPage() {
 
       {/* Datasets View: Card Grid */}
       {datasets.length > 0 && viewMode === 'grid' && (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-          {filteredDatasets.map((dataset) => {
+        filteredDatasets.length === 0 ? (
+          <div className="py-16 text-center text-[#a8a29e] font-mono text-xs border border-[#272738] rounded-md bg-[#12121a]">
+            <Search className="h-6 w-6 text-zinc-600 mx-auto mb-2" />
+            <p className="font-bold text-white text-sm">No datasets found matching your search</p>
+            <p className="text-zinc-500 text-[11px] mt-1">Try adjusting your keywords or clearing filters.</p>
+            {search && (
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => setSearch('')}
+                className="mt-3 h-7 text-xs font-mono border-[#272738] text-[#f26625] hover:bg-[#161622]"
+              >
+                Clear Search Filter
+              </Button>
+            )}
+          </div>
+        ) : (
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+            {filteredDatasets.map((dataset) => {
             const ModalityIcon = modalityIcons[dataset.modality as keyof typeof modalityIcons] || FileText
             return (
               <Card
@@ -1172,6 +1221,13 @@ export default function DatasetsPage() {
                         </Button>
                       </DropdownMenuTrigger>
                       <DropdownMenuContent align="end" className="w-48 bg-[#12121a] border-[#272738] text-white text-xs font-mono shadow-xl z-50">
+                        <DropdownMenuItem
+                          onClick={() => handleDownload(dataset.id, 'jsonl')}
+                          className="cursor-pointer hover:bg-[#161622] focus:bg-[#161622] flex items-center gap-2 py-1.5 text-emerald-400 focus:text-emerald-400 font-bold"
+                        >
+                          <Download className="h-3.5 w-3.5 text-emerald-400" />
+                          <span>Download JSONL</span>
+                        </DropdownMenuItem>
                         {dataset.records > 0 && (
                           <DropdownMenuItem
                             onClick={() => router.push(`/finetune?dataset=${dataset.id}`)}
@@ -1225,6 +1281,7 @@ export default function DatasetsPage() {
             )
           })}
         </div>
+        )
       )}
 
       {/* Floating Multi-Dataset Batch Exporter HUD */}

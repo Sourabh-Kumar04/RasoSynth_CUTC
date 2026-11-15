@@ -625,7 +625,7 @@ class ProviderRouter:
         healthy_names = set(self.get_healthy_providers())
         return {
             name: {
-                "available": (name in healthy_names) or (s.requests == 0 and name in self._providers),
+                "available": (name in healthy_names) if (name in self._success_rates and len(self._success_rates[name]) > 0) else (s.requests == 0 and name in self._providers),
                 "requests": s.requests,
                 "failures": len([r for r in self._success_rates.get(name, []) if not r]),
                 "total_tokens": s.total_tokens,

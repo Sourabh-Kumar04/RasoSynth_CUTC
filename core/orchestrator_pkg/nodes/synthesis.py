@@ -238,7 +238,17 @@ class SynthesisNodeMixin:
                                 and len(sample.instruction.strip()) > 5
                                 and len(sample.response.strip()) > 5
                             ):
-                                return sample
+                                # Strict Language/Script Gate: Never bypass language conformity even on final retry
+                                from core.validation.cultural_guardrails import validate_script_conformity
+                                target_lang = str(config.get("language") or "en").lower().strip()
+                                target_script = str(config.get("script_mode") or "native").lower().strip()
+                                is_script_ok, _ = validate_script_conformity(
+                                    f"{sample.instruction} {sample.response}",
+                                    target_lang,
+                                    target_script,
+                                )
+                                if is_script_ok:
+                                    return sample
                         else:
                             logger.debug(
                                 f"Sample validation failed (attempt {attempt+1}/{max_attempts}): "
@@ -301,6 +311,15 @@ class SynthesisNodeMixin:
                             derived_src = "https://incometaxindia.gov.in/pages/rules.aspx"
                         elif "aerospace" in domain_kw or "isro" in domain_kw:
                             derived_src = "https://www.isro.gov.in"
+                        elif any(kw in domain_kw for kw in ["ayushman", "pmjay", "pm-jay", "abdm", "health insurance", "national health authority", "nha", "mohfw", "health", "hospital", "medical"]):
+                            if "abdm" in domain_kw:
+                                derived_src = "https://abdm.gov.in"
+                            elif "mohfw" in domain_kw or "ministry of health" in domain_kw:
+                                derived_src = "https://mohfw.gov.in"
+                            elif "nha" in domain_kw or "national health authority" in domain_kw:
+                                derived_src = "https://nha.gov.in"
+                            else:
+                                derived_src = "https://pmjay.gov.in"
                         elif any(kw in domain_kw for kw in ["stock", "market", "nse", "bse", "sebi", "share", "invest", "trading", "equity"]):
                             if "bse" in domain_kw or "bombay" in domain_kw:
                                 derived_src = "https://www.bseindia.com"
@@ -308,11 +327,19 @@ class SynthesisNodeMixin:
                                 derived_src = "https://www.sebi.gov.in"
                             else:
                                 derived_src = "https://www.nseindia.com"
+                        elif "aadhaar" in domain_kw or "uidai" in domain_kw:
+                            derived_src = "https://uidai.gov.in"
+                        elif "meity" in domain_kw or "digital india" in domain_kw:
+                            derived_src = "https://www.meity.gov.in"
+                        elif "education" in domain_kw or "ugc" in domain_kw or "cbse" in domain_kw or "ncert" in domain_kw:
+                            derived_src = "https://www.education.gov.in"
                         elif target_domain_str.startswith("http"):
                             derived_src = target_domain_str
                         elif state.get("sources") and len(state["sources"]) > 0:
                             first_s = state["sources"][0]
                             derived_src = first_s.get("url") if isinstance(first_s, dict) else getattr(first_s, "url", "")
+                            if not derived_src or derived_src == "https://data.gov.in":
+                                derived_src = "https://data.gov.in"
                         else:
                             derived_src = "https://data.gov.in"
 

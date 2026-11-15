@@ -146,18 +146,18 @@ export function Mascot({
         width: dims.width,
         height: dims.height,
         background: "transparent",
+        isolation: "isolate",
       }}
       role="img"
       aria-label={altText}
       onClick={interactive ? handleClick : undefined}
     >
-      {/* Contrast guardian halo: ensures white robot body and helmet stand out cleanly on any light or dark background */}
+      {/* Subtle brand glow (never dark blotches) */}
       <div
-        className="absolute inset-1 -z-10 rounded-full pointer-events-none"
+        className="absolute inset-2 -z-10 rounded-full pointer-events-none opacity-40"
         style={{
-          background:
-            "radial-gradient(circle at 50% 52%, rgba(14, 13, 22, 0.72) 0%, rgba(10, 10, 16, 0.45) 55%, transparent 75%)",
-          filter: "blur(10px)",
+          background: "radial-gradient(circle at 50% 50%, rgba(242, 102, 37, 0.12) 0%, transparent 70%)",
+          filter: "blur(12px)",
         }}
       />
 
@@ -167,13 +167,19 @@ export function Mascot({
         alt=""
         width={dims.width}
         height={dims.height}
+        onError={(e) => {
+          const target = e.currentTarget
+          if (target.src.endsWith('.webp')) {
+            target.src = target.src.replace(/\.webp$/, '.png')
+          }
+        }}
         style={{
           width: dims.width,
           height: dims.height,
           objectFit: "contain",
           background: "transparent",
           display: "block",
-          filter: "drop-shadow(0 8px 24px rgba(242, 102, 37, 0.15))",
+          filter: "drop-shadow(0 4px 16px rgba(242, 102, 37, 0.15))",
         }}
       />
     </div>

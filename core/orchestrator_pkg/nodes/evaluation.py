@@ -388,12 +388,9 @@ class EvaluationNodeMixin:
             "domain_correctness": round(avg_domain, 3),
         }
         
+        # Uniform arithmetic mean across all 5 verified dimensions (5D Rubric Mean)
         composite_score = round(
-            (avg_topic * 0.25) +
-            (avg_grounding * 0.25) +
-            (avg_clarity * 0.15) +
-            (avg_completeness * 0.15) +
-            (avg_domain * 0.20),
+            (avg_topic + avg_grounding + avg_clarity + avg_completeness + avg_domain) / 5.0,
             3
         )
         quality_breakdown["composite"] = composite_score

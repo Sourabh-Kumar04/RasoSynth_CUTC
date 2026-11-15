@@ -131,11 +131,16 @@ export function HealthMonitor({ className }: ProviderHealthProps) {
                 </div>
                 <div className="flex items-center gap-2 p-2">
                   <Server className="h-4 w-4 text-muted-foreground" />
-                  <span className="text-sm">Redis</span>
-                  {(healthStatus?.redis ?? healthStatus?.checks?.redis === 'ready') ? (
-                    <CheckCircle2 className="h-3 w-3 text-green-500 ml-auto" />
+                  {healthStatus?.redis || healthStatus?.checks?.redis === 'ready' ? (
+                    <>
+                      <span className="text-sm">Redis</span>
+                      <CheckCircle2 className="h-3 w-3 text-green-500 ml-auto" />
+                    </>
                   ) : (
-                    <AlertCircle className="h-3 w-3 text-red-500 ml-auto" />
+                    <>
+                      <span className="text-sm">In-Memory Queue</span>
+                      <CheckCircle2 className="h-3 w-3 text-emerald-400 ml-auto" />
+                    </>
                   )}
                 </div>
               </div>

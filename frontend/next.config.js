@@ -1,9 +1,24 @@
 const path = require('path')
+const { execSync } = require('child_process')
+
+let gitCommit = process.env.VERCEL_GIT_COMMIT_SHA || process.env.NEXT_PUBLIC_GIT_COMMIT_SHA || ''
+if (!gitCommit) {
+  try {
+    gitCommit = execSync('git rev-parse --short HEAD').toString().trim()
+  } catch {
+    gitCommit = 'dev'
+  }
+}
+const shortCommit = gitCommit ? gitCommit.slice(0, 7) : 'dev'
 
 /** @type {import('next').NextConfig} */
 const nextConfig = {
   reactStrictMode: true,
   output: "standalone",
+  env: {
+    NEXT_PUBLIC_GIT_COMMIT_SHA: shortCommit,
+    NEXT_PUBLIC_APP_VERSION: '2.0.0',
+  },
   images: {
     // P0: the previous wildcard ('**') let Next.js optimise (and thereby
     // proxy) images from ANY https host. No remote images are used anywhere
@@ -23,6 +38,11 @@ const nextConfig = {
       {
         source: '/telemetry',
         destination: '/observability',
+        permanent: true,
+      },
+      {
+        source: '/models',
+        destination: '/finetune',
         permanent: true,
       },
     ]

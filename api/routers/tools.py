@@ -254,12 +254,49 @@ async def tool_verify_dbom(
 ):
     """Cryptographically verify dataset against its DBOM certificate."""
     from core.export.dbom_attestor import verify_dataset_dbom
+    import json
+    from pathlib import Path
 
     samples = _tool_list(request.get("samples") or [], "samples")
     certificate = _tool_dict(request.get("dbom_certificate") or {}, "dbom_certificate")
+    merkle_root = request.get("merkle_root") or request.get("merkle_root_hash")
+    job_id = request.get("job_id") or request.get("dataset_id")
+
+    if not certificate and merkle_root:
+        certificate = {"merkle_root_hash": merkle_root}
+
+    # If job_id is provided, prioritize loading canonical records from disk or DB
+    if job_id:
+        try:
+            import api.server as server_mod
+            resolve_disk_fn = getattr(server_mod, "_resolve_dynamic_disk_dataset", None)
+            disk_info = resolve_disk_fn(job_id) if resolve_disk_fn else None
+            if disk_info and Path(disk_info["output_path"]).exists():
+                disk_samples = []
+                with open(disk_info["output_path"], "r", encoding="utf-8") as f:
+                    for line in f:
+                        if line.strip():
+                            disk_samples.append(json.loads(line))
+                if disk_samples:
+                    samples = disk_samples
+            if not samples:
+                db_mgr = getattr(server_mod, "db", None)
+                if db_mgr and db_mgr.db:
+                    datasets = await db_mgr.db.get_datasets_by_job(job_id)
+                    all_s = []
+                    for ds in datasets:
+                        s_list = await db_mgr.db.get_samples(ds["id"], limit=50000)
+                        all_s.extend(s_list)
+                    if all_s:
+                        samples = all_s
+        except Exception as e:
+            logger.warning("Failed to load canonical disk/DB samples for DBOM verification of job %s: %s", job_id, e)
+
     if not samples or not certificate:
-        raise HTTPException(status_code=400, detail="Fields 'samples' and 'dbom_certificate' are required.")
-    return verify_dataset_dbom(samples=samples, dbom_certificate=certificate)
+        raise HTTPException(status_code=400, detail="Fields 'samples' (or valid 'job_id') and 'dbom_certificate' are required.")
+    res = verify_dataset_dbom(samples=samples, dbom_certificate=certificate)
+    res["verified"] = res.get("is_valid", False)
+    return res
 
 
 @router.post("/tools/generate-contrastive-pair")

@@ -196,9 +196,8 @@ function DbomContent() {
           api.getJobRecords(selectedDatasetId, 100),
         ])
 
-        const certObj = (dbomRes.status === 'fulfilled' && (dbomRes.value?.dbom || (dbomRes.value as any)?.dbom_certificate))
-          ? (dbomRes.value?.dbom || (dbomRes.value as any)?.dbom_certificate)
-          : null
+        const rawVal = dbomRes.status === 'fulfilled' ? dbomRes.value : null
+        const certObj = ((rawVal as any)?.dbom || (rawVal as any)?.dbom_certificate || ((rawVal as any)?.merkle_root_hash ? rawVal : null)) || null
 
         if (certObj) {
           const rawVal = dbomRes.status === 'fulfilled' ? dbomRes.value : null
@@ -571,6 +570,7 @@ function DbomContent() {
                       a.click()
                       document.body.removeChild(a)
                       URL.revokeObjectURL(url)
+                      toast(`Exported DBOM attestation certificate (${certToExport.certificate_id || 'JSON'})`, true)
                     }}
                     className="h-7 text-xs font-mono border-[#272738] text-zinc-300 hover:text-white cursor-pointer"
                   >

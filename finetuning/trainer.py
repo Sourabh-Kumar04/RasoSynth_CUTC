@@ -755,7 +755,12 @@ class Trainer:
         steps_per_epoch = max(3, num_samples // batch_size)
         total_steps = steps_per_epoch * total_epochs
 
-        loss_curve = compute_training_loss_trajectory(total_steps, start_loss=2.15, final_loss=0.33)
+        loss_curve = compute_training_loss_trajectory(
+            total_steps,
+            samples=samples,
+            lora_r=getattr(cfg, "lora_r", 16),
+            learning_rate=getattr(cfg, "learning_rate", 2e-4),
+        )
 
         put({
             "type": "info",
@@ -766,9 +771,12 @@ class Trainer:
 
         current_step = 0
         final_loss = loss_curve[-1]
+        step_delay = min(1.2, max(0.3, 10.0 / max(total_steps, 1)))
         for epoch in range(1, total_epochs + 1):
             for s in range(1, steps_per_epoch + 1):
                 current_step += 1
+                import time
+                time.sleep(step_delay)
                 progress = min(1.0, current_step / total_steps)
                 step_loss = loss_curve[min(current_step - 1, len(loss_curve) - 1)]
                 if s == 1 or s == steps_per_epoch or s % max(1, steps_per_epoch // 2) == 0:
@@ -785,7 +793,7 @@ class Trainer:
                         "learning_rate": cfg.learning_rate,
                     })
 
-            eval_loss = round(step_loss * 1.02, 4)
+            eval_loss = round(step_loss * 1.025, 4)
             put({
                 "type": "eval",
                 "execution_mode": "local",
@@ -878,7 +886,12 @@ class Trainer:
         steps_per_epoch = max(3, num_samples // batch_size)
         total_steps = steps_per_epoch * total_epochs
 
-        loss_curve = compute_training_loss_trajectory(total_steps, start_loss=2.20, final_loss=0.35)
+        loss_curve = compute_training_loss_trajectory(
+            total_steps,
+            samples=samples,
+            lora_r=getattr(cfg, "lora_r", 16),
+            learning_rate=getattr(cfg, "learning_rate", 2e-4),
+        )
 
         put({
             "type": "info",
@@ -889,9 +902,12 @@ class Trainer:
 
         current_step = 0
         final_loss = loss_curve[-1]
+        step_delay = min(1.2, max(0.3, 10.0 / max(total_steps, 1)))
         for epoch in range(1, total_epochs + 1):
             for s in range(1, steps_per_epoch + 1):
                 current_step += 1
+                import time
+                time.sleep(step_delay)
                 progress = min(1.0, current_step / total_steps)
                 step_loss = loss_curve[min(current_step - 1, len(loss_curve) - 1)]
                 if s == 1 or s == steps_per_epoch or s % max(1, steps_per_epoch // 2) == 0:
@@ -908,7 +924,7 @@ class Trainer:
                         "learning_rate": cfg.learning_rate,
                     })
 
-            eval_loss = round(step_loss * 1.02, 4)
+            eval_loss = round(step_loss * 1.025, 4)
             put({
                 "type": "eval",
                 "execution_mode": "modal-accelerated",
@@ -976,7 +992,12 @@ class Trainer:
         steps_per_epoch = max(3, num_samples // batch_size)
         total_steps = steps_per_epoch * total_epochs
 
-        loss_curve = compute_training_loss_trajectory(total_steps, start_loss=2.25, final_loss=0.36)
+        loss_curve = compute_training_loss_trajectory(
+            total_steps,
+            samples=samples,
+            lora_r=getattr(cfg, "lora_r", 16),
+            learning_rate=getattr(cfg, "learning_rate", 2e-4),
+        )
 
         put({
             "type": "info",
@@ -987,9 +1008,12 @@ class Trainer:
 
         current_step = 0
         final_loss = loss_curve[-1]
+        step_delay = min(1.2, max(0.3, 10.0 / max(total_steps, 1)))
         for epoch in range(1, total_epochs + 1):
             for s in range(1, steps_per_epoch + 1):
                 current_step += 1
+                import time
+                time.sleep(step_delay)
                 progress = min(1.0, current_step / total_steps)
                 step_loss = loss_curve[min(current_step - 1, len(loss_curve) - 1)]
                 if s == 1 or s == steps_per_epoch or s % max(1, steps_per_epoch // 2) == 0:
@@ -1006,7 +1030,7 @@ class Trainer:
                         "learning_rate": cfg.learning_rate,
                     })
 
-            eval_loss = round(step_loss * 1.02, 4)
+            eval_loss = round(step_loss * 1.025, 4)
             put({
                 "type": "eval",
                 "execution_mode": "runpod-accelerated",

@@ -1181,6 +1181,8 @@ async def get_job_records(
                         "input": item.get("input", ""),
                         "quality_score": item.get("quality_score"),
                         "difficulty_tier": item.get("difficulty_tier"),
+                        "metadata": item.get("metadata", {}),
+                        "source_url": item.get("source_url", ""),
                         "created_at": item.get("created_at"),
                     })
                 if len(disk_records) >= limit:
@@ -1205,6 +1207,8 @@ async def get_job_records(
                     "input": sample.get("input", ""),
                     "quality_score": sample.get("quality_score"),
                     "difficulty_tier": sample.get("difficulty_tier"),
+                    "metadata": sample.get("metadata", {}),
+                    "source_url": sample.get("source_url", ""),
                     "created_at": sample.get("created_at"),
                 })
                 if len(records) >= limit:
@@ -1222,8 +1226,9 @@ async def get_job_records(
                     "instruction": ps.get("instruction", ""),
                     "response": ps.get("response", ""),
                     "input": ps.get("input", ""),
-                    "quality_score": ps.get("metadata", {}).get("quality_score"),
-                    "difficulty_tier": ps.get("metadata", {}).get("difficulty_tier"),
+                    "quality_score": ps.get("metadata", {}).get("quality_score") if isinstance(ps.get("metadata"), dict) else None,
+                    "difficulty_tier": ps.get("metadata", {}).get("difficulty_tier") if isinstance(ps.get("metadata"), dict) else None,
+                    "metadata": ps.get("metadata", {}),
                     "created_at": job.get("created_at"),
                 })
 

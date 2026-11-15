@@ -31,9 +31,16 @@ export default function DashboardLayout({
               <FooterStatus />
             </div>
 
-            {/* Right: Copyright */}
-            <div className="text-xs text-zinc-500">
-              © 2026 RasoSynthTune
+            {/* Right: Copyright & Commit Hash */}
+            <div className="flex items-center gap-2 text-xs text-zinc-500 font-mono">
+              <span>© 2026 RasoSynthTune</span>
+              <span>·</span>
+              <span>v{process.env.NEXT_PUBLIC_APP_VERSION || '2.0.0'}</span>
+              {process.env.NEXT_PUBLIC_GIT_COMMIT_SHA && (
+                <span className="px-1.5 py-0.5 rounded bg-white/[0.04] border border-white/10 text-[10px] text-zinc-400 font-bold">
+                  {process.env.NEXT_PUBLIC_GIT_COMMIT_SHA}
+                </span>
+              )}
             </div>
           </div>
         </footer>

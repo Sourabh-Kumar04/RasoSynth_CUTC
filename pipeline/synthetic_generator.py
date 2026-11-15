@@ -393,6 +393,8 @@ class SeedlessGenerator:
 
         # Clean internal metadata markers from cell dict
         clean_cell = {k: v for k, v in cell.items() if not str(k).startswith("_")}
+        if lang in ("en", "english") and "language" in clean_cell:
+            clean_cell["language"] = "English"
 
         user_message = (
             f"Generate a high-quality training sample targeting these attributes (sample #{cell_index + 1} of {total_cells}):\n"

@@ -86,17 +86,23 @@ export default function QualityDashboardPage() {
   const completenessPct = typeof rawBreakdown?.response_completeness === 'number' ? Math.round(rawBreakdown.response_completeness * 100) : null;
   const domainPct = typeof rawBreakdown?.domain_correctness === 'number' ? Math.round(rawBreakdown.domain_correctness * 100) : null;
 
-  const compositePct = typeof selectedJob?.quality_score === 'number'
-    ? (selectedJob.quality_score <= 1.0 ? Math.round(selectedJob.quality_score * 100) : Math.round(selectedJob.quality_score))
-    : typeof rawBreakdown?.composite === 'number'
-    ? (rawBreakdown.composite <= 1.0 ? Math.round(rawBreakdown.composite * 100) : Math.round(rawBreakdown.composite))
-    : null;
-
   const dimensionScores = [topicFidelityPct, groundingPct, clarityPct, completenessPct, domainPct];
   const scoredScores = dimensionScores.filter((s): s is number => s !== null);
   const allScored = scoredScores.length === 5;
   const allMetricsPassed = allScored && scoredScores.every(s => s >= 85);
   const anyMetricFailed = scoredScores.some(s => s < 85);
+
+  const arithmeticMean = scoredScores.length > 0
+    ? (scoredScores.reduce((a, b) => a + b, 0) / scoredScores.length)
+    : null;
+
+  const compositePct = arithmeticMean !== null
+    ? Number(arithmeticMean.toFixed(1))
+    : typeof selectedJob?.quality_score === 'number'
+    ? (selectedJob.quality_score <= 1.0 ? Math.round(selectedJob.quality_score * 100) : Math.round(selectedJob.quality_score))
+    : typeof rawBreakdown?.composite === 'number'
+    ? (rawBreakdown.composite <= 1.0 ? Math.round(rawBreakdown.composite * 100) : Math.round(rawBreakdown.composite))
+    : null;
 
   // Semantic Density State
   const [densityLoading, setDensityLoading] = useState(false);
@@ -255,7 +261,13 @@ export default function QualityDashboardPage() {
                   : "bg-emerald-950/60 text-emerald-400 border-emerald-500/40"
               )}
             >
-              {allMetricsPassed ? "✓ Production Grade · Ready for Fine-Tuning" : anyMetricFailed ? "⚠ Needs Calibration (< 85% Target)" : "✓ Verified Quality Target Passed"}
+              {allMetricsPassed
+                ? "✓ Production Grade · Ready for Fine-Tuning"
+                : anyMetricFailed
+                ? (fiveDimensions.filter(d => d.val !== null && d.val < d.target).length > 0
+                    ? `⚠ Below Target: ${fiveDimensions.filter(d => d.val !== null && d.val < d.target).map(d => `${d.name} (${d.val}%)`).join(', ')}`
+                    : "⚠ 1 Dimension Below Target (< 85%)")
+                : "✓ Verified Quality Target Passed"}
             </Badge>
           </div>
           <p className="text-sm font-sans text-zinc-300 max-w-2xl leading-relaxed">
@@ -363,7 +375,7 @@ export default function QualityDashboardPage() {
 
           {/* Side-by-side Score Histogram and Source Authorities */}
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-10 pt-4 border-t border-white/[0.08]">
-            <QualityScoreChart />
+            <QualityScoreChart jobId={selectedJobId} />
             <SourceQualityTable />
           </div>
         </TabsContent>

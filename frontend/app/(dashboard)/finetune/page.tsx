@@ -2555,7 +2555,7 @@ LORA_ALPHA = ${form.lora_alpha}`}
 
                 {vramData?.breakdown ? (
                   <div className="space-y-3">
-                    <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 text-center">
+                    <div className="grid grid-cols-2 sm:grid-cols-5 gap-2 text-center">
                       <div className="p-2 rounded bg-[#07070b] border border-[#1e1e2d]">
                         <div className="text-[#a8a29e] text-xs">Weight Memory</div>
                         <div className="text-white font-bold text-sm mt-0.5">{vramData.breakdown.weight_memory_gb} GB</div>
@@ -2571,7 +2571,12 @@ LORA_ALPHA = ${form.lora_alpha}`}
                         <div className="text-white font-bold text-sm mt-0.5">{vramData.breakdown.activation_memory_gb} GB</div>
                         <div className="text-zinc-500 text-[10px]">batch={form.per_device_train_batch_size}</div>
                       </div>
-                      <div className="p-2 rounded bg-[#07070b] border border-[#f26625]/30">
+                      <div className="p-2 rounded bg-[#07070b] border border-[#1e1e2d]">
+                        <div className="text-[#a8a29e] text-xs">CUDA &amp; Cache</div>
+                        <div className="text-white font-bold text-sm mt-0.5">{vramData.breakdown.cuda_overhead_gb ?? 1.20} GB</div>
+                        <div className="text-zinc-500 text-[10px]">PyTorch Runtime</div>
+                      </div>
+                      <div className="p-2 rounded bg-[#07070b] border border-[#f26625]/30 col-span-2 sm:col-span-1">
                         <div className="text-[#f26625] text-xs font-semibold">Total Required</div>
                         <div className="text-[#f26625] font-bold text-sm mt-0.5">{vramData.breakdown.total_estimated_vram_gb} GB</div>
                         <div className="text-zinc-400 text-[10px]">rec. {vramData.breakdown.recommended_gpu_vram_gb} GB</div>

@@ -440,6 +440,33 @@ export default function SettingsPage() {
                   </Button>
                 </div>
               </form>
+
+              {/* Deployment & Commit Information */}
+              <div className="mt-6 pt-5 border-t border-[#1c1c28] space-y-3 font-mono text-xs">
+                <div className="flex items-center justify-between">
+                  <span className="text-xs uppercase font-bold text-[#a8a29e]">Deployment &amp; Build Metadata</span>
+                  <Badge variant="outline" className="border-emerald-500/30 text-emerald-400 text-[10px]">
+                    PRODUCTION BUILD
+                  </Badge>
+                </div>
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                  <div className="p-3 rounded bg-[#0a0a0f] border border-[#272738]">
+                    <div className="text-[#a8a29e] text-[10px] uppercase">Engine Release</div>
+                    <div className="text-white font-bold text-sm mt-0.5">v{process.env.NEXT_PUBLIC_APP_VERSION || '2.0.0'}</div>
+                    <div className="text-zinc-500 text-[10px]">RasoSynth Core Engine</div>
+                  </div>
+                  <div className="p-3 rounded bg-[#0a0a0f] border border-[#272738]">
+                    <div className="text-[#a8a29e] text-[10px] uppercase">Git Commit SHA</div>
+                    <div className="text-emerald-400 font-bold text-sm mt-0.5">{process.env.NEXT_PUBLIC_GIT_COMMIT_SHA || 'dev'}</div>
+                    <div className="text-zinc-500 text-[10px]">Verified Branch Deployment</div>
+                  </div>
+                  <div className="p-3 rounded bg-[#0a0a0f] border border-[#272738]">
+                    <div className="text-[#a8a29e] text-[10px] uppercase">Platform Stack</div>
+                    <div className="text-[#f26625] font-bold text-sm mt-0.5">Next.js 14 + FastAPI</div>
+                    <div className="text-zinc-500 text-[10px]">SQLite + In-Memory Queue</div>
+                  </div>
+                </div>
+              </div>
             </CardContent>
           </Card>
         </TabsContent>
