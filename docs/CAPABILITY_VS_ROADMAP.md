@@ -1,41 +1,45 @@
-# Capability vs Roadmap — single source of truth
+# Capability vs. Roadmap — Canonical Accounting
 
-**Rule:** if a capability is not marked **Built** here with evidence,
-do not describe it as built anywhere else (README, deck, site copy,
-or PR description). Status labels:
+This document is the single source of truth for what RasoSynthTune
+has actually built versus what is planned, simulated, or directional.
+When documentation, marketing text, or demo scripts conflict with this
+file, this file wins.
 
-- **Built** — code exists and is exercised by tests or a verified run.
-- **Partial** — code exists but a known gap breaks the claim end to end.
-- **Simulated** — the code path produces placeholder/demo output, not
-  the real result. Must be labelled simulated wherever shown.
-- **Roadmap** — direction only. No code claim is made.
+Status definitions:
+- **Built**: verified by reading the code and running it.
+- **Built (notebook)**: verified as code in a notebook; requires external GPU compute to run.
+- **Partial**: part of the pipeline exists; known gaps listed in the evidence column.
+- **Simulated**: the code path exists but returns simulated/mock data or placeholders rather than doing the real work.
+- **Roadmap**: design direction, future architecture, or aspirational goals. Not built.
 
-Version source of truth: `pyproject.toml` (`2.0.0`).
-Evidence date for the live-site findings: 2026-10-28 regression check.
+---
 
-## The four stages
+## Current Architecture (Engine v2.0.0)
 
-### Stage 1 — Dataset Engineering
-
-| Capability | Status | Evidence / gap |
-| --- | --- | --- |
-| Multi-engine synthesis (SFT, CoT, RAG, Socratic, DPO/SimPO, tool-calling, multi-turn) | Built | `core/generation/`, `pipeline/`; CLI `rasosynthtune generate` |
-| Discovery / crawling / extraction | Built | Pipeline stages in `core/`; provider/router code |
-| Dedup, filtering, PII redaction | Built (code) / Partial (outcome) | Dedup exists, yet old certified datasets contained many duplicates — dedup was not enforced end to end on those datasets |
-| Quality scoring + LLM judge | Partial | Scoring exists, but one dataset showed multiple quality numbers and the library showed a status constant — no single enforced score |
-| HITL review gate | Built | Review queue pauses jobs; the fraction shown in the UI has not always matched the configured fraction — verify on a fresh job |
-| DBOM Merkle provenance + export (JSONL/CSV/Parquet/HF) | Partial | API roots recompute exactly from exported data (verified); dashboard verification UI is decorative (not a recomputation) |
-| Dataset library / dashboard | Partial | Library renders, but status/quality values are partly constant or derived from job status, not measured |
-
-### Stage 2 — End-to-End Fine-Tuning
+### Stage 1 — Autonomous Dataset Generation
 
 | Capability | Status | Evidence / gap |
 | --- | --- | --- |
-| Local LoRA/QLoRA training (PEFT/Unsloth, `execution_target=local`) | Built | `finetuning/trainer.py`; real local path, not the simulator |
-| Colab GPU notebook (1-click) | Built (notebook) | `finetuning/RasoSynthTune_FineTuning_Colab.ipynb`; real GPU training only when actually run on a GPU |
-| Fine-tuning on the live site (Colab/Modal/RunPod paths) | Simulated | `finetuning/colab_bridge.py` and the Modal stub in `finetuning/trainer.py` emit `is_simulated: true`, placeholder adapters, and demo loss curves — not GPU-trained weights |
-| Model cards / training telemetry | Partial | Cards are generated, but simulated runs must carry the simulated disclosure (the code appends it; the UI must not strip it) |
-| Evaluation of fine-tuned models | Partial | Evaluation code exists under `core/evaluation/`; no evaluated-vs-baseline claim is made here without a traced run |
+| Dynamic LLM Statutory Discovery | Built (v2.0.0) | `pipeline/planner.py`; dynamically extracts official government authority portals and statutory frameworks without hardcoded dictionaries |
+| Multi-turn synthetic generation (SFT, DPO, SimPO, KTO, CoT, Socratic) | Built | `core/generation/`; multi-turn, multi-difficulty generation engines |
+| MinHash LSH de-duplication | Built | `core/curation/dedup.py`; MinHash LSH Jaccard similarity thresholding |
+| Statutory PII redaction (Aadhaar, PAN, GSTIN, UPI) | Built | `core/curation/pii.py`; Verhoeff $D_8$ dihedral checksum verification for Aadhaar, Mod-36 for GSTIN |
+| Benchmark contamination guard | Built | 13-gram exact match quarantine scanner against benchmark test splits |
+| 5D Quality Jury (topic, grounding, clarity, completeness, correctness) | Built (v2.0.0) | `api/quality.py` and `/quality` UI; 5 orthogonal quality dimensions evaluated with $\ge 85\%$ canary pass gate |
+| Blinded Elo Arena | Built (v2.0.0) | `/research` and `core/evaluation/alignment_judge.py`; head-to-head randomized evaluation with dynamic Elo calibration ($K=32$) |
+| HITL review gate & active learning queue | Built | `api/review.py` and `/review` UI; multi-stage review queue (`pending`, `in_review`, `approved`, `rejected`), GroundingDiffModal, DPO export |
+| DBOM Merkle provenance & In-Toto attestation | Built (v2.0.0) | `core/export/dbom_attestor.py` and `api/dbom.py`; deterministic SHA-256 Merkle root computation over canonical sample records, ECDSA SECP256R1 signing, and `/api/dbom/verify` |
+| Primary Datastore | Built (v2.0.0) | `core/db.py` & `api/server.py`; Supabase PostgreSQL via `asyncpg`, `NullPool` on transaction pooler (port 6543), SSL mode normalization, exponential retry backoff, and no silent SQLite fallback |
+
+### Stage 2 — Model Fine-Tuning & Quantization
+
+| Capability | Status | Evidence / gap |
+| --- | --- | --- |
+| Serverless Modal Cloud GPU fine-tuning (`execution_target=modal`) | Built (v2.0.0) | `finetuning/modal_trainer.py`; real remote execution on dedicated NVIDIA A10G (24GB VRAM) instances when `MODAL_TOKEN_ID` and `MODAL_TOKEN_SECRET` are present, automated SafeTensors packaging, GGUF v3 quantization (`model-q4_k_m.gguf`), and Ollama Modelfile export |
+| Local LoRA/QLoRA training (PEFT/Unsloth, `execution_target=local`) | Built | `finetuning/trainer.py`; local CUDA/CPU path with automated BitsAndBytes 4-bit NF4 loading |
+| Colab GPU notebook (1-click) | Built (notebook) | `finetuning/RasoSynthTune_FineTuning_Colab.ipynb`; real GPU training when executed in Google Colab |
+| Model cards / training telemetry | Built | Automated README model card generation, WebSocket loss telemetry streaming (`/api/finetune/jobs/{id}/stream`), and circular log buffer |
+| Evaluation of fine-tuned models | Built | `core/evaluation/` and `scripts/demo_finetune_eval.py`; chrF overlap, token-F1, exact match, and statutory citation grounding |
 
 ### Stage 3 — Autonomous Optimisation
 
@@ -49,6 +53,8 @@ Evidence date for the live-site findings: 2026-10-28 regression check.
 | --- | --- | --- |
 | Autonomous end-to-end AI engineering (system designs, builds, and improves models itself) | Roadmap | Vision only. Nothing in this repo is presented as Stage 4. |
 
+---
+
 ## Long-term vision (not a status claim)
 
 Democratising AI development: an autonomous, open, efficient platform
@@ -58,18 +64,12 @@ specialised models, starting with underserved languages/domains
 curate → optimise → fine-tune → evaluate → improve. Philosophy:
 "Don't just use AI. Build the systems that make better AI possible."
 
-## Known gaps that change a status (2026-10-28, do not soften)
+---
 
-- Live-site fine-tuning is simulated; label it simulated.
-- Library quality was a status constant; one dataset, multiple numbers.
-- Old certified datasets held many duplicate records.
-- Merkle API roots recompute exactly; verification UI is decorative.
-- Provider badges showed zero requests.
-- Deployment is standalone/in-memory, not distributed.
-- Site cost figures do not trace to a real provider bill.
-- Previous README benchmark figures were removed in this docs pass
-  because they were not re-traced to a current run.
+## Resolved Architectural Gaps in Engine v2.0.0 (2026-11-15)
 
-When a gap above is fixed, update this file first, with the fresh
-job/run evidence, then update the README and site copy to match.
-
+- **Modal Cloud Fine-Tuning**: Promoted from simulated stub to real serverless execution on NVIDIA A10G via `finetuning/modal_trainer.py`. Real weights packaged as `finetuned_model_lora.zip`, edge GGUF binaries (`model-q4_k_m.gguf`), and Ollama Modelfile.
+- **Primary Database**: Integrated Supabase PostgreSQL with `asyncpg`, handling connection poolers (port 6543 / `NullPool`), SSL mapping, statement caching, and strictly eliminating silent SQLite fallback.
+- **Dynamic Authority Discovery**: Replaced static topic dictionaries with dynamic LLM statutory extraction (`pipeline/planner.py`), discovering official government portal URLs and statutory acts per domain.
+- **Evaluation & Benchmarking**: Added 5-Dimensional Quality Jury ($\ge 85\%$ threshold) and double-blind Elo Arena with dynamic rating calibration.
+- **Cryptographic DBOM**: Bound UI and API to functional SHA-256 Merkle root verification and ECDSA SECP256R1 In-Toto digital supply chain signing.

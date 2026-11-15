@@ -1,156 +1,151 @@
 # Production Deployment Guide: RasoSynthTune
 
-Complete guide to deploying the **Autonomous Dataset Generation Pipeline** and **Fine-Tuning Studio**.
-
----
-
-## Architecture Overview
+This document outlines deployment procedures for the RasoSynthTune dataset engineering pipeline, audit engine, and fine-tuning control plane.
 
 ```
-┌─────────────────────────────────┐
-│     Live Frontend (Vercel)      │  Next.js 14 App Router, YC Stitch Theme
-│ https://rasosynthtune-indiaai.  │  (Zero-serverless timeout limits on browser)
-│           vercel.app            │
-└────────────────┬────────────────┘
-                 │ HTTP / WebSocket (NEXT_PUBLIC_API_URL)
-                 ▼
-┌─────────────────────────────────┐
-│       Backend API Server        │  FastAPI, LangGraph Orchestrator
-│   (Render / Railway / Fly.io)   │  • Autonomous Discovery & Scraping
-│                                 │  • Extraction & Deduplication (MinHash)
-│                                 │  • Synthetic Generator (Gemini/OpenAI/Groq)
-│                                 │  • Cryptographic DBOM Audit (SHA-256)
-│                                 │  • SQLite / Postgres Auto-fallback
-└────────────────┬────────────────┘
-                 │
-      ┌──────────┴──────────┐
-      ▼                     ▼
-┌──────────────┐     ┌──────────────┐
-│  Free Cloud  │     │ Dedicated GPU│
-│  Colab / GPU │     │ Celery Worker│
-│ (Unsloth/LoRA│     │(NVIDIA Docker│
-│   Notebook)  │     │  Compose)    │
-└──────────────┘     └──────────────┘
+┌──────────────────────────────────────┐
+│       Next.js 14 Frontend            │  Vercel Edge Platform
+│  https://rasosynthtune-indiaai.      │  Static & Dynamic SSR, React Query,
+│             vercel.app               │  WebSocket Stream Client
+└──────────────────┬───────────────────┘
+                   │ HTTPS / WSS (`NEXT_PUBLIC_API_URL`)
+                   ▼
+┌──────────────────────────────────────┐
+│       Backend API Server             │  Render Web Service (Docker Runtime)
+│     `rasosynthtune-api`              │  • FastAPI Application Server
+│                                      │  • MinHash LSH Deduplication Engine
+│                                      │  • Cryptographic DBOM Audit Ledger
+│                                      │  • SQLAlchemy 2.0 AsyncPG Engine
+└──────────┬───────────────────┬───────┘
+           │                   │
+           ▼                   ▼
+┌──────────────────────┐  ┌────────────────────────────────────┐
+│ Supabase PostgreSQL  │  │   Modal Serverless Compute         │
+│ Transaction Pooler   │  │   • NVIDIA A10G Cloud GPU          │
+│ (Port 6543, SSL Req) │  │   • QLoRA / DPO / SimPO / KTO      │
+└──────────────────────┘  └────────────────────────────────────┘
 ```
 
 ---
 
-## 1. Deploy the Backend API (Complete Pipeline)
+## 1. Managed PostgreSQL Setup (Supabase / RDS / Neon)
 
-The backend runs the complete dataset generation pipeline, DBOM signing, quality scoring, and job management. It requires **no GPU** because synthetic generation uses external API providers (Gemini, Groq, OpenAI, Anthropic).
+Production environments require a dedicated PostgreSQL 15+ database with the `uuid-ossp` and `pgvector` extensions enabled.
 
-### Option A: 1-Click Deploy on Render
-1. Push your repository to GitHub.
-2. In [Render Dashboard](https://dashboard.render.com/), select **New > Blueprint**.
-3. Select this repository. Render automatically reads `render.yaml` and provisions:
-   - Web Service: `rasosynthtune-api`
-   - Postgres Database: `rasosynthtune-db` (or runs SQLite fallback automatically)
-4. Set your LLM API Keys in the Render dashboard:
-   - `GEMINI_API_KEY` (or `OPENAI_API_KEY`, `GROQ_API_KEY`)
-5. Your API URL will be: `https://rasosynthtune-api.onrender.com`.
+### 1.1 Connection Strings & Normalization
+Configure the database connection via either `POSTGRES_URL` or `DATABASE_URL`. The backend automatically parses, normalizes, and validates the connection URI:
+- Upgrades URI prefixes `postgres://` and `postgresql://` to `postgresql+asyncpg://`.
+- Converts `sslmode=require` query parameters to `ssl=require` for `asyncpg` driver compatibility.
+- Strips PgBouncer parameters (`pgbouncer=true`, `supa=true`) that are invalid in direct asyncpg connection strings.
 
-### Option B: 1-Click Deploy on Railway
-1. In [Railway](https://railway.app/), click **New Project > Deploy from GitHub repo**.
-2. Select this repository. Railway detects `railway.json` and builds via `Dockerfile`.
-3. Add Environment Variables:
-   - `GEMINI_API_KEY` or `OPENAI_API_KEY`
-   - `PORT=8000`
-4. Generate a domain (e.g., `https://rasosynthtune-production.up.railway.app`).
+### 1.2 Supabase Transaction Pooler (Port 6543) Handling
+When connecting through Supabase's transaction pooler (`pooler.supabase.com` on port `6543` or when `pgbouncer=true` is used), client-side connection pooling and prepared statement caches must be disabled to prevent connection collisions:
 
-### Option C: Fly.io Deployment
-```bash
-fly launch --config fly.toml
-fly secrets set GEMINI_API_KEY="your-key" OPENAI_API_KEY="your-key"
-fly deploy
-```
+- **Pool Class**: Automatically switches from `QueuePool` to `NullPool`.
+- **Prepared Statement Cache**: Automatically forces `statement_cache_size=0` and `prepared_statement_cache_size=0`.
+- **Direct Connection Alternative (Port 5432)**: Direct connections utilize `QueuePool` with `pool_size=10`, `max_overflow=20`, `pool_pre_ping=True`, and `pool_recycle=3600`.
 
-### Option D: Docker Compose on VPS / EC2
-```bash
-cp .env.example .env
-# Edit .env and paste your API keys
-docker compose -f docker-compose.prod.yml up -d --build
+Example configuration in environment:
+```env
+POSTGRES_URL=postgresql://postgres.projectref:password@aws-0-us-west-1.pooler.supabase.com:6543/postgres?sslmode=require
 ```
 
 ---
 
-## 2. Connect the Live Vercel Frontend
+## 2. Deploying Backend API to Render
 
-The frontend is already live at:
-**`https://rasosynthtune-indiaai.vercel.app`**
+The backend control plane executes API orchestration, synthesis task routing, data validation, and Modal dispatching.
 
-To connect it to your newly deployed backend:
-1. Open your Vercel Dashboard for `rasosynthtune-indiaai`.
-2. Navigate to **Settings > Environment Variables**.
-3. Add or update:
-   - **Key**: `NEXT_PUBLIC_API_URL`
-   - **Value**: `https://your-api-domain.com` (e.g. `https://rasosynthtune-api.onrender.com`)
-4. Trigger a **Redeploy** from the Deployments tab.
-5. All live requests from the studio, visualizer, telemetry, and review queue now stream directly to your deployed backend.
+### 2.1 Blueprint Deployment (`render.yaml`)
+1. Link your repository in the [Render Dashboard](https://dashboard.render.com/).
+2. Select **New > Blueprint** and choose the repository. Render reads `render.yaml` and sets up the service:
+   - **Service Name**: `rasosynthtune-api`
+   - **Runtime**: `docker` (`./Dockerfile`)
+   - **Region**: `oregon`
+   - **Plan**: `free` or standard compute
+   - **Health Check Path**: `/health`
+
+### 2.2 Environment Variables Matrix
+
+| Variable | Category | Required | Description |
+| :--- | :--- | :--- | :--- |
+| `PORT` | Networking | Yes | Set to `8000` |
+| `ENVIRONMENT` | Runtime | Yes | Set to `production` |
+| `AIR_GAPPED_MODE` | Runtime | Yes | Set to `false` for cloud API routing |
+| `WORKERS` | Runtime | Yes | Set to `1` (single-process event loop) |
+| `MALLOC_ARENA_MAX`| Memory | Yes | Set to `2` to prevent memory fragmentation |
+| `JWT_SECRET` | Security | Yes | 64-character cryptographically secure string |
+| `DOWNLOAD_SIGNING_SECRET` | Security | Yes | 32+ character dedicated secret for presigned URLs |
+| `POSTGRES_URL` | Database | Yes | Supabase or PostgreSQL connection string |
+| `MODAL_TOKEN_ID` | Fine-Tuning | Optional | Modal API Token ID for serverless GPU jobs |
+| `MODAL_TOKEN_SECRET` | Fine-Tuning | Optional | Modal API Token Secret |
+| `GEMINI_API_KEY` | Model Provider | Optional | Google Gemini API Key |
+| `GROQ_API_KEY` | Model Provider | Optional | Groq High-Speed Inference API Key |
+| `NVIDIA_API_KEY` | Model Provider | Optional | NVIDIA NIM API Key |
+| `SARVAM_API_KEY` | Model Provider | Optional | Sarvam AI Indic Model API Key |
+| `HF_TOKEN` | Model Provider | Optional | Hugging Face Hub Access Token |
 
 ---
 
-## 3. Fine-Tuning Execution
+## 3. Deploying Next.js 14 Frontend to Vercel
 
-Training 1.7B–8B models requires an **NVIDIA GPU with 16GB–24GB VRAM**. You have 3 options:
+The frontend is built on Next.js 14 App Router, Radix UI, TanStack Query, and Tailwind CSS.
 
-### Option 1: 1-Click Google Colab (Free GPU — Zero Infrastructure Cost)
-The platform includes an end-to-end Unsloth fine-tuning notebook:
-1. Click the **Open in Colab (Free GPU)** button on the `/finetune` dashboard, or open:
-   [`finetuning/RasoSynthTune_FineTuning_Colab.ipynb`](file:///mnt/d/Sourabh_Workspace/00_Academics/RasoSynth_CUTC/finetuning/RasoSynthTune_FineTuning_Colab.ipynb)
-2. Select **Runtime > Change runtime type > T4 GPU**.
-3. Enter your generated dataset URL (or upload `dataset.jsonl`).
-4. Run all cells: it applies QLoRA (4-bit), trains in 15–20 minutes with Unsloth (2x-5x faster), and saves your adapter weights or pushes them directly to Hugging Face Hub.
+### 3.1 Vercel Deployment Configuration
+1. Import the repository into the [Vercel Dashboard](https://vercel.com/).
+2. Set the **Root Directory** to `frontend`.
+3. Framework Preset: **Next.js**.
+4. Configure Environment Variables:
+   - `NEXT_PUBLIC_API_URL`: The deployed Render backend URL (e.g., `https://rasosynthtune-api.onrender.com`).
+5. Click **Deploy**.
 
-### Option 2: Serverless GPU with Modal
-Run serverless QLoRA on a cloud NVIDIA A10G with zero server setup:
-```bash
-pip install modal
-modal setup
-modal run finetuning/modal_trainer.py --dataset-content "$(cat outputs/my_dataset.jsonl)" --base-model unsloth/llama-3-8b-Instruct
-```
+### 3.2 Real-Time Communication Architecture
+- **WebSockets**: The client opens WebSocket connections to `NEXT_PUBLIC_API_URL/ws/jobs/{id}` and `/api/finetune/jobs/{id}/stream` for sub-second telemetry, step execution, and live training loss streaming.
+- **Asynchronous Decoupling**: Dataset generation and fine-tuning tasks run asynchronously in the background. Vercel serverless function timeouts do not interrupt long-running generation or training runs.
 
-### Option 3: Dedicated GPU Celery Worker (In-Cluster)
-If deploying on a machine with an NVIDIA GPU (e.g., RunPod, Lambda Labs, AWS G5/G6):
-1. Install NVIDIA Container Toolkit on host.
-2. Ensure GPU driver is enabled in `docker-compose.yml`:
-   ```yaml
-   deploy:
-     resources:
-       reservations:
-         devices:
-           - driver: nvidia
-             count: all
-             capabilities: [gpu]
-   ```
-3. Install fine-tuning dependencies:
+---
+
+## 4. Serverless GPU Execution on Modal
+
+To run QLoRA training without provisioning static GPU servers:
+
+1. Create a Modal account at [modal.com](https://modal.com).
+2. Generate API tokens:
    ```bash
-   uv pip install -e ".[finetuning]"
+   pip install modal
+   modal setup
    ```
-4. Jobs created in the Fine-Tune Studio will execute directly on local GPU hardware and stream training metrics over WebSockets.
+3. Set `MODAL_TOKEN_ID` and `MODAL_TOKEN_SECRET` in the Render environment variables.
+4. When a fine-tuning job is initiated via the API (`POST /api/finetune/jobs`) or UI, the backend provisions an on-demand NVIDIA A10G container, executes training, streams loss updates via WebSockets, and retrieves adapter weights back to the API server.
 
 ---
 
-## Verification & Health Check
+## 5. Verification & Health Monitoring
 
-After deploying:
+Execute automated health verification against your deployment:
+
 ```bash
-# Check API health
-curl https://your-api-domain.com/health
+# 1. Health check and dependency status
+curl -i https://rasosynthtune-api.onrender.com/health
 
-# Verify provider connectivity
-curl https://your-api-domain.com/providers
+# Expected response:
+# HTTP/1.1 200 OK
+# {"status":"healthy","database":"connected","version":"1.0.0"}
 
-# Test dataset creation
-curl -X POST https://your-api-domain.com/jobs \
+# 2. Verify active model providers
+curl -s https://rasosynthtune-api.onrender.com/providers | jq .
+
+# 3. Test dataset generation pipeline
+curl -X POST https://rasosynthtune-api.onrender.com/jobs \
   -H "Content-Type: application/json" \
+  -H "Authorization: Bearer <TOKEN>" \
   -d '{"target_domain": "Healthcare Claims", "num_samples": 5}'
 ```
 
 ---
 
-## Production Security & Operational Configuration
+## 6. Security & Operational Hardening
 
-- **Download Signing Secret (`DOWNLOAD_SIGNING_SECRET`)**: Mandatory dedicated 32+ character secret for presigned dataset downloads and previews. Presigned URL minting fails closed when absent (no fallback to `JWT_SECRET`).
-- **Token Revocation & Expiry**: Tokens are revoked in-memory on logout (`/auth/logout`) for single-process deployments. Configure short `JWT_EXPIRATION_HOURS` (e.g. 1–24 hours) as the boundary against process restarts.
-- **Account Lockout Policy**: 5 failed login attempts in 15 minutes lock an account for 15 minutes. Admin credentials are gated by default; use `unlock_user()` or process restart if escape is needed.
-- **Orchestration Retry Semantics**: Step retry (`POST /orchestration/steps/{step_id}/retry`) relaunches the complete pipeline from the stored job configuration. Targeted stage resume is handled via `POST /checkpoints/{checkpoint_id}/restore`.
+- **Database Connection Fail-Closed**: In `production` mode, the application fails at startup if `POSTGRES_URL` cannot establish an active connection; it will not silently revert to an ephemeral SQLite database.
+- **Presigned Download URLs**: Dataset downloads require HMAC-SHA256 signatures generated via `DOWNLOAD_SIGNING_SECRET`. Requests with expired or missing signatures return `403 Forbidden`.
+- **Credential Storage**: Database credentials, LLM API tokens, and Modal secrets must never be committed to repository files. Use secret managers or hosting environment panels exclusively.

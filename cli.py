@@ -31,8 +31,7 @@ if str(PROJECT_ROOT) not in sys.path:
 # offline and seed-assisted dataset synthesis. All statutory figures and provisions
 # are grounded with exact act sections, gazette notification numbers, and
 # effective dates (e.g. CGST Act 2017, Finance Act 2024, DPDP Act 2023).
-BUILTIN_SEED_BANK: Dict[str, List[Dict[str, Any]]] = {}
-_OLD_BANK: Dict[str, List[Dict[str, Any]]] = {
+BUILTIN_SEED_BANK: Dict[str, List[Dict[str, Any]]] = {
     "taxation": [
         {
             "instruction": "What are the core conditions for claiming Input Tax Credit (ITC) under Section 16(2) of the CGST Act?",

@@ -82,8 +82,10 @@ class _FakeDB:
         start = (page - 1) * page_size
         return items[start:start + page_size], total
 
-    async def review_stats(self):
+    async def review_stats(self, owner: Optional[str] = None):
         items = list(self._store.values())
+        if owner is not None:
+            items = [i for i in items if getattr(i, "owner", None) == owner]
         total = len(items)
         counts = {}
         for s in ("pending", "in_review", "approved", "rejected", "flagged"):

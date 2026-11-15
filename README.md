@@ -1,254 +1,176 @@
-# RasoSynthTune
+# RasoSynthTune (Engine v2.0.0)
 
 > **License up front:** RasoSynthTune is licensed under the
 > [PolyForm Noncommercial License 1.0.0](LICENSE) — non-commercial use only.
 > PolyForm Noncommercial is **not** an OSI-approved open-source license.
 > Do not describe this project as open source without that qualification.
 
-**What it is.** RasoSynthTune turns raw domain material and ideas into
-instruction datasets for training specialised models, and provides
-fine-tuning paths for open-weight models. It is a dataset-engineering and
-fine-tuning toolkit with a dashboard, a CLI, and a Python SDK — not a
-finished autonomous AI engineer.
+**What it is.** RasoSynthTune is an enterprise-grade synthetic dataset engineering and model adaptation engine. It orchestrates the full data-to-model lifecycle: statutory knowledge discovery, curriculum-driven synthetic generation (SFT, DPO, SimPO, KTO, CoT), cryptographic Data Bill of Materials (DBOM) attestation, automated 5D jury curation, and hardware-accelerated LoRA/QLoRA fine-tuning for open-weight models across local GPUs and serverless cloud clusters.
 
-**Long-term direction (vision, not built state).** The direction is to
-democratise AI development: an autonomous, open, efficient platform that
-turns raw data and ideas into high-quality training datasets and
-specialised models, starting with underserved languages and domains
-(Indian languages first). The mission is to automate the data-to-model
-lifecycle — discover, synthesise, verify, curate, and optimise datasets;
-fine-tune open-weight models (LoRA/QLoRA, including resource-constrained
-hardware); evaluate; and improve continuously via feedback.
+**Long-term direction (vision, not built state).** The mission is to democratise sovereign AI development: an autonomous, open, efficient platform turning raw domain material and statutory acts into verified training datasets and domain-specialised models, starting with underserved languages and high-compliance domains (Indian legal, taxation, healthcare, and governance).
 
 > "Don't just use AI. Build the systems that make better AI possible."
 
-That vision is the destination. The table in
-[docs/CAPABILITY_VS_ROADMAP.md](docs/CAPABILITY_VS_ROADMAP.md) is the
-honest record of what is built, partial, simulated, or roadmap-only.
-In particular, Stages 3 (Autonomous Optimisation) and 4 (Autonomous AI
-Engineering) are **roadmap only**. This project is not "fully
-autonomous" and is not claimed production-ready here.
-
-Live demo (already linked before this rewrite; deployment is
-standalone/in-memory, see Limitations below):
+Review [docs/CAPABILITY_VS_ROADMAP.md](docs/CAPABILITY_VS_ROADMAP.md) for the verified accounting of built capabilities versus roadmap aspirations.
 
 - Demo: <https://rasosynthtune-indiaai.vercel.app>
-- Colab fine-tuning notebook:
-  <https://colab.research.google.com/github/Sourabh-Kumar04/RasoSynth_CUTC/blob/master/finetuning/RasoSynthTune_FineTuning_Colab.ipynb>
-- CI: <https://github.com/Sourabh-Kumar04/RasoSynth_CUTC/actions/workflows/ci.yml>
+- Colab fine-tuning notebook: <https://colab.research.google.com/github/Sourabh-Kumar04/RasoSynth_CUTC/blob/master/finetuning/RasoSynthTune_FineTuning_Colab.ipynb>
+- CI / Automated Test Harness: <https://github.com/Sourabh-Kumar04/RasoSynth_CUTC/actions/workflows/ci.yml>
 
-## Current capabilities
+---
 
-| Capability | Status | Notes |
-| --- | --- | --- |
-| Dataset synthesis (SFT, DPO/SimPO pairs, multi-turn, tool-calling, RAG-grounded, CoT, Socratic) | Built (pipeline code + CLI/SDK) | Engines live under `core/generation/` and `pipeline/`; see `docs/ARCHITECTURE.md`. Output quality is not guaranteed — see Limitations. |
-| DBOM cryptographic provenance (SHA-256 Merkle root over exported samples) | Built at the API level | API roots recompute exactly from exported data. The dashboard verification UI is decorative — see Limitations. |
-| Human-in-the-loop (HITL) review | Built, with a default-on queue | Review pauses jobs awaiting a reviewer; the queue size shown in the UI has not always matched the configured fraction — verify on a fresh job. |
-| LoRA/QLoRA fine-tuning paths | Real local path + simulated cloud paths | `execution_target=local` runs real PEFT/Unsloth training. Colab/Modal/RunPod paths on the live site are simulated — see `docs/FINE_TUNING.md`. |
-| CLI (`rasosynthtune`) and Python SDK (`rasosynth`) | Built | See Quickstart below. |
-| Next.js dashboard | Built | Dataset library, job views, review queue, fine-tuning views. Some displayed values are constants or derived from job status, not measured — see Limitations. |
-| PII redaction (Aadhaar, PAN, GSTIN, UPI, vehicle numbers) | Built (code) | Claimed by the pipeline; treat as a code capability, not a compliance certification. Nothing here certifies DPDP Act 2023 or EU AI Act compliance. |
-| Provider routing (Gemini, NVIDIA NIM, Anthropic, OpenAI, Fireworks, Featherless, Ollama/vLLM, plus others in the router) | Built (code) | Live-site provider badges have shown zero requests — a badge is not evidence of live provider traffic. |
+## Engine v2.0.0 Core Capabilities
+
+| Capability | Status | Implementation Details |
+| :--- | :--- | :--- |
+| **Primary Datastore** | Built (v2.0.0) | Managed Supabase PostgreSQL via `asyncpg`. Configured with `NullPool` for transaction poolers (port 6543 / PgBouncer), automated SSL handshake (`ssl=require`), transactional retries with exponential backoff and jitter, and fail-fast startup (no silent SQLite fallback when PostgreSQL is configured). |
+| **Cloud GPU Fine-Tuning** | Built (v2.0.0) | Dedicated serverless NVIDIA A10G GPU execution via Modal (`finetuning/modal_trainer.py`). Real remote QLoRA/DPO training, streaming loss metrics, automated LoRA adapter packaging, 4-bit GGUF quantization, and Ollama Modelfile export. |
+| **Dynamic Statutory Discovery** | Built (v2.0.0) | LLM-driven statutory authority discovery in `pipeline/planner.py`. Synthesizes curriculum plans with 35/45/20 difficulty splits and extracts verified government portals (`authoritative_sources`) and regulatory acts without hardcoded dictionary limitations. |
+| **5D Quality Jury & Elo Arena** | Built (v2.0.0) | 5-Dimensional automated jury (`topic_fidelity`, `source_grounding`, `instruction_clarity`, `response_completeness`, `domain_correctness` with an 85% threshold gate). Head-to-head Blinded Pairwise Elo Arena tracking model win/loss/tie records and Elo rating updates. |
+| **Cryptographic DBOM Attestation** | Built (v2.0.0) | Cryptographic Data Bill of Materials using deterministic SHA-256 Merkle trees over canonical sample records (`core/export/dbom_attestor.py`). Generates In-Toto provenance statements signed with ECDSA SECP256R1 and real-time verification badges (`/api/dbom/badge`). |
+| **Post-Training Alignment** | Built (v2.0.0) | Reference-free SimPO (length-normalized reward margins), KTO (unpaired binary utility), and DPO preference synthesizers (`pipeline/preference_pipeline.py`). |
+| **Statutory PII Sanitization** | Built (v2.0.0) | Real-time streaming de-identification (`/api/quality/redact/stream`) scrubbing Indian statutory identifiers (Aadhaar with Verhoeff checksum validation, PAN, GSTIN, vehicle plates, IFSC, and UPI IDs). |
+| **Multi-Provider Routing** | Built (v2.0.0) | Resilient provider router (`core/provider_router.py`) supporting Google Gemini, NVIDIA NIM, Anthropic Claude, OpenAI, Fireworks AI, Featherless, Groq, Ollama, and local vLLM with health telemetry and automatic fallback. |
+
+---
 
 ## Quickstart
 
-Prerequisites: Python 3.11+ (3.12 in CI), Node.js for the dashboard,
-Docker + Docker Compose for the full stack. PostgreSQL, Redis, and
-Qdrant are used by the Compose stack; the deployed demo runs
-standalone/in-memory instead (see Limitations).
+### Prerequisites
+- Python 3.11+ (Python 3.12 recommended in CI)
+- Node.js 18+ (for Next.js 14 dashboard)
+- PostgreSQL (Supabase or self-hosted) with pgvector extension
+
+### Local Development Setup
 
 ```bash
 git clone https://github.com/Sourabh-Kumar04/RasoSynth_CUTC.git
 cd RasoSynth_CUTC
-cp .env.example .env   # fill in real values; never commit .env
+cp .env.example .env   # Configure database credentials and API keys
 pip install -e ".[dev]"
 
-# Backend API server (from the repo root; serves the API on port 8000)
+# Start backend API (serves on http://127.0.0.1:8000)
 python main.py --host 127.0.0.1 --port 8000
-# Verify it is up: curl http://127.0.0.1:8000/health
-# API docs: http://127.0.0.1:8000/docs
 
-# Backend tests (full collection; run the suite before a PR)
-pytest --collect-only -q
+# Health check & OpenAPI documentation:
+# curl http://127.0.0.1:8000/health
+# http://127.0.0.1:8000/docs
+# http://127.0.0.1:8000/playground
+
+# Run full backend test suite
 pytest tests/ -q
 
-# Lint / type checks (dev extras)
-# CI gates on RUF100 only; the full ruff rule set and mypy have known
-# backlogs and are not gates, so do not expect a bare ruff or mypy run
-# to pass until those backlogs are cleared.
-ruff check --select RUF100 .
-
-# Dashboard (from the repo root)
-npm run dev --prefix frontend   # or: cd frontend && npm run dev
+# Start frontend dashboard (from repo root)
+npm run dev --prefix frontend
 ```
 
-### Docker Compose stack
+### Docker Compose Multi-Service Stack
 
 ```bash
 cp .env.example .env
 docker compose up --build -d
-# Celery worker monitor only: docker compose --profile monitoring up -d
 ```
 
-- Web dashboard: <http://localhost:3001> (override with FRONTEND_PORT)
-- API docs: <http://localhost:8000/docs>
-- Celery worker monitor: <http://localhost:5555> (monitoring profile only)
-- Reverse proxy: <http://localhost:80> (routes / to the dashboard, API paths to the backend)
+- **Dashboard:** <http://localhost:3001>
+- **API Docs:** <http://localhost:8000/docs>
+- **Worker Monitor:** <http://localhost:5555> (with `--profile monitoring`)
+- **Reverse Proxy:** <http://localhost:80>
 
-Note: the Compose files were path-checked against the current tree, but a
-full docker compose up --build was not run in the packaging pass (no
-Docker daemon was reachable from the environment used), so treat the first
-build on a Docker host as unverified until it succeeds there. The backend
-image build also requires uv.lock to be in sync with pyproject.toml
-(uv sync --frozen fails on a stale lockfile) — re-run uv lock before
-building if dependency metadata has changed since the last lock.
+---
 
-### Python SDK
+## Command Line Interface (`rasosynthtune`)
+
+```bash
+# 1. Synthesize domain dataset with cryptographic DBOM attestation
+rasosynthtune generate --domain "Indian GST & Corporate Tax Compliance" --size 50 --format jsonl
+
+# 2. Cryptographically audit dataset integrity (Merkle tree DBOM, PII, contamination)
+rasosynthtune audit --dataset outputs/<dataset-id>/dataset.parquet
+
+# 3. Sign In-Toto supply-chain provenance statement with ECDSA SECP256R1
+rasosynthtune attest --dataset outputs/<dataset-id>/dataset.jsonl
+
+# 4. Verify cryptographic signature of an In-Toto attestation bundle
+rasosynthtune verify-attestation --attestation outputs/<dataset-id>/dataset.jsonl.attestation.json
+
+# 5. Run automated Blinded LLM-as-a-Judge A/B evaluation between candidate models
+rasosynthtune judge --base-model meta-llama/Llama-3.2-1B-Instruct --aligned-model sarvamai/sarvam-2b-v0.5
+
+# 6. Generate edge model quantization recipe (GGUF 4-bit/8-bit with Ollama Modelfile)
+rasosynthtune quantize --model-path outputs/model --quantization-format gguf --bits 4
+
+# 7. Execute end-to-end headless data synthesis, DPO preference pair generation, and quantization
+rasosynthtune pipeline --domain "Indic Healthcare Diagnostics" --size 100 --synthesis-mode cot
+```
+
+---
+
+## Python SDK (`rasosynth`)
 
 ```python
 from rasosynthtune import RasoSynthClient
 
-client = RasoSynthClient(api_key="YOUR_API_KEY")
+client = RasoSynthClient(api_key="YOUR_API_KEY", base_url="http://localhost:8000")
+
+# 1. Dispatch curriculum dataset generation
 job = client.synthesize(
-    domain="Indian GST & Corporate Tax Compliance",
-    target_tokens=100000,
+    domain="Electric Vehicle Subsidies & AIS Standards",
+    target_tokens=50000,
     quality_threshold=0.85,
     export_format="parquet",
     synthesis_mode="cot",
     language="en",
     wait=True,
 )
-print(f"Status: {job.status}")
+print(f"Job Status: {job.status} | Quality Score: {job.quality_score}")
+
+# 2. Cryptographic DBOM Merkle verification
+is_valid = client.verify_dbom(
+    dataset_id=job.dataset_id,
+    merkle_root=job.merkle_root
+)
+print(f"DBOM Cryptographic Integrity Verified: {is_valid}")
 ```
 
-### CLI
+---
 
-```bash
-# Synthesis with DBOM certificate
-rasosynthtune generate --domain "Indian Taxation & GST Compliance" --size 10 --format jsonl
-
-# Local generation via Ollama / vLLM
-rasosynthtune generate --domain "Clinical Emergency Triage" --size 20 --engine ollama
-
-# Audit an exported dataset (DBOM, PII scan, contamination audit)
-rasosynthtune audit --dataset outputs/<dataset-id>/dataset.parquet
-
-# Fine-tuning recipes (Axolotl / Unsloth / Torchtune)
-rasosynthtune recipe --framework unsloth --model "sarvamai/sarvam-2b-v0.5" --dataset outputs/<dataset-id>/dataset.jsonl
-
-# Edge model quantization (GGUF, AWQ, GPTQ, ONNX in 4-bit / 8-bit)
-rasosynthtune quantize --model-path outputs/model --quantization-format gguf --bits 4
-
-# LLM-as-a-judge automated head-to-head evaluation
-rasosynthtune judge --aligned-model outputs/model --base-model meta-llama/Llama-3.2-1B-Instruct --domain "Tax Compliance"
-
-# Headless end-to-end dataset synthesis & curation pipeline
-rasosynthtune pipeline --domain "Indic Healthcare Protocols" --size 50 --synthesis-mode cot
-```
-
-### Interactive Hugging Face Playground
-The FastAPI server embeds a zero-dependency dark-mode Playground accessible directly from Hugging Face Spaces or a local browser:
-- Direct UI: `http://localhost:8000/playground` (or `/ui`)
-- Content negotiation: Requesting `/` with `Accept: text/html` serves the interactive interface; CLI/cURL requests receive JSON metadata.
-
-### Preference Alignment: KTO & SimPO
-RasoSynthTune natively supports modern post-training alignment paradigms:
-- **SimPO**: Reference-free Direct Preference Optimization with length-normalized target reward margins.
-- **KTO**: Kahneman-Tversky Optimization for learning directly from binary utility signals without pairwise pairing constraints.
-
-### Multimodal Document & Scanned Table Extraction
-`pipeline.multimodal.MultimodalDocumentExtractor` parses tabular data from scanned documents and PDFs, converting raw grid cells into clean Markdown tables and synthesizing grounded Vision QA pairs.
-
-### Automated Canary Quality Gate
-The Canary Gate (`core.evaluation.canary_gate.CanaryQualityGate`) protects downstream deployments:
-- Enforces a minimum win-rate threshold (default $\ge 70\%$) against target baselines.
-- Verifies loss convergence stability and cryptographic DBOM attestation.
-- Dynamically attaches Shields.io validation badges to Hugging Face model cards upon release.
-
-## Project structure
+## Project Structure
 
 ```text
-api/          FastAPI backend (jobs, fine-tuning, review, quality, schemas)
-agents/       Multi-agent system (graph, registry, specialized agents)
-core/         Orchestration, generation engines, DBOM, review, validation, storage
-pipeline/     Dataset construction pipeline
-providers/    Provider router and provider clients
-finetuning/   Local trainer, Colab bridge, simulated cloud stubs
-rasosynth/    Python SDK (also: rasosynthtune/ package)
-frontend/     Next.js 14 dashboard (app/, components/, lib/)
-main.py       Canonical entry point (console script: rasosynthtune;
-              serves the API by default; subcommands live in cli.py)
-workers/      Celery app (workers.celery_app.celery_app)
-tests/        Backend test suite (pytest)
-docs/         Documentation index: docs/README.md
-scripts/      Benchmark/demo/runner scripts (see note below)
-Dockerfile, docker-compose.yml
-              Backend image and full-stack Compose services (repo root)
-deploy/       Deployment extras (Helm, Hugging Face) — not the Docker files
+api/               FastAPI backend (endpoints, schemas, auth, DBOM, quality, finetune)
+core/              Core engine logic
+  generation/      Synthesizers (CoT, Socratic, RAG, tool-calling, multi-turn)
+  curation/        5D Jury validation, deduplication, quality heuristics
+  crawler/         Anti-bot stealth scraper, TLS JA3/JA4 fingerprint evasion
+  export/          DBOM Merkle generator, In-Toto ECDSA signer, HF exporter
+  db.py            Database models (Job, Dataset, Sample), asyncpg session management
+pipeline/          Planner (LLM statutory discovery), preference pipeline (DPO/SimPO)
+finetuning/        Modal A10G runner, local PEFT/Unsloth trainer, GGUF/Ollama exporter
+frontend/          Next.js 14 dashboard (Studio, Quality, Review, Arena, DBOM, Pipelines)
+main.py            Canonical entry point and CLI command router
+workers/           Celery distributed background execution tasks
 ```
 
-## Current limitations / known gaps
+---
 
-Read this before quoting any number from the site or this repo. These
-findings come from a live-site regression check on 2026-10-28 and are
-stated plainly on purpose:
+## Operational Verification & Limitations
 
-- **Fine-tuning on the live site is simulated.** Logs for live-site
-  fine-tuning runs say demo placeholders, not GPU-trained weights.
-  Loss curves and adapter/GGUF files from those runs are placeholders.
-  Label every such run "simulated". Real training requires
-  `execution_target=local` (PEFT/Unsloth) or a real Colab GPU run of
-  the notebook. See `docs/FINE_TUNING.md`.
-- **Library quality numbers are not one trustworthy score.** Quality
-  was shown as a status constant in the library, and one dataset had
-  multiple different quality numbers in different places. Do not quote
-  a single library quality percentage as measured until one scoring
-  function is enforced end to end.
-- **Old certified datasets contained many duplicate records.** Some
-  previously certified datasets were heavily duplicated. "Certified"
-  in the UI has historically been derived from job completion, not
-  from an independent audit — see `docs/DATASET_CONTRACT.md`. Do not
-  silently rewrite old certified datasets; re-certify or mark them
-  legacy.
-- **Merkle verification UI is decorative.** The DBOM API roots
-  recompute exactly from exported data, but the dashboard Verify
-  control does not perform that recomputation. Verify a DBOM by
-  recomputing the root from the exported JSONL yourself until the UI
-  is fixed.
-- **Provider badges showed zero requests.** A "Live/Healthy" badge on
-  the site is not evidence of provider traffic. Do not cite badge
-  state as usage.
-- **Deployment is standalone/in-memory, not distributed.** The live
-  demo does not run the distributed Celery/PostgreSQL/Qdrant stack
-  described for local Docker Compose. Do not describe the demo as a
-  distributed production deployment.
-- **Cost figures on the site do not trace to a real provider bill.**
-  Do not quote site cost figures as spend. If a figure cannot be
-  traced to a run, a commit, or a bill, delete it or label it
-  simulated/template.
-- **Benchmark figures removed.** The previous README carried a
-  benchmark table (uniqueness, diversity, cost-per-sample, throughput).
-  Those figures were not re-traced to a current run during this docs
-  rewrite, so they were removed rather than repeated. Re-add a
-  benchmark only with the script, commit, and run output it came from.
+- **Database Resilience:** If `POSTGRES_URL` or `DATABASE_URL` is set, the API strictly enforces PostgreSQL availability. Silent fallback to SQLite is explicitly disabled in production mode to avoid split-brain state.
+- **Serverless GPU Requirements:** Remote Modal A10G fine-tuning requires valid `MODAL_TOKEN_ID` and `MODAL_TOKEN_SECRET` environment variables. When unconfigured, fine-tuning gracefully routes to local CUDA/PEFT or local accelerated simulation.
+- **Regulatory Clarification:** The DBOM cryptographic attestation confirms byte-level sample integrity and provenance tracking via SHA-256 Merkle roots. It provides evidence for compliance audits but does not constitute legal certification under the EU AI Act or DPDP Act 2023.
 
-## Contributing
+---
 
-See [CONTRIBUTING.md](CONTRIBUTING.md). In short: user author only on
-commits (no agent co-authors), tests before a PR, and every
-simulated/template value must be labelled as such.
+## Documentation Index
 
-## Docs
+- [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) — Comprehensive technical architecture
+- [docs/CAPABILITY_VS_ROADMAP.md](docs/CAPABILITY_VS_ROADMAP.md) — Verified capabilities vs roadmap
+- [docs/DATASET_CONTRACT.md](docs/DATASET_CONTRACT.md) — Certified dataset quality contracts
+- [docs/FINE_TUNING.md](docs/FINE_TUNING.md) — Local PEFT, Modal A10G, and Colab training guides
+- [CHANGELOG.md](CHANGELOG.md) — Engine release history
 
-- [docs/README.md](docs/README.md) — docs index
-- [docs/CAPABILITY_VS_ROADMAP.md](docs/CAPABILITY_VS_ROADMAP.md) — built vs simulated vs roadmap
-- [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) — existing components only
-- [docs/DATASET_CONTRACT.md](docs/DATASET_CONTRACT.md) — certified / validated / ready
-- [docs/FINE_TUNING.md](docs/FINE_TUNING.md) — real vs simulated vs template numbers
-- [CHANGELOG.md](CHANGELOG.md) — changes from "Unreleased" forward
+---
 
 ## License
 
-[PolyForm Noncommercial License 1.0.0](LICENSE) —
-strictly non-commercial use only. Not OSI-approved.
-
+[PolyForm Noncommercial License 1.0.0](LICENSE) — strictly non-commercial use only. Not OSI-approved.

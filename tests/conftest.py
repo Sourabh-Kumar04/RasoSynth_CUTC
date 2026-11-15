@@ -23,6 +23,7 @@ os.environ.setdefault(
 # negative tests assert that unauthenticated requests are rejected.
 # The test users below are test-only credentials for this process.
 os.environ["AUTH_DISABLED"] = "false"
+os.environ["ALLOW_ANONYMOUS"] = "false"
 os.environ["ADMIN_USER"] = "testadmin:test-admin-pass-9f3k7x"
 os.environ["USER_USER"] = "testuser:test-user-pass-4m8q2z"
 os.environ.setdefault("AI_DATASET_ENVIRONMENT", "development")
