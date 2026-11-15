@@ -914,7 +914,7 @@ export default function ZenPortalPage() {
           {/* Left Column: Interactive Merkle Tree Graph */}
           <div className="lg:col-span-7">
             <MerkleTreeGraph
-              rootHash="9b87df7a3982f6e9b418a096c429712a5542a1ef248f27af3b028da3d91cf972"
+              rootHash="92f5492d11cd0f6472bb18f4890aade63556e332c75f2f4c86729911265dbb6f"
               certificateId="DBOM-VERIFIED-DATASET"
               totalSamples={100}
               issuedAt="2026-10-28T12:00:00Z"

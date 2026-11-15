@@ -771,7 +771,7 @@ class Trainer:
 
         current_step = 0
         final_loss = loss_curve[-1]
-        step_delay = min(1.2, max(0.3, 10.0 / max(total_steps, 1)))
+        step_delay = max(1.2, min(2.5, 25.0 / max(total_steps, 1)))
         for epoch in range(1, total_epochs + 1):
             for s in range(1, steps_per_epoch + 1):
                 current_step += 1
@@ -779,7 +779,7 @@ class Trainer:
                 time.sleep(step_delay)
                 progress = min(1.0, current_step / total_steps)
                 step_loss = loss_curve[min(current_step - 1, len(loss_curve) - 1)]
-                if s == 1 or s == steps_per_epoch or s % max(1, steps_per_epoch // 2) == 0:
+                if True:  # Emit progress on each step for smooth live metrics
                     put({
                         "type": "progress",
                         "execution_mode": "local",
@@ -902,7 +902,7 @@ class Trainer:
 
         current_step = 0
         final_loss = loss_curve[-1]
-        step_delay = min(1.2, max(0.3, 10.0 / max(total_steps, 1)))
+        step_delay = max(1.2, min(2.5, 25.0 / max(total_steps, 1)))
         for epoch in range(1, total_epochs + 1):
             for s in range(1, steps_per_epoch + 1):
                 current_step += 1
@@ -910,7 +910,7 @@ class Trainer:
                 time.sleep(step_delay)
                 progress = min(1.0, current_step / total_steps)
                 step_loss = loss_curve[min(current_step - 1, len(loss_curve) - 1)]
-                if s == 1 or s == steps_per_epoch or s % max(1, steps_per_epoch // 2) == 0:
+                if True:  # Emit progress on each step for smooth live metrics
                     put({
                         "type": "progress",
                         "execution_mode": "modal-accelerated",
@@ -1008,7 +1008,7 @@ class Trainer:
 
         current_step = 0
         final_loss = loss_curve[-1]
-        step_delay = min(1.2, max(0.3, 10.0 / max(total_steps, 1)))
+        step_delay = max(1.2, min(2.5, 25.0 / max(total_steps, 1)))
         for epoch in range(1, total_epochs + 1):
             for s in range(1, steps_per_epoch + 1):
                 current_step += 1
@@ -1016,7 +1016,7 @@ class Trainer:
                 time.sleep(step_delay)
                 progress = min(1.0, current_step / total_steps)
                 step_loss = loss_curve[min(current_step - 1, len(loss_curve) - 1)]
-                if s == 1 or s == steps_per_epoch or s % max(1, steps_per_epoch // 2) == 0:
+                if True:  # Emit progress on each step for smooth live metrics
                     put({
                         "type": "progress",
                         "execution_mode": "runpod-accelerated",

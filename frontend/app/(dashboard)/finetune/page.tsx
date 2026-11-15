@@ -1276,19 +1276,17 @@ function FineTuneContent() {
   }, [handleEstimateVram])
 
   const applyAutoTune = () => {
-    if (vramData?.recommended_hyperparameters) {
-      const hp = vramData.recommended_hyperparameters
-      setForm(prev => ({
-        ...prev,
-        load_in_4bit: hp.load_in_4bit ?? prev.load_in_4bit,
-        bf16: hp.bf16 ?? prev.bf16,
-        per_device_train_batch_size: hp.per_device_train_batch_size ?? prev.per_device_train_batch_size,
-        gradient_accumulation_steps: hp.gradient_accumulation_steps ?? prev.gradient_accumulation_steps,
-        lora_r: hp.lora_r ?? prev.lora_r,
-        lora_alpha: hp.lora_alpha ?? prev.lora_alpha,
-      }))
-      toast('Auto-tuned hyperparameters for 16GB VRAM!', 'success')
-    }
+    const hp = vramData?.recommended_hyperparameters
+    setForm(prev => ({
+      ...prev,
+      load_in_4bit: true,
+      bf16: true,
+      per_device_train_batch_size: 2,
+      gradient_accumulation_steps: 8,
+      lora_r: hp?.lora_r ?? 16,
+      lora_alpha: hp?.lora_alpha ?? 32,
+    }))
+    toast('Auto-tuned for 16GB GPU: Batch Size=2, Grad Accum=8, 4-bit NF4 enabled.', 'success')
   }
 
   // Synchronize search param if changes

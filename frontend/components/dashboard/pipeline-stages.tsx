@@ -16,17 +16,41 @@ export type StageState = 'done' | 'active' | 'upcoming' | 'unknown'
  * job data is available at all, every stage renders as Unknown — never
  * as a fabricated success.
  */
+const STAGE_ALIASES: Record<string, PipelineStage> = {
+  discover: 'discovery',
+  discovery: 'discovery',
+  extract: 'extraction',
+  extraction: 'extraction',
+  filter: 'filtering',
+  filtering: 'filtering',
+  quality_eval: 'filtering',
+  human_review: 'filtering',
+  balance: 'filtering',
+  construct: 'construction',
+  construction: 'construction',
+  plan: 'construction',
+  synthesis: 'construction',
+  export: 'export',
+  completed: 'completed',
+}
+
 export function stageStatesFor(currentStage: string | null | undefined, jobStatus: string | null | undefined): StageState[] {
+  if (jobStatus === 'completed') {
+    return PIPELINE_STAGES.map(() => 'done' as StageState)
+  }
+
   if (!currentStage || currentStage === 'unknown') {
     return PIPELINE_STAGES.map(() => 'unknown' as StageState)
   }
-  const idx = PIPELINE_STAGES.indexOf(currentStage as PipelineStage)
+
+  const normalized = STAGE_ALIASES[currentStage.toLowerCase()] || currentStage.toLowerCase()
+  const idx = PIPELINE_STAGES.indexOf(normalized as PipelineStage)
   if (idx === -1) {
     return PIPELINE_STAGES.map(() => 'unknown' as StageState)
   }
   return PIPELINE_STAGES.map((_, i) => {
     if (i < idx) return 'done'
-    if (i === idx) return jobStatus === 'completed' && currentStage === 'completed' ? 'done' : 'active'
+    if (i === idx) return jobStatus === 'completed' && normalized === 'completed' ? 'done' : 'active'
     return 'upcoming'
   })
 }
@@ -42,7 +66,8 @@ export function PipelineStages({
   progress: number | null
 }) {
   const states = stageStatesFor(currentStage, jobStatus)
-  const allUnknown = states.every((s) => s === 'unknown')
+  const isCompleted = jobStatus === 'completed'
+  const allUnknown = !isCompleted && states.every((s) => s === 'unknown')
   return (
     <div>
       <ol className="flex flex-col gap-2 sm:flex-row sm:items-start">
@@ -74,7 +99,9 @@ export function PipelineStages({
         })}
       </ol>
       <div className="mt-3 font-mono text-xs text-[#a8a29e]">
-        {allUnknown
+        {isCompleted
+          ? 'Current stage: completed · Progress: 100% · All pipeline stages executed successfully'
+          : allUnknown
           ? 'Stage state: unknown — the selected job reports no stage, or no job data is available.'
           : `Current stage: ${currentStage}${typeof progress === 'number' && Number.isFinite(progress) ? ` · Progress: ${Math.round(Math.min(100, Math.max(0, progress <= 1 ? progress * 100 : progress)))}%` : ' · Progress: unknown'}`}
       </div>

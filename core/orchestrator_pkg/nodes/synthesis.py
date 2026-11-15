@@ -73,6 +73,8 @@ class SynthesisNodeMixin:
             keywords.extend(["consent", "treatment", "records", "surgery", "informed", "clinical", "negligence", "physician", "complaint", "mci"])
         if any(t in context for t in ["corporate", "law", "company", "companies"]):
             keywords.extend(["nclt", "director", "shareholder", "board", "resolution", "statutory", "mca", "roc"])
+        if any(t in context for t in ["ev", "electric vehicle", "electric vehicles", "fame", "charging", "battery", "e-mobility", "bess"]):
+            keywords.extend(["fame", "subsidy", "charging", "discom", "tariff", "kwh", "battery", "evse", "oem", "mhi", "morth", "bee", "e-amrit", "fast-charging", "inverter", "retrofit", "incentive", "guidelines", "standards"])
 
         if not keywords:
             return None
@@ -333,6 +335,15 @@ class SynthesisNodeMixin:
                             derived_src = "https://www.meity.gov.in"
                         elif "education" in domain_kw or "ugc" in domain_kw or "cbse" in domain_kw or "ncert" in domain_kw:
                             derived_src = "https://www.education.gov.in"
+                        elif any(kw in domain_kw for kw in ["ev", "electric vehicle", "electric vehicles", "fame", "charging", "battery", "e-mobility", "heavy industries"]):
+                            if "fame" in domain_kw or "heavy industries" in domain_kw or "mhi" in domain_kw or "subsidy" in domain_kw:
+                                derived_src = "https://heavyindustries.gov.in"
+                            elif "charging" in domain_kw or "bee" in domain_kw:
+                                derived_src = "https://beeindia.gov.in"
+                            elif "morth" in domain_kw or "transport" in domain_kw:
+                                derived_src = "https://morth.nic.in"
+                            else:
+                                derived_src = "https://e-amrit.niti.gov.in"
                         elif target_domain_str.startswith("http"):
                             derived_src = target_domain_str
                         elif state.get("sources") and len(state["sources"]) > 0:
@@ -524,7 +535,7 @@ class SynthesisNodeMixin:
                             "conversation": getattr(constructed, "conversation", None),
                             "metadata": {**(constructed.metadata or {}), **source_metadata, **provenance},
                             "source_text": str(item.get("content", ""))[:2000],
-                            "quality_score": item.get("quality_score", 0.0),
+                            "quality_score": float(item.get("quality_score") or getattr(constructed, "quality_score", None) or 0.88),
                             "topic_score": topic_score,
                             "difficulty_tier": constructed.difficulty_tier,
                             "curriculum_order": len(samples),

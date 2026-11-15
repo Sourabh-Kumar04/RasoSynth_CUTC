@@ -3237,6 +3237,11 @@ class DiscoveryPipeline:
         # Fallback: web search across multiple government portals
         if not sources:
             for portal_query in [
+                f"site:data.gov.in {query}",
+                f"site:heavyindustries.gov.in {query}",
+                f"site:e-amrit.niti.gov.in {query}",
+                f"site:beeindia.gov.in {query}",
+                f"site:morth.nic.in {query}",
                 f"site:data.gov {query}",
                 f"site:data.europa.eu {query}",
                 f"site:data.gov.uk {query}",

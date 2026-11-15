@@ -18,6 +18,7 @@ export interface HealthStatus {
   checks?: Record<string, any>
   providers?: Record<string, ProviderHealthInfo>
   database?: boolean
+  database_engine?: string
   redis?: boolean
   circuit_breakers?: Record<string, string>
 }

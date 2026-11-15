@@ -158,11 +158,14 @@ export function MerkleTreeGraph({
     },
   }
 
+  const calculatedRoot = computeSha256(`${branchLeftHash}:${branchRightHash}`)
+  const effectiveRoot = (isValidRoot && cleanRoot) ? cleanRoot : calculatedRoot
+
   const rootNode: MerkleNode = {
     id: 'root',
     label: 'Merkle Root',
-    hash: cleanRoot.slice(0, 16) + '...',
-    fullHash: cleanRoot,
+    hash: effectiveRoot.slice(0, 16) + '...',
+    fullHash: effectiveRoot,
     level: 0,
     parent: null,
     sibling: null,

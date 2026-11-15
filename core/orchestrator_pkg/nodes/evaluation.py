@@ -640,7 +640,18 @@ class EvaluationNodeMixin:
             except Exception as arbiter_error:
                 logger.debug("Human arbiter agent skipped: %s", arbiter_error)
 
-        if hitl_enabled and review_samples:
+        # Confidence-based flagged samples always enter review regardless of general sampling switch
+        flagged_samples = [
+            s for s in samples
+            if s.get("needs_human_review") or float(s.get("quality_score", 1.0) or 1.0) < 0.70 or float(s.get("hallucination_risk", 0.0) or 0.0) > 0.40
+        ]
+        seen_cand_ids = {id(s) for s in review_samples}
+        for fs in flagged_samples:
+            if id(fs) not in seen_cand_ids:
+                review_samples.append(fs)
+                seen_cand_ids.add(id(fs))
+
+        if (hitl_enabled or flagged_samples) and review_samples:
             # ── Resolve the ReviewService ──────────────────────────────
             # Try to get the shared instance from app state first
             try:

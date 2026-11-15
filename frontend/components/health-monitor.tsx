@@ -120,28 +120,23 @@ export function HealthMonitor({ className }: ProviderHealthProps) {
 
               {/* Infrastructure */}
               <div className="grid grid-cols-2 gap-3">
-                <div className="flex items-center gap-2 p-2">
-                  <Database className="h-4 w-4 text-muted-foreground" />
-                  <span className="text-sm">Database</span>
+                <div className="flex items-center gap-2 p-2 rounded bg-[#0a0a0f] border border-[#272738]/40">
+                  <Database className="h-4 w-4 text-[#f26625]" />
+                  <span className="text-xs font-mono">
+                    DB: <strong className="text-white">{healthStatus?.database_engine === 'postgres' ? 'PostgreSQL' : 'SQLite Ready'}</strong>
+                  </span>
                   {(healthStatus?.database ?? healthStatus?.checks?.database === 'ready') ? (
-                    <CheckCircle2 className="h-3 w-3 text-green-500 ml-auto" />
+                    <CheckCircle2 className="h-3 w-3 text-emerald-400 ml-auto" />
                   ) : (
-                    <AlertCircle className="h-3 w-3 text-red-500 ml-auto" />
+                    <AlertCircle className="h-3 w-3 text-rose-500 ml-auto" />
                   )}
                 </div>
-                <div className="flex items-center gap-2 p-2">
-                  <Server className="h-4 w-4 text-muted-foreground" />
-                  {healthStatus?.redis || healthStatus?.checks?.redis === 'ready' ? (
-                    <>
-                      <span className="text-sm">Redis</span>
-                      <CheckCircle2 className="h-3 w-3 text-green-500 ml-auto" />
-                    </>
-                  ) : (
-                    <>
-                      <span className="text-sm">In-Memory Queue</span>
-                      <CheckCircle2 className="h-3 w-3 text-emerald-400 ml-auto" />
-                    </>
-                  )}
+                <div className="flex items-center gap-2 p-2 rounded bg-[#0a0a0f] border border-[#272738]/40">
+                  <Server className="h-4 w-4 text-[#f26625]" />
+                  <span className="text-xs font-mono">
+                    Broker: <strong className="text-white">{healthStatus?.redis || healthStatus?.checks?.redis === 'ready' ? 'Redis Connected' : 'In-Memory Queue'}</strong>
+                  </span>
+                  <CheckCircle2 className="h-3 w-3 text-emerald-400 ml-auto" />
                 </div>
               </div>
 

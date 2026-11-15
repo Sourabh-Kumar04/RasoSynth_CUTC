@@ -449,6 +449,7 @@ async def get_quality_benchmarks(current_user: User = Depends(get_current_user))
     markdown_report = benchmark.generate_report(results)
     payload = {
         "benchmark_data": results,
+        "results": results,
         "markdown_report": markdown_report,
     }
     _bench_cache = {"data": payload, "timestamp": now}

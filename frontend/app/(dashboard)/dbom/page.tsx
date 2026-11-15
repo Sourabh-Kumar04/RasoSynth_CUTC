@@ -16,6 +16,7 @@ import {
   Check,
   RefreshCw,
   AlertCircle,
+  Clock,
   FileText,
   Download,
   Loader2,
@@ -378,9 +379,38 @@ function DbomContent() {
   return (
     <div className="space-y-6 max-w-6xl mx-auto pb-10 animate-fade-in">
       <PageHeader
-        eyebrow="Cryptographically Certified"
+        eyebrow={
+          verifying
+            ? "Verifying Merkle Tree..."
+            : verifyResult?.valid
+            ? "Cryptographically Certified & Verified"
+            : verifyResult && !verifyResult.valid
+            ? "Integrity Check Failed"
+            : "Cryptographic Attestation Record"
+        }
         title="Data Bill of Materials (DBOM)"
         purpose="Cryptographic provenance, Merkle tree audits, and statutory compliance verification for synthesized instruction datasets."
+        status={
+          <div className="flex items-center gap-2">
+            {verifying ? (
+              <Badge variant="outline" className="border-blue-500/40 text-blue-400 bg-blue-950/20 text-xs font-mono">
+                <RefreshCw className="w-3.5 h-3.5 mr-1.5 animate-spin" /> Verifying SHA-256 Merkle Proof...
+              </Badge>
+            ) : verifyResult?.valid ? (
+              <Badge variant="outline" className="border-emerald-500/40 text-emerald-400 bg-emerald-950/20 text-xs font-mono">
+                <ShieldCheck className="w-3.5 h-3.5 mr-1.5" /> Cryptographic Root Verified · 4 Leaves Matched
+              </Badge>
+            ) : verifyResult && !verifyResult.valid ? (
+              <Badge variant="outline" className="border-rose-500/40 text-rose-400 bg-rose-950/20 text-xs font-mono">
+                <AlertCircle className="w-3.5 h-3.5 mr-1.5" /> Root Mismatch / Tamper Detected
+              </Badge>
+            ) : (
+              <Badge variant="outline" className="border-zinc-700 text-zinc-400 bg-zinc-900/60 text-xs font-mono">
+                <Clock className="w-3.5 h-3.5 mr-1.5" /> Awaiting Verification (Click &quot;Verify Root&quot; Below)
+              </Badge>
+            )}
+          </div>
+        }
         action={
           <div className="flex items-center gap-2">
             <Link href="/datasets">

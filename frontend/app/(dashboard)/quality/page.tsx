@@ -138,17 +138,46 @@ export default function QualityDashboardPage() {
   const handleRunSemanticProjection = async () => {
     setDensityLoading(true);
     try {
-      const demoSamples = [
-        { instruction: "Calculate 18% GST on ₹2,50,000 for IT consulting", response: "₹45,000", domain: "Taxation" },
-        { instruction: "Input Tax Credit claiming conditions under Section 16", response: "Tax invoice and payment proof required.", domain: "Taxation" },
-        { instruction: "Draft an objection reply for GSTR-2B reconciliation mismatch notice", response: "Respected Officer, Here is the reconciliation...", domain: "Compliance" },
-        { instruction: "Explain Section 80C deductions for EPF and PPF deposits", response: "Up to ₹1.5L can be claimed under 80C.", domain: "Income Tax" },
-        { instruction: "Health insurance premium deduction limits under Section 80D", response: "₹25,000 for self, ₹50,000 for senior parents.", domain: "Income Tax" },
-        { instruction: "Udyam registration online steps for MSME certification", response: "Visit udyamregistration portal with PAN and Aadhaar.", domain: "Corporate" },
-        { instruction: "Penalty for delayed submission of annual GSTR-9 filing", response: "Late fee under section 47 applies.", domain: "Compliance" },
-        { instruction: "Customs duty bill of entry warehouse bond release clause", response: "Section 68 customs clearance procedure.", domain: "Logistics" },
-      ];
-      const res = await api.analyzeSemanticDensity({ samples: demoSamples, k_clusters: 4 });
+      let samplesToProject: any[] = [];
+      if (selectedJobId) {
+        try {
+          const preview = await api.getPreviewSamples(selectedJobId);
+          if (preview?.samples && preview.samples.length > 0) {
+            samplesToProject = preview.samples.map((s: any) => ({
+              instruction: s.instruction,
+              response: s.response || "",
+              domain: selectedJob?.target_domain || "Dataset Domain",
+            }));
+          }
+        } catch {}
+      }
+
+      if (samplesToProject.length === 0) {
+        const domainStr = ((selectedJob?.target_domain || "") + " " + (selectedJob?.dataset_name || "")).toLowerCase();
+        if (domainStr.includes("ev") || domainStr.includes("electric") || domainStr.includes("fame") || domainStr.includes("charging")) {
+          samplesToProject = [
+            { instruction: "What are the eligibility requirements for FAME-II subsidy on two-wheeler EVs?", response: "Minimum 80km range, 45km/h top speed, and localized manufacturing.", domain: "FAME Subsidies" },
+            { instruction: "How does the PM E-DRIVE scheme differ from FAME II for commercial electric vehicles?", response: "PM E-DRIVE allocates dedicated outlay for public charging infrastructure and e-ambulances.", domain: "E-Mobility" },
+            { instruction: "What are the BEE guidelines for public EV charging station power tariff in India?", response: "State DISCOM single-part tariff capped at average cost of supply during off-peak hours.", domain: "EV Charging" },
+            { instruction: "Can a consumer claim subsidy under PM Surya Ghar for EV home solar charging?", response: "Yes, grid-tied rooftop solar installations provide direct subsidy up to ₹78,000 for 3kW.", domain: "Renewable Energy" },
+            { instruction: "Battery swapping policy standards for electric commercial three-wheelers in India", response: "Interoperable battery packs conforming to AIS-156 safety standards.", domain: "Battery Standards" },
+            { instruction: "Ex-showroom price cap criteria under Heavy Industries EV subsidy schemes", response: "Subsidies apply only to vehicles priced under statutory cost ceilings to benefit mass transit.", domain: "Policy Norms" },
+          ];
+        } else {
+          samplesToProject = [
+            { instruction: "Calculate 18% GST on ₹2,50,000 for IT consulting", response: "₹45,000", domain: "Taxation" },
+            { instruction: "Input Tax Credit claiming conditions under Section 16", response: "Tax invoice and payment proof required.", domain: "Taxation" },
+            { instruction: "Draft an objection reply for GSTR-2B reconciliation mismatch notice", response: "Respected Officer, Here is the reconciliation...", domain: "Compliance" },
+            { instruction: "Explain Section 80C deductions for EPF and PPF deposits", response: "Up to ₹1.5L can be claimed under 80C.", domain: "Income Tax" },
+            { instruction: "Health insurance premium deduction limits under Section 80D", response: "₹25,000 for self, ₹50,000 for senior parents.", domain: "Income Tax" },
+            { instruction: "Udyam registration online steps for MSME certification", response: "Visit udyamregistration portal with PAN and Aadhaar.", domain: "Corporate" },
+            { instruction: "Penalty for delayed submission of annual GSTR-9 filing", response: "Late fee under section 47 applies.", domain: "Compliance" },
+            { instruction: "Customs duty bill of entry warehouse bond release clause", response: "Section 68 customs clearance procedure.", domain: "Logistics" },
+          ];
+        }
+      }
+
+      const res = await api.analyzeSemanticDensity({ samples: samplesToProject, k_clusters: 4 });
       setDensityResult(res);
       if (res.points?.length) {
         setSelectedPoint(res.points[0]);
@@ -247,21 +276,36 @@ export default function QualityDashboardPage() {
       <div className="p-6 rounded-2xl bg-white/[0.02] border border-white/[0.06] flex flex-col md:flex-row items-start md:items-center justify-between gap-6">
         <div className="space-y-2">
           <div className="flex items-center gap-3">
-            <span className="text-3xl font-extrabold font-mono text-emerald-400">
-              {compositePct !== null ? `${compositePct}%` : '88.0%'}
+            <span className={clsx(
+              "text-3xl font-extrabold font-mono",
+              compositePct === null
+                ? "text-amber-400"
+                : allMetricsPassed
+                ? "text-emerald-400"
+                : anyMetricFailed
+                ? "text-amber-400"
+                : "text-emerald-400"
+            )}>
+              {compositePct !== null ? `${compositePct}%` : (selectedJob?.status === 'running' || selectedJob?.status === 'synthesizing') ? 'In-Flight' : 'Pending'}
             </span>
             <Badge
               variant="outline"
               className={clsx(
                 "font-mono text-xs font-bold py-1 px-3",
-                allMetricsPassed
+                compositePct === null
+                  ? "bg-amber-950/60 text-amber-400 border-amber-500/40"
+                  : allMetricsPassed
                   ? "bg-emerald-950/60 text-emerald-400 border-emerald-500/40"
                   : anyMetricFailed
                   ? "bg-amber-950/60 text-amber-400 border-amber-500/40"
                   : "bg-emerald-950/60 text-emerald-400 border-emerald-500/40"
               )}
             >
-              {allMetricsPassed
+              {compositePct === null
+                ? (selectedJob?.status === 'running' || selectedJob?.status === 'synthesizing'
+                    ? "⏳ 5D Jury Audit In-Flight..."
+                    : "⏳ Awaiting Audit Certification")
+                : allMetricsPassed
                 ? "✓ Production Grade · Ready for Fine-Tuning"
                 : anyMetricFailed
                 ? (fiveDimensions.filter(d => d.val !== null && d.val < d.target).length > 0
@@ -271,7 +315,11 @@ export default function QualityDashboardPage() {
             </Badge>
           </div>
           <p className="text-sm font-sans text-zinc-300 max-w-2xl leading-relaxed">
-            {allMetricsPassed
+            {compositePct === null
+              ? (selectedJob?.status === 'running' || selectedJob?.status === 'synthesizing'
+                  ? "Dataset synthesis is actively underway. The automated 5D statutory jury will evaluate records upon batch completion."
+                  : "Audit certification pending for the selected batch.")
+              : allMetricsPassed
               ? "All 5 quality dimensions passed target benchmarks (≥85%). High grounding fidelity with zero detected benchmark contamination."
               : anyMetricFailed
               ? "One or more dimensions fell below the 85% threshold. Review the dimension scores below before kicking off a training run."
@@ -288,7 +336,7 @@ export default function QualityDashboardPage() {
       </div>
 
       {/* Overview Stat Strip */}
-      <QualityOverviewCards />
+      <QualityOverviewCards selectedJobComposite={compositePct} selectedJobSamples={selectedJob?.metadata?.total_samples || selectedJob?.config?.dataset_size} />
 
       {/* Tabs */}
       <Tabs defaultValue="audit" className="space-y-6">
@@ -329,8 +377,9 @@ export default function QualityDashboardPage() {
 
             <div className="divide-y divide-white/[0.06] border-y border-white/[0.08]">
               {fiveDimensions.map((dim) => {
-                const score = dim.val ?? 88;
-                const passed = score >= dim.target;
+                const hasScore = typeof dim.val === 'number' && dim.val !== null;
+                const score: number = hasScore ? (dim.val as number) : 0;
+                const passed = hasScore && score >= dim.target;
 
                 return (
                   <div key={dim.id} className="py-4 px-2 hover:bg-white/[0.02] transition-colors flex flex-col sm:flex-row sm:items-center justify-between gap-4">
@@ -349,21 +398,27 @@ export default function QualityDashboardPage() {
                       <div className="w-36 space-y-1">
                         <div className="w-full bg-white/[0.06] h-1.5 rounded-full overflow-hidden">
                           <div
-                            className={clsx("h-full rounded-full transition-all duration-500", passed ? "bg-emerald-400" : "bg-amber-400")}
-                            style={{ width: `${score}%` }}
+                            className={clsx(
+                              "h-full rounded-full transition-all duration-500",
+                              !hasScore ? "bg-zinc-700" : passed ? "bg-emerald-400" : "bg-amber-400"
+                            )}
+                            style={{ width: `${hasScore ? score : 0}%` }}
                           />
                         </div>
                       </div>
 
                       <div className="text-right shrink-0">
-                        <div className={clsx("text-base font-bold font-mono", passed ? "text-emerald-400" : "text-amber-400")}>
-                          {score}%
+                        <div className={clsx(
+                          "text-base font-bold font-mono",
+                          !hasScore ? "text-zinc-500" : passed ? "text-emerald-400" : "text-amber-400"
+                        )}>
+                          {hasScore ? `${score}%` : '—'}
                         </div>
                         <span className={clsx(
                           "text-[10px] font-mono font-bold uppercase",
-                          passed ? "text-emerald-400" : "text-amber-400"
+                          !hasScore ? "text-zinc-500" : passed ? "text-emerald-400" : "text-amber-400"
                         )}>
-                          {passed ? "Pass" : "Below Target"}
+                          {!hasScore ? "Pending Audit" : passed ? "Pass" : "Below Target"}
                         </span>
                       </div>
                     </div>
@@ -441,7 +496,7 @@ export default function QualityDashboardPage() {
                   <CheckCircle2 className="h-4 w-4 text-emerald-400" />
                   <span className="font-bold text-sm text-white">Jury Evaluation Verdict</span>
                   <Badge variant="outline" className="text-xs font-mono font-bold uppercase bg-emerald-950/60 text-emerald-400 border-emerald-500/40">
-                    {judgeResult.rating}
+                    {judgeResult.groundedness == null ? `${judgeResult.rating} · Reference Pending` : judgeResult.rating}
                   </Badge>
                 </div>
                 <div className="text-right">
@@ -459,20 +514,26 @@ export default function QualityDashboardPage() {
                   { label: "Correctness", val: judgeResult.domain_correctness },
                   { label: "Safety & Tone", val: judgeResult.safety_tone },
                   { label: "Conciseness", val: judgeResult.conciseness },
-                ].map((dim, i) => (
-                  <div key={i} className="p-3 rounded-lg bg-white/[0.02] border border-white/[0.04] space-y-1">
-                    <span className="text-[11px] font-mono text-[#a8a29e] uppercase block">{dim.label}</span>
-                    <p className="text-base font-bold font-mono text-white">
-                      {Math.round(dim.val * 100)}%
-                    </p>
-                    <div className="w-full bg-white/[0.06] h-1 rounded-full overflow-hidden">
-                      <div
-                        className={clsx("h-full", dim.val >= 0.85 ? "bg-emerald-400" : "bg-[#f26625]")}
-                        style={{ width: `${Math.round(dim.val * 100)}%` }}
-                      />
+                ].map((dim, i) => {
+                  const hasVal = typeof dim.val === 'number';
+                  return (
+                    <div key={i} className="p-3 rounded-lg bg-white/[0.02] border border-white/[0.04] space-y-1">
+                      <span className="text-[11px] font-mono text-[#a8a29e] uppercase block">{dim.label}</span>
+                      <p className="text-base font-bold font-mono text-white">
+                        {hasVal ? `${Math.round(dim.val * 100)}%` : 'N/A (No Ref)'}
+                      </p>
+                      <div className="w-full bg-white/[0.06] h-1 rounded-full overflow-hidden">
+                        <div
+                          className={clsx(
+                            "h-full",
+                            !hasVal ? "bg-zinc-700" : dim.val >= 0.85 ? "bg-emerald-400" : "bg-[#f26625]"
+                          )}
+                          style={{ width: `${hasVal ? Math.round(dim.val * 100) : 0}%` }}
+                        />
+                      </div>
                     </div>
-                  </div>
-                ))}
+                  );
+                })}
               </div>
             </div>
           )}

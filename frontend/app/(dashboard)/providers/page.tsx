@@ -330,11 +330,13 @@ export default function ProvidersPage() {
                                 <p className="text-xs font-bold text-white truncate">{p.name.replace(/_/g, ' ')}</p>
                                 <span className={clsx(
                                   "px-1.5 py-0.2 rounded text-[10px] font-mono font-bold border",
-                                  idx === 0
-                                    ? "bg-emerald-950/40 text-emerald-400 border-emerald-500/30"
-                                    : "bg-[#161622] text-[#f26625] border-[#272738]"
+                                  testResults[p.name]?.ok === false
+                                    ? "bg-rose-950/40 text-rose-400 border-rose-500/30"
+                                    : idx === 0
+                                      ? "bg-emerald-950/40 text-emerald-400 border-emerald-500/30"
+                                      : "bg-[#161622] text-[#f26625] border-[#272738]"
                                 )}>
-                                  Priority #{idx + 1} {idx === 0 ? '(Primary)' : '(Fallback)'}
+                                  Priority #{idx + 1} {testResults[p.name]?.ok === false ? '(Unreachable)' : idx === 0 ? '(Primary)' : '(Fallback)'}
                                 </span>
                               </div>
                               {(() => {
@@ -380,12 +382,20 @@ export default function ProvidersPage() {
                         <div className="grid grid-cols-2 gap-x-4 gap-y-1.5 text-xs bg-[#0a0a0f] p-3 rounded-xl border border-[#272738]">
                           <div className="flex justify-between">
                             <span className="text-[#a8a29e] font-mono text-xs">Latency</span>
-                            <span className="font-mono text-xs font-bold text-[#f26625]">{p.latency_ms ? `${Math.round(p.latency_ms)}ms` : '—'}</span>
+                            <span className="font-mono text-xs font-bold text-[#f26625]">
+                              {testResults[p.name]?.latency != null
+                                ? `${Math.round(testResults[p.name].latency)}ms`
+                                : p.latency_ms
+                                ? `${Math.round(p.latency_ms)}ms`
+                                : '—'}
+                            </span>
                           </div>
                           <div className="flex justify-between">
                             <span className="text-[#a8a29e] font-mono text-xs">Success Rate</span>
                             <span className="font-mono text-xs font-bold text-zinc-300">
-                              {p.requests_today && p.requests_today > 0 && p.success_rate != null
+                              {testResults[p.name]?.ok === false
+                                ? 'Unreachable (Test Failed)'
+                                : p.requests_today && p.requests_today > 0 && p.success_rate != null
                                 ? `${(p.success_rate * 100).toFixed(1)}%`
                                 : testResults[p.name]?.ok
                                 ? 'Verified'

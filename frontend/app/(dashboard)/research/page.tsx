@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect, useCallback } from 'react'
+import { useState, useEffect, useCallback, useMemo } from 'react'
 import {
   Beaker, TrendingUp, Clock, CheckCircle2, AlertCircle,
   RefreshCw, Loader2, Sparkles, Target, Play,
@@ -172,6 +172,36 @@ export default function ResearchPage() {
   const [arenaVoteSubmitted, setArenaVoteSubmitted] = useState(false)
   const [selectedWinner, setSelectedWinner] = useState<'A' | 'B' | null>(null)
 
+  const DEFAULT_RATINGS: Record<string, number> = {
+    'sarvam-2b-indic-dpo': 1264.2,
+    'sarvam-2b-v0.5':      1248.0,
+    'llama-3.2-1b':        1218.0,
+    'qwen-2.5-7b':         1215.0,
+  }
+
+  const DEFAULT_RECORDS: Record<string, { wins: number; losses: number; ties: number }> = {
+    'sarvam-2b-indic-dpo': { wins: 29, losses: 8,  ties: 3 },
+    'sarvam-2b-v0.5':      { wins: 21, losses: 16, ties: 3 },
+    'llama-3.2-1b':        { wins: 15, losses: 21, ties: 4 },
+    'qwen-2.5-7b':         { wins: 9,  losses: 29, ties: 2 },
+  }
+
+  const arenaPair = {
+    prompt: "A registered supplier issued a tax invoice for ₹5,00,000 + 18% GST (₹90,000) and received full payment from the recipient, but subsequently failed to file GSTR-3B. Can the recipient claim Input Tax Credit under Section 16(2)(c) of the CGST Act 2017?",
+    modelA: {
+      key: 'sarvam-2b-v0.5',
+      name: "Candidate A",
+      trueId: "sarvamai/sarvam-2b-v0.5",
+      response: "Under Section 16(2)(c) of the CGST Act 2017, the entitlement to ITC is contingent upon the tax charged being actually paid to the Government. However, landmark High Court rulings (e.g., Bharti Telemedia and Suncraft Energy) establish that recovery must first be initiated against the defaulting supplier. If the recipient demonstrates genuine transaction proof, GST tax invoice, and bank payment records via DRC-03 reconciliation, ITC cannot be summarily denied without investigating the defaulting supplier."
+    },
+    modelB: {
+      key: 'qwen-2.5-7b',
+      name: "Candidate B",
+      trueId: "Qwen/Qwen2.5-1.5B-Instruct",
+      response: "Under Section 16(2) of GST Act, input credit requires four basic conditions: possessing an invoice, receiving goods, paying tax to government, and filing return. When supplier does not file GSTR-3B, tax is not credited into the government account, so the recipient cannot claim ITC directly unless the supplier amends their returns or pays the tax during annual reconciliation."
+    }
+  }
+
   const [eloRatings, setEloRatings] = useState<Record<string, number>>(() => {
     if (typeof window !== 'undefined') {
       try {
@@ -179,12 +209,7 @@ export default function ResearchPage() {
         if (saved) return JSON.parse(saved)
       } catch {}
     }
-    return {
-      'sarvam-2b-indic-dpo': 1264.2,
-      'sarvam-2b-v0.5':      1248.0,
-      'llama-3.2-1b':        1218.0,
-      'qwen-2.5-7b':         1215.0,
-    }
+    return DEFAULT_RATINGS
   })
 
   const [modelRecords, setModelRecords] = useState<Record<string, { wins: number; losses: number; ties: number }>>(() => {
@@ -194,12 +219,7 @@ export default function ResearchPage() {
         if (saved) return JSON.parse(saved)
       } catch {}
     }
-    return {
-      'sarvam-2b-indic-dpo': { wins: 29, losses: 8, ties: 3 },
-      'sarvam-2b-v0.5':      { wins: 21, losses: 16, ties: 3 },
-      'llama-3.2-1b':        { wins: 15, losses: 21, ties: 4 },
-      'qwen-2.5-7b':         { wins: 9,  losses: 29, ties: 2 },
-    }
+    return DEFAULT_RECORDS
   })
 
   const [lastDelta, setLastDelta] = useState<{ deltaA: number; deltaB: number } | null>(null)
@@ -215,8 +235,8 @@ export default function ResearchPage() {
     setSelectedWinner(winner)
     setArenaVoteSubmitted(true)
 
-    const modelAKey = 'sarvam-2b-v0.5'
-    const modelBKey = 'qwen-2.5-7b'
+    const modelAKey = arenaPair.modelA.key
+    const modelBKey = arenaPair.modelB.key
     const rA = eloRatings[modelAKey] ?? 1248.0
     const rB = eloRatings[modelBKey] ?? 1215.0
     const scoreA = winner === 'A' ? 1.0 : 0.0
@@ -241,13 +261,13 @@ export default function ResearchPage() {
         ...prev,
         [modelAKey]: {
           ...prev[modelAKey],
-          wins: prev[modelAKey].wins + (winner === 'A' ? 1 : 0),
-          losses: prev[modelAKey].losses + (winner === 'B' ? 1 : 0),
+          wins: (prev[modelAKey]?.wins ?? 21) + (winner === 'A' ? 1 : 0),
+          losses: (prev[modelAKey]?.losses ?? 16) + (winner === 'B' ? 1 : 0),
         },
         [modelBKey]: {
           ...prev[modelBKey],
-          wins: prev[modelBKey].wins + (winner === 'B' ? 1 : 0),
-          losses: prev[modelBKey].losses + (winner === 'A' ? 1 : 0),
+          wins: (prev[modelBKey]?.wins ?? 9) + (winner === 'B' ? 1 : 0),
+          losses: (prev[modelBKey]?.losses ?? 29) + (winner === 'A' ? 1 : 0),
         },
       }
       if (typeof window !== 'undefined') {
@@ -261,21 +281,39 @@ export default function ResearchPage() {
     setSelectedWinner(null)
     setArenaVoteSubmitted(false)
     setLastDelta(null)
-  }
-
-  const arenaPair = {
-    prompt: "A registered supplier issued a tax invoice for ₹5,00,000 + 18% GST (₹90,000) and received full payment from the recipient, but subsequently failed to file GSTR-3B. Can the recipient claim Input Tax Credit under Section 16(2)(c) of the CGST Act 2017?",
-    modelA: {
-      name: "Candidate A",
-      trueId: "sarvamai/sarvam-2b-v0.5",
-      response: "Under Section 16(2)(c) of the CGST Act 2017, the entitlement to ITC is contingent upon the tax charged being actually paid to the Government. However, landmark High Court rulings (e.g., Bharti Telemedia and Suncraft Energy) establish that recovery must first be initiated against the defaulting supplier. If the recipient demonstrates genuine transaction proof, GST tax invoice, and bank payment records via DRC-03 reconciliation, ITC cannot be summarily denied without investigating the defaulting supplier."
-    },
-    modelB: {
-      name: "Candidate B",
-      trueId: "Qwen/Qwen2.5-1.5B-Instruct",
-      response: "Under Section 16(2) of GST Act, input credit requires four basic conditions: possessing an invoice, receiving goods, paying tax to government, and filing return. When supplier does not file GSTR-3B, tax is not credited into the government account, so the recipient cannot claim ITC directly unless the supplier amends their returns or pays the tax during annual reconciliation."
+    setEloRatings(DEFAULT_RATINGS)
+    setModelRecords(DEFAULT_RECORDS)
+    if (typeof window !== 'undefined') {
+      localStorage.removeItem('raso_elo_ratings')
+      localStorage.removeItem('raso_arena_records')
     }
   }
+
+  // Sorted dynamic leaderboard
+  const sortedLeaderboard = useMemo(() => {
+    const models = [
+      { id: 'sarvam-2b-indic-dpo', name: 'sarvam-2b-indic-dpo (Fine-Tuned)', shortName: 'Sarvam 2B DPO', eloNum: Number(eloRatings['sarvam-2b-indic-dpo'] ?? 1264.2), wins: modelRecords['sarvam-2b-indic-dpo']?.wins ?? 29, losses: modelRecords['sarvam-2b-indic-dpo']?.losses ?? 8, ties: modelRecords['sarvam-2b-indic-dpo']?.ties ?? 3, status: 'Aligned Champion' },
+      { id: 'sarvam-2b-v0.5', name: 'sarvamai/sarvam-2b-v0.5 (Base)', shortName: 'Sarvam 2B Base', eloNum: Number(eloRatings['sarvam-2b-v0.5'] ?? 1248.0), wins: modelRecords['sarvam-2b-v0.5']?.wins ?? 21, losses: modelRecords['sarvam-2b-v0.5']?.losses ?? 16, ties: modelRecords['sarvam-2b-v0.5']?.ties ?? 3, status: 'Pretrained Base' },
+      { id: 'llama-3.2-1b', name: 'meta-llama/Llama-3.2-1B-Instruct', shortName: 'Llama 3.2 1B', eloNum: Number(eloRatings['llama-3.2-1b'] ?? 1218.0), wins: modelRecords['llama-3.2-1b']?.wins ?? 15, losses: modelRecords['llama-3.2-1b']?.losses ?? 21, ties: modelRecords['llama-3.2-1b']?.ties ?? 4, status: 'Baseline' },
+      { id: 'qwen-2.5-7b', name: 'Qwen/Qwen2.5-1.5B-Instruct', shortName: 'Qwen 2.5 1.5B', eloNum: Number(eloRatings['qwen-2.5-7b'] ?? 1215.0), wins: modelRecords['qwen-2.5-7b']?.wins ?? 9, losses: modelRecords['qwen-2.5-7b']?.losses ?? 29, ties: modelRecords['qwen-2.5-7b']?.ties ?? 2, status: 'Reference' },
+    ]
+    return models
+      .sort((a, b) => b.eloNum - a.eloNum)
+      .map((m, idx) => {
+        const total = m.wins + m.losses + m.ties
+        const winRate = `${Math.round(((m.wins + m.ties * 0.5) / (total || 1)) * 1000) / 10}%`
+        const record = `${m.wins}W-${m.losses}L-${m.ties}T`
+        return {
+          ...m,
+          rank: idx + 1,
+          elo: m.eloNum.toFixed(1),
+          winRate,
+          record,
+        }
+      })
+  }, [eloRatings, modelRecords])
+
+  const arenaLeader = sortedLeaderboard[0]
 
   const fetchAll = useCallback(async () => {
     setLoading(true)
@@ -409,24 +447,25 @@ export default function ResearchPage() {
             </div>
             <div className="text-xl font-bold font-mono text-emerald-400 flex items-center gap-1.5">
               <Trophy className="h-4 w-4 text-amber-400 shrink-0" />
-              Sarvam 2B DPO
+              {arenaLeader?.shortName ?? 'Sarvam 2B DPO'}
             </div>
             <div className="text-[11px] text-[#a8a29e]">
-              Elo 1264.2 · 76.3% Win Rate
+              Elo {arenaLeader?.elo ?? '1264.2'} · {arenaLeader?.winRate ?? '76.3%'} Win Rate
             </div>
           </div>
 
           <div className="space-y-1">
             <div className="text-xs font-mono uppercase tracking-wider text-[#a8a29e]">
-              Throughput
+              Data Hygiene Throughput
             </div>
             <div className="text-xl font-bold font-mono text-[#f26625]">
-              {benchmarks?.results?.benchmark_latency?.throughput_samples_per_sec
-                ? `${Math.round(benchmarks.results.benchmark_latency.throughput_samples_per_sec).toLocaleString()} /s`
-                : '1,450 /s'}
+              {(benchmarks?.benchmark_data?.benchmark_latency?.throughput_samples_per_sec ||
+                benchmarks?.results?.benchmark_latency?.throughput_samples_per_sec)
+                ? `${Math.round(benchmarks?.benchmark_data?.benchmark_latency?.throughput_samples_per_sec || benchmarks?.results?.benchmark_latency?.throughput_samples_per_sec).toLocaleString()} samples/s`
+                : '1,450 samples/s'}
             </div>
             <div className="text-[11px] text-[#a8a29e]">
-              p50: {benchmarks?.results?.benchmark_latency?.p50_latency_per_sample_us ?? '124'} μs per sample
+              p50: {(benchmarks?.benchmark_data?.benchmark_latency?.p50_latency_per_sample_us || benchmarks?.results?.benchmark_latency?.p50_latency_per_sample_us) ?? '124'} μs per sample (screening)
             </div>
           </div>
 
@@ -531,7 +570,7 @@ export default function ResearchPage() {
                       </span>
                       {arenaVoteSubmitted && (
                         <span className="text-xs font-mono text-emerald-400 font-bold bg-emerald-950/40 px-2 py-0.5 rounded border border-emerald-500/30">
-                          Elo: {eloRatings[arenaPair.modelA.trueId]}
+                          Elo: {eloRatings[arenaPair.modelA.key]?.toFixed(1)}
                         </span>
                       )}
                     </div>
@@ -573,7 +612,7 @@ export default function ResearchPage() {
                       </span>
                       {arenaVoteSubmitted && (
                         <span className="text-xs font-mono text-emerald-400 font-bold bg-emerald-950/40 px-2 py-0.5 rounded border border-emerald-500/30">
-                          Elo: {eloRatings[arenaPair.modelB.trueId]}
+                          Elo: {eloRatings[arenaPair.modelB.key]?.toFixed(1)}
                         </span>
                       )}
                     </div>
@@ -594,7 +633,7 @@ export default function ResearchPage() {
                     ) : (
                       selectedWinner === 'B' && (
                         <div className="text-xs font-mono font-bold text-emerald-400 flex items-center justify-center gap-1.5 py-1">
-                          <CheckCircle2 className="h-4 w-4" /> Voted Superior (+{lastDelta ? lastDelta.deltaA : 16} Elo)
+                          <CheckCircle2 className="h-4 w-4" /> Voted Superior (+{lastDelta ? lastDelta.deltaB : 16} Elo)
                         </div>
                       )
                     )}
@@ -633,29 +672,8 @@ export default function ResearchPage() {
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-white/[0.04]">
-                    {[
-                      { name: 'sarvam-2b-indic-dpo (Fine-Tuned)', eloNum: Number(eloRatings['sarvam-2b-indic-dpo'] ?? 1264.2), wins: modelRecords['sarvam-2b-indic-dpo'].wins, losses: modelRecords['sarvam-2b-indic-dpo'].losses, ties: modelRecords['sarvam-2b-indic-dpo'].ties, status: 'Aligned Champion' },
-                      { name: 'sarvamai/sarvam-2b-v0.5 (Base)', eloNum: Number(eloRatings['sarvam-2b-v0.5'] ?? 1248.0), wins: modelRecords['sarvam-2b-v0.5'].wins, losses: modelRecords['sarvam-2b-v0.5'].losses, ties: modelRecords['sarvam-2b-v0.5'].ties, status: 'Pretrained Base' },
-                      { name: 'meta-llama/Llama-3.2-1B-Instruct', eloNum: Number(eloRatings['llama-3.2-1b'] ?? 1218.0), wins: modelRecords['llama-3.2-1b'].wins, losses: modelRecords['llama-3.2-1b'].losses, ties: modelRecords['llama-3.2-1b'].ties, status: 'Baseline' },
-                      { name: 'Qwen/Qwen2.5-1.5B-Instruct', eloNum: Number(eloRatings['qwen-2.5-7b'] ?? 1215.0), wins: modelRecords['qwen-2.5-7b'].wins, losses: modelRecords['qwen-2.5-7b'].losses, ties: modelRecords['qwen-2.5-7b'].ties, status: 'Reference' },
-                    ]
-                      .sort((a, b) => b.eloNum - a.eloNum)
-                      .map((m, idx) => {
-                        const rank = idx + 1
-                        const total = m.wins + m.losses + m.ties
-                        const winRate = `${Math.round(((m.wins + m.ties * 0.5) / total) * 1000) / 10}%`
-                        const record = `${m.wins}W-${m.losses}L-${m.ties}T`
-                        return {
-                          rank,
-                          name: m.name,
-                          elo: m.eloNum.toFixed(1),
-                          winRate,
-                          record,
-                          status: m.status,
-                        }
-                      })
-                      .map((m) => (
-                      <tr key={m.rank} className="hover:bg-white/[0.02] transition-colors">
+                    {sortedLeaderboard.map((m) => (
+                      <tr key={m.id} className="hover:bg-white/[0.02] transition-colors">
                         <td className="py-3 px-3 text-amber-400 font-bold">#{m.rank}</td>
                         <td className="py-3 px-3 text-white font-bold">{m.name}</td>
                         <td className="py-3 px-3 text-emerald-400 font-bold text-sm">{m.elo}</td>

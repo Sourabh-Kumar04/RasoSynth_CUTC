@@ -277,6 +277,11 @@ def _build_language_instruction(
     if enable_cot_reasoning:
         rules.append(f"14. {build_cot_prompt_directive(language=language)}")
 
+    # 11. Statutory & Subsidy Grounding
+    rules.append(
+        "15. Statutory & Subsidy Grounding: For public policy, electric mobility, and subsidy schemes (FAME-II, EMPS, PM E-DRIVE, PM Surya Ghar), ground all eligibility criteria, subsidy amounts (e.g. ₹/kWh caps, ex-showroom limits), and battery/charging standards in official Indian government notifications (MHI, MoRTH, BEE, NITI Aayog). Do NOT fabricate or estimate unsourced financial figures."
+    )
+
     return "\n".join(rules)
 
 
