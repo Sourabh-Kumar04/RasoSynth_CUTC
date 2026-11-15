@@ -32,10 +32,11 @@ class ReviewService:
         db: Optional[DatabaseManager] = None,
         ws_manager: Any = None,
     ):
-        manager = db_manager or db
-        if manager is None:
+        raw_manager = db_manager or db
+        if raw_manager is None:
             raise ValueError("db_manager must be provided to ReviewService")
-        self.db = manager
+        # Unwrap AsyncDB to its underlying DatabaseManager if wrapped
+        self.db = getattr(raw_manager, "db", raw_manager)
         self.ws_manager = ws_manager
         # job_id -> asyncio.Event (set when reviewer calls resume_job)
         self._resume_events: dict[str, asyncio.Event] = {}

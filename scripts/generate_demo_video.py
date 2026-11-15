@@ -17,7 +17,7 @@ FRAMES_DIR.mkdir(parents=True, exist_ok=True)
 OUTPUT_VIDEO.parent.mkdir(parents=True, exist_ok=True)
 
 CHROME_BIN = "/home/sourabh-kumar04/.local/bin/chromium"
-BASE_URL = "http://127.0.0.1:3000"
+BASE_URL = os.getenv("DEMO_BASE_URL", "https://rasosynthtune-indiaai.vercel.app")
 
 def create_title_card(title: str, subtitle: str, badge: str, filename: str, details=None):
     """Generate a sleek, dark-mode 1920x1080 title card."""
@@ -165,8 +165,9 @@ views = [
     ("dbom", "view_06_dbom_attestation.png", "1920,1080"),
     ("quality", "view_07_quality_inspector.png", "1920,1080"),
     ("review", "view_08_review_studio.png", "1920,1080"),
-    ("finetune", "view_09_model_training.png", "1920,1080"),
-    ("settings", "view_10_settings_system.png", "1920,1080"),
+    ("research", "view_09_research_arena.png", "1920,1080"),
+    ("finetune", "view_10_model_training.png", "1920,1080"),
+    ("settings", "view_11_settings_system.png", "1920,1080"),
 ]
 
 for route, fname, size in views:
@@ -188,9 +189,10 @@ storyboard = [
     ("view_06_dbom_attestation.png", 6.5),
     ("view_07_quality_inspector.png", 6.0),
     ("view_08_review_studio.png", 5.0),
+    ("view_09_research_arena.png", 6.0),
     ("card_05_finetune.png", 4.5),
-    ("view_09_model_training.png", 7.0),
-    ("view_10_settings_system.png", 5.0),
+    ("view_10_model_training.png", 7.0),
+    ("view_11_settings_system.png", 5.0),
     ("card_06_outro.png", 6.0),
 ]
 
@@ -226,3 +228,23 @@ if res.returncode == 0:
     print(f"\nSUCCESS! Demo video rendered at:\n{OUTPUT_VIDEO} ({size_mb:.2f} MB)")
 else:
     print("FFmpeg error:", res.stderr)
+
+print("5. Generating multi-page presentation PDF of all video frames...")
+pdf_frames = []
+for fname, _ in storyboard:
+    fpath = FRAMES_DIR / fname
+    if fpath.exists():
+        im = Image.open(fpath).convert("RGB")
+        pdf_frames.append(im)
+
+pdf_output = BASE_DIR / "outputs" / "RasoSynthTune_Demo_Walkthrough_Frames.pdf"
+if pdf_frames:
+    pdf_frames[0].save(
+        pdf_output,
+        save_all=True,
+        append_images=pdf_frames[1:],
+        quality=95,
+        resolution=150.0
+    )
+    pdf_size_mb = os.path.getsize(pdf_output) / (1024 * 1024)
+    print(f"\nSUCCESS! Demo frames PDF generated at:\n{pdf_output} ({pdf_size_mb:.2f} MB)")

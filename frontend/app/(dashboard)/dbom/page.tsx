@@ -126,6 +126,7 @@ function DbomContent() {
   const [verifyResult, setVerifyResult] = useState<{
     valid: boolean
     message: string
+    leafCount?: number
   } | null>(null)
 
   // Fetch available datasets from API
@@ -351,6 +352,7 @@ function DbomContent() {
         }
         setVerifyResult({
           valid: res.is_valid,
+          leafCount: res.total_samples_verified ?? samplesToVerify.length,
           message: res.is_valid
             ? `Cryptographic proof verified against stored SHA-256 root across ${res.total_samples_verified ?? samplesToVerify.length} sample nodes.`
             : `Verification failed: root hash mismatch or invalid leaf node detected.`,
@@ -360,6 +362,7 @@ function DbomContent() {
         toast(`Merkle Root Validated across ${samplesToVerify.length} sample nodes!`, true)
         setVerifyResult({
           valid: true,
+          leafCount: samplesToVerify.length,
           message: `Deterministic Merkle tree leaves validated against active SHA-256 root across ${samplesToVerify.length} samples.`,
         })
       }
@@ -369,6 +372,7 @@ function DbomContent() {
       toast(`Cryptographic SHA-256 root verified across sample nodes!`, true)
       setVerifyResult({
         valid: true,
+        leafCount: records.length || 4,
         message: `Cryptographic SHA-256 Merkle root validated against canonicalized sample nodes (${records.length || 4} leaves).`,
       })
     } finally {
@@ -398,7 +402,7 @@ function DbomContent() {
               </Badge>
             ) : verifyResult?.valid ? (
               <Badge variant="outline" className="border-emerald-500/40 text-emerald-400 bg-emerald-950/20 text-xs font-mono">
-                <ShieldCheck className="w-3.5 h-3.5 mr-1.5" /> Cryptographic Root Verified · 4 Leaves Matched
+                <ShieldCheck className="w-3.5 h-3.5 mr-1.5" /> Cryptographic Root Verified · {verifyResult.leafCount ?? records.length ?? 4} Leaves Matched
               </Badge>
             ) : verifyResult && !verifyResult.valid ? (
               <Badge variant="outline" className="border-rose-500/40 text-rose-400 bg-rose-950/20 text-xs font-mono">

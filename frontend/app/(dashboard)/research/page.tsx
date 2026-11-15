@@ -202,9 +202,16 @@ export default function ResearchPage() {
     }
   }
 
+  const ARENA_VERSION = 'v2.2_clean'
   const [eloRatings, setEloRatings] = useState<Record<string, number>>(() => {
     if (typeof window !== 'undefined') {
       try {
+        if (localStorage.getItem('raso_arena_version') !== ARENA_VERSION) {
+          localStorage.setItem('raso_arena_version', ARENA_VERSION)
+          localStorage.removeItem('raso_elo_ratings')
+          localStorage.removeItem('raso_arena_records')
+          return DEFAULT_RATINGS
+        }
         const saved = localStorage.getItem('raso_elo_ratings')
         if (saved) return JSON.parse(saved)
       } catch {}
@@ -301,7 +308,7 @@ export default function ResearchPage() {
       .sort((a, b) => b.eloNum - a.eloNum)
       .map((m, idx) => {
         const total = m.wins + m.losses + m.ties
-        const winRate = `${Math.round(((m.wins + m.ties * 0.5) / (total || 1)) * 1000) / 10}%`
+        const winRate = total > 0 ? `${((m.wins / total) * 100).toFixed(1)}%` : '0.0%'
         const record = `${m.wins}W-${m.losses}L-${m.ties}T`
         return {
           ...m,
@@ -566,7 +573,7 @@ export default function ResearchPage() {
                   <div className="space-y-3">
                     <div className="flex items-center justify-between border-b border-white/[0.06] pb-3">
                       <span className="text-xs font-mono font-bold uppercase tracking-wider text-white">
-                        {arenaVoteSubmitted ? `Model A: ${arenaPair.modelA.trueId}` : arenaPair.modelA.name}
+                        {arenaVoteSubmitted ? `Model A: ${arenaPair.modelA.trueId}` : "Candidate A (Blinded Evaluation)"}
                       </span>
                       {arenaVoteSubmitted && (
                         <span className="text-xs font-mono text-emerald-400 font-bold bg-emerald-950/40 px-2 py-0.5 rounded border border-emerald-500/30">
@@ -608,7 +615,7 @@ export default function ResearchPage() {
                   <div className="space-y-3">
                     <div className="flex items-center justify-between border-b border-white/[0.06] pb-3">
                       <span className="text-xs font-mono font-bold uppercase tracking-wider text-white">
-                        {arenaVoteSubmitted ? `Model B: ${arenaPair.modelB.trueId}` : arenaPair.modelB.name}
+                        {arenaVoteSubmitted ? `Model B: ${arenaPair.modelB.trueId}` : "Candidate B (Blinded Evaluation)"}
                       </span>
                       {arenaVoteSubmitted && (
                         <span className="text-xs font-mono text-emerald-400 font-bold bg-emerald-950/40 px-2 py-0.5 rounded border border-emerald-500/30">

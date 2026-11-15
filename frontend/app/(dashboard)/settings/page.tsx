@@ -103,11 +103,11 @@ export default function SettingsPage() {
           if (parsed.storageBackend) setStorageBackend(parsed.storageBackend)
           if (parsed.validationStrictness) setValidationStrictness(parsed.validationStrictness)
           if (parsed.hitlMode) setHitlMode(parsed.hitlMode)
-          if (parsed.qualityThreshold != null) setQualityThreshold(Math.round(Number(parsed.qualityThreshold) * 100) / 100)
-          if (parsed.sampleRatio != null) setSampleRatio(Math.round(Number(parsed.sampleRatio) * 100) / 100)
+          if (parsed.qualityThreshold != null) setQualityThreshold(parseFloat(Number(parsed.qualityThreshold).toFixed(2)))
+          if (parsed.sampleRatio != null) setSampleRatio(parseFloat(Number(parsed.sampleRatio).toFixed(2)))
           if (parsed.autoApproveMinutes != null) setAutoApproveMinutes(parsed.autoApproveMinutes)
           if (parsed.canaryGateEnabled != null) setCanaryGateEnabled(parsed.canaryGateEnabled)
-          if (parsed.tokenBudgetUsd != null) setTokenBudgetUsd(Math.round(Number(parsed.tokenBudgetUsd) * 100) / 100)
+          if (parsed.tokenBudgetUsd != null) setTokenBudgetUsd(parseFloat(Number(parsed.tokenBudgetUsd).toFixed(2)))
           if (parsed.maxConcurrentJobs != null) setMaxConcurrentJobs(parsed.maxConcurrentJobs)
           if (parsed.maxQueueSize != null) setMaxQueueSize(parsed.maxQueueSize)
           if (parsed.fineTuneMaxConcurrent != null) setFineTuneMaxConcurrent(parsed.fineTuneMaxConcurrent)
@@ -128,11 +128,11 @@ export default function SettingsPage() {
         storageBackend,
         validationStrictness,
         hitlMode,
-        qualityThreshold,
-        sampleRatio,
+        qualityThreshold: parseFloat(Number(qualityThreshold).toFixed(2)),
+        sampleRatio: parseFloat(Number(sampleRatio).toFixed(2)),
         autoApproveMinutes,
         canaryGateEnabled,
-        tokenBudgetUsd,
+        tokenBudgetUsd: parseFloat(Number(tokenBudgetUsd).toFixed(2)),
         maxConcurrentJobs,
         maxQueueSize,
         fineTuneMaxConcurrent,

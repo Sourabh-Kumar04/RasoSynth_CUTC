@@ -16,6 +16,14 @@ class DatasetPlan(BaseModel):
     difficulty_distribution: Dict[str, Any] = Field(default_factory=dict, description="Target proportion of difficulty tiers")
     constraints: List[str] = Field(default_factory=list, description="Extracted constraints and guidelines")
     diversity_attributes: Dict[str, List[Any]] = Field(default_factory=dict, description="Attributes to vary for diversity planning")
+    authoritative_sources: List[str] = Field(
+        default_factory=list,
+        description="Top 2-4 official government, regulatory, or primary statutory portal URLs for this exact topic, e.g. https://heavyindustries.gov.in, https://e-amrit.niti.gov.in for EV, https://pmjay.gov.in for Ayushman Bharat, https://incometaxindia.gov.in for Tax, etc."
+    )
+    statutory_frameworks: List[str] = Field(
+        default_factory=list,
+        description="Official statutory acts, regulations, schemes or circular names relevant to this topic"
+    )
 
 class CoverageMatrix(BaseModel):
     dimensions: Dict[str, List[Any]] = Field(default_factory=dict, description="Dimensions and their corresponding values")
@@ -36,7 +44,8 @@ class DatasetPlanner:
         )
         system_prompt = (
             "You are an expert ML/AI data architect. Analyze the user prompt to build a comprehensive, structured plan for generating a high-quality dataset "
-            "following enterprise curriculum design (Domain, 35/45/20 difficulty split, Structural Invariants, and Anti-Domain boundaries)."
+            "following enterprise curriculum design (Domain, 35/45/20 difficulty split, Structural Invariants, and Anti-Domain boundaries). "
+            "Identify the exact official government portal domains/URLs (authoritative_sources) and statutory schemes or acts (statutory_frameworks) governing the topic. "
             f"{lang_directive} "
             "Output ONLY a valid JSON object matching the schema: "
             "{\n"
@@ -46,7 +55,9 @@ class DatasetPlanner:
             "  \"metadata_schema\": {\"field_name\": \"type_description\"},\n"
             "  \"difficulty_distribution\": {\"beginner\": 0.35, \"intermediate\": 0.45, \"advanced\": 0.20},\n"
             "  \"constraints\": [\"string\"],\n"
-            "  \"diversity_attributes\": {\"attribute_name\": [\"value1\", \"value2\"]}\n"
+            "  \"diversity_attributes\": {\"attribute_name\": [\"value1\", \"value2\"]},\n"
+            "  \"authoritative_sources\": [\"https://official-government-or-regulatory-portal.gov...\"],\n"
+            "  \"statutory_frameworks\": [\"Official Statutory Act / Scheme / Regulation\"]\n"
             "}\n"
             "Do not include markdown wrappers, fences, or text outside the JSON."
         )
@@ -101,6 +112,27 @@ class DatasetPlanner:
 
                     data["diversity_attributes"] = sanitized_attrs
 
+                # Sanitize authoritative_sources and statutory_frameworks
+                if "authoritative_sources" in data:
+                    if isinstance(data["authoritative_sources"], list):
+                        data["authoritative_sources"] = [str(s).strip() for s in data["authoritative_sources"] if s]
+                    elif isinstance(data["authoritative_sources"], str):
+                        data["authoritative_sources"] = [data["authoritative_sources"].strip()]
+                    else:
+                        data["authoritative_sources"] = []
+                else:
+                    data["authoritative_sources"] = []
+
+                if "statutory_frameworks" in data:
+                    if isinstance(data["statutory_frameworks"], list):
+                        data["statutory_frameworks"] = [str(s).strip() for s in data["statutory_frameworks"] if s]
+                    elif isinstance(data["statutory_frameworks"], str):
+                        data["statutory_frameworks"] = [data["statutory_frameworks"].strip()]
+                    else:
+                        data["statutory_frameworks"] = []
+                else:
+                    data["statutory_frameworks"] = []
+
                 return DatasetPlan(**data)
 
         except Exception as e:
@@ -111,9 +143,21 @@ class DatasetPlanner:
         objective = "General instruction following dataset"
         roles = ["User", "Assistant"]
         diversity_attributes = {"topic": ["general_q_a"]}
+        authoritative_sources = ["https://data.gov.in"]
+        statutory_frameworks = ["Digital Personal Data Protection Act", "Right to Information Act"]
         
         prompt_lower = prompt.lower()
-        if any(w in prompt_lower for w in ["patient", "doctor", "medical", "clinical", "consultation", "diagnosis", "health"]):
+        if any(w in prompt_lower for w in ["ev", "electric vehicle", "fame", "charging", "battery", "e-mobility"]):
+            domain = "electric_vehicles"
+            objective = "Generate comprehensive instruction-response pairs covering EV adoption, subsidies, charging infrastructure, and standards"
+            roles = ["Consumer", "EV Specialist"]
+            diversity_attributes = {
+                "subtopic": ["FAME / PM E-DRIVE Subsidies", "Charging Standards", "Battery Safety", "Vehicle Registration"],
+                "vehicle_type": ["2W", "3W", "4W", "Commercial Bus"]
+            }
+            authoritative_sources = ["https://heavyindustries.gov.in", "https://e-amrit.niti.gov.in", "https://beeindia.gov.in"]
+            statutory_frameworks = ["FAME II / PM E-DRIVE Scheme Guidelines", "Central Motor Vehicles Rules (CMVR)", "AIS 156 / AIS 038 Standards"]
+        elif any(w in prompt_lower for w in ["patient", "doctor", "medical", "clinical", "consultation", "diagnosis", "health", "ayushman", "pmjay"]):
             domain = "healthcare"
             objective = "Generate realistic, medically accurate doctor-patient diagnosis and consultation dialogues"
             roles = ["Patient", "Doctor"]
@@ -121,6 +165,18 @@ class DatasetPlanner:
                 "doctor_specialty": ["General Medicine", "Cardiology", "Neurology", "Dermatology", "Pediatrics"],
                 "patient_condition": ["Hypertension", "Diabetes", "Asthma", "Migraine", "Common Cold"]
             }
+            authoritative_sources = ["https://pmjay.gov.in", "https://mohfw.gov.in", "https://abdm.gov.in"]
+            statutory_frameworks = ["Ayushman Bharat Pradhan Mantri Jan Arogya Yojana Guidelines", "Clinical Establishments Act"]
+        elif any(w in prompt_lower for w in ["tax", "gst", "itr", "income tax"]):
+            domain = "taxation"
+            objective = "Generate accurate taxation guidance, compliance instructions, and filing procedures"
+            roles = ["Taxpayer", "Tax Consultant"]
+            diversity_attributes = {
+                "tax_type": ["Income Tax", "GST", "TDS", "Corporate Tax"],
+                "difficulty": ["standard", "complex"]
+            }
+            authoritative_sources = ["https://incometaxindia.gov.in", "https://cbic.gov.in", "https://gst.gov.in"]
+            statutory_frameworks = ["Income Tax Act 1961", "Central Goods and Services Tax Act 2017"]
         elif any(w in prompt_lower for w in ["code", "software", "programming", "python", "developer", "bug"]):
             domain = "software_engineering"
             objective = "Generate high-quality software engineering instruction-response pairs, bug fixes, and code samples"
@@ -129,7 +185,9 @@ class DatasetPlanner:
                 "language": ["Python", "JavaScript", "Go", "Rust", "C++"],
                 "difficulty": ["junior", "mid", "senior"]
             }
-        elif any(w in prompt_lower for w in ["finance", "stock", "market", "economy", "investment", "portfolio"]):
+            authoritative_sources = ["https://docs.python.org", "https://developer.mozilla.org"]
+            statutory_frameworks = ["ISO/IEC 25010 Software Engineering Standards", "Open Source Standards"]
+        elif any(w in prompt_lower for w in ["finance", "stock", "market", "economy", "investment", "portfolio", "sebi"]):
             domain = "finance"
             objective = "Generate financial market analysis, investment consulting conversations, and economic advice dialogues"
             roles = ["Client", "Financial Advisor"]
@@ -137,6 +195,8 @@ class DatasetPlanner:
                 "asset_class": ["Equities", "Fixed Income", "Real Estate", "Crypto"],
                 "risk_profile": ["Conservative", "Moderate", "Aggressive"]
             }
+            authoritative_sources = ["https://www.sebi.gov.in", "https://www.nseindia.com", "https://www.rbi.org.in"]
+            statutory_frameworks = ["Securities and Exchange Board of India Act", "RBI Master Directions"]
 
         return DatasetPlan(
             domain=domain,
@@ -145,7 +205,9 @@ class DatasetPlanner:
             metadata_schema={"difficulty": "string"},
             difficulty_distribution={"standard": 1.0},
             constraints=[],
-            diversity_attributes=diversity_attributes
+            diversity_attributes=diversity_attributes,
+            authoritative_sources=authoritative_sources,
+            statutory_frameworks=statutory_frameworks,
         )
 
 class CoveragePlanner:

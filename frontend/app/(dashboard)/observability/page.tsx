@@ -289,7 +289,7 @@ export default function ObservabilityPage() {
                     <div className="p-3 rounded-lg bg-[#0a0a0f] border border-[#272738]">
                       <span className="text-[#a8a29e] block text-[10px] uppercase">DBOM Provenance Verification</span>
                       <span className="text-emerald-400 font-bold text-base mt-0.5 block">100% Passed</span>
-                      <span className="text-zinc-500 text-[10px]">ECDSA SECP256R1 Sealed</span>
+                      <span className="text-zinc-500 text-[10px]">SHA-256 Merkle Root Sealed</span>
                     </div>
                   </div>
                 </CardContent>

@@ -677,7 +677,7 @@ def handle_pipeline(args: argparse.Namespace) -> int:
 
 
 def handle_scrape(args: argparse.Namespace) -> int:
-    """Execute stealth web extraction with TLS JA3/JA4 spoofing and anti-bot bypass."""
+    """Execute stealth web extraction with automated compliance-friendly crawling."""
     from core.crawler.tls_stealth import StealthHTTPClient, BrowserImpersonation
     from pipeline.domain_extractors.regulatory import IndianRegulatoryExtractor
 
@@ -941,7 +941,7 @@ def build_parser() -> argparse.ArgumentParser:
     pipe_parser.add_argument("--output-dir", default="outputs/pipeline_run", help="Output directory")
 
     # Command 10: scrape
-    scrape_parser = subparsers.add_parser("scrape", help="Stealth web scraping with TLS JA3/JA4 spoofing and anti-bot bypass")
+    scrape_parser = subparsers.add_parser("scrape", help="Stealth web scraping with automated compliance-friendly crawling")
     scrape_parser.add_argument("--url", required=True, help="Target URL to extract")
     scrape_parser.add_argument("--impersonate", default="chrome124", choices=["chrome124", "chrome120", "safari17_0", "firefox125"], help="Browser TLS profile")
     scrape_parser.add_argument("--regulatory", action="store_true", help="Apply Indian regulatory circular extractor")

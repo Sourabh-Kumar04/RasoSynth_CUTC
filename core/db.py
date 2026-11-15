@@ -1900,6 +1900,24 @@ class AsyncDB:
     async def list_workflow_schedule_runs(self, schedule_id: str, limit: int = 100) -> list[dict]:
         return [record.to_dict() for record in await self.db.list_workflow_schedule_runs(schedule_id, limit)]
 
+    async def create_review_item(self, item_dict: dict) -> Any:
+        return await self.db.create_review_item(item_dict)
+
+    async def get_review_item(self, item_id: str) -> Any:
+        return await self.db.get_review_item(item_id)
+
+    async def get_review_item_for_job_sample(self, job_id: str, dataset_id: str) -> Any:
+        return await self.db.get_review_item_for_job_sample(job_id, dataset_id)
+
+    async def update_review_item(self, item_id: str, **kwargs) -> Any:
+        return await self.db.update_review_item(item_id, **kwargs)
+
+    async def list_review_items(self, status: Optional[str] = None, job_id: Optional[str] = None, page: int = 1, page_size: int = 50, owner: Optional[str] = None) -> tuple[list[Any], int]:
+        return await self.db.list_review_items(status=status, job_id=job_id, page=page, page_size=page_size, owner=owner)
+
+    async def review_stats(self, owner: Optional[str] = None) -> dict:
+        return await self.db.review_stats(owner=owner)
+
     async def list_datasets(self, limit: int = 100, owner: Optional[str] = None) -> list[dict]:
         """List all datasets ordered by creation date."""
         datasets = await self.db.list_datasets(limit, owner=owner)

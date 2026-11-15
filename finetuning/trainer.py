@@ -229,21 +229,26 @@ def estimate_vram_requirement(
     activation_gb = 1.2 * seq_scale * batch_scale * ((params_b / 7.0) ** 0.5) * activation_multiplier
     cuda_overhead_gb = 1.5 if is_dpo else 1.2
 
-    total_est_gb = weight_gb + lora_gb + activation_gb + cuda_overhead_gb
-    recommended_gpu_gb = 8.0 if total_est_gb <= 6.5 else 16.0 if total_est_gb <= 14.0 else 24.0 if total_est_gb <= 22.0 else 40.0 if total_est_gb <= 36.0 else 80.0
+    w_gb = round(weight_gb, 2)
+    l_gb = round(lora_gb, 2)
+    a_gb = round(activation_gb, 2)
+    c_gb = round(cuda_overhead_gb, 2)
+    tot_gb = round(w_gb + l_gb + a_gb + c_gb, 2)
+
+    recommended_gpu_gb = 8.0 if tot_gb <= 6.5 else 16.0 if tot_gb <= 14.0 else 24.0 if tot_gb <= 22.0 else 40.0 if tot_gb <= 36.0 else 80.0
 
     return {
         "base_model": base_model,
         "training_method": training_method.lower(),
         "estimated_parameters_billion": params_b,
-        "weight_memory_gb": round(weight_gb, 2),
-        "lora_optimizer_memory_gb": round(lora_gb, 2),
-        "activation_memory_gb": round(activation_gb, 2),
-        "cuda_overhead_gb": round(cuda_overhead_gb, 2),
-        "total_estimated_vram_gb": round(total_est_gb, 2),
+        "weight_memory_gb": w_gb,
+        "lora_optimizer_memory_gb": l_gb,
+        "activation_memory_gb": a_gb,
+        "cuda_overhead_gb": c_gb,
+        "total_estimated_vram_gb": tot_gb,
         "recommended_gpu_vram_gb": recommended_gpu_gb,
-        "supported_on_16gb_gpu": total_est_gb <= 15.0,
-        "supported_on_24gb_gpu": total_est_gb <= 23.0,
+        "supported_on_16gb_gpu": tot_gb <= 15.0,
+        "supported_on_24gb_gpu": tot_gb <= 23.0,
     }
 
 

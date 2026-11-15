@@ -54,6 +54,8 @@ services:
         sync: false
       - key: ANTHROPIC_API_KEY
         sync: false
+      - key: FEATHERLESS_API_KEY
+        sync: false
       # Serverless Cloud GPU Training (Modal Labs $30/mo free compute)
       - key: MODAL_TOKEN_ID
         sync: false

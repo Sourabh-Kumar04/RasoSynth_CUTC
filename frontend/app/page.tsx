@@ -33,6 +33,7 @@ import { Mascot } from '@/components/ui/mascot'
 import { Button } from '@/components/ui/button'
 import { SynthesisFlowDiagram } from '@/components/ui/synthesis-flow-diagram'
 import { FooterStatus } from '@/components/layout/footer-status'
+import { api } from '@/lib/api/client'
 
 // 7 Autonomous Synthesis Engines Definition
 const ENGINES = [
@@ -344,6 +345,28 @@ export default function ZenPortalPage() {
   const [codeTab, setCodeTab] = useState<'python' | 'curl' | 'typescript'>('python')
   const [copiedCode, setCopiedCode] = useState(false)
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false)
+  const [latestMerkleRoot, setLatestMerkleRoot] = useState<string>("92f5492d11cd0f6472bb18f4890aade63556e332c75f2f4c86729911265dbb6f")
+  const [latestCertificateId, setLatestCertificateId] = useState<string>("DBOM-VERIFIED-DATASET")
+  const [latestSamplesCount, setLatestSamplesCount] = useState<number>(100)
+
+  useEffect(() => {
+    async function loadLatestDatasetRoot() {
+      try {
+        const res = await api.getJobs({ limit: 5 })
+        const jobs = res?.data || (Array.isArray(res) ? res : [])
+        const completedJob = jobs.find((j: any) => j.status === 'completed' && (j.merkle_root || j.dbom_root))
+        if (completedJob) {
+          const root = completedJob.merkle_root || completedJob.dbom_root
+          if (root) {
+            setLatestMerkleRoot(root)
+            setLatestCertificateId(`DBOM-${completedJob.id.slice(0, 8).toUpperCase()}`)
+            setLatestSamplesCount(completedJob.metadata?.total_samples || completedJob.config?.dataset_size || 10)
+          }
+        }
+      } catch {}
+    }
+    loadLatestDatasetRoot()
+  }, [])
 
   // GSAP 60fps Ambient Cursor Spotlight Tracker
   useEffect(() => {
@@ -914,9 +937,9 @@ export default function ZenPortalPage() {
           {/* Left Column: Interactive Merkle Tree Graph */}
           <div className="lg:col-span-7">
             <MerkleTreeGraph
-              rootHash="92f5492d11cd0f6472bb18f4890aade63556e332c75f2f4c86729911265dbb6f"
-              certificateId="DBOM-VERIFIED-DATASET"
-              totalSamples={100}
+              rootHash={latestMerkleRoot}
+              certificateId={latestCertificateId}
+              totalSamples={latestSamplesCount}
               issuedAt="2026-10-28T12:00:00Z"
             />
           </div>

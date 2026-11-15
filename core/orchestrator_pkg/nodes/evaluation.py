@@ -653,22 +653,21 @@ class EvaluationNodeMixin:
 
         if (hitl_enabled or flagged_samples) and review_samples:
             # ── Resolve the ReviewService ──────────────────────────────
-            # Try to get the shared instance from app state first
             try:
-                # When running inside the FastAPI lifespan, the service is
-                # stored as a module-level singleton via _review_service_instance.
                 from core import _review_service_instance  # type: ignore
                 review_service = _review_service_instance
             except (ImportError, AttributeError):
                 review_service = None
 
-            if review_service is None and (getattr(self, "db_manager", None) or getattr(getattr(self, "db", None), "db", None)):
+            if review_service is None:
                 try:
                     from core.review_service import ReviewService
-                    db_mgr = getattr(self, "db_manager", None) or getattr(getattr(self, "db", None), "db", None)
-                    review_service = ReviewService(db_mgr)
-                    self.review_service = review_service
-                except Exception:
+                    db_target = getattr(self, "db_manager", None) or getattr(getattr(self, "db", None), "db", getattr(self, "db", None))
+                    if db_target is not None:
+                        review_service = ReviewService(db=db_target)
+                        self.review_service = review_service
+                except Exception as rev_init_err:
+                    logger.warning("Could not instantiate ReviewService fallback: %s", rev_init_err)
                     review_service = None
             elif review_service is not None:
                 self.review_service = review_service

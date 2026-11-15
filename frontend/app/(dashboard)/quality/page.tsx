@@ -108,16 +108,16 @@ export default function QualityDashboardPage() {
   const [densityLoading, setDensityLoading] = useState(false);
   const [selectedPoint, setSelectedPoint] = useState<any | null>(null);
   const [densityResult, setDensityResult] = useState<any | null>({
-    total_samples: 12,
+    total_samples: 10,
     diversity_entropy: 0.942,
-    semantic_coverage_pct: 91.7,
+    semantic_coverage_pct: 92.0,
     outlier_count: 1,
-    redundancy_count: 2,
+    redundancy_count: 1,
     clusters: [
-      { cluster_id: 0, label: "GST & Tax Calculations", sample_count: 4, percentage: 33.3, centroid: [32.5, 41.2], top_terms: ["gst", "calculate", "tax", "invoices"] },
-      { cluster_id: 1, label: "Statutory Deductions & Slabs", sample_count: 3, percentage: 25.0, centroid: [68.0, 31.0], top_terms: ["80c", "deduction", "epf", "ppf"] },
-      { cluster_id: 2, label: "Compliance & Dispute Notices", sample_count: 3, percentage: 25.0, centroid: [45.0, 78.5], top_terms: ["notice", "gstr-3b", "penalty", "appeal"] },
-      { cluster_id: 3, label: "Enterprise & MSME Registry", sample_count: 2, percentage: 16.7, centroid: [75.0, 72.0], top_terms: ["udyam", "msme", "aadhaar", "portal"] },
+      { cluster_id: 0, label: "Statutory Provisions & Scope", sample_count: 3, percentage: 30.0, centroid: [32.5, 41.2], top_terms: ["provisions", "statutory", "rules", "eligibility"] },
+      { cluster_id: 1, label: "Registration & Mandatory Filings", sample_count: 3, percentage: 30.0, centroid: [68.0, 31.0], top_terms: ["portal", "filing", "verification", "docs"] },
+      { cluster_id: 2, label: "Remedies, Redressal & Disputes", sample_count: 2, percentage: 20.0, centroid: [45.0, 78.5], top_terms: ["complaint", "recourse", "penalty", "order"] },
+      { cluster_id: 3, label: "Refunds, Escrow & Financial Rights", sample_count: 2, percentage: 20.0, centroid: [75.0, 72.0], top_terms: ["refund", "escrow", "compensation", "account"] },
     ],
     points: [
       { id: "p1", x: 28.5, y: 39.0, cluster_id: 0, cluster_label: "GST & Tax Calculations", is_outlier: false, is_redundant: true, instruction_snippet: "Calculate 18% GST on ₹2,50,000 for IT consulting services.", domain: "Taxation" },

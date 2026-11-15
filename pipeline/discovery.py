@@ -3234,20 +3234,23 @@ class DiscoveryPipeline:
         except Exception as e:
             self._LOG.warning(f"Government data search error: {e}")
 
-        # Fallback: web search across multiple government portals
+        # Dynamic search across discovered topic authorities and standard open data portals
         if not sources:
-            for portal_query in [
-                f"site:data.gov.in {query}",
-                f"site:heavyindustries.gov.in {query}",
-                f"site:e-amrit.niti.gov.in {query}",
-                f"site:beeindia.gov.in {query}",
-                f"site:morth.nic.in {query}",
-                f"site:data.gov {query}",
-                f"site:data.europa.eu {query}",
-                f"site:data.gov.uk {query}",
-                f"site:data.gouv.fr {query}",
-            ]:
-                sources.extend(await self._search_duckduckgo(portal_query))
+            dynamic_targets = []
+            cfg_sources = self.config.get("authoritative_sources") or []
+            for s in cfg_sources:
+                if isinstance(s, str) and s.startswith("http"):
+                    try:
+                        from urllib.parse import urlparse
+                        domain = urlparse(s).netloc
+                        if domain and domain not in dynamic_targets:
+                            dynamic_targets.append(domain)
+                    except Exception:
+                        pass
+
+            search_targets = dynamic_targets or ["data.gov.in", "data.gov", "data.europa.eu"]
+            for dom in search_targets[:6]:
+                sources.extend(await self._search_duckduckgo(f"site:{dom} {query}"))
 
         return sources[:20]
 

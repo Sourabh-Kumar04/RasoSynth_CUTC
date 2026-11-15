@@ -383,7 +383,9 @@ export default function ProvidersPage() {
                           <div className="flex justify-between">
                             <span className="text-[#a8a29e] font-mono text-xs">Latency</span>
                             <span className="font-mono text-xs font-bold text-[#f26625]">
-                              {testResults[p.name]?.latency != null
+                              {testResults[p.name]?.ok === false
+                                ? '—'
+                                : testResults[p.name]?.latency != null
                                 ? `${Math.round(testResults[p.name].latency)}ms`
                                 : p.latency_ms
                                 ? `${Math.round(p.latency_ms)}ms`
@@ -421,7 +423,7 @@ export default function ProvidersPage() {
                               : 'bg-rose-950/40 text-rose-300 border-rose-500/40'
                           )}>
                             <span>{testResults[p.name].ok ? '✓ Reachable' : '✗ Unreachable'}</span>
-                            <span>{testResults[p.name].latency}ms latency</span>
+                            <span>{testResults[p.name].ok ? `${testResults[p.name].latency}ms latency` : 'Connection Failed'}</span>
                           </div>
                         )}
 

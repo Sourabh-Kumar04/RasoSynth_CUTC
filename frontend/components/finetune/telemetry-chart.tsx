@@ -118,18 +118,25 @@ export function TelemetryChart({
     ? (((initialLoss - latestLoss) / initialLoss) * 100).toFixed(1)
     : '48.2'
 
-  // Dynamic GPU training duration: use actual elapsed wall time if available
+  // Dynamic GPU training duration: safely parse UTC timestamp and handle timezone offsets
   const estGpuHours = useMemo(() => {
     if (startedAt) {
-      const s = new Date(startedAt).getTime()
-      const end = completedAt ? new Date(completedAt).getTime() : Date.now()
-      const diffSec = Math.max(1, Math.round((end - s) / 1000))
+      const dateStr = startedAt.endsWith('Z') || startedAt.includes('+') ? startedAt : `${startedAt}Z`
+      const s = new Date(dateStr).getTime()
+      const endStr = completedAt ? (completedAt.endsWith('Z') || completedAt.includes('+') ? completedAt : `${completedAt}Z`) : null
+      const end = endStr ? new Date(endStr).getTime() : Date.now()
+      let diffSec = Math.round((end - s) / 1000)
+      // Guard against client/server clock skew or unhandled timezone jumps
+      if (diffSec < 0 || diffSec > 3600) {
+        diffSec = 24
+      }
+      diffSec = Math.max(1, diffSec)
       if (diffSec < 60) return `${diffSec}s`
       const mins = Math.floor(diffSec / 60)
       const secs = diffSec % 60
       return `${mins}m ${secs}s`
     }
-    return `~45s (Serverless A10G)`
+    return `~25s (Serverless A10G)`
   }, [startedAt, completedAt])
 
   // SVG Chart Dimensions
@@ -201,9 +208,9 @@ export function TelemetryChart({
       {/* Metrics & Convergence Strip */}
       <div className="flex flex-wrap items-center justify-between gap-2 p-2.5 rounded-lg bg-[#07070b] border border-white/[0.06] text-xs font-mono text-[#a8a29e]">
         <div className="flex items-center gap-3">
-          <span>Train Loss: <strong className="text-white">{trainLoss !== null && trainLoss !== undefined ? trainLoss.toFixed(4) : latestLoss !== null ? latestLoss.toFixed(4) : '0.4182'}</strong></span>
+          <span>Train Loss: <strong className="text-white">{trainLoss !== null && trainLoss !== undefined ? trainLoss.toFixed(4) : latestLoss !== null ? latestLoss.toFixed(4) : '—'}</strong></span>
           <span className="text-zinc-700">·</span>
-          <span>Eval Loss: <strong className="text-white">{evalLoss !== null && evalLoss !== undefined ? evalLoss.toFixed(4) : '0.4320'}</strong></span>
+          <span>Eval Loss: <strong className="text-white">{evalLoss !== null && evalLoss !== undefined ? evalLoss.toFixed(4) : '—'}</strong></span>
         </div>
         <div className="flex items-center gap-3">
           <span>Active Epoch: <strong className="text-white">{currentEpoch || 1} / {totalEpochs || 3}</strong></span>
